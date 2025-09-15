@@ -22,12 +22,20 @@ export const command = {
     aliases: ['status', 'info'],
     execute: async ({ m, version, sReply }) => {
         const currentSettings = await Settings.getSettings();
-        const [npmVersionData, diskData, virtData, ipInfo, packageJson] = await Promise.all([
+        const [
+            npmVersionData,
+            diskData,
+            virtData,
+            ipInfo,
+            packageJson,
+            topCommands
+        ] = await Promise.all([
             exec('npm -v').catch(() => ({ stdout: 'N/A' })),
             exec('df -h /').catch(() => ({ stdout: '' })),
             exec('systemd-detect-virt').catch(() => ({ stdout: 'N/A' })),
             axios.get('https://ipinfo.io/json').catch(() => ({ data: {} })),
-            fs.readFile('./package.json', 'utf8').then(JSON.parse).catch(() => ({}))
+            fs.readFile('./package.json', 'utf8').then(JSON.parse).catch(() => ({})),
+            Command.getTopCommands(3)
         ]);
         const used = process.memoryUsage();
         const cpus = os.cpus();
@@ -69,6 +77,13 @@ export const command = {
         const dependencies = packageJson.dependencies || {};
         const devDependencies = packageJson.devDependencies || {};
         const totalModules = Object.keys(dependencies).length + Object.keys(devDependencies).length;
+        let topCommandsText = '';
+        if (topCommands && topCommands.length > 0) {
+            topCommandsText += `*❏ TOP 3 COMMANDS*\n`;
+            topCommandsText += topCommands.map((cmd, index) =>
+                `> ${index + 1}. ${cmd.name} (${cmd.count} uses)`
+            ).join('\n') + '\n\n';
+        }
         let a = '';
         a += `*❏ BOT STATISTICS*\n`;
         a += `> WhatsApp Version: ${version?.join('.') || 'Unknown'}\n`;
@@ -98,7 +113,8 @@ export const command = {
         a += `*❏ PROVIDER INFO*\n`;
         a += `> IP: ${ip}\n`;
         a += `> Region: ${region}\n`;
-        a += `> ISP: ${isp}`;
+        a += `> ISP: ${isp}\n\n`;
+        a += topCommandsText;
         await sReply(a.trim());
         await Command.findOneAndUpdate({ name: command.name }, { $inc: { count: 1 } }, { upsert: true });
         await User.findOneAndUpdate({ userId: m.sender }, { $inc: { [`commandStats.${command.name}`]: 1 } }, { upsert: true });

@@ -12,10 +12,10 @@ export const command = {
     category: 'util',
     description: 'Memeriksa waktu respons bot.',
     aliases: ['p', 'speed'],
-    execute: async ({ sReply, m }) => {
+    execute: async ({ sPesan, m }) => {
         const current = new Date().getTime();
         const est = Math.floor(current - (m.timestamp * 1000));
-        await sReply(`Response time: ${est}ms`);
+        await sPesan(`Response time: ${est}ms`);
         await Command.findOneAndUpdate({ name: command.name }, { $inc: { count: 1 } }, { upsert: true });
         await User.findOneAndUpdate({ userId: m.sender }, { $inc: { [`commandStats.${command.name}`]: 1 } }, { upsert: true });
     }

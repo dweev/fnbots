@@ -8,7 +8,7 @@
 
 import config from '../../config.js';
 import { color, msgs, deleteFile, mycmd } from './function.js';
-import { User, Group, Whitelist } from '../../database/index.js';
+import { User, Group, Whitelist, Settings } from '../../database/index.js';
 import log from './logger.js';
 import util from 'util';
 import path from 'path';
@@ -245,6 +245,7 @@ export async function arfine(fn, m, { dbSettings, ownerNumber, version }) {
                             } else {
                                 await command.execute(commandArgs);
                                 commandFound = true;
+                                await Settings.incrementTotalHitCount();
                             }
                         } catch (error) {
                             await sReply(`Terjadi kesalahan saat menjalankan perintah "${command.name}": ${error.message}`);

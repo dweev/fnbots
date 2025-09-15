@@ -6,9 +6,10 @@
 */
 // ─── Info Commands.js ────────────────────
 
+import config from '../../config.js';
 import mongoose from 'mongoose';
 
-const VALID_CATEGORIES = process.env.COMMAND_CATEGORIES.split(',');
+const VALID_CATEGORIES = config.commandCategories;
 const commandSchema = new mongoose.Schema({
   name: {
     type: String,

@@ -6,7 +6,7 @@
 */
 // ─── Info connection index.js ────────────
 
-import 'dotenv/config';
+import config from '../config.js';
 import mongoose from 'mongoose';
 import log from '../src/utils/logger.js';
 
@@ -18,7 +18,7 @@ class DatabaseConnection {
     }
     async connect() {
         try {
-            const MONGODB_URI = process.env.MONGODB_URI;
+            const MONGODB_URI = config.mongodbUri;
             mongoose.connection.on('connected', () => {
                 this.isConnected = true;
                 this.connectionRetries = 0;

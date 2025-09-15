@@ -6,13 +6,14 @@
 */
 // ─── Info main.js ────────────────────────
 
+import config from './config.js';
 import log from './src/utils/logger.js';
 import { isBug } from './src/utils/security.js';
 import { randomByte, gifToWebp, imageToWebp, videoToWebp, getBuffer, getSizeMedia, deleteFile } from './src/utils/function.js';
 import { database, Settings, mongoStore } from './database/index.js';
 import { AuthStore, BaileysSession } from './database/auth.js';
+import { arfine, handleRestart } from './src/utils/handler.js';
 import { loadPlugins } from './src/utils/plugins.js';
-import arfine from './src/utils/handler.js';
 import { dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -21,18 +22,14 @@ const __dirname = dirname(__filename);
 const exec = util.promisify(cp_exec);
 const isPm2 = process.env.pm_id !== undefined || process.env.NODE_APP_INSTANCE !== undefined;
 const isSelfRestarted = process.env.RESTARTED_BY_SELF === '1';
-const MAX_RECONNECT_ATTEMPTS = 5;
-const RECONNECT_DELAY_MS = 5000;
 
 function logRestartInfo() { 
     log(`Mode Jalankan: ${isPm2 ? 'PM2' : 'Manual'} | RestartedBySelf: ${isSelfRestarted}`) ;
 };
 
-import 'dotenv/config';
 import path from 'path';
 import util from 'util';
 import process from 'process';
-import { spawn } from 'child_process';
 import { exec as cp_exec } from 'child_process';
 import pino from 'pino';
 import dayjs from 'dayjs';
@@ -73,13 +70,12 @@ class CrotToLive extends Map {
     }
 };
 
-const pairingCode = process.argv.includes('--qr') ? false : process.argv.includes('--pairing-code') || process.env.PAIRING_CODE === 'true';
+const pairingCode = process.argv.includes('--qr') ? false : process.argv.includes('--pairing-code') || config.usePairingCode;;
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 const question = (text) => new Promise((resolve) => rl.question(text, resolve));
 
 let pairingStarted = false;
 let phoneNumber, version, dbSettings;
-let ownerNumber = JSON.parse(process.env.OWNER_NUMBER);
 let duplexM = new CrotToLive();
 let debugs = false;
 
@@ -185,33 +181,6 @@ async function updateContact(jid, data = {}) {
         await mongoStore.updateContact(jid, data);
     } catch (error) {
         await log(`Error updating contact: ${error}`, true);
-    }
-};
-async function handleRestart(reason) {
-    const currentRestarts = parseInt(process.env.RESTART_ATTEMPTS || '0', 10);
-    const nextAttempt = currentRestarts + 1;
-    if (currentRestarts >= MAX_RECONNECT_ATTEMPTS) {
-        await log(`Gagal total setelah ${MAX_RECONNECT_ATTEMPTS} percobaan. Alasan: ${reason}`);
-        process.exit(1);
-    }
-    await log(`Terjadi error: ${reason}`);
-    await log(`Mencoba restart otomatis #${nextAttempt} dalam ${RECONNECT_DELAY_MS / 1000}s...`);
-    await delay(RECONNECT_DELAY_MS);
-    if (isPm2) {
-        await log(`Dijalankan via PM2 → menyerahkan restart ke PM2`);
-        process.exit(1);
-    } else {
-        await log(`Restart manual via spawn`);
-        spawn(process.argv[0], process.argv.slice(1), {
-            detached: true,
-            stdio: 'inherit',
-            env: {
-                ...process.env,
-                RESTART_ATTEMPTS: nextAttempt.toString(),
-                RESTARTED_BY_SELF: '1'
-            }
-        });
-        process.exit(0);
     }
 };
 async function handleGroupStubMessages(fn, m) {
@@ -682,7 +651,7 @@ async function updateMessageUpsert(fn, message) {
             duplexM.set(m.key.id, Date.now(), 60000);
             const dependencies = {
                 dbSettings,
-                ownerNumber,
+                ownerNumber: config.ownerNumber,
                 version
             };
             await arfine(fn, m, dependencies);
@@ -1037,7 +1006,7 @@ async function starts() {
             enableRecentMessageCache: true
         });
         if (pairingCode && !phoneNumber && !fn.authState.creds.registered) {
-            let numberToValidate = dbSettings.botNumber ? dbSettings.botNumber : process.env.BOT_NUMBER;
+            let numberToValidate = dbSettings.botNumber ? dbSettings.botNumber : config.botNumber;
             let isValid = false;
             while (!isValid) {
                 if (!numberToValidate) {
@@ -1084,7 +1053,7 @@ async function starts() {
                     await log(`WA Version: ${version}`);
                     await log(`BOT Number: ${jidNormalizedUser(fn.user.id).split('@')[0]}`);
                     await log(`${dbSettings.botName} Berhasil tersambung ke whatsapp...`);
-                    if (process.env.RESTART_ATTEMPTS && parseInt(process.env.RESTART_ATTEMPTS, 10) > 0) {
+                    if (config.restartAttempts > 0) {
                         process.env.RESTART_ATTEMPTS = '0';
                     }
                 }

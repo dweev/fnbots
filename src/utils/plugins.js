@@ -6,11 +6,11 @@
 */
 // ─── Info plugins.js ─────────────────────
 
+import config from '../../config.js';
 import { readdir } from 'fs/promises';
 import { join } from 'path';
 import log from './logger.js';
 import { Command } from '../../database/index.js';
-import 'dotenv/config';
 
 export const pluginCache = {
     commands: new Map(),
@@ -21,12 +21,7 @@ export const loadPlugins = async (pluginPath) => {
     try {
         pluginCache.commands.clear();
         pluginCache.helpMap.clear();
-        const VALID_CATEGORIES_ENV = process.env.COMMAND_CATEGORIES;
-        if (!VALID_CATEGORIES_ENV) {
-            throw new Error('Variabel lingkungan COMMAND_CATEGORIES tidak ditemukan di .env.');
-        }
-        const VALID_CATEGORIES = VALID_CATEGORIES_ENV.split(',');
-        for (const cat of VALID_CATEGORIES) {
+        for (const cat of config.commandCategories) {
             pluginCache.helpMap.set(cat, new Map());
         }
         const files = await readdir(pluginPath);

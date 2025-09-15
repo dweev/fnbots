@@ -6,6 +6,7 @@
 */
 // ─── Info handler.js ─────────────────────
 
+import config from '../../config.js';
 import { color, msgs, deleteFile, mycmd } from './function.js';
 import { User, Group, Whitelist } from '../../database/index.js';
 import log from './logger.js';
@@ -21,7 +22,6 @@ const exec = util.promisify(cp_exec);
 const isPm2 = process.env.pm_id !== undefined || process.env.NODE_APP_INSTANCE !== undefined;
 const MAX_RECONNECT_ATTEMPTS = 5;
 const RECONNECT_DELAY_MS = 5000;
-const VALID_CATEGORIES = process.env.COMMAND_CATEGORIES.split(',');
 
 const localFilePrefix = 'local-file://';
 const recentcmd = new LRUCache({ max: 1000, maxAge: 30000 });
@@ -36,7 +36,7 @@ let _checkPremium = false;
 let _latestMessage = null;
 let _latestMessages = null;
 let helpMap = {};
-for (const cat of VALID_CATEGORIES) {
+for (const cat of config.commandCategories) {
     helpMap[cat] = new Map();
 }
 
@@ -65,33 +65,6 @@ async function expiredVIPcheck(fn, ownerNumber) {
             }
         }
     }, 60000);
-};
-async function handleRestart(reason) {
-    const currentRestarts = parseInt(process.env.RESTART_ATTEMPTS || '0', 10);
-    const nextAttempt = currentRestarts + 1;
-    if (currentRestarts >= MAX_RECONNECT_ATTEMPTS) {
-        await log(`Gagal total setelah ${MAX_RECONNECT_ATTEMPTS} percobaan. Alasan: ${reason}`);
-        process.exit(1);
-    }
-    await log(`Terjadi error: ${reason}`);
-    await log(`Mencoba restart otomatis #${nextAttempt} dalam ${RECONNECT_DELAY_MS / 1000}s...`);
-    await delay(RECONNECT_DELAY_MS);
-    if (isPm2) {
-        await log(`Dijalankan via PM2 → menyerahkan restart ke PM2`);
-        process.exit(1);
-    } else {
-        await log(`Restart manual via spawn`);
-        spawn(process.argv[0], process.argv.slice(1), {
-            detached: true,
-            stdio: 'inherit',
-            env: {
-                ...process.env,
-                RESTART_ATTEMPTS: nextAttempt.toString(),
-                RESTARTED_BY_SELF: '1'
-            }
-        });
-        process.exit(0);
-    }
 };
 async function getSerial(m) {
     if (m?.key?.fromMe) return;
@@ -130,7 +103,34 @@ async function sendAndCleanupFile(fn, toId, localPath, m, dbSettings) {
     }
 };
 
-export default async function arfine(fn, m, { dbSettings, ownerNumber, version }) {
+export async function handleRestart(reason) {
+    const currentRestarts = config.restartAttempts;
+    const nextAttempt = currentRestarts + 1;
+    if (currentRestarts >= MAX_RECONNECT_ATTEMPTS) {
+        await log(`Gagal total setelah ${MAX_RECONNECT_ATTEMPTS} percobaan. Alasan: ${reason}`);
+        process.exit(1);
+    }
+    await log(`Terjadi error: ${reason}`);
+    await log(`Mencoba restart otomatis #${nextAttempt} dalam ${RECONNECT_DELAY_MS / 1000}s...`);
+    await delay(RECONNECT_DELAY_MS);
+    if (isPm2) {
+        await log(`Dijalankan via PM2 → menyerahkan restart ke PM2`);
+        process.exit(1);
+    } else {
+        await log(`Restart manual via spawn`);
+        spawn(process.argv[0], process.argv.slice(1), {
+            detached: true,
+            stdio: 'inherit',
+            env: {
+                ...process.env,
+                RESTART_ATTEMPTS: nextAttempt.toString(),
+                RESTARTED_BY_SELF: '1'
+            }
+        });
+        process.exit(0);
+    }
+};
+export async function arfine(fn, m, { dbSettings, ownerNumber, version }) {
     _latestMessage = m;
     _latestMessages = m;
     await expiredCheck(fn, ownerNumber);

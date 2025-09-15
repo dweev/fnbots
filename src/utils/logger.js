@@ -52,7 +52,7 @@ const blockedKeywords = [
   "Closing session:"
 ];
 
-export default function log(message, isError = false) {
+export default async function log(message, isError = false) {
   const textMessage = typeof message === 'string' ? message : util.inspect(message, { depth: 1 });
   if (blockedKeywords.some(keyword => textMessage.includes(keyword))) {
     return;

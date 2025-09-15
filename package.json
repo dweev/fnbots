@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node main.js",
     "pair": "node main.js --pairing-code",
-    "dev": "nodemon main.js --ignore database --ignore downloads --ignore har_and_cookies --ignore node_modules --ignore src --ignore venv"
+    "dev": "nodemon main.js --ignore node_modules"
   },
   "keywords": [
     "whatsapp",

@@ -22,6 +22,26 @@ dayjs.extend(timezone);
 dayjs.extend(duration);
 dayjs.extend(localizedFormat);
 
+export function archimed(s, list) {
+  const ln = list.length;
+  const ls = new Set();
+  for (let logic of s.split(',')) {
+    if (logic.includes('>')) {
+      const si = parseInt(logic.slice(1)) - 1;
+      for (let i = si + 1; i < ln; i++) ls.add(i);
+    } else if (logic.includes('<')) {
+      const si = parseInt(logic.slice(1)) - 1;
+      for (let i = 0; i <= si && i < ln; i++) ls.add(i);
+    } else if (logic.includes('-')) {
+      let [start, end] = logic.split('-').map(n => parseInt(n) - 1);
+      for (let i = start; i <= end && i < ln; i++) ls.add(i);
+    } else {
+      const idx = parseInt(logic) - 1;
+      if (idx >= 0 && idx < ln) ls.add(idx);
+    }
+  }
+  return [...ls].map(i => list[i]);
+};
 export function bytesToSize(bytes, decimals = 2) {
   if (bytes === 0) return '0 Bytes';
   const k = 1024;
@@ -108,25 +128,21 @@ export function formatDuration(durationStr) {
     seconds: seconds
   });
 };
-export function archimed(s, list) {
-  const ln = list.length;
-  const ls = new Set();
-  for (let logic of s.split(',')) {
-    if (logic.includes('>')) {
-      const si = parseInt(logic.slice(1)) - 1;
-      for (let i = si + 1; i < ln; i++) ls.add(i);
-    } else if (logic.includes('<')) {
-      const si = parseInt(logic.slice(1)) - 1;
-      for (let i = 0; i <= si && i < ln; i++) ls.add(i);
-    } else if (logic.includes('-')) {
-      let [start, end] = logic.split('-').map(n => parseInt(n) - 1);
-      for (let i = start; i <= end && i < ln; i++) ls.add(i);
-    } else {
-      const idx = parseInt(logic) - 1;
-      if (idx >= 0 && idx < ln) ls.add(idx);
-    }
-  }
-  return [...ls].map(i => list[i]);
+export function formatDurationMessage(duration) {
+  let years = duration.years();
+  let months = duration.months();
+  let days = duration.days();
+  let hours = duration.hours();
+  let minutes = duration.minutes();
+  let seconds = duration.seconds();
+  let durationMessage = `*Expired*: `;
+  if (years > 0) durationMessage += `${years} year(s) `;
+  if (months > 0) durationMessage += `${months} month(s) `;
+  if (days > 0) durationMessage += `${days} day(s) `;
+  if (hours > 0) durationMessage += `${hours} hour(s) `;
+  if (minutes > 0) durationMessage += `${minutes} minute(s) `;
+  if (seconds > 0) durationMessage += `${seconds} second(s)`;
+  return durationMessage;
 };
 export function formatCommandList(commandCollection) {
   if (!commandCollection || commandCollection.size === 0) return '';
@@ -184,22 +200,6 @@ export async function deleteFile(path) {
   } catch (error) {
     await log(`Error deleteFile ${path}:\n${error}`, true);
   }
-};
-export function formatDurationMessage(duration) {
-  let years = duration.years();
-  let months = duration.months();
-  let days = duration.days();
-  let hours = duration.hours();
-  let minutes = duration.minutes();
-  let seconds = duration.seconds();
-  let durationMessage = `*Expired*: `;
-  if (years > 0) durationMessage += `${years} year(s) `;
-  if (months > 0) durationMessage += `${months} month(s) `;
-  if (days > 0) durationMessage += `${days} day(s) `;
-  if (hours > 0) durationMessage += `${hours} hour(s) `;
-  if (minutes > 0) durationMessage += `${minutes} minute(s) `;
-  if (seconds > 0) durationMessage += `${seconds} second(s)`;
-  return durationMessage;
 };
 export async function gifToWebp(media) {
   const tmpFileIn = path.join(global.tmpDir, `${global.randomSuffix}.gif`);

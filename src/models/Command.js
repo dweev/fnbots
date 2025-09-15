@@ -8,6 +8,7 @@
 
 import mongoose from 'mongoose';
 
+const VALID_CATEGORIES = process.env.COMMAND_CATEGORIES.split(',');
 const commandSchema = new mongoose.Schema({
   name: {
     type: String,
@@ -32,9 +33,14 @@ const commandSchema = new mongoose.Schema({
   },
   category: {
     type: String,
-    enum: ['master', 'owner', 'vip', 'premium', 'util', 'manage'],
     required: true,
-    index: true
+    index: true,
+    validate: {
+      validator: function(v) {
+        return VALID_CATEGORIES.includes(v);
+      },
+      message: props => `${props.value} bukan kategori yang valid!`
+    }
   },
   aliases: {
     type: [String],
@@ -58,7 +64,7 @@ commandSchema.methods.updateDescription = function (newDescription) {
   return this.save();
 };
 commandSchema.methods.changeCategory = function (newCategory) {
-  if (['master', 'owner', 'vip', 'premium', 'util', 'manage'].includes(newCategory)) {
+  if (VALID_CATEGORIES.includes(newCategory)) {
     this.category = newCategory;
     return this.save();
   }
@@ -82,14 +88,15 @@ commandSchema.statics.getCommandStats = function () {
     }
   ]);
 };
-commandSchema.statics.findOrCreate = async function (name, category, description = 'belum terdefinisikan...') {
+commandSchema.statics.findOrCreate = async function (name, category, description = 'belum terdefinisikan...', aliases) {
   const normalizedName = name.toLowerCase();
   let command = await this.findOne({ name: normalizedName });
   if (!command) {
     command = new this({
       name: normalizedName,
       category,
-      description
+      description,
+      aliases
     });
     await command.save();
   }

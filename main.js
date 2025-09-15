@@ -9,10 +9,15 @@
 import log from './src/utils/logger.js';
 import { isBug } from './src/utils/security.js';
 import { randomByte, gifToWebp, imageToWebp, videoToWebp, getBuffer, getSizeMedia, deleteFile } from './src/utils/function.js';
-import { AuthStore, BaileysSession } from './database/auth.js';
 import { database, Settings, mongoStore } from './database/index.js';
+import { AuthStore, BaileysSession } from './database/auth.js';
+import { loadPlugins } from './src/utils/plugins.js';
 import arfine from './src/utils/handler.js';
+import { dirname } from 'path';
+import { fileURLToPath } from 'url';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 const exec = util.promisify(cp_exec);
 const isPm2 = process.env.pm_id !== undefined || process.env.NODE_APP_INSTANCE !== undefined;
 const isSelfRestarted = process.env.RESTARTED_BY_SELF === '1';
@@ -1005,6 +1010,7 @@ async function serializeMessage(fn, msg) {
 async function starts() {
     try {
         await initializeDatabases();
+        await loadPlugins(path.join(__dirname, 'src', 'plugins'));
         version = await getBaileysVersion();
         const { state, saveCreds } = await AuthStore();
         const fn = makeWASocket({

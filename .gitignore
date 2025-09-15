@@ -3,5 +3,5 @@ node_modules
 src/session/*.json
 package-lock.json
 .env
-main.js.bak
+oldmain.js
 *.yaml

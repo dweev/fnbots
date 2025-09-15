@@ -1,0 +1,7 @@
+logs
+node_modules
+src/session/*.json
+package-lock.json
+.env
+main.js.bak
+*.yaml

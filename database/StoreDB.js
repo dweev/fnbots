@@ -36,6 +36,10 @@ class DBStore {
             ttlExpirations: 0
         };
         this.isConnected = false;
+        this.messages = {};
+        this.conversations = {};
+        this.presences = {};
+        this.status = {};
         this.startBatchProcessor();
         this.startCacheCleanup();
         this.startStatsLogger();
@@ -265,6 +269,32 @@ class DBStore {
             evictions: this.cacheStats.evictions
         };
     }
+    updateMessages(chatId, message, maxSize = 50) {
+        if (!this.messages[chatId]) this.messages[chatId] = [];
+        this.messages[chatId].push(message);
+        this.messages[chatId] = this.messages[chatId].slice(-maxSize);
+    }
+    updateConversations(chatId, conversation, maxSize = 200) {
+        if (!this.conversations[chatId]) this.conversations[chatId] = [];
+        this.conversations[chatId].push(conversation);
+        this.conversations[chatId] = this.conversations[chatId].slice(-maxSize);
+    }
+    updatePresences(chatId, presenceUpdate) {
+        if (!this.presences[chatId]) this.presences[chatId] = {};
+        Object.assign(this.presences[chatId], presenceUpdate);
+    }
+    addStatus(userId, statusMessage, maxSize = 20) {
+        if (!this.status[userId]) this.status[userId] = [];
+        this.status[userId].push(statusMessage);
+        this.status[userId] = this.status[userId].slice(-maxSize);
+    }
+    deleteStatus(userId, messageId) {
+        if (this.status[userId]) {
+            this.status[userId] = this.status[userId].filter(
+                status => status.key.id !== messageId
+            );
+        }
+    }
     clearCache() {
         this.lidToJidCache.clear();
         this.contactsCache.clear();
@@ -273,6 +303,10 @@ class DBStore {
         this.cacheTimestamps.clear();
         this.pendingUpdates.contacts.clear();
         this.pendingUpdates.groups.clear();
+        this.messages = {};
+        this.conversations = {};
+        this.presences = {};
+        this.status = {};
     }
     clearGroupsCache() {
         this.groupMetadataCache.clear();

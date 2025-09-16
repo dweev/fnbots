@@ -158,12 +158,12 @@ export function randomByte(length = 32) {
   }
   return result;
 };
-export function mycmd(word) {
-  if (word.includes(';')) {
-    return word.split(/[;]+/).map(x => x.trim()).filter(Boolean);
+export async function mycmd(input) {
+  if (Array.isArray(input)) {
+    return input;
   }
-  return [word.trim()];
-};
+  return input.split(';').map(cmd => cmd.trim()).filter(cmd => cmd.length > 0);
+}
 export function msgs(a) {
   if (!a) return;
   return a.length >= 10 ? a.slice(0, 40) : a;

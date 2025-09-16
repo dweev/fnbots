@@ -124,7 +124,11 @@ const groupMetadataSchema = new mongoose.Schema({
     lastSynced: {
         type: Date,
         default: Date.now
-    }
+    },
+    updateCount: {
+        type: Number,
+        default: 0
+    },
 }, {
     timestamps: true,
     minimize: false

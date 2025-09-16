@@ -7,8 +7,8 @@
 // ─── Info main.js ────────────────────────
 
 import config from './config.js';
-import log from './src/utils/logger.js';
 import { isBug } from './src/utils/security.js';
+import log, { pinoLogger } from './src/utils/logger.js';
 import { randomByte, gifToWebp, imageToWebp, videoToWebp, getBuffer, getSizeMedia, deleteFile } from './src/utils/function.js';
 import { database, Settings, mongoStore, GroupMetadata } from './database/index.js';
 import { arfine, handleRestart, initializeFuse  } from './src/utils/handler.js';
@@ -31,7 +31,6 @@ import path from 'path';
 import util from 'util';
 import process from 'process';
 import { exec as cp_exec } from 'child_process';
-import pino from 'pino';
 import dayjs from 'dayjs';
 import fs from 'fs-extra';
 import axios from 'axios';
@@ -92,21 +91,6 @@ dayjs.extend(localizedFormat);
 global.tmpDir = './src/sampah';
 global.randomSuffix = randomByte(16);
 global.debugs = debugs;
-
-const pinoLogger = pino({
-    level: 'silent',
-    transport: {
-        target: 'pino-pretty',
-        options: {
-            colorize: true,
-            translateTime: 'SYS:dd-mm-yyyy HH:MM:ss',
-            ignore: 'pid,hostname',
-            depthLimit: 10,
-            maxExpandDepth: 10,
-            showHidden: true
-        }
-    }
-});
 
 async function initializeDatabases() {
     try {
@@ -654,7 +638,8 @@ async function updateMessageUpsert(fn, message) {
                 ownerNumber: config.ownerNumber,
                 version
             };
-            await arfine(fn, m, false, dependencies);
+            dependencies.isSuggestion = false;
+            await arfine(fn, m, dependencies);
         } catch (error) {
             await log(`Error updateMessageStore:\n${error}`, true);
         }

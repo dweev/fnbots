@@ -38,10 +38,6 @@ let _checkVIP           = false;
 let _checkPremium       = false;
 let _latestMessage      = null;
 let _latestMessages     = null;
-let helpMap             = {};
-for (const cat of config.commandCategories) {
-    helpMap[cat] = new Map();
-}
 
 const fuseOptions = { includeScore: true, threshold: 0.25, minMatchCharLength: 2, distance: 25 };
 
@@ -69,26 +65,32 @@ async function textMatch1(fn, m, lt, toId) {
     }
 };
 async function textMatch2(lt) {
+    if (Array.isArray(lt)) {
+        lt = lt.join(' ; ');
+    }
+    const commands = lt.split(';').map(cmd => cmd.trim()).filter(cmd => cmd.length > 0);
     const correctedCommands = [];
     let hasCorrections = false;
-    for (const typo of lt) {
-        const firstWord = typo.trim().split(/\s+/)[0].toLowerCase();
-        const results = fuse.search(firstWord);
-        if (results.length > 0) {
+    for (const command of commands) {
+        const parts = command.trim().split(/\s+/);
+        const commandName = parts[0].toLowerCase();
+        const args = parts.slice(1).join(' ');
+        const results = fuse.search(commandName);
+        if (results.length > 0 && results[0].score <= fuseOptions.threshold) {
             const bestMatch = results[0].item;
-            correctedCommands.push(bestMatch);
-            if (firstWord.toLowerCase() !== bestMatch.toLowerCase()) {
+            let correctedCommand = bestMatch;
+            if (args) {
+                correctedCommand += ' ' + args;
+            }
+            correctedCommands.push(correctedCommand);
+            if (commandName !== bestMatch) {
                 hasCorrections = true;
             }
         } else {
-            correctedCommands.push(firstWord);
+            correctedCommands.push(command);
         }
     }
-    const correctedString = correctedCommands.join(' | ');
-    if (hasCorrections) {
-        return correctedString;
-    }
-    return null;
+    return hasCorrections ? correctedCommands : null;
 };
 async function expiredCheck(fn, ownerNumber) {
     if (_checkPremium) return;
@@ -188,8 +190,8 @@ export async function handleRestart(reason) {
         process.exit(0);
     }
 };
-export async function arfine(fn, m, asu, { dbSettings, ownerNumber, version }) {
-    suggested = !!asu
+export async function arfine(fn, m, { dbSettings, ownerNumber, version, isSuggestion = false }) {
+    suggested = isSuggestion;
     _latestMessage = m;
     _latestMessages = m;
     await expiredCheck(fn, ownerNumber);
@@ -205,15 +207,16 @@ export async function arfine(fn, m, asu, { dbSettings, ownerNumber, version }) {
     const quotedParticipant = m.quoted?.sender || '';
     const mentionedJidList = Array.isArray(m.mentionedJid) ? m.mentionedJid : [];
 
-    const masterUser = await User.findOne({ userId: serial, isMaster: true });
-    const vipUser = await User.findOne({ userId: serial, isVIP: true, vipExpired: { $gt: new Date() }});
-    const premiumUser = await User.findOne({ userId: serial, isPremium: true, premiumExpired: { $gt: new Date() }});
-
+    let user = await User.findOne({ userId: serial });
+    if (!user) {
+        user = new User({ userId: serial });
+        await user.save();
+    }
     const botNumber = m.botnumber;
     const isSadmin = ownerNumber.includes(serial);
-    const isMaster = !!masterUser;
-    const isVIP = !!vipUser;
-    const isPremium = !!premiumUser;
+    const isMaster = user.isMaster;
+    const isVIP = user.isVIPActive;
+    const isPremium = user.isPremiumActive;
     const isWhiteList = await Whitelist.isWhitelisted(toId, 'group');
     const hakIstimewa = [isSadmin, isMaster, isVIP, isPremium].some(Boolean);
     const isBotGroupAdmins = m.isBotAdmin || false;
@@ -223,9 +226,6 @@ export async function arfine(fn, m, asu, { dbSettings, ownerNumber, version }) {
     const reactFail = async () => { await delay(1000); await fn.sendMessage(toId, { react: { text: '❎', key: m.key } }) };
     const sReply = (content, options = {}) => fn.sendReply(toId, content, { quoted: m, ...options });
     const sPesan = (content) => fn.sendPesan(toId, content, m);
-    const args = (body && body?.trim() !== "") ? (body?.slice(dbSettings.rname.length).trim().split(/ +/).slice(1) || body?.slice(dbSettings.sname.length).trim().split(/ +/).slice(1)) : [];
-    const arg = body?.includes(' ') ? body?.trim().substring(body?.indexOf(' ') + 1) : '';
-    const ar = args.map((v) => v.toLowerCase());
     let txt = body?.toLowerCase();
     const isCmd = txt?.startsWith(dbSettings.rname) || txt?.startsWith(dbSettings.sname);
     try {
@@ -270,11 +270,12 @@ export async function arfine(fn, m, asu, { dbSettings, ownerNumber, version }) {
             chainingCommands = await mycmd(await getTxt(txt, dbSettings));
             async function executeCommandChain(commandList) {
                 const failedCommands = [];
-                for (const aa of commandList) {
+                log(`Mengeksekusi chain commands: ${JSON.stringify(commandList)}`);
+                for (const currentCommand of commandList) {
                     let commandFound = false;
-                    txt = aa;
-                    const commandName = txt.split(' ')[0].toLowerCase();
+                    const commandName = currentCommand.split(' ')[0].toLowerCase();
                     const command = pluginCache.commands.get(commandName);
+                    log(`Memproses command: ${commandName} -> ${command ? 'Ditemukan' : 'Tidak Ditemukan'}`);
                     if (command) {
                         try {
                             let hasAccess = false;
@@ -299,14 +300,15 @@ export async function arfine(fn, m, asu, { dbSettings, ownerNumber, version }) {
                                 }
                             }
                             if (hasAccess) {
-                                const args = txt.split(' ').slice(1);
+                                const args = currentCommand.split(' ').slice(1);
+                                const fullArgs = args.join(' ');
                                 const commandArgs = {
                                     fn, m, dbSettings, ownerNumber, version,
                                     isSadmin, isMaster, isVIP, isPremium,
                                     isWhiteList, hakIstimewa, isBotGroupAdmins,
                                     sPesan, sReply, reactDone, reactFail, toId,
                                     quotedMsg, quotedParticipant, mentionedJidList,
-                                    body, args, arg, ar, handleRestart, command,
+                                    body, args, arg: fullArgs, ar: args, handleRestart, command,
                                     serial
                                 };
                                 await command.execute(commandArgs);
@@ -316,13 +318,14 @@ export async function arfine(fn, m, asu, { dbSettings, ownerNumber, version }) {
                         } catch (error) {
                             await sReply(`Terjadi kesalahan saat menjalankan perintah "${command.name}": ${error.message}`);
                             log(`Error executing command ${command.name}:\n${error}`, true);
-                            failedCommands.push(aa);
+                            failedCommands.push(currentCommand);
                         }
                     } else {
-                        failedCommands.push(aa);
+                        log(`Command tidak ditemukan: ${commandName}`);
+                        failedCommands.push(currentCommand);
                     }
                     if (commandFound) {
-                        const msgPreview = msgs(aa);
+                        const msgPreview = msgs(currentCommand);
                         if (msgPreview === undefined) continue;
                         const parts = [color(msgPreview, "#32CD32"), color('from', "#a8dffb"), color(pushname, '#FFA500'), ...(m.isGroup ? [color('in', '#a8dffb'), color(m.metadata?.subject, "#00FFFF")] : [])];
                         const formatted = parts.join(' ');
@@ -345,15 +348,27 @@ export async function arfine(fn, m, asu, { dbSettings, ownerNumber, version }) {
                         sban.add(usr);
                     }
                 } else {
-                    setTimeout(() => { counter--; }, 1500);
+                    setTimeout(() => { counter--; }, 1000);
                     recentcmd.add(usr);
-                    setTimeout(() => { recentcmd.delete(usr); fspamm.delete(usr); }, 3000);
+                    setTimeout(() => { recentcmd.delete(usr); }, 1000);
+                    setTimeout(() => { fspamm.delete(usr); }, 10000);
                     setTimeout(() => { sban.delete(usr); }, 900000);
                     const failedCommands = await executeCommandChain(chainingCommands);
                     if (failedCommands.length > 0 && dbSettings.autocorrect === 2 && !suggested) {
-                        const correctedText = await textMatch2(failedCommands);
-                        if (correctedText) {
-                            await executeCommandChain(await mycmd(await getTxt(correctedText, dbSettings)));
+                        const correctedCommands = [];
+                        let hasCorrections = false;
+                        for (const failedCommand of failedCommands) {
+                            const corrected = await textMatch2(failedCommand);
+                            if (corrected && Array.isArray(corrected)) {
+                                correctedCommands.push(...corrected);
+                                hasCorrections = true;
+                            } else {
+                                correctedCommands.push(failedCommand);
+                            }
+                        }
+                        if (hasCorrections) {
+                            log(`Perintah dikoreksi: ${JSON.stringify(correctedCommands)}`);
+                            await executeCommandChain(correctedCommands);
                         }
                     } else if (failedCommands.length > 0 && dbSettings.autocorrect === 1 && !m._textmatch_done) {
                         await textMatch1(fn, m, failedCommands, toId);

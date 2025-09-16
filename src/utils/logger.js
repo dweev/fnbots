@@ -12,29 +12,6 @@ import process from 'process';
 import util from 'util';
 
 const logFilePath = path.join(process.cwd(), 'logs');
-const pinoLogger = pino(pino.transport({
-  targets: [
-    {
-      level: 'info',
-      target: 'pino-pretty',
-      options: {
-        colorize: true,
-        translateTime: 'SYS:dd-mm-yyyy HH:MM:ss',
-        ignore: 'pid,hostname',
-      },
-    },
-    {
-      level: 'info',
-      target: 'pino-roll',
-      options: {
-        file: path.join(logFilePath, 'app.log'),
-        frequency: 'daily',
-        size: '10M',
-        mkdir: true,
-      },
-    },
-  ],
-}));
 
 const blockedKeywords = [
   "WARNING: Expected pubkey of length 33, please report the ST and client that generated the pubkey",
@@ -51,6 +28,33 @@ const blockedKeywords = [
   "Removing old closed session:",
   "Closing session:"
 ];
+
+export const pinoLogger = pino(pino.transport({
+  targets: [
+    {
+      level: 'info',
+      target: 'pino-pretty',
+      options: {
+        colorize: true,
+        translateTime: 'SYS:dd-mm-yyyy HH:MM:ss',
+        ignore: 'pid,hostname',
+        depthLimit: 10,
+        maxExpandDepth: 10,
+        showHidden: true
+      }
+    },
+    {
+      level: 'info',
+      target: 'pino-roll',
+      options: {
+        file: path.join(logFilePath, 'app.log'),
+        frequency: 'daily',
+        size: '10M',
+        mkdir: true,
+      },
+    },
+  ],
+}));
 
 export default async function log(message, isError = false) {
   const textMessage = typeof message === 'string' ? message : util.inspect(message, { depth: 1 });

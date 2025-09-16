@@ -108,6 +108,9 @@ import Command from '../src/models/Command.js';
 import Settings from '../src/models/Settings.js';
 import Whitelist from '../src/models/Whitelist.js';
 import GroupMetadata from '../src/models/GroupMetadata.js';
+import DatabaseBot from '../src/models/DatabaseBot.js'
+import Messages from '../src/models/Messages.js';
+import Story from '../src/models/Story.js';
 
 export {
     database,
@@ -118,5 +121,8 @@ export {
     Command,
     Settings,
     Whitelist,
-    GroupMetadata
+    GroupMetadata,
+    DatabaseBot,
+    Messages,
+    Story
 };

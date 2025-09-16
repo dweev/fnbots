@@ -53,6 +53,11 @@ const settingsSchema = new mongoose.Schema({
   autocommand: {
     type: String,
     default: ''
+  },
+  autocorrect: {
+    type: Number,
+    default: 0,
+    enum: [0, 1, 2]
   }
 }, {
   timestamps: true

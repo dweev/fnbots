@@ -10,9 +10,9 @@ import config from './config.js';
 import log from './src/utils/logger.js';
 import { isBug } from './src/utils/security.js';
 import { randomByte, gifToWebp, imageToWebp, videoToWebp, getBuffer, getSizeMedia, deleteFile } from './src/utils/function.js';
+import { arfine, handleRestart, initializeFuse  } from './src/utils/handler.js';
 import { database, Settings, mongoStore } from './database/index.js';
 import { AuthStore, BaileysSession } from './database/auth.js';
-import { arfine, handleRestart } from './src/utils/handler.js';
 import { loadPlugins } from './src/utils/plugins.js';
 import { dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -586,7 +586,7 @@ async function clientBot(fn) {
         return data;
     };
     fn.sendGroupInvite = async (jid, participant, inviteCode, inviteExpiration, groupName = 'Unknown Subject', caption = 'Invitation to join my WhatsApp group', jpegThumbnail = null, options = {}) => {
-        const msg = proto.Message.fromObject({
+        const msg = proto.Message.create({
             groupInviteMessage: {
                 inviteCode,
                 inviteExpiration: parseInt(inviteExpiration) || + new Date(new Date + (3 * 86400000)),
@@ -654,7 +654,7 @@ async function updateMessageUpsert(fn, message) {
                 ownerNumber: config.ownerNumber,
                 version
             };
-            await arfine(fn, m, dependencies);
+            await arfine(fn, m, false, dependencies);
         } catch (error) {
             await log(`Error updateMessageStore:\n${error}`, true);
         }
@@ -980,6 +980,7 @@ async function starts() {
     try {
         await initializeDatabases();
         await loadPlugins(path.join(__dirname, 'src', 'plugins'));
+        await initializeFuse();
         version = await getBaileysVersion();
         const { state, saveCreds } = await AuthStore();
         const fn = makeWASocket({

@@ -12,7 +12,7 @@ import { User, Group, Whitelist, Settings } from '../../database/index.js';
 import log from './logger.js';
 import util from 'util';
 import path from 'path';
-import { LRUCache } from 'lru-cache';
+import Fuse from 'fuse.js';
 import { delay } from 'baileys';
 import { spawn } from 'child_process';
 import { exec as cp_exec } from 'child_process';
@@ -24,22 +24,72 @@ const MAX_RECONNECT_ATTEMPTS = 5;
 const RECONNECT_DELAY_MS = 5000;
 
 const localFilePrefix = 'local-file://';
-const recentcmd = new LRUCache({ max: 1000, maxAge: 30000 });
-const fspamm = new LRUCache({ max: 500, maxAge: 900000 });
-const sban = new LRUCache({ max: 200, maxAge: 900000 });
 
-let mygroup = [];
-let chainingCommands = [];
-let counter = 0;
-let _checkVIP = false;
-let _checkPremium = false;
-let _latestMessage = null;
-let _latestMessages = null;
-let helpMap = {};
+let fuse;
+let recentcmd           = new Set();
+let fspamm              = new Set();
+let sban                = new Set();
+let allCmds             = [];
+let mygroup             = [];
+let chainingCommands    = [];
+let counter             = 0;
+let suggested           = false;
+let _checkVIP           = false;
+let _checkPremium       = false;
+let _latestMessage      = null;
+let _latestMessages     = null;
+let helpMap             = {};
 for (const cat of config.commandCategories) {
     helpMap[cat] = new Map();
 }
 
+const fuseOptions = { includeScore: true, threshold: 0.25, minMatchCharLength: 2, distance: 25 };
+
+async function textMatch1(fn, m, lt, toId) {
+    const suggestions = [];
+    const seenTypo = new Set();
+    for (const typo of lt) {
+        const firstWord = typo.trim().split(/\s+/)[0].toLowerCase();
+        if (allCmds.includes(firstWord) || seenTypo.has(firstWord)) continue;
+        seenTypo.add(firstWord);
+        const results = fuse.search(firstWord);
+        if (results.length > 0) {
+            const bestMatch = results[0].item;
+            if (bestMatch !== firstWord) {
+                suggestions.push({ from: firstWord, to: bestMatch });
+            }
+        }
+    }
+    if (suggestions.length > 0) {
+        const suggestionText = [
+            "*Mungkinkah yang kamu maksud:*",
+            ...suggestions.map(s => `• ${s.from} → ${s.to}`)
+        ].join("\n");
+        await fn.sendPesan(toId, suggestionText, m);
+    }
+};
+async function textMatch2(lt) {
+    const correctedCommands = [];
+    let hasCorrections = false;
+    for (const typo of lt) {
+        const firstWord = typo.trim().split(/\s+/)[0].toLowerCase();
+        const results = fuse.search(firstWord);
+        if (results.length > 0) {
+            const bestMatch = results[0].item;
+            correctedCommands.push(bestMatch);
+            if (firstWord.toLowerCase() !== bestMatch.toLowerCase()) {
+                hasCorrections = true;
+            }
+        } else {
+            correctedCommands.push(firstWord);
+        }
+    }
+    const correctedString = correctedCommands.join(' | ');
+    if (hasCorrections) {
+        return correctedString;
+    }
+    return null;
+};
 async function expiredCheck(fn, ownerNumber) {
     if (_checkPremium) return;
     _checkPremium = true;
@@ -103,6 +153,14 @@ async function sendAndCleanupFile(fn, toId, localPath, m, dbSettings) {
     }
 };
 
+export const updateMyGroup = (newGroupList) => {
+    mygroup = newGroupList;
+};
+export async function initializeFuse() {
+    allCmds = Array.from(pluginCache.commands.keys());
+    fuse = new Fuse(allCmds, fuseOptions);
+    log('Fuse.js berhasil diinisialisasi dengan ' + allCmds.length + ' perintah.');
+};
 export async function handleRestart(reason) {
     const currentRestarts = config.restartAttempts;
     const nextAttempt = currentRestarts + 1;
@@ -130,7 +188,8 @@ export async function handleRestart(reason) {
         process.exit(0);
     }
 };
-export async function arfine(fn, m, { dbSettings, ownerNumber, version }) {
+export async function arfine(fn, m, asu, { dbSettings, ownerNumber, version }) {
+    suggested = !!asu
     _latestMessage = m;
     _latestMessages = m;
     await expiredCheck(fn, ownerNumber);
@@ -147,7 +206,7 @@ export async function arfine(fn, m, { dbSettings, ownerNumber, version }) {
     const mentionedJidList = Array.isArray(m.mentionedJid) ? m.mentionedJid : [];
 
     const masterUser = await User.findOne({ userId: serial, isMaster: true });
-    const vipUser = await User.findOne({ userId: serial, isVIP: true, vipExpired: { $gt: new Date() } });
+    const vipUser = await User.findOne({ userId: serial, isVIP: true, vipExpired: { $gt: new Date() }});
     const premiumUser = await User.findOne({ userId: serial, isPremium: true, premiumExpired: { $gt: new Date() }});
 
     const botNumber = m.botnumber;
@@ -171,30 +230,32 @@ export async function arfine(fn, m, { dbSettings, ownerNumber, version }) {
     const isCmd = txt?.startsWith(dbSettings.rname) || txt?.startsWith(dbSettings.sname);
     try {
         if (fromBot || (serial === botNumber)) return;
-        if (m.isGroup) {
-            const isPrivileged = isBotGroupAdmins && [isSadmin, isMaster, isVIP, isPremium, isBotGroupAdmins].some(Boolean);
-            const groupSettings = await Group.findOne({ groupId: toId });
-            if (groupSettings?.antiHidetag) {
-                if (m.mentionedJid?.length === m.metadata.participants.length && !isPrivileged) {
-                    await fn.sendMessage(toId, { delete: { remoteJid: toId, fromMe: false, id: id, participant: serial } });
+        if (m.isGroup && !isCmd) {
+            const isPrivileged = isBotGroupAdmins && [isSadmin, isMaster, isVIP, isPremium].some(Boolean);
+            const groupSettings = await Group.findOne({ groupId: toId }).lean();
+            if (groupSettings) {
+                if (groupSettings.antiHidetag) {
+                    if (m.mentionedJid?.length === m.metadata.participants.length && !isPrivileged) {
+                        await fn.sendMessage(toId, { delete: { remoteJid: toId, fromMe: false, id: id, participant: serial } });
+                    }
                 }
-            }
-            if (groupSettings?.antiTagStory) {
-                if (m.type === 'groupStatusMentionMessage' || m.message?.groupStatusMentionMessage || m.message?.protocolMessage?.type === 25 || (Object.keys(m.message).length === 1 && Object.keys(m.message)[0] === 'messageContextInfo')) {
-                    if (!isPrivileged && !fromBot) {
-                        try {
-                            await fn.sendMessage(toId, { delete: { remoteJid: toId, fromMe: false, id: id, participant: serial } });
-                            await fn.removeParticipant(toId, [serial]);
-                        } catch (error) {
-                            await log(`Error_kick_antitagSW:\n${error}`, true);
+                if (groupSettings.antiTagStory) {
+                    if (m.type === 'groupStatusMentionMessage' || m.message?.groupStatusMentionMessage || m.message?.protocolMessage?.type === 25 || (Object.keys(m.message).length === 1 && Object.keys(m.message)[0] === 'messageContextInfo')) {
+                        if (!isPrivileged && !fromBot) {
+                            try {
+                                await fn.sendMessage(toId, { delete: { remoteJid: toId, fromMe: false, id: id, participant: serial } });
+                                await fn.removeParticipant(toId, serial);
+                            } catch (error) {
+                                await log(`Error_kick_antitagSW:\n${error}`, true);
+                            }
                         }
                     }
                 }
-            }
-            if (groupSettings?.antilink) {
-                if (body?.includes('chat.whatsapp.com') && !isPrivileged) {
-                    await fn.sendMessage(toId, { delete: { remoteJid: toId, fromMe: false, id: id, participant: serial } });
-                    await fn.removeParticipant(toId, [serial]);
+                if (groupSettings.antilink) {
+                    if (body?.includes('chat.whatsapp.com') && !isPrivileged) {
+                        await fn.sendMessage(toId, { delete: { remoteJid: toId, fromMe: false, id: id, participant: serial } });
+                        await fn.removeParticipant(toId, serial);
+                    }
                 }
             }
         }
@@ -215,34 +276,39 @@ export async function arfine(fn, m, { dbSettings, ownerNumber, version }) {
                     const commandName = txt.split(' ')[0].toLowerCase();
                     const command = pluginCache.commands.get(commandName);
                     if (command) {
-                        const args = txt.split(' ').slice(1);
-                        const commandArgs = {
-                            fn, m, dbSettings, ownerNumber, version,
-                            isSadmin, isMaster, isVIP, isPremium,
-                            isWhiteList, hakIstimewa, isBotGroupAdmins,
-                            sPesan, sReply, reactDone, reactFail, toId,
-                            quotedMsg, quotedParticipant, mentionedJidList,
-                            body, args, arg, ar, handleRestart, command,
-                            serial
-                        };
                         try {
-                            if (!isSadmin && !isMaster && !(isWhiteList && (isVIP || isPremium))) {
-                                continue;
-                            } else if (command.category === 'master' && !isSadmin) {
-                                continue;
-                            } else if (command.category === 'owner' && !(isSadmin || isMaster)) {
-                                continue;
-                            } else if (command.category === 'vip' && !(isSadmin || isMaster || (isWhiteList && isVIP))) {
-                                continue;
-                            } else if (command.category === 'premium' && !(isSadmin || isMaster || (isWhiteList && (isVIP || isPremium)))) {
-                                continue;
-                            } else if (command.category === 'manage' && !(isSadmin || isMaster || (isWhiteList && (isVIP || isPremium)))) {
-                                continue;
-                            } else if (command.category === 'manage' && m.isGroup) {
-                                continue;
-                            } else if (command.category === 'util' && !(isSadmin || isMaster || (isWhiteList && (isVIP || isPremium)))) {
-                                continue;
-                            } else {
+                            let hasAccess = false;
+                            if (isSadmin) {
+                                hasAccess = true;
+                            }
+                            if (isMaster) {
+                                if (command.category !== 'master') {
+                                    hasAccess = true;
+                                }
+                            }
+                            if (isWhiteList) {
+                                switch (command.category) {
+                                    case 'vip':
+                                        if (isVIP) hasAccess = true;
+                                        break;
+                                    case 'premium':
+                                    case 'util':
+                                    case 'manage':
+                                        if (isPremium || isVIP) hasAccess = true;
+                                        break;
+                                }
+                            }
+                            if (hasAccess) {
+                                const args = txt.split(' ').slice(1);
+                                const commandArgs = {
+                                    fn, m, dbSettings, ownerNumber, version,
+                                    isSadmin, isMaster, isVIP, isPremium,
+                                    isWhiteList, hakIstimewa, isBotGroupAdmins,
+                                    sPesan, sReply, reactDone, reactFail, toId,
+                                    quotedMsg, quotedParticipant, mentionedJidList,
+                                    body, args, arg, ar, handleRestart, command,
+                                    serial
+                                };
                                 await command.execute(commandArgs);
                                 commandFound = true;
                                 await Settings.incrementTotalHitCount();
@@ -270,57 +336,35 @@ export async function arfine(fn, m, { dbSettings, ownerNumber, version }) {
                 counter++;
                 if (botNumber === serial) return;
                 const usr = serial;
-                recentcmd.set(usr, Date.now());
                 if ((recentcmd.has(usr) || sban.has(usr)) && !isSadmin) {
-                    if (!fspamm.has(usr)) {
+                    if (!(fspamm.has(usr) || sban.has(usr))) {
                         await sReply(`*Hei @${usr.split('@')[0]} you are on cooldown!*`);
-                        fspamm.set(usr, Date.now());
+                        fspamm.add(usr);
                     } else if (!sban.has(usr)) {
                         await sReply(`*Hei @${usr.split('@')[0]}*\n*COMMAND SPAM DETECTED*\n*Command banned for 15 minutes*`);
-                        sban.set(usr, Date.now());
+                        sban.add(usr);
                     }
                 } else {
                     setTimeout(() => { counter--; }, 1500);
+                    recentcmd.add(usr);
+                    setTimeout(() => { recentcmd.delete(usr); fspamm.delete(usr); }, 3000);
+                    setTimeout(() => { sban.delete(usr); }, 900000);
                     const failedCommands = await executeCommandChain(chainingCommands);
-                    if (failedCommands.length > 0) {
-                        return;
+                    if (failedCommands.length > 0 && dbSettings.autocorrect === 2 && !suggested) {
+                        const correctedText = await textMatch2(failedCommands);
+                        if (correctedText) {
+                            await executeCommandChain(await mycmd(await getTxt(correctedText, dbSettings)));
+                        }
+                    } else if (failedCommands.length > 0 && dbSettings.autocorrect === 1 && !m._textmatch_done) {
+                        await textMatch1(fn, m, failedCommands, toId);
+                        m._textmatch_done = true;
                     }
                 }
             } else {
                 await sReply("🏃💨 Bot sedang sibuk, coba lagi dalam beberapa saat...");
                 setTimeout(() => { counter = 0; }, 6000);
             }
-        } else {
-            if (isSadmin || isMaster || (isWhiteList && hakIstimewa)) {
-                if (m.isGroup) {
-                    const isPrivileged = isBotGroupAdmins && [isSadmin, isMaster, isVIP, isPremium, isBotGroupAdmins].some(Boolean);
-                    const groupSettings = await Group.findOne({ groupId: toId });
-                    if (groupSettings?.antiHidetag) {
-                        if (m.mentionedJid?.length === m.metadata.participants.length && !isPrivileged) {
-                            await fn.sendMessage(toId, { delete: { remoteJid: toId, fromMe: false, id: id, participant: serial } });
-                        }
-                    }
-                    if (groupSettings?.antiTagStory) {
-                        if (m.type === 'groupStatusMentionMessage' || m.message?.groupStatusMentionMessage || m.message?.protocolMessage?.type === 25 || (Object.keys(m.message).length === 1 && Object.keys(m.message)[0] === 'messageContextInfo')) {
-                            if (!isPrivileged && !fromBot) {
-                                try {
-                                    await fn.sendMessage(toId, { delete: { remoteJid: toId, fromMe: false, id: id, participant: serial } });
-                                    await fn.removeParticipant(toId, [serial]);
-                                } catch (error) {
-                                    await log(`Error_kick_antitagSW:\n${error}`, true);
-                                }
-                            }
-                        }
-                    }
-                    if (groupSettings?.antilink) {
-                        if (body?.includes('chat.whatsapp.com') && !isPrivileged) {
-                            await fn.sendMessage(toId, { delete: { remoteJid: toId, fromMe: false, id: id, participant: serial } });
-                            await fn.removeParticipant(toId, [serial]);
-                        }
-                    }
-                };
-            };
-        };
+        }
     } catch (error) {
         await log(`!!! ERROR DI DALAM ARFINE !!!\n${error}`, true);
     };

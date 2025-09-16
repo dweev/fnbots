@@ -11,36 +11,42 @@ import { User, Command, Group } from '../../database/index.js';
 export const command = {
     name: 'settings',
     category: 'owner',
-    description: 'Melihat settings Bot.',
+    description: 'Melihat info pengaturan bot.',
     aliases: ['set'],
     execute: async ({ m, toId, sReply, dbSettings }) => {
         const messageParts = [];
-        const globalFlags = [
-            { label: "Maintenance", value: dbSettings.maintenance }
-        ];
         let globalSettingsText = "*- Bot Config -*\n";
+        const globalFlags = [
+            { label: "Maintenance", value: dbSettings.maintenance },
+            { label: "Auto Correct", value: dbSettings.autocorrect }
+        ];
         for (const { label, value } of globalFlags) {
             const icon = value ? "⚙" : "⚔";
-            const valueText = (typeof value === 'string' || typeof value === 'number') ? ` : ${value}` : '';
-            globalSettingsText += `\n${icon} ${label}${valueText}`;
+            const valueText = typeof value === 'boolean' ? (value ? 'On' : 'Off') : value;
+            globalSettingsText += `\n${icon} ${label} : ${valueText}`;
         }
         if (m.isGroup) {
             let groupSettingsText = "*- Group Config -*\n";
-            const group = await Group.findOne({ groupId: toId });
-            if (group) {
-                const groupFeatures = [
-                    { label: "Anti Tag Story", value: group.antiTagStory },
-                    { label: "Anti Link", value: group.antilink },
-                    { label: "Anti Hidetag", value: group.antiHidetag }
-                ];
-                for (const feature of groupFeatures) {
-                    const icon = feature.value ? "⚙" : "⚔";
-                    groupSettingsText += `\n${icon} ${feature.label}`;
-                }
+            const groupData = await Group.findOne({ groupId: toId }).lean();
+            const defaultGroupSettings = {
+                antiTagStory: false,
+                antilink: false,
+                antiHidetag: false
+            };
+            const currentSettings = { ...defaultGroupSettings, ...groupData };
+            const groupFeatures = [
+                { label: "Anti Tag Story", value: currentSettings.antiTagStory },
+                { label: "Anti Link", value: currentSettings.antilink },
+                { label: "Anti Hidetag", value: currentSettings.antiHidetag }
+            ];
+            for (const feature of groupFeatures) {
+                const icon = feature.value ? "⚙" : "⚔";
+                const status = feature.value ? 'On' : 'Off';
+                groupSettingsText += `\n${icon} ${feature.label} : ${status}`;
             }
             messageParts.push(groupSettingsText);
         }
-        globalSettingsText += "\n\n" + dbSettings.autocommand;
+        globalSettingsText += `\n\n${dbSettings.autocommand || 'Tidak diatur'}`;
         messageParts.push(globalSettingsText);
         const finalReply = messageParts.join('\n\n');
         await sReply(finalReply);

@@ -13,7 +13,7 @@ export const command = {
     category: 'manage',
     description: 'Mengeluarkan anggota dari grup.',
     aliases: ['tendang', 'pancal', 'gajul'],
-    execute: async ({ fn, m, toId, sReply, isBotGroupAdmins, quotedMsg, mentionedJidList, isSadmin, reactDone }) => {
+    execute: async ({ fn, m, toId, sReply, isBotGroupAdmins, quotedMsg, mentionedJidList, ownerNumber, reactDone }) => {
         if (!m.isGroup) throw new Error(`Perintah ini hanya bisa digunakan di grup.`);
         if (!isBotGroupAdmins) throw new Error(`Bot harus menjadi admin grup untuk menjalankan perintah ini.`);
         let targets = [];
@@ -28,16 +28,16 @@ export const command = {
         const metadata = await fn.groupMetadata(toId);
         const groupAdmins = metadata?.participants?.filter(p => p.admin) || [];
         for (const jid of targets) {
-            if (groupAdmins.some(admin => admin.id === jid) || isSadmin) {
+            if (groupAdmins.some(admin => admin.id === jid) || ownerNumber.includes(jid)) {
                 failedUsers.push(jid);
                 continue;
             }
             await fn.removeParticipant(toId, jid);
+            await reactDone();
         }
         if (failedUsers.length > 0) {
             await sReply(`Gagal kick beberapa user karena mereka memiliki privilege: ${failedUsers.map(jid => `@${jid.split('@')[0]}`).join(', ')}`);
         }
-        await reactDone();
         await Command.findOneAndUpdate({ name: command.name }, { $inc: { count: 1 } }, { upsert: true });
         await User.findOneAndUpdate({ userId: m.sender }, { $inc: { [`commandStats.${command.name}`]: 1 } }, { upsert: true });
     }

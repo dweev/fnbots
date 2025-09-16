@@ -676,69 +676,107 @@ async function updateMessageUpsert(fn, message) {
     }
 };
 async function groupParticipantsUpdate({ id, participants, action }, fn) {
+    log(`Event: group-participants.update | Aksi: ${action} | Grup: ${id}`);
     try {
         const botJid = jidNormalizedUser(fn.user.id);
-        const metadata = await mongoStore.getGroupMetadata(id);
-        if (!metadata) {
-            const freshMetadata = await fn.groupMetadata(id);
-            if (freshMetadata) {
-                await mongoStore.updateGroupMetadata(id, freshMetadata);
-                if (freshMetadata.participants) {
-                    for (const participant of freshMetadata.participants) {
-                        const contactJid = jidNormalizedUser(participant.id);
-                        const contactName = await fn.getName(contactJid);
-                        await updateContact(contactJid, { lid: participant.lid, name: contactName });
-                    }
-                }
-            }
-            return;
-        }
-        if (action === 'add' || action === 'remove') {
-            if (action === 'remove') {
+        switch (action) {
+            case 'add': {
+                let isBotAdded = false;
                 for (const userId of participants) {
-                    let leaveMemberJid;
-                    if (userId.endsWith('@lid')) {
-                        leaveMemberJid = await mongoStore.findJidByLid(userId);
-                    } else {
-                        leaveMemberJid = jidNormalizedUser(userId);
-                    }
-                    if (leaveMemberJid.includes(botJid)) {
-                        await mongoStore.updateGroupMetadata(id, {});
-                        return;
+                    const addedMemberJid = userId.endsWith('@lid') ?
+                        await mongoStore.findJidByLid(userId) : jidNormalizedUser(userId);
+                    if (addedMemberJid && addedMemberJid === botJid) {
+                        isBotAdded = true;
+                        break;
                     }
                 }
+                if (isBotAdded) {
+                    try {
+                        const freshMetadata = await fn.groupMetadata(id);
+                        if (freshMetadata) {
+                            await mongoStore.updateGroupMetadata(id, freshMetadata);
+                            const botParticipant = freshMetadata.participants.find(p => p.id === botJid || jidNormalizedUser(p.id) === botJid);
+                            if (botParticipant && botParticipant.admin) {
+                                log(`Bot adalah admin di grup ${id}. Siap untuk operasi.`);
+                            } else {
+                                log(`Bot bukan admin di grup ${id}.`);
+                            }
+                        }
+                    } catch (metadataError) {
+                        log(`Gagal mendapatkan metadata grup setelah bot ditambahkan: ${metadataError}`, true);
+                    }
+                } else {
+                    const freshMetadata = await fn.groupMetadata(id);
+                    if (freshMetadata) await mongoStore.updateGroupMetadata(id, freshMetadata);
+                }
+                break;
             }
-            const freshMetadata = await fn.groupMetadata(id);
-            if (freshMetadata) {
-                await mongoStore.updateGroupMetadata(id, freshMetadata);
-                if (freshMetadata.participants) {
-                    for (const participant of freshMetadata.participants) {
-                        const contactJid = jidNormalizedUser(participant.id);
-                        const contactName = await fn.getName(contactJid);
-                        await updateContact(contactJid, { lid: participant.lid, name: contactName });
+            case 'remove': {
+                let isBotRemoved = false;
+                for (const userId of participants) {
+                    const leaveMemberJid = userId.endsWith('@lid') ? await mongoStore.findJidByLid(userId) : jidNormalizedUser(userId);
+                    if (leaveMemberJid && leaveMemberJid === botJid) {
+                        isBotRemoved = true;
+                        break;
                     }
                 }
+                if (isBotRemoved) {
+                    log(`Bot dikeluarkan dari grup ${id}. Membersihkan metadata...`);
+                    await GroupMetadata.deleteOne({ groupId: id });
+                    mongoStore.clearGroupCacheByKey(id);
+                    return;
+                } else {
+                    const freshMetadata = await fn.groupMetadata(id);
+                    if (freshMetadata) await mongoStore.updateGroupMetadata(id, freshMetadata);
+                }
+                break;
+            }
+            case 'promote':
+            case 'demote': {
+                let isBotAffected = false;
+                for (const userId of participants) {
+                    const affectedMemberJid = userId.endsWith('@lid') ? await mongoStore.findJidByLid(userId) : jidNormalizedUser(userId);
+                    if (affectedMemberJid && affectedMemberJid === botJid) {
+                        isBotAffected = true;
+                        break;
+                    }
+                }
+                if (isBotAffected) {
+                    try {
+                        const freshMetadata = await fn.groupMetadata(id);
+                        if (freshMetadata) await mongoStore.updateGroupMetadata(id, freshMetadata);
+                    } catch (metadataError) {
+                        log(`Gagal mendapatkan metadata grup setelah perubahan admin: ${metadataError}`, true);
+                    }
+                } else {
+                    const newStatus = action === 'promote' ? 'admin' : null;
+                    const currentMetadata = await mongoStore.getGroupMetadata(id);
+                    if (currentMetadata && currentMetadata.participants) {
+                        let metadataChanged = false;
+                        currentMetadata.participants.forEach(p => {
+                            if (participants.includes(p.id)) {
+                                p.admin = newStatus;
+                                metadataChanged = true;
+                            }
+                        });
+                        if (metadataChanged) {
+                            await mongoStore.updateGroupMetadata(id, currentMetadata);
+                        }
+                    }
+                }
+                break;
             }
         }
-        if (action === 'promote' || action === 'demote') {
-            const newStatus = action === 'promote' ? 'admin' : null;
-            const currentMetadata = await mongoStore.getGroupMetadata(id);
-            if (currentMetadata && currentMetadata.participants) {
-                currentMetadata.participants.forEach(p => {
-                    if (participants.includes(p.id)) {
-                        p.admin = newStatus;
-                    }
-                });
-                await mongoStore.updateGroupMetadata(id, currentMetadata);
-                for (const participant of currentMetadata.participants) {
-                    const contactJid = jidNormalizedUser(participant.id);
-                    const contactName = await fn.getName(contactJid);
-                    await updateContact(contactJid, { lid: participant.lid, name: contactName });
+        const finalMetadata = await mongoStore.getGroupMetadata(id);
+        if (finalMetadata && finalMetadata.participants) {
+            for (const participant of finalMetadata.participants) {
+                if (participant.id && participant.lid) {
+                    await updateContact(participant.id, { lid: participant.lid });
                 }
             }
         }
     } catch (error) {
-        await log(`Error groupParticipantsUpdate:\n${error}`, true);
+        log(`Error saat menangani group-participants.update untuk ${id}:\n${error}`, true);
     }
 };
 async function serializeMessage(fn, msg) {
@@ -1069,7 +1107,7 @@ async function starts() {
                     } catch (error) {
                         await log(`Terjadi kesalahan saat sinkronisasi data grup: ${error}`, true);
                     }
-                    await log(`WA Version: ${version}`);
+                    await log(`WA Version: ${version.join('.')}`);
                     await log(`BOT Number: ${jidNormalizedUser(fn.user.id).split('@')[0]}`);
                     await log(`${dbSettings.botName} Berhasil tersambung ke whatsapp...`);
                     if (config.restartAttempts > 0) {

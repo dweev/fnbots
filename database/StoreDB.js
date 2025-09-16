@@ -341,6 +341,13 @@ class DBStore {
             return null;
         }
     }
+    clearGroupCacheByKey(groupId) {
+        if (this.groupMetadataCache.has(groupId)) {
+            this.groupMetadataCache.delete(groupId);
+            this.cacheHits.delete(groupId);
+            this.cacheTimestamps.delete(groupId);
+        }
+    }
 }
 
 export default new DBStore();

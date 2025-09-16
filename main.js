@@ -10,8 +10,8 @@ import config from './config.js';
 import log from './src/utils/logger.js';
 import { isBug } from './src/utils/security.js';
 import { randomByte, gifToWebp, imageToWebp, videoToWebp, getBuffer, getSizeMedia, deleteFile } from './src/utils/function.js';
+import { database, Settings, mongoStore, GroupMetadata } from './database/index.js';
 import { arfine, handleRestart, initializeFuse  } from './src/utils/handler.js';
-import { database, Settings, mongoStore } from './database/index.js';
 import { AuthStore, BaileysSession } from './database/auth.js';
 import { loadPlugins } from './src/utils/plugins.js';
 import { dirname } from 'path';
@@ -1050,7 +1050,25 @@ async function starts() {
                         await Settings.updateSettings(dbSettings);
                     }
                     await log(`Menghubungkan ke WhatsApp...`);
-                    await fn.groupFetchAllParticipating();
+                    const participatingGroups = await fn.groupFetchAllParticipating();
+                    await log('Memulai sinkronisasi data grup...');
+                    try {
+                        const currentGroupIds = new Set(Object.keys(participatingGroups));
+                        const storedMetadatas = await GroupMetadata.find({}, { groupId: 1, _id: 0 }).lean();
+                        const storedGroupIds = storedMetadatas.map(g => g.groupId);
+                        const staleGroupIds = storedGroupIds.filter(id => !currentGroupIds.has(id));
+                        if (staleGroupIds.length > 0) {
+                            await log(`Mendeteksi ${staleGroupIds.length} grup usang. Memulai pembersihan...`);
+                            const deleteResult = await GroupMetadata.deleteMany({ groupId: { $in: staleGroupIds } });
+                            await log(`Pembersihan database selesai: ${deleteResult.deletedCount} metadata grup usang telah dihapus.`);
+                            staleGroupIds.forEach(id => mongoStore.clearGroupCacheByKey(id));
+                            await log(`Cache untuk ${staleGroupIds.length} grup usang telah dibersihkan dari StoreDB.`);
+                        } else {
+                            await log('Sinkronisasi selesai. Tidak ada data grup usang ditemukan.');
+                        }
+                    } catch (error) {
+                        await log(`Terjadi kesalahan saat sinkronisasi data grup: ${error}`, true);
+                    }
                     await log(`WA Version: ${version}`);
                     await log(`BOT Number: ${jidNormalizedUser(fn.user.id).split('@')[0]}`);
                     await log(`${dbSettings.botName} Berhasil tersambung ke whatsapp...`);

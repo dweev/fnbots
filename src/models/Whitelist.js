@@ -1,8 +1,8 @@
 // ─── Info ────────────────────────────────
 /*
-  * Created with ❤️ and 💦 By FN
-  * Follow https://github.com/Terror-Machine
-  * Feel Free To Use
+* Created with ❤️ and 💦 By FN
+* Follow https://github.com/Terror-Machine
+* Feel Free To Use
 */
 // ─── Info Whitelist.js ───────────────────
 
@@ -26,20 +26,6 @@ const whitelistSchema = new mongoose.Schema({
       },
       message: 'Target ID must match type (group: @g.us, user: @s.whatsapp.net)'
     }
-  },
-  addedBy: {
-    type: String,
-    required: true,
-    validate: {
-      validator: function (v) {
-        return v.endsWith('@s.whatsapp.net');
-      },
-      message: 'AddedBy must be a valid user ID'
-    }
-  },
-  reason: {
-    type: String,
-    default: ''
   }
 }, {
   timestamps: true
@@ -48,24 +34,22 @@ const whitelistSchema = new mongoose.Schema({
 whitelistSchema.index({ type: 1, targetId: 1 }, { unique: true });
 whitelistSchema.pre('save', function (next) {
   this.targetId = this.targetId.toLowerCase();
-  this.addedBy = this.addedBy.toLowerCase();
   next();
 });
 whitelistSchema.statics.isWhitelisted = async function (targetId, type = null) {
   if (!type) {
     type = targetId.endsWith('@g.us') ? 'group' : 'user';
   }
-  return await this.exists({ type, targetId });
+  const result = await this.exists({ type, targetId: targetId.toLowerCase() });
+  return !!result;
 };
-whitelistSchema.statics.addToWhitelist = async function (targetId, addedBy, reason = '', type = null) {
+whitelistSchema.statics.addToWhitelist = async function (targetId, type = null) {
   if (!type) {
     type = targetId.endsWith('@g.us') ? 'group' : 'user';
   }
   const whitelist = new this({
     type,
-    targetId,
-    addedBy,
-    reason
+    targetId
   });
   return await whitelist.save();
 };
@@ -86,10 +70,6 @@ whitelistSchema.statics.clearAll = function (type = null) {
     return this.deleteMany({ type });
   }
   return this.deleteMany({});
-};
-whitelistSchema.methods.updateReason = function (newReason) {
-  this.reason = newReason;
-  return this.save();
 };
 
 export default mongoose.model('Whitelist', whitelistSchema);

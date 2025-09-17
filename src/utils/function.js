@@ -1,8 +1,8 @@
 // ─── Info ────────────────────────────────
 /*
-  * Created with ❤️ and 💦 By FN
-  * Follow https://github.com/Terror-Machine
-  * Feel Free To Use
+* Created with ❤️ and 💦 By FN
+* Follow https://github.com/Terror-Machine
+* Feel Free To Use
 */
 // ─── Info Function.js ────────────────────
 
@@ -12,16 +12,34 @@ import dayjs from 'dayjs';
 import fs from 'fs-extra';
 import axios from 'axios';
 import path from 'path';
+import webp from 'node-webpmux';
+import FileType from 'file-type';
 import utc from 'dayjs/plugin/utc.js';
 import duration from 'dayjs/plugin/duration.js';
 import timezone from 'dayjs/plugin/timezone.js';
 import localizedFormat from 'dayjs/plugin/localizedFormat.js';
+import { getDbSettings } from './settingsManager.js';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
 dayjs.extend(duration);
 dayjs.extend(localizedFormat);
 
+export function getSizeMedia(crots) {
+  return new Promise((resolve, reject) => {
+    if (typeof crots === 'string' && /http/.test(crots)) {
+      axios.get(crots).then((res) => {
+        let length = parseInt(res.headers['content-length']);
+        if (!isNaN(length)) resolve(bytesToSize(length, 3));
+      }).catch(reject);
+    } else if (Buffer.isBuffer(crots)) {
+      let length = Buffer.byteLength(crots);
+      if (!isNaN(length)) resolve(bytesToSize(length, 3));
+    } else {
+      reject(0);
+    };
+  });
+};
 export function archimed(s, list) {
   const ln = list.length;
   const ls = new Set();
@@ -293,18 +311,53 @@ export async function getBuffer(url, options = {}) {
     throw error;
   }
 };
-export function getSizeMedia(crots) {
-  return new Promise((resolve, reject) => {
-    if (typeof crots === 'string' && /http/.test(crots)) {
-      axios.get(crots).then((res) => {
-        let length = parseInt(res.headers['content-length']);
-        if (!isNaN(length)) resolve(bytesToSize(length, 3));
-      }).catch(reject);
-    } else if (Buffer.isBuffer(crots)) {
-      let length = Buffer.byteLength(crots);
-      if (!isNaN(length)) resolve(bytesToSize(length, 3));
-    } else {
-      reject(0);
+export async function writeExif(media, data) {
+  const dbSettings = getDbSettings();
+  const fileType = await FileType.fromBuffer(media);
+  if (!fileType) throw new Error('Error_writeExif_FileType');
+  let wMedia;
+  if (/webp/.test(fileType.mime)) {
+    wMedia = media;
+  } else if (/image\/gif/.test(fileType.mime)) {
+    wMedia = await gifToWebp(media);
+  } else if (/jpeg|jpg|png/.test(fileType.mime)) {
+    wMedia = await imageToWebp(media);
+  } else if (/video/.test(fileType.mime)) {
+    wMedia = await videoToWebp(media);
+  } else {
+    throw new Error('Error_writeExif');
+  }
+  const tmpFileIn = path.join(global.tmpDir, `${global.randomSuffix}.webp`);
+  const tmpFileOut = path.join(global.tmpDir, `FN-${global.randomSuffix}.webp`);
+  await fs.writeFile(tmpFileIn, wMedia);
+  if (data) {
+    const img = new webp.Image();
+    const {
+      wra = data.pack_id || dbSettings.packID,
+      wrb = data.packname || dbSettings.packName,
+      wrc = data.author || dbSettings.packAuthor,
+      wrd = data.categories || [''],
+      wre = data.isAvatar || 0,
+      ...wrf
+    } = data;
+    const json = {
+      'sticker-pack-id': wra,
+      'sticker-pack-name': wrb,
+      'sticker-pack-publisher': wrc,
+      'emojis': wrd,
+      'is-avatar-sticker': wre,
+      ...wrf
     };
-  });
+    const exifAttr = Buffer.from([0x49, 0x49, 0x2A, 0x00, 0x08, 0x00, 0x00, 0x00, 0x01, 0x00, 0x41, 0x57, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x16, 0x00, 0x00, 0x00]);
+    const jsonBuff = Buffer.from(JSON.stringify(json), 'utf-8');
+    const exif = Buffer.concat([exifAttr, jsonBuff]);
+    exif.writeUIntLE(jsonBuff.length, 14, 4);
+    await img.load(tmpFileIn);
+    await deleteFile(tmpFileIn);
+    img.exif = exif;
+    await img.save(tmpFileOut);
+    return tmpFileOut;
+  } else {
+    return tmpFileIn;
+  };
 };

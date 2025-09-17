@@ -1,0 +1,41 @@
+// ─── Info ────────────────────────────────
+/*
+* Created with ❤️ and 💦 By FN
+* Follow https://github.com/Terror-Machine
+* Feel Free To Use
+*/
+// ─── Info ────────────────────────────────
+
+import { User } from '../../../database/index.js';
+import { formatDurationMessage } from '../../utils/function.js';
+
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc.js';
+import duration from 'dayjs/plugin/duration.js';
+import timezone from 'dayjs/plugin/timezone.js';
+import localizedFormat from 'dayjs/plugin/localizedFormat.js';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+dayjs.extend(duration);
+dayjs.extend(localizedFormat);
+
+export const command = {
+  name: 'checkpremium',
+  category: 'premium',
+  description: 'Memeriksa apakah user memiliki benefit premium atau tidak',
+  aliases: ['cekpremium', 'cekprem'],
+  execute: async ({ mentionedJidList, serial, sReply }) => {
+    let targetId = mentionedJidList[0] || serial;
+    const activePrems = await User.findActivePremiums();
+    const premiumUser = activePrems.find(user => user.userId === targetId);
+    if (!premiumUser) {
+      await sReply(`@${targetId.split('@')[0]} tidak memiliki status Premium aktif.`);
+      return;
+    }
+    const remainingMs = premiumUser.premiumExpired - Date.now();
+    const durationLeft = dayjs.duration(remainingMs);
+    const durationMessage = formatDurationMessage(durationLeft);
+    await sReply(`「 *PREMIUM EXPIRE* 」\n\n➸ *ID*: @${targetId.split('@')[0]}\n➸ ${durationMessage}`);
+  }
+}

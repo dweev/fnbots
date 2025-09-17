@@ -1,8 +1,8 @@
 // ─── Info ────────────────────────────────
 /*
-  * Created with ❤️ and 💦 By FN
-  * Follow https://github.com/Terror-Machine
-  * Feel Free To Use
+* Created with ❤️ and 💦 By FN
+* Follow https://github.com/Terror-Machine
+* Feel Free To Use
 */
 // ─── Info Settings.js ────────────────────
 
@@ -156,84 +156,14 @@ const settingsSchema = new mongoose.Schema({
     of: mongoose.Schema.Types.Mixed,
     default: {}
   },
-  mutedUsers: [{
-    userId: {
-      type: String,
-      required: true
-    },
-    mutedAt: {
-      type: Date,
-      default: Date.now
-    },
-    mutedBy: {
-      type: String,
-      default: 'system'
-    },
-    reason: {
-      type: String,
-      default: ''
-    },
-    _id: false
-  }],
-  blockedUsers: [{
-    userId: {
-      type: String,
-      required: true
-    },
-    blockedAt: {
-      type: Date,
-      default: Date.now
-    },
-    blockedBy: {
-      type: String,
-      default: 'system'
-    },
-    reason: {
-      type: String,
-      default: ''
-    },
-    _id: false
-  }],
-  maxFileSize: {
-    type: Number,
-    default: 100
-  },
-  allowedMediaTypes: {
-    type: [String],
-    default: ['image', 'video', 'audio', 'document']
-  },
-  autoBackup: {
-    type: Boolean,
-    default: false
-  },
-  backupInterval: {
-    type: Number,
-    default: 24
-  },
-  language: {
-    type: String,
-    default: 'id',
-    enum: ['id', 'en', 'es', 'pt', 'ar']
-  },
-  timezone: {
-    type: String,
-    default: 'Asia/Jakarta'
-  }
 }, {
   timestamps: true
 });
 
 settingsSchema.index({}, { unique: true });
-settingsSchema.index({ 'mutedUsers.userId': 1 });
-settingsSchema.index({ 'blockedUsers.userId': 1 });
 settingsSchema.index({ 'sAdmin': 1 });
 
-settingsSchema.virtual('mutedUsersCount').get(function () {
-  return this.mutedUsers.length;
-});
-settingsSchema.virtual('blockedUsersCount').get(function () {
-  return this.blockedUsers.length;
-});
+
 settingsSchema.virtual('prefix').get(function () {
   return this.rname;
 });
@@ -265,22 +195,6 @@ settingsSchema.statics.incrementTotalHitCount = async function (amount = 1) {
   const settings = await this.getSettings();
   settings.totalHitCount += amount;
   return settings.save();
-};
-settingsSchema.statics.isUserMuted = async function (userId) {
-  const settings = await this.getSettings();
-  return settings.mutedUsers.some(user => user.userId === userId);
-};
-settingsSchema.statics.isUserBlocked = async function (userId) {
-  const settings = await this.getSettings();
-  return settings.blockedUsers.some(user => user.userId === userId);
-};
-settingsSchema.statics.getMutedUsers = async function () {
-  const settings = await this.getSettings();
-  return settings.mutedUsers;
-};
-settingsSchema.statics.getBlockedUsers = async function () {
-  const settings = await this.getSettings();
-  return settings.blockedUsers;
 };
 settingsSchema.statics.isSAdmin = async function (userId) {
   const settings = await this.getSettings();
@@ -325,56 +239,6 @@ settingsSchema.methods.clearAllSAdmins = function () {
   }
   return this;
 };
-settingsSchema.methods.muteUser = function (userId, mutedBy = 'system', reason = '') {
-  this.mutedUsers = this.mutedUsers.filter(user => user.userId !== userId);
-  this.mutedUsers.push({
-    userId: userId,
-    mutedAt: new Date(),
-    mutedBy: mutedBy,
-    reason: reason
-  });
-  return this.save();
-};
-settingsSchema.methods.unmuteUser = function (userId) {
-  const initialLength = this.mutedUsers.length;
-  this.mutedUsers = this.mutedUsers.filter(user => user.userId !== userId);
-  if (this.mutedUsers.length !== initialLength) {
-    return this.save();
-  }
-  return this;
-};
-settingsSchema.methods.isUserMuted = function (userId) {
-  return this.mutedUsers.some(user => user.userId === userId);
-};
-settingsSchema.methods.getMuteReason = function (userId) {
-  const mutedUser = this.mutedUsers.find(user => user.userId === userId);
-  return mutedUser ? mutedUser.reason : null;
-};
-settingsSchema.methods.blockUser = function (userId, blockedBy = 'system', reason = '') {
-  this.blockedUsers = this.blockedUsers.filter(user => user.userId !== userId);
-  this.blockedUsers.push({
-    userId: userId,
-    blockedAt: new Date(),
-    blockedBy: blockedBy,
-    reason: reason
-  });
-  return this.save();
-};
-settingsSchema.methods.unblockUser = function (userId) {
-  const initialLength = this.blockedUsers.length;
-  this.blockedUsers = this.blockedUsers.filter(user => user.userId !== userId);
-  if (this.blockedUsers.length !== initialLength) {
-    return this.save();
-  }
-  return this;
-};
-settingsSchema.methods.isUserBlocked = function (userId) {
-  return this.blockedUsers.some(user => user.userId === userId);
-};
-settingsSchema.methods.getBlockReason = function (userId) {
-  const blockedUser = this.blockedUsers.find(user => user.userId === userId);
-  return blockedUser ? blockedUser.reason : null;
-};
 settingsSchema.methods.toggleSetting = function (settingName) {
   if (typeof this[settingName] === 'boolean') {
     this[settingName] = !this[settingName];
@@ -395,30 +259,6 @@ settingsSchema.methods.deleteDataM = function (key) {
 };
 settingsSchema.methods.clearDataM = function () {
   this.dataM.clear();
-  return this.save();
-};
-settingsSchema.methods.clearAllMutedUsers = function () {
-  if (this.mutedUsers.length > 0) {
-    this.mutedUsers = [];
-    return this.save();
-  }
-  return this;
-};
-settingsSchema.methods.clearAllBlockedUsers = function () {
-  if (this.blockedUsers.length > 0) {
-    this.blockedUsers = [];
-    return this.save();
-  }
-  return this;
-};
-settingsSchema.methods.updateMediaSettings = function (maxSize, allowedTypes) {
-  if (maxSize !== undefined) this.maxFileSize = maxSize;
-  if (allowedTypes !== undefined) this.allowedMediaTypes = allowedTypes;
-  return this.save();
-};
-settingsSchema.methods.setBackupSettings = function (autoBackup, intervalHours) {
-  if (autoBackup !== undefined) this.autoBackup = autoBackup;
-  if (intervalHours !== undefined) this.backupInterval = intervalHours;
   return this.save();
 };
 settingsSchema.methods.updateLimitSettings = function (limitCount, limitGame, limitCountPrem, memberLimit) {

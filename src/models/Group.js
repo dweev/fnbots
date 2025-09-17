@@ -1,8 +1,8 @@
 // ─── Info ────────────────────────────────
 /*
-  * Created with ❤️ and 💦 By FN
-  * Follow https://github.com/Terror-Machine
-  * Feel Free To Use
+* Created with ❤️ and 💦 By FN
+* Follow https://github.com/Terror-Machine
+* Feel Free To Use
 */
 // ─── Info Group.js ───────────────────────
 
@@ -74,41 +74,6 @@ const groupSchema = new mongoose.Schema({
     default: false,
     index: true
   },
-  antiSpam: {
-    type: Boolean,
-    default: false,
-    index: true
-  },
-  antiSticker: {
-    type: Boolean,
-    default: false,
-    index: true
-  },
-  antiAudio: {
-    type: Boolean,
-    default: false,
-    index: true
-  },
-  autoReply: {
-    type: Boolean,
-    default: false
-  },
-  autoDelete: {
-    type: Boolean,
-    default: false
-  },
-  autoDeleteTime: {
-    type: Number,
-    default: 60
-  },
-  maxWarnings: {
-    type: Number,
-    default: 3
-  },
-  muteDuration: {
-    type: Number,
-    default: 3600
-  },
   verifyMember: {
     type: Boolean,
     default: false
@@ -125,6 +90,10 @@ const groupSchema = new mongoose.Schema({
     type: Map,
     of: Number,
     default: {}
+  },
+  muteDuration: {
+    type: Number,
+    default: 3600
   },
   mutedMembers: {
     type: Map,
@@ -150,15 +119,6 @@ const groupSchema = new mongoose.Schema({
     },
     _id: false
   }],
-  language: {
-    type: String,
-    default: 'id',
-    enum: ['id', 'en', 'es', 'pt', 'ar']
-  },
-  timezone: {
-    type: String,
-    default: 'Asia/Jakarta'
-  },
   isActive: {
     type: Boolean,
     default: true,
@@ -390,12 +350,12 @@ groupSchema.methods.toggleMuteChat = function (mutedBy = 'system') {
   this.lastActivity = new Date();
   return this.save();
 };
-groupSchema.methods.toggleFilter = function() {
+groupSchema.methods.toggleFilter = function () {
   this.filter = !this.filter;
   this.lastActivity = new Date();
   return this.save();
 };
-groupSchema.methods.addFilterWord = function(word) {
+groupSchema.methods.addFilterWord = function (word) {
   if (!this.filterWords.includes(word)) {
     this.filterWords.push(word);
     this.lastActivity = new Date();
@@ -403,20 +363,19 @@ groupSchema.methods.addFilterWord = function(word) {
   }
   return this;
 };
-groupSchema.methods.removeFilterWord = function(word) {
+groupSchema.methods.removeFilterWord = function (word) {
   const initialLength = this.filterWords.length;
   this.filterWords = this.filterWords.filter(w => w !== word);
-  
   if (this.filterWords.length !== initialLength) {
     this.lastActivity = new Date();
     return this.save();
   }
   return this;
 };
-groupSchema.methods.hasFilterWord = function(word) {
+groupSchema.methods.hasFilterWord = function (word) {
   return this.filterWords.includes(word);
 };
-groupSchema.methods.clearAllFilterWords = function() {
+groupSchema.methods.clearAllFilterWords = function () {
   if (this.filterWords.length > 0) {
     this.filterWords = [];
     this.lastActivity = new Date();
@@ -424,15 +383,21 @@ groupSchema.methods.clearAllFilterWords = function() {
   }
   return this;
 };
-groupSchema.methods.checkMessage = function(message) {
+groupSchema.methods.checkMessage = function (message) {
   if (!this.filter) return false;
-  
   const lowerMessage = message.toLowerCase();
-  return this.filterWords.some(word => 
+  return this.filterWords.some(word =>
     lowerMessage.includes(word.toLowerCase())
   );
 };
 
+groupSchema.statics.ensureGroup = async function (groupId) {
+  return this.findOneAndUpdate(
+    { groupId },
+    { $setOnInsert: { groupId } },
+    { upsert: true, new: true }
+  );
+};
 groupSchema.statics.findBySetting = function (settingName, value = true) {
   return this.find({ [settingName]: value });
 };
@@ -517,10 +482,10 @@ groupSchema.statics.findMutedGroups = function () {
 groupSchema.statics.countMutedGroups = function () {
   return this.countDocuments({ isMuted: true });
 };
-groupSchema.statics.findGroupsWithFilter = function() {
+groupSchema.statics.findGroupsWithFilter = function () {
   return this.find({ filter: true });
 };
-groupSchema.statics.findFilteredWords = function(groupId) {
+groupSchema.statics.findFilteredWords = function (groupId) {
   return this.findOne({ groupId })
     .select('filterWords')
     .then(group => group ? group.filterWords : []);

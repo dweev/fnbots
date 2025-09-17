@@ -1,8 +1,8 @@
 // ─── Info ────────────────────────────────
 /*
-  * Created with ❤️ and 💦 By FN
-  * Follow https://github.com/Terror-Machine
-  * Feel Free To Use
+* Created with ❤️ and 💦 By FN
+* Follow https://github.com/Terror-Machine
+* Feel Free To Use
 */
 // ─── Info Logger.js ──────────────────────
 
@@ -57,13 +57,19 @@ export const pinoLogger = pino(pino.transport({
 }));
 
 export default async function log(message, isError = false) {
-  const textMessage = typeof message === 'string' ? message : util.inspect(message, { depth: 1 });
-  if (blockedKeywords.some(keyword => textMessage.includes(keyword))) {
+  const inspectedMessage = util.inspect(message);
+  if (blockedKeywords.some(keyword => inspectedMessage.includes(keyword))) {
     return;
   }
   if (isError) {
-    pinoLogger.error(textMessage);
+    if (message instanceof Error) {
+      pinoLogger.error(message);
+    } else {
+      const textMessage = typeof message === 'string' ? message : util.inspect(message, { depth: null });
+      pinoLogger.error(textMessage);
+    }
   } else {
+    const textMessage = typeof message === 'string' ? message : util.inspect(message, { depth: null });
     pinoLogger.info(textMessage);
   }
 }

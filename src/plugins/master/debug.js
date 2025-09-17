@@ -1,0 +1,20 @@
+// ─── Info ────────────────────────────────
+/*
+* Created with ❤️ and 💦 By FN
+* Follow https://github.com/Terror-Machine
+* Feel Free To Use
+*/
+// ─── Info ────────────────────────────────
+
+export const command = {
+  name: 'debug',
+  category: 'master',
+  description: 'Mengaktifkan atau menonaktifkan mode debug global.',
+  aliases: ['dbg'],
+  execute: async ({ dbSettings, reactDone, args }) => {
+    const mode = (args[0] || '').toLowerCase();
+    if (!['on', 'off'].includes(mode)) throw new Error(`gunakan perintah dengan benar, contoh: ${dbSettings.rname}debug on/off`);
+    global.debugs = mode === 'on';
+    await reactDone();
+  }
+};

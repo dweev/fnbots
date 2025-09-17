@@ -1,8 +1,8 @@
 // ─── Info ────────────────────────────────
 /*
-  * Created with ❤️ and 💦 By FN
-  * Follow https://github.com/Terror-Machine
-  * Feel Free To Use
+* Created with ❤️ and 💦 By FN
+* Follow https://github.com/Terror-Machine
+* Feel Free To Use
 */
 // ─── Info Commands.js ────────────────────
 
@@ -37,7 +37,7 @@ const commandSchema = new mongoose.Schema({
     required: true,
     index: true,
     validate: {
-      validator: function(v) {
+      validator: function (v) {
         return VALID_CATEGORIES.includes(v);
       },
       message: props => `${props.value} bukan kategori yang valid!`
@@ -70,6 +70,14 @@ commandSchema.methods.changeCategory = function (newCategory) {
     return this.save();
   }
   throw new Error('Invalid category');
+};
+
+commandSchema.statics.updateCount = async function (commandName, amount = 1) {
+  return this.findOneAndUpdate(
+    { name: commandName.toLowerCase() },
+    { $inc: { count: amount } },
+    { upsert: true, new: true }
+  );
 };
 commandSchema.statics.getTopCommands = function (limit = 10) {
   return this.find().sort({ count: -1 }).limit(limit);
@@ -151,7 +159,7 @@ commandSchema.statics.removeAlias = async function (commandName, alias) {
   await command.save();
   return command;
 };
-commandSchema.statics.resetAll = async function() {
+commandSchema.statics.resetAll = async function () {
   return this.deleteMany({});
 };
 

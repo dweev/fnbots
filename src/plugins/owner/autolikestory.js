@@ -1,0 +1,23 @@
+// ─── Info ────────────────────────────────
+/*
+* Created with ❤️ and 💦 By FN
+* Follow https://github.com/Terror-Machine
+* Feel Free To Use
+*/
+// ─── Info ────────────────────────────────
+
+import { Settings } from '../../../database/index.js';
+
+export const command = {
+  name: 'autolikestory',
+  category: 'owner',
+  description: 'Mengaktifkan atau menonaktifkan mode autolikestory.',
+  aliases: ['autolikesw'],
+  execute: async ({ dbSettings, reactDone, args }) => {
+    const mode = (args[0] || '').toLowerCase();
+    if (!['on', 'off'].includes(mode)) throw new Error(`gunakan perintah dengan benar, contoh: ${dbSettings.rname}autolikestory on/off`);
+    dbSettings.autolikestory = mode === 'on';
+    await Settings.updateSettings(dbSettings);
+    await reactDone();
+  }
+};

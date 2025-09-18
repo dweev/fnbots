@@ -9,6 +9,20 @@
 import mongoose from 'mongoose';
 import config from '../../config.js';
 
+async function addMembership(user, type, durationMs) {
+  const fieldMap = {
+    premium: { is: 'isPremium', expiry: 'premiumExpired' },
+    vip: { is: 'isVIP', expiry: 'vipExpired' }
+  };
+  const fields = fieldMap[type];
+  if (!fields) throw new Error('Invalid membership type');
+  user[fields.is] = true;
+  const currentExpiry = user[fields.expiry];
+  const newExpiry = (currentExpiry && currentExpiry > new Date() ? currentExpiry.getTime() : Date.now()) + durationMs;
+  user[fields.expiry] = new Date(newExpiry);
+  return user.save();
+}
+
 const userSchema = new mongoose.Schema({
   userId: {
     type: String,
@@ -383,30 +397,12 @@ userSchema.statics.addMaster = async function (userId) {
   );
 };
 userSchema.statics.addPremium = async function (userId, durationMs) {
-  const user = await this.findOneAndUpdate(
-    { userId },
-    {
-      $set: { isPremium: true },
-      $inc: { __v: 1 }
-    },
-    { new: true, upsert: true }
-  );
-  const newExpiry = (user.premiumExpired && user.premiumExpired > new Date() ? user.premiumExpired.getTime() : Date.now()) + durationMs;
-  user.premiumExpired = new Date(newExpiry);
-  return user.save();
+  const user = await this.findOneAndUpdate({ userId }, { $set: { isPremium: true } }, { new: true, upsert: true });
+  return addMembership(user, 'premium', durationMs);
 };
 userSchema.statics.addVIP = async function (userId, durationMs) {
-  const user = await this.findOneAndUpdate(
-    { userId },
-    {
-      $set: { isVIP: true },
-      $inc: { __v: 1 }
-    },
-    { new: true, upsert: true }
-  );
-  const newExpiry = (user.vipExpired && user.vipExpired > new Date() ? user.vipExpired.getTime() : Date.now()) + durationMs;
-  user.vipExpired = new Date(newExpiry);
-  return user.save();
+  const user = await this.findOneAndUpdate({ userId }, { $set: { isVIP: true } }, { new: true, upsert: true });
+  return addMembership(user, 'vip', durationMs);
 };
 userSchema.statics.removeMaster = async function (userId) {
   return this.findOneAndUpdate(
@@ -469,23 +465,22 @@ userSchema.statics.getLeaderboard = function (type = 'xp', limit = 20) {
   return this.find().sort(sortCriteria).limit(limit);
 };
 userSchema.statics.getUserRank = async function (userId, type = 'xp') {
-  let sortCriteria = {};
-  switch (type) {
-    case 'xp':
-      sortCriteria = { xp: -1, level: -1 };
-      break;
-    case 'balance':
-      sortCriteria = { balance: -1 };
-      break;
-    case 'level':
-      sortCriteria = { level: -1, xp: -1 };
-      break;
-    default:
-      sortCriteria = { xp: -1 };
+  if (type !== 'xp' && type !== 'level') {
+    return null;
   }
-  const users = await this.find().sort(sortCriteria);
-  const rank = users.findIndex(user => user.userId === userId);
-  return rank >= 0 ? rank + 1 : null;
+  const user = await this.findOne({ userId }).lean();
+  if (!user) return null;
+  const filter = {};
+  if (type === 'xp') {
+    filter.xp = { $gt: user.xp };
+  } else if (type === 'level') {
+    filter.$or = [
+      { level: { $gt: user.level } },
+      { level: user.level, xp: { $gt: user.xp } }
+    ];
+  }
+  const higherRankCount = await this.countDocuments(filter);
+  return higherRankCount + 1;
 };
 userSchema.statics.findActiveVIPs = function () {
   return this.find({

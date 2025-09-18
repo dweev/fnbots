@@ -33,7 +33,6 @@ function logRestartInfo() {
 import cron from 'node-cron';
 import path from 'path';
 import process from 'process';
-import dayjs from 'dayjs';
 import fs from 'fs-extra';
 import axios from 'axios';
 import readline from 'readline';
@@ -78,16 +77,6 @@ let pairingStarted = false;
 let phoneNumber, version, dbSettings;
 let duplexM = new CrotToLive();
 let debugs = false;
-
-import utc from 'dayjs/plugin/utc.js';
-import duration from 'dayjs/plugin/duration.js';
-import timezone from 'dayjs/plugin/timezone.js';
-import localizedFormat from 'dayjs/plugin/localizedFormat.js';
-
-dayjs.extend(utc);
-dayjs.extend(timezone);
-dayjs.extend(duration);
-dayjs.extend(localizedFormat);
 
 global.tmpDir = './src/sampah';
 global.randomSuffix = randomByte(16);

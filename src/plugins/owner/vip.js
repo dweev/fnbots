@@ -8,17 +8,7 @@
 
 import { formatDuration, formatDurationMessage } from '../../utils/function.js';
 import { User } from '../../../database/index.js';
-import dayjs from 'dayjs';
-
-import utc from 'dayjs/plugin/utc.js';
-import duration from 'dayjs/plugin/duration.js';
-import timezone from 'dayjs/plugin/timezone.js';
-import localizedFormat from 'dayjs/plugin/localizedFormat.js';
-
-dayjs.extend(utc);
-dayjs.extend(timezone);
-dayjs.extend(duration);
-dayjs.extend(localizedFormat);
+import dayjs from '../../utils/dayjs.js';
 
 export const command = {
   name: 'vip',

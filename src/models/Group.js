@@ -212,8 +212,9 @@ groupSchema.methods.isMemberMuted = async function (userId) {
 groupSchema.methods.banMember = function (userId) {
   if (!this.bannedMembers.includes(userId)) {
     this.bannedMembers.push(userId);
+    return this.save();
   }
-  return this.save();
+  return Promise.resolve(this);
 };
 groupSchema.methods.unbanMember = function (userId) {
   this.bannedMembers = this.bannedMembers.filter(id => id !== userId);

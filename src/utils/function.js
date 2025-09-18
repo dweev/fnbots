@@ -7,23 +7,14 @@
 // ─── Info Function.js ────────────────────
 
 import ffmpeg from '@ts-ffmpeg/fluent-ffmpeg';
+import dayjs from './dayjs.js';
 import log from './logger.js';
-import dayjs from 'dayjs';
 import fs from 'fs-extra';
 import axios from 'axios';
 import path from 'path';
 import webp from 'node-webpmux';
 import FileType from 'file-type';
-import utc from 'dayjs/plugin/utc.js';
-import duration from 'dayjs/plugin/duration.js';
-import timezone from 'dayjs/plugin/timezone.js';
-import localizedFormat from 'dayjs/plugin/localizedFormat.js';
 import { getDbSettings } from './settingsManager.js';
-
-dayjs.extend(utc);
-dayjs.extend(timezone);
-dayjs.extend(duration);
-dayjs.extend(localizedFormat);
 
 export function getSizeMedia(crots) {
   return new Promise((resolve, reject) => {

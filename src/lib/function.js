@@ -4,16 +4,16 @@
 * Follow https://github.com/Terror-Machine
 * Feel Free To Use
 */
-// ─── Info Function.js ────────────────────
+// ─── Info function.js ────────────────────
 
-import ffmpeg from '@ts-ffmpeg/fluent-ffmpeg';
-import dayjs from './dayjs.js';
-import log from './logger.js';
+import path from 'path';
 import fs from 'fs-extra';
 import axios from 'axios';
-import path from 'path';
 import webp from 'node-webpmux';
 import FileType from 'file-type';
+import log from '../utils/logger.js';
+import dayjs from '../utils/dayjs.js';
+import ffmpeg from '@ts-ffmpeg/fluent-ffmpeg';
 import { getDbSettings } from './settingsManager.js';
 
 export function getSizeMedia(crots) {

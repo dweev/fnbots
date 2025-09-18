@@ -1,5 +1,13 @@
+// ─── Info ────────────────────────────────
+/*
+* Created with ❤️ and 💦 By FN
+* Follow https://github.com/Terror-Machine
+* Feel Free To Use
+*/
+// ─── Info settingsManager.js ─────────────
+
+import log from '../utils/logger.js';
 import { Settings } from '../../database/index.js';
-import log from './logger.js';
 
 let settingsCache = null;
 const POLLING_INTERVAL_MS = 1000;

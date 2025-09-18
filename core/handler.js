@@ -6,23 +6,22 @@
 */
 // ─── Info handler.js ─────────────────────
 
-import config from '../../config.js';
-import { color, msgs, deleteFile, mycmd } from './function.js';
-import { User, Group, Whitelist, Settings, Command } from '../../database/index.js';
-import log from './logger.js';
 import util from 'util';
 import path from 'path';
 import Fuse from 'fuse.js';
 import { delay } from 'baileys';
+import config from '../config.js';
 import { spawn } from 'child_process';
+import log from '../src/utils/logger.js';
 import { exec as cp_exec } from 'child_process';
-import { pluginCache } from './plugins.js';
+import { pluginCache } from '../src/lib/plugins.js';
+import { color, msgs, deleteFile, mycmd } from '../src/lib/function.js';
+import { User, Group, Whitelist, Settings, Command } from '../database/index.js';
 
 const exec = util.promisify(cp_exec);
 const isPm2 = process.env.pm_id !== undefined || process.env.NODE_APP_INSTANCE !== undefined;
 const MAX_RECONNECT_ATTEMPTS = 5;
 const RECONNECT_DELAY_MS = 5000;
-
 const localFilePrefix = 'local-file://';
 
 let fuse;

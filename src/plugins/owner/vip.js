@@ -6,7 +6,7 @@
 */
 // ─── Info ────────────────────────────────
 
-import { formatDuration, formatDurationMessage } from '../../utils/function.js';
+import { formatDuration, formatDurationMessage } from '../../lib/function.js';
 import { User } from '../../../database/index.js';
 import dayjs from '../../utils/dayjs.js';
 

@@ -7,7 +7,7 @@
 // ─── Info ────────────────────────────────
 
 import { User } from '../../../database/index.js';
-import { formatDurationMessage } from '../../utils/function.js';
+import { formatDurationMessage } from '../../lib/function.js';
 import dayjs from '../../utils/dayjs.js';
 
 export const command = {

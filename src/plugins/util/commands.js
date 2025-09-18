@@ -6,8 +6,8 @@
 */
 // ─── Info ────────────────────────────────
 
-import { formatCommandList } from '../../utils/function.js';
-import { pluginCache } from '../../utils/plugins.js';
+import { formatCommandList } from '../../lib/function.js';
+import { pluginCache } from '../../lib/plugins.js';
 
 export const command = {
   name: 'commands',

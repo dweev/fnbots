@@ -7,7 +7,7 @@
 // ─── Info ────────────────────────────────
 
 import { GroupMetadata } from '../../../database/index.js';
-import { updateMyGroup } from '../../utils/handler.js';
+import { updateMyGroup } from '../../../core/handler.js';
 
 export const command = {
   name: 'listgroup',

@@ -7,7 +7,7 @@
 // ─── Info ────────────────────────────────
 
 import { Command, Settings, User } from '../../../database/index.js';
-import { waktu, bytesToSize } from '../../utils/function.js';
+import { waktu, bytesToSize } from '../../lib/function.js';
 import os from 'os';
 import fs from 'fs-extra';
 import axios from 'axios';

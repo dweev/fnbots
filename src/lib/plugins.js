@@ -6,17 +6,16 @@
 */
 // ─── Info plugins.js ─────────────────────
 
-import config from '../../config.js';
-import { readdir, stat } from 'fs/promises';
 import { join } from 'path';
-import log from './logger.js';
+import config from '../../config.js';
+import log from '../utils/logger.js';
+import { readdir, stat } from 'fs/promises';
 import { Command } from '../../database/index.js';
 
 export const pluginCache = {
   commands: new Map(),
   helpMap: new Map(),
 };
-
 export const loadPlugins = async (pluginPath) => {
   try {
     pluginCache.commands.clear();

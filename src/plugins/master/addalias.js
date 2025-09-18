@@ -7,7 +7,7 @@
 // ─── Info ────────────────────────────────
 
 import { Command } from '../../../database/index.js';
-import { pluginCache } from '../../utils/plugins.js';
+import { pluginCache } from '../../lib/plugins.js';
 
 export const command = {
   name: 'addalias',

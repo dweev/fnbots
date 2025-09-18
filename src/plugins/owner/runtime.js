@@ -6,7 +6,7 @@
 */
 // ─── Info ────────────────────────────────
 
-import { waktu } from '../../utils/function.js';
+import { waktu } from '../../lib/function.js';
 
 const timeStart = Date.now() / 1000;
 export const command = {

@@ -7,7 +7,7 @@
 // ─── Info ────────────────────────────────
 
 import { proto } from 'baileys';
-import { randomByte } from '../../utils/function.js';
+import { randomByte } from '../../lib/function.js';
 
 export const command = {
   name: 'totag',

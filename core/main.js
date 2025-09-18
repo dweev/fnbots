@@ -39,7 +39,7 @@ function logRestartInfo() {
 let dbSettings;
 let debugs = false;
 
-global.tmpDir = '../src/sampah';
+global.tmpDir = path.resolve(__dirname, '../src/sampah');
 global.randomSuffix = randomByte(16);
 global.debugs = debugs;
 

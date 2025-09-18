@@ -167,9 +167,9 @@ async function shutdown() {
 async function checkCommandAccess(command, userData, user, maintenance) {
   const {
     isSadmin,
-    master,
-    vip,
-    premium,
+    isMaster,
+    isVIP,
+    isPremium,
     isGroupAdmins,
     isWhiteList,
     hakIstimewa,
@@ -182,38 +182,39 @@ async function checkCommandAccess(command, userData, user, maintenance) {
   if (!hasBasicAccess) return false;
   if (isSadmin) return true;
   const accessLevels = {
-    'master': ['sadmin'],
-    'owner': ['sadmin', 'master'],
-    'bot': ['sadmin', 'master'],
-    'vip': ['sadmin', 'master', 'vip'],
-    'premium': ['sadmin', 'master', 'vip', 'premium'],
-    'manage': ['sadmin', 'master', 'vip', 'premium', 'groupAdmin'],
-    'util': ['sadmin', 'master', 'vip', 'premium', 'groupAdmin'],
-    'hitung': ['all'],
-    'media': ['all'],
-    'ai': ['all'],
-    'ngaji': ['all'],
-    'fun': ['all'],
-    'anime': ['all'],
-    'text': ['all'],
-    'image': ['all'],
-    'audio': ['all'],
-    'game': ['all'],
-    'stateless': ['all'],
-    'statefull': ['all'],
-    'pvpgame': ['all'],
-    'convert': ['all']
+    'master':     ['sadmin'],
+    'owner':      ['sadmin', 'master'],
+    'bot':        ['sadmin', 'master'],
+    'vip':        ['sadmin', 'master', 'vip'],
+    'premium':    ['sadmin', 'master', 'vip', 'premium'],
+    'manage':     ['sadmin', 'master', 'vip', 'premium', 'groupAdmin'],
+    'media':      ['all'],
+    'convert':    ['all'],
+    'audio':      ['all'],
+    'text':       ['all'],
+    'image':      ['all'],
+    'ai':         ['all'],
+    'anime':      ['all'],
+    'fun':        ['all'],
+    'ngaji':      ['all'],
+    'game':       ['all'],
+    'stateless':  ['all'],
+    'statefull':  ['all'],
+    'pvpgame':    ['all'],
+    'math':       ['all'],
+    'util':       ['all'],
+    'list':       ['all'],
   };
   const requiredLevels = accessLevels[command.category] || [];
   if (requiredLevels.includes('all')) {
     hasAccess = true;
   } else if (requiredLevels.includes('sadmin') && isSadmin) {
     hasAccess = true;
-  } else if (requiredLevels.includes('master') && master) {
+  } else if (requiredLevels.includes('master') && isMaster) {
     hasAccess = true;
-  } else if (requiredLevels.includes('vip') && vip) {
+  } else if (requiredLevels.includes('vip') && isVIP) {
     hasAccess = true;
-  } else if (requiredLevels.includes('premium') && premium) {
+  } else if (requiredLevels.includes('premium') && isPremium) {
     hasAccess = true;
   } else if (requiredLevels.includes('groupAdmin') && isGroupAdmins) {
     hasAccess = true;
@@ -282,9 +283,9 @@ export async function arfine(fn, m, { dbSettings, ownerNumber, version, isSugges
   const body = m?.body;
   const userData = {
     isSadmin: isSadmin,
-    master: isMaster,
-    vip: isVIP,
-    premium: isPremium,
+    isMaster: isMaster,
+    isVIP: isVIP,
+    isPremium: isPremium,
     isGroupAdmins: false,
     isWhiteList: isWhiteList,
     hakIstimewa: hakIstimewa,

@@ -6,16 +6,13 @@
 */
 // ─── Info connection.js ──────────────────
 
-import util from 'util';
 import axios from 'axios';
 import readline from 'readline';
 import config from '../config.js';
 import { Boom } from '@hapi/boom';
-const exec = util.promisify(cp_exec);
 import qrcode from 'qrcode-terminal';
 import { clientBot } from './client.js';
 import { handleRestart } from './handler.js';
-import { exec as cp_exec } from 'child_process';
 import { parsePhoneNumber } from 'awesome-phonenumber';
 import log, { pinoLogger } from '../src/utils/logger.js';
 import { AuthStore, BaileysSession } from '../database/auth.js';
@@ -87,13 +84,13 @@ export async function createWASocket(dbSettings) {
         dbSettings.botNumber = cleanedNumber;
         await Settings.updateSettings(dbSettings);
         isValid = true;
-        await log('Phone number valid, continuing...\ntunggu sampai kodenya muncul. agak lama. tungguin aja..');
+        await log('Phone number valid, continuing...');
       } else {
         await log('Invalid number. Start with your country code and make sure it is correct, Example: 628123456789');
         numberToValidate = null;
       }
     }
-    await exec('rm -rf ./src/session/*');
+    await BaileysSession.deleteMany({});
   };
   await clientBot(fn, dbSettings);
   fn.ev.on('creds.update', saveCreds);

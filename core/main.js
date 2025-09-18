@@ -6,6 +6,7 @@
 */
 // ─── Info main.js ────────────────────────
 
+global.activeIntervals = [];
 import util from 'util';
 import path from 'path';
 import cron from 'node-cron';
@@ -59,6 +60,7 @@ async function starts() {
     await initializeDatabases();
     await loadPlugins(path.join(__dirname, '..', 'src', 'plugins'));
     await initializeFuse();
+    mongoStore.init();
     const fn = await createWASocket(dbSettings);
     fn.ev.on('messaging-history.set', async (event) => {
       for (const contact of event.contacts) {
@@ -161,7 +163,7 @@ async function starts() {
       mongoStore.updatePresences(id, update);
       Messages.updatePresences(id, update).catch(err => log(err, true));
     });
-    setInterval(async () => {
+    const keepAliveInterval = setInterval(async () => {
       try {
         await fn.query({
           tag: "iq",
@@ -171,28 +173,35 @@ async function starts() {
         await starts();
       }
     }, 4 * 60 * 1000);
+    global.activeIntervals.push(keepAliveInterval);
+    const memoryUsageInterval = setInterval(() => {
+      const memUsage = process.memoryUsage();
+      log(`Memory usage: ${Math.round(memUsage.heapUsed / 1024 / 1024)}MB`);
+    }, 300000);
+    global.activeIntervals.push(memoryUsageInterval);
     cron.schedule('0 21 * * 2', async () => {
-    log('Menjalankan tugas pembersihan data lama...');
-    try {
+      log('Menjalankan tugas pembersihan data lama...');
+      try {
         const chatResult = await Messages.cleanupOldData();
         const storyResult = await Story.cleanupOldData();
         await exec('rm -rf ../logs/*');
         log(`Pembersihan selesai. Messages terhapus: ${chatResult.deletedCount}. Story terhapus: ${storyResult.deletedCount}. Log dihapus.`);
-    } catch (error) {
+      } catch (error) {
         log(`Terjadi error saat tugas pembersihan data: ${error}`, true);
-    }
-}, {
-    scheduled: true,
-    timezone: "Asia/Jakarta"
-});
-
+      }
+    }, {
+      scheduled: true,
+      timezone: "Asia/Jakarta"
+    });
   } catch (error) {
     await log(`Error loadStore\n${error}`, true);
     await handleRestart('Gagal memuat database store');
   }
 };
 async function cleanup(signal) {
-  await log(`[${signal}] Menyimpan data sebelum keluar...`);
+  await log(`[${signal}] Menyimpan data dan membersihkan interval yang aktif sebelum keluar...`);
+  global.activeIntervals.forEach(intervalId => clearInterval(intervalId));
+  global.activeIntervals = [];
   try {
     if (dbSettings) {
       await Settings.updateSettings(dbSettings);

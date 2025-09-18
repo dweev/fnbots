@@ -40,6 +40,17 @@ let _latestMessages   = null;
 
 const fuseOptions = { includeScore: true, threshold: 0.25, minMatchCharLength: 2, distance: 25 };
 
+function safeStringify(obj, space = 2) {
+  const seen = new WeakSet();
+  return JSON.stringify(obj, (key, value) => {
+    if (typeof value === 'object' && value !== null) {
+      if (seen.has(value)) return '[Circular]';
+      seen.add(value);
+    }
+    if (typeof value === 'function') return `[Function: ${value.name || 'anonymous'}]`;
+    return value;
+  }, space);
+}
 async function textMatch1(fn, m, lt, toId) {
   const suggestions = [];
   const seenTypo = new Set();
@@ -94,7 +105,7 @@ async function textMatch2(lt) {
 async function expiredCheck(fn, ownerNumber) {
   if (_checkPremium) return;
   _checkPremium = true;
-  setInterval(async () => {
+  const premiumCheckInterval = setInterval(async () => {
     const expiredUsers = await User.getExpiredPremiumUsers();
     for (const user of expiredUsers) {
       if (_latestMessages) {
@@ -103,11 +114,12 @@ async function expiredCheck(fn, ownerNumber) {
       }
     }
   }, 60000);
+  global.activeIntervals.push(premiumCheckInterval);
 };
 async function expiredVIPcheck(fn, ownerNumber) {
   if (_checkVIP) return;
   _checkVIP = true;
-  setInterval(async () => {
+  const vipCheckInterval = setInterval(async () => {
     const expiredUsers = await User.getExpiredVIPUsers();
     for (const user of expiredUsers) {
       if (_latestMessage) {
@@ -116,6 +128,7 @@ async function expiredVIPcheck(fn, ownerNumber) {
       }
     }
   }, 60000);
+  global.activeIntervals.push(vipCheckInterval);
 };
 async function getSerial(m) {
   if (m?.key?.fromMe) return;
@@ -350,14 +363,20 @@ export async function arfine(fn, m, { dbSettings, ownerNumber, version, isSugges
       }
     }
     if (isCmd) {
-      if (txt.includes("r:")) {
-        const [, fa] = txt.split("r:");
-        const [numStr, ...rest] = fa.trim().split(" ");
-        const index = parseInt(numStr) - 1;
-        toId = mygroup[index];
-        txt = rest.join(" ").trim();
-      };
-      chainingCommands = await mycmd(await getTxt(txt, dbSettings));
+      let commandText = await getTxt(txt, dbSettings);
+      const remoteMatch = commandText.match(/^r:(\d+)\s+(.*)/s);
+      if (remoteMatch && (isSadmin || isMaster)) {
+        const index = parseInt(remoteMatch[1]) - 1;
+        const remainingText = remoteMatch[2];
+        if (mygroup[index]) {
+          toId = mygroup[index];
+          chainingCommands = await mycmd(remainingText);
+        } else {
+          return sReply(`Grup dengan nomor urut ${index + 1} tidak ditemukan.`);
+        }
+      } else {
+        chainingCommands = await mycmd(commandText);
+      }
       async function executeCommandChain(commandList) {
         const failedCommands = [];
         for (const currentCommand of commandList) {
@@ -462,26 +481,48 @@ export async function arfine(fn, m, { dbSettings, ownerNumber, version, isSugges
   if (body?.startsWith('>')) {
     if (!isSadmin) return;
     try {
-      const evaled = /await/i.test(body?.slice(2)) ? await eval('(async () => { ' + body?.slice(2) + ' })()') : await eval(body?.slice(2));
+      const code = body.slice(2);
+      const evaled = /await/i.test(code) ? await eval(`(async () => { ${code} })()`) : await eval(code);
       if (typeof evaled === 'string' && evaled.startsWith(localFilePrefix)) {
         const localPath = evaled.substring(localFilePrefix.length);
         await sendAndCleanupFile(fn, toId, localPath, m, dbSettings);
+        return;
+      }
+      let outputText;
+      if (typeof evaled === 'object' && evaled !== null) {
+        try {
+          outputText = safeStringify(evaled, 2);
+        } catch {
+          outputText = util.inspect(evaled, { depth: 2 });
+        }
       } else {
-        let outputText;
-        if (typeof evaled === 'object' && evaled !== null) {
-          outputText = JSON.stringify(evaled, null, 2);
-        } else {
-          outputText = util.format(evaled);
-        }
-        if (outputText === 'undefined') {
-          // await sReply('proses selesai.');
-        } else {
-          await sReply(outputText);
-        }
+        outputText = util.format(evaled);
+      }
+
+      if (outputText === 'undefined') {
+        // do nothing
+      } else {
+        await sReply(outputText);
       }
     } catch (error) {
-      const errorText = JSON.stringify(error, Object.getOwnPropertyNames(error), 2);
-      await sReply(errorText);
+      const prettyError = (() => {
+        try {
+          const errObj = {
+            name: error?.name,
+            message: error?.message,
+            stack: error?.stack,
+          };
+          for (const k of Object.getOwnPropertyNames(error || {})) {
+            if (!['name', 'message', 'stack'].includes(k)) {
+              try { errObj[k] = error[k]; } catch { errObj[k] = `[unserializable:${k}]`; }
+            }
+          }
+          return safeStringify(errObj, 2);
+        } catch {
+          return util.inspect(error, { depth: 2 });
+        }
+      })();
+      await sReply(prettyError);
     }
   } else if (body?.startsWith('$')) {
     if (!isSadmin) return;
@@ -498,10 +539,3 @@ export async function arfine(fn, m, { dbSettings, ownerNumber, version, isSugges
     }
   }
 };
-setInterval(() => {
-  const memUsage = process.memoryUsage();
-  log(`Memory usage: ${Math.round(memUsage.heapUsed / 1024 / 1024)}MB`);
-}, 300000);
-setInterval(() => {
-  log(`Cache stats: recentcmd=${recentcmd.size}, fspamm=${fspamm.size}, sban=${sban.size}`);
-}, 600000);

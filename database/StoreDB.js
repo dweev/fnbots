@@ -40,6 +40,8 @@ class DBStore {
     this.conversations = {};
     this.presences = {};
     this.status = {};
+  }
+  init() {
     this.startBatchProcessor();
     this.startCacheCleanup();
     this.startStatsLogger();
@@ -52,12 +54,14 @@ class DBStore {
     return this;
   }
   startBatchProcessor() {
-    setInterval(() => this.processBatchUpdates(), this.batchInterval);
+    const batchIntervalId = setInterval(() => this.processBatchUpdates(), this.batchInterval);
+    global.activeIntervals.push(batchIntervalId);
   }
   startCacheCleanup() {
-    setInterval(() => {
+    const cleanupIntervalId = setInterval(() => {
       this.cleanupExpiredGroupsCache();
     }, this.cacheCleanupInterval);
+    global.activeIntervals.push(cleanupIntervalId);
   }
   cleanupExpiredGroupsCache() {
     if (!this.isConnected) return;
@@ -231,7 +235,7 @@ class DBStore {
     this.pendingUpdates.groups.set(groupId, updatedMetadata);
   }
   startStatsLogger() {
-    setInterval(() => {
+    const statsIntervalId = setInterval(() => {
       const stats = this.getCacheStats();
       const totalAccess = stats.contacts.hits + stats.contacts.misses;
       if (totalAccess > 0) {
@@ -247,6 +251,7 @@ class DBStore {
         */
       }
     }, 30000);
+    global.activeIntervals.push(statsIntervalId);
   }
   getCacheStats() {
     const totalAccess = this.cacheStats.hits + this.cacheStats.misses;

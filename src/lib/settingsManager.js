@@ -6,7 +6,7 @@
 */
 // ─── Info settingsManager.js ─────────────
 
-import log from '../utils/logger.js';
+import log, { pinoLogger } from '../utils/logger.js';
 import { Settings } from '../../database/index.js';
 
 let settingsCache = null;
@@ -19,6 +19,9 @@ export async function initializeDbSettings() {
       try {
         const latestSettings = await Settings.getSettings();
         if (JSON.stringify(settingsCache) !== JSON.stringify(latestSettings)) {
+          if (settingsCache.pinoLogger !== latestSettings.pinoLogger) {
+              pinoLogger.level = latestSettings.pinoLogger;
+          }
           settingsCache = latestSettings;
         }
       } catch (pollError) {

@@ -7,6 +7,7 @@
 // ─── Info Group.js ───────────────────────
 
 import mongoose from 'mongoose';
+import MutedMember from './MutedMember.js';
 
 const groupSchema = new mongoose.Schema({
   groupId: {
@@ -95,11 +96,6 @@ const groupSchema = new mongoose.Schema({
     type: Number,
     default: 3600
   },
-  mutedMembers: {
-    type: Map,
-    of: Date,
-    default: {}
-  },
   bannedMembers: {
     type: [String],
     default: []
@@ -172,9 +168,6 @@ groupSchema.virtual('warningCount').get(function () {
 groupSchema.virtual('activeMemberCount').get(function () {
   return this.memberCount - this.bannedMembers.length;
 });
-groupSchema.virtual('hasMutedMembers').get(function () {
-  return this.mutedMembers.size > 0;
-});
 groupSchema.virtual('afkCount').get(function () {
   return this.afkUsers.length;
 });
@@ -186,12 +179,10 @@ groupSchema.virtual('mutechatDuration').get(function () {
 groupSchema.methods.addWarning = function (userId) {
   const currentWarnings = this.warnings.get(userId) || 0;
   this.warnings.set(userId, currentWarnings + 1);
-  this.lastActivity = new Date();
   return this.save();
 };
 groupSchema.methods.resetWarnings = function (userId) {
   this.warnings.delete(userId);
-  this.lastActivity = new Date();
   return this.save();
 };
 groupSchema.methods.getWarnings = function (userId) {
@@ -199,34 +190,33 @@ groupSchema.methods.getWarnings = function (userId) {
 };
 groupSchema.methods.clearAllWarnings = function () {
   this.warnings.clear();
-  this.lastActivity = new Date();
   return this.save();
 };
-groupSchema.methods.muteMember = function (userId, durationMs = this.muteDuration * 1000) {
+groupSchema.methods.muteMember = async function (userId, durationMs = this.muteDuration * 1000) {
   const expiryDate = new Date(Date.now() + durationMs);
-  this.mutedMembers.set(userId, expiryDate);
-  this.lastActivity = new Date();
+  await MutedMember.findOneAndUpdate(
+    { groupId: this.groupId, userId: userId },
+    { $set: { expireAt: expiryDate } },
+    { upsert: true, new: true }
+  );
   return this.save();
 };
-groupSchema.methods.unmuteMember = function (userId) {
-  this.mutedMembers.delete(userId);
-  this.lastActivity = new Date();
+groupSchema.methods.unmuteMember = async function (userId) {
+  await MutedMember.deleteOne({ groupId: this.groupId, userId: userId });
   return this.save();
 };
-groupSchema.methods.isMemberMuted = function (userId) {
-  const expiryDate = this.mutedMembers.get(userId);
-  return expiryDate && expiryDate > new Date();
+groupSchema.methods.isMemberMuted = async function (userId) {
+  const isMuted = await MutedMember.exists({ groupId: this.groupId, userId: userId });
+  return !!isMuted;
 };
 groupSchema.methods.banMember = function (userId) {
   if (!this.bannedMembers.includes(userId)) {
     this.bannedMembers.push(userId);
-    this.lastActivity = new Date();
   }
   return this.save();
 };
 groupSchema.methods.unbanMember = function (userId) {
   this.bannedMembers = this.bannedMembers.filter(id => id !== userId);
-  this.lastActivity = new Date();
   return this.save();
 };
 groupSchema.methods.isMemberBanned = function (userId) {
@@ -239,7 +229,6 @@ groupSchema.methods.addAfkUser = function (userId, reason = '') {
     time: new Date(),
     reason: reason
   });
-  this.lastActivity = new Date();
   return this.save();
 };
 groupSchema.methods.checkAfkUser = function (userId) {
@@ -264,7 +253,6 @@ groupSchema.methods.removeAfkUser = function (userId) {
   if (position !== -1) {
     const removedUser = this.afkUsers[position];
     this.afkUsers.splice(position, 1);
-    this.lastActivity = new Date();
     return this.save().then(() => removedUser);
   }
   return Promise.resolve(null);
@@ -278,7 +266,6 @@ groupSchema.methods.handleUserReturn = async function (userId, currentTime) {
       duration = currentTime - afkData.time;
     }
     this.afkUsers.splice(position, 1);
-    this.lastActivity = new Date();
     await this.save();
     return {
       success: true,
@@ -291,7 +278,6 @@ groupSchema.methods.handleUserReturn = async function (userId, currentTime) {
 groupSchema.methods.clearAllAfk = function () {
   if (this.afkUsers.length > 0) {
     this.afkUsers = [];
-    this.lastActivity = new Date();
     return this.save();
   }
   return this;
@@ -301,18 +287,15 @@ groupSchema.methods.incrementMessageCount = function () {
   const today = new Date().toISOString().split('T')[0];
   const dailyCount = this.dailyStats.get(today) || 0;
   this.dailyStats.set(today, dailyCount + 1);
-  this.lastActivity = new Date();
   return this.save();
 };
 groupSchema.methods.incrementCommandCount = function () {
   this.commandCount += 1;
-  this.lastActivity = new Date();
   return this.save();
 };
 groupSchema.methods.toggleSetting = function (settingName) {
   if (this[settingName] !== undefined) {
     this[settingName] = !this[settingName];
-    this.lastActivity = new Date();
   }
   return this.save();
 };
@@ -321,21 +304,18 @@ groupSchema.methods.updateMessages = function (welcomeMsg = null, leaveMsg = nul
   if (leaveMsg !== null) this.leaveMessage = leaveMsg;
   if (promoteMsg !== null) this.promoteMessage = promoteMsg;
   if (demoteMsg !== null) this.demoteMessage = demoteMsg;
-  this.lastActivity = new Date();
   return this.save();
 };
 groupSchema.methods.muteChat = function (mutedBy = 'system') {
   this.isMuted = true;
   this.mutedAt = new Date();
   this.mutedBy = mutedBy;
-  this.lastActivity = new Date();
   return this.save();
 };
 groupSchema.methods.unmuteChat = function () {
   this.isMuted = false;
   this.mutedAt = null;
   this.mutedBy = null;
-  this.lastActivity = new Date();
   return this.save();
 };
 groupSchema.methods.toggleMuteChat = function (mutedBy = 'system') {
@@ -347,18 +327,15 @@ groupSchema.methods.toggleMuteChat = function (mutedBy = 'system') {
     this.mutedAt = null;
     this.mutedBy = null;
   }
-  this.lastActivity = new Date();
   return this.save();
 };
 groupSchema.methods.toggleFilter = function () {
   this.filter = !this.filter;
-  this.lastActivity = new Date();
   return this.save();
 };
 groupSchema.methods.addFilterWord = function (word) {
   if (!this.filterWords.includes(word)) {
     this.filterWords.push(word);
-    this.lastActivity = new Date();
     return this.save();
   }
   return this;
@@ -367,7 +344,6 @@ groupSchema.methods.removeFilterWord = function (word) {
   const initialLength = this.filterWords.length;
   this.filterWords = this.filterWords.filter(w => w !== word);
   if (this.filterWords.length !== initialLength) {
-    this.lastActivity = new Date();
     return this.save();
   }
   return this;
@@ -378,7 +354,6 @@ groupSchema.methods.hasFilterWord = function (word) {
 groupSchema.methods.clearAllFilterWords = function () {
   if (this.filterWords.length > 0) {
     this.filterWords = [];
-    this.lastActivity = new Date();
     return this.save();
   }
   return this;
@@ -450,18 +425,6 @@ groupSchema.statics.getGroupStats = function () {
     }
   ]);
 };
-groupSchema.statics.cleanupExpiredMutes = function () {
-  return this.updateMany(
-    {},
-    {
-      $pull: {
-        mutedMembers: {
-          $lt: new Date()
-        }
-      }
-    }
-  );
-};
 groupSchema.statics.cleanupOldAfkUsers = function (maxAfkHours = 24) {
   const cutoffDate = new Date();
   cutoffDate.setHours(cutoffDate.getHours() - maxAfkHours);
@@ -497,7 +460,6 @@ groupSchema.index({ isActive: 1, lastActivity: -1 });
 groupSchema.index({ isMuted: 1, mutedAt: -1 });
 groupSchema.index({ filter: 1 });
 groupSchema.index({ filterWords: 1 });
-groupSchema.index({ 'mutedMembers': 1 }, { expireAfterSeconds: 0 });
 groupSchema.index({ 'afkUsers.userId': 1 });
 groupSchema.index({ 'afkUsers.time': -1 });
 

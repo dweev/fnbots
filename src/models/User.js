@@ -160,48 +160,33 @@ userSchema.methods.addCommandCount = function (commandName, count = 1) {
 userSchema.methods.getCommandCount = function (commandName) {
   return this.commandStats.get(commandName) || 0;
 };
-userSchema.methods.addLimit = async function (count = 1) {
-  const isSadmin = config.ownerNumber.includes(this.userId);
-  if (isSadmin || this.isMaster || this.isVIPActive) return false;
-  this.limit.current -= count;
-  return this.save();
-};
-userSchema.methods.addGameLimit = async function (count = 1) {
-  const isSadmin = config.ownerNumber.includes(this.userId);
-  if (isSadmin || this.isMaster || this.isVIPActive) return false;
-  this.limitgame.current -= count;
-  return this.save();
-};
-userSchema.methods.isLimit = function () {
+userSchema.methods.isLimit = async function () {
   const isSadmin = config.ownerNumber.includes(this.userId);
   if (isSadmin || this.isMaster || this.isVIPActive) return false;
   if (this.limit.current <= 0) {
     if (!this.limit.warned) {
       this.limit.warned = true;
-      this.save();
+      await mongoose.model('User').updateOne(
+        { userId: this.userId },
+        { $set: { 'limit.warned': true } }
+      );
     }
     return true;
-  }
-  if (this.limit.warned) {
-    this.limit.warned = false;
-    this.save();
   }
   return false;
 };
-userSchema.methods.isGameLimit = function () {
+userSchema.methods.isGameLimit = async function () {
   const isSadmin = config.ownerNumber.includes(this.userId);
   if (isSadmin || this.isMaster || this.isVIPActive) return false;
-
   if (this.limitgame.current <= 0) {
     if (!this.limitgame.warned) {
       this.limitgame.warned = true;
-      this.save();
+      await mongoose.model('User').updateOne(
+        { userId: this.userId },
+        { $set: { 'limitgame.warned': true } }
+      );
     }
     return true;
-  }
-  if (this.limitgame.warned) {
-    this.limitgame.warned = false;
-    this.save();
   }
   return false;
 };
@@ -232,26 +217,36 @@ userSchema.methods.minBalance = async function (amount) {
 };
 userSchema.methods.addXp = async function (xpToAdd = 1) {
   const levelData = [
-    { level: 1, xpAdd: 5, threshold: 1250 },
-    { level: 2, xpAdd: 4, threshold: 3800 },
-    { level: 3, xpAdd: 3, threshold: 5400 },
-    { level: 4, xpAdd: 2, threshold: 7600 },
-    { level: 5, xpAdd: 1, threshold: 9300 },
-    { level: 6, xpAdd: 1, threshold: 12000 },
-    { level: 7, xpAdd: 1, threshold: 18000 },
-    { level: 8, xpAdd: 1, threshold: 24000 },
-    { level: 9, xpAdd: 1, threshold: 30000 },
+    { level: 1, threshold: 1250 },
+    { level: 2, threshold: 3800 },
+    { level: 3, threshold: 5400 },
+    { level: 4, threshold: 7600 },
+    { level: 5, threshold: 9300 },
+    { level: 6, threshold: 12000 },
+    { level: 7, threshold: 18000 },
+    { level: 8, threshold: 24000 },
+    { level: 9, threshold: 30000 }
   ];
-  const data = levelData.find(d => d.level === this.level);
-  if (!data) return this;
   this.xp += xpToAdd;
-  if (this.xp > data.threshold && this.level < 9) {
-    this.level += 1;
-    await this.save();
-    return { levelUp: true, newLevel: this.level };
+  let leveledUp = false;
+  while (this.level < 10) {
+    const currentLevelData = levelData.find(d => d.level === this.level);
+    if (!currentLevelData) {
+      break;
+    }
+    if (this.xp >= currentLevelData.threshold) {
+      this.level++;
+      leveledUp = true;
+    } else {
+      break;
+    }
   }
   await this.save();
-  return { levelUp: false, currentLevel: this.level };
+  if (leveledUp) {
+    return { levelUp: true, newLevel: this.level };
+  } else {
+    return { levelUp: false, currentLevel: this.level };
+  }
 };
 userSchema.methods.getLevelFormat = function () {
   return {
@@ -440,13 +435,30 @@ userSchema.statics.removeVIP = function (userId) {
   });
 };
 userSchema.statics.getLeaderboard = function (type = 'xp', limit = 20) {
+  if (type === 'balance') {
+    return this.aggregate([
+      {
+        $addFields: {
+          balanceNumeric: { $toLong: "$balance" }
+        }
+      },
+      {
+        $sort: { balanceNumeric: -1 }
+      },
+      {
+        $limit: limit
+      },
+      {
+        $project: {
+          balanceNumeric: 0
+        }
+      }
+    ]);
+  }
   let sortCriteria = {};
   switch (type) {
     case 'xp':
       sortCriteria = { xp: -1, level: -1 };
-      break;
-    case 'balance':
-      sortCriteria = { balance: -1 };
       break;
     case 'level':
       sortCriteria = { level: -1, xp: -1 };

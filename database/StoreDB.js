@@ -105,21 +105,21 @@ class DBStore {
   async processBatchUpdates() {
     if (!this.isConnected) return;
     if (this.pendingUpdates.contacts.size > 0) {
-      const contactsArray = Array.from(this.pendingUpdates.contacts.values());
-      this.pendingUpdates.contacts.clear();
+      const contactsToUpdate = Array.from(this.pendingUpdates.contacts.values());
       try {
-        await Contact.bulkUpsert(contactsArray);
+        await Contact.bulkUpsert(contactsToUpdate);
+        this.pendingUpdates.contacts.clear();
       } catch (error) {
-        log(`Batch contacts update failed: ${error}`, true);
+        log(`Batch contacts update failed: ${error}. Data will be retried on the next interval.`, true);
       }
     }
     if (this.pendingUpdates.groups.size > 0) {
-      const groupsArray = Array.from(this.pendingUpdates.groups.values());
-      this.pendingUpdates.groups.clear();
+      const groupsToUpdate = Array.from(this.pendingUpdates.groups.values());
       try {
-        await GroupMetadata.bulkUpsert(groupsArray);
+        await GroupMetadata.bulkUpsert(groupsToUpdate);
+        this.pendingUpdates.groups.clear();
       } catch (error) {
-        log(`Batch groups update failed: ${error}`, true);
+        log(`Batch groups update failed: ${error}. Data will be retried on the next interval.`, true);
       }
     }
   }

@@ -380,10 +380,17 @@ export async function arfine(fn, m, { dbSettings, ownerNumber, version, isSugges
                 };
                 await command.execute(commandArgs);
                 commandFound = true;
-                await user.countHit();
-                await user.addCommandCount(commandName, 1);
-                await user.addLimit(1);
-                await user.addGameLimit(1);
+                const userUpdates = {
+                  $inc: {
+                    userCount: 1,
+                    [`commandStats.${commandName}`]: 1
+                  }
+                };
+                if (!isSadmin && !isMaster && !isVIP) {
+                  userUpdates.$inc['limit.current'] = -1;
+                  userUpdates.$inc['limitgame.current'] = -1;
+                }
+                await User.updateOne({ userId: user.userId }, userUpdates);
                 await Command.updateCount(command.name, 1);
                 await Settings.incrementTotalHitCount();
               }

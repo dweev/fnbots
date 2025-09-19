@@ -26,6 +26,6 @@ export const command = {
     const remainingMs = vipUser.vipExpired - Date.now();
     const durationLeft = dayjs.duration(remainingMs);
     const durationMessage = formatDurationMessage(durationLeft);
-    await sReply(`「 *VIP EXPIRE* 」\n\n➸ *ID*: @${targetId.split('@')[0]}\n➸ ${durationMessage}`);
+    await sReply(`「 *VIP EXPIRE* 」\n\n*ID*: @${targetId.split('@')[0]}\n${durationMessage}`);
   }
 }

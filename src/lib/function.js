@@ -167,12 +167,6 @@ export function randomByte(length = 32) {
   }
   return result;
 };
-export async function mycmd(input) {
-  if (Array.isArray(input)) {
-    return input;
-  }
-  return input.split(';').map(cmd => cmd.trim()).filter(cmd => cmd.length > 0);
-}
 export function msgs(a) {
   if (!a) return;
   return a.length >= 10 ? a.slice(0, 40) : a;
@@ -199,6 +193,12 @@ export function reviver(key, value) {
     return BigInt(value.slice(0, -1));
   };
   return value;
+};
+export async function mycmd(input) {
+  if (Array.isArray(input)) {
+    return input;
+  }
+  return input.split(';').map(cmd => cmd.trim()).filter(cmd => cmd.length > 0);
 };
 export async function deleteFile(path) {
   try {
@@ -351,4 +351,28 @@ export async function writeExif(media, data) {
   } else {
     return tmpFileIn;
   };
+};
+export async function convertAudio(inputPath, { isNotVoice = true, ffmpegPath = '/usr/bin/ffmpeg', ffprobePath = '/usr/bin/ffprobe' } = {}) {
+  return new Promise((resolve, reject) => {
+    const format = isNotVoice ? 'mp3' : 'ogg';
+    const audioCodec = isNotVoice ? 'libmp3lame' : 'libopus';
+    const audioBitrate = isNotVoice ? '128k' : '48k';
+    const audioChannels = isNotVoice ? 2 : 1;
+    const outputPath = path.join(
+      path.dirname(inputPath),
+      `${path.parse(inputPath).name}-converted.${format}`
+    );
+    ffmpeg(inputPath)
+      .setFfmpegPath(ffmpegPath)
+      .setFfprobePath(ffprobePath)
+      .noVideo()
+      .format(format)
+      .audioCodec(audioCodec)
+      .audioBitrate(audioBitrate)
+      .audioChannels(audioChannels)
+      .addOption('-avoid_negative_ts', 'make_zero')
+      .on('error', reject)
+      .on('end', () => resolve(outputPath))
+      .save(outputPath);
+  });
 };

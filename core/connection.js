@@ -72,7 +72,7 @@ export async function createWASocket(dbSettings) {
     enableRecentMessageCache: true
   });
   if (pairingCode && !phoneNumber && !fn.authState.creds.registered) {
-    let numberToValidate = dbSettings.botNumber ? dbSettings.botNumber : config.botNumber;
+    let numberToValidate = config.botNumber ? config.botNumber : dbSettings.botNumber;
     let isValid = false;
     while (!isValid) {
       if (!numberToValidate) {
@@ -91,6 +91,8 @@ export async function createWASocket(dbSettings) {
       }
     }
     await BaileysSession.deleteMany({});
+    dbSettings.botNumber = null;
+    await Settings.updateSettings(dbSettings);
   };
   await clientBot(fn, dbSettings);
   fn.ev.on('creds.update', saveCreds);
@@ -145,7 +147,9 @@ export async function createWASocket(dbSettings) {
         await log(`[DISCONNECTED] Connection closed. Code: ${statusCode}`);
         const code = [401, 402, 403, 411, 500];
         if (code.includes(statusCode)) {
+          dbSettings.botNumber = null;
           await BaileysSession.deleteMany({});
+          await Settings.updateSettings(dbSettings);
           process.exit(1);
         } else {
           await handleRestart(`Koneksi terputus dengan kode ${statusCode}`);

@@ -108,6 +108,7 @@ export default async function updateMessageUpsert(fn, message, dbSettings) {
         }
       }
       const dependencies = {
+        mongoStore,
         dbSettings,
         ownerNumber: config.ownerNumber,
         version: global.version,

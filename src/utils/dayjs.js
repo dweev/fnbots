@@ -16,5 +16,6 @@ dayjs.extend(utc);
 dayjs.extend(timezone);
 dayjs.extend(duration);
 dayjs.extend(localizedFormat);
+dayjs.tz.setDefault('Asia/Jakarta');
 
 export default dayjs;

@@ -12,7 +12,6 @@ import process from 'process';
 import util from 'util';
 
 const logFilePath = path.join(process.cwd(), 'logs');
-
 const blockedKeywords = [
   "WARNING: Expected pubkey of length 33, please report the ST and client that generated the pubkey",
   "Unhandled bucket type (for naming):",
@@ -29,6 +28,29 @@ const blockedKeywords = [
   "Closing session:"
 ];
 
+export const appLogger = pino(pino.transport({
+  targets: [
+    {
+      level: 'info',
+      target: 'pino-pretty',
+      options: {
+        colorize: true,
+        translateTime: 'SYS:dd-mm-yyyy HH:MM:ss',
+        ignore: 'pid,hostname',
+      }
+    },
+    {
+      level: 'info',
+      target: 'pino-roll',
+      options: {
+        file: path.join(logFilePath, 'app_activity.log'),
+        frequency: 'daily',
+        size: '10M',
+        mkdir: true,
+      },
+    },
+  ],
+}));
 export const pinoLogger = pino(pino.transport({
   targets: [
     {
@@ -38,16 +60,13 @@ export const pinoLogger = pino(pino.transport({
         colorize: true,
         translateTime: 'SYS:dd-mm-yyyy HH:MM:ss',
         ignore: 'pid,hostname',
-        depthLimit: 10,
-        maxExpandDepth: 10,
-        showHidden: true
       }
     },
     {
       level: 'info',
       target: 'pino-roll',
       options: {
-        file: path.join(logFilePath, 'app.log'),
+        file: path.join(logFilePath, 'baileys.log'),
         frequency: 'daily',
         size: '10M',
         mkdir: true,
@@ -55,7 +74,6 @@ export const pinoLogger = pino(pino.transport({
     },
   ],
 }));
-
 export default async function log(message, isError = false) {
   const inspectedMessage = util.inspect(message);
   if (blockedKeywords.some(keyword => inspectedMessage.includes(keyword))) {
@@ -63,14 +81,14 @@ export default async function log(message, isError = false) {
   }
   if (isError) {
     if (message instanceof Error) {
-      pinoLogger.error(message);
+      appLogger.error(message);
     } else {
       const textMessage = typeof message === 'string' ? message : util.inspect(message, { depth: null });
-      pinoLogger.error(textMessage);
+      appLogger.error(textMessage);
     }
   } else {
     const textMessage = typeof message === 'string' ? message : util.inspect(message, { depth: null });
-    pinoLogger.info(textMessage);
+    appLogger.info(textMessage);
   }
 }
 

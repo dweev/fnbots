@@ -15,7 +15,9 @@ const ConversationSchema = new mongoose.Schema({
   timestamp: Number,
   quoted: String,
   quotedSender: String,
-  keyId: { type: String, unique: true }
+  keyId: {
+    type: String,
+  }
 }, { _id: false });
 
 const messagesSchema = new mongoose.Schema({
@@ -45,6 +47,17 @@ const messagesSchema = new mongoose.Schema({
   },
 }, {
   timestamps: true,
+});
+
+messagesSchema.index({
+  "chatId": 1,
+  "conversations.keyId": 1
+}, {
+  unique: true,
+  sparse: true,
+  partialFilterExpression: {
+    "conversations.keyId": { $exists: true, $ne: null }
+  }
 });
 
 messagesSchema.statics.addMessage = function (chatId, messageObject, maxSize = 50) {

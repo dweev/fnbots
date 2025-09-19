@@ -12,14 +12,12 @@ import axios from 'axios';
 import FileType from 'file-type';
 import log from '../src/utils/logger.js';
 import { mongoStore } from '../database/index.js';
-import { randomByte, getBuffer, getSizeMedia, deleteFile, writeExif } from '../src/lib/function.js';
+import { randomByte, getBuffer, getSizeMedia, deleteFile, writeExif, convertAudio } from '../src/lib/function.js';
 import { jidNormalizedUser, generateWAMessage, generateWAMessageFromContent, downloadContentFromMessage, jidDecode, jidEncode, getBinaryNodeChildString, getBinaryNodeChildren, getBinaryNodeChild, proto } from 'baileys';
 
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
-const nodeGtts = require('node-gtts');
-
-export const ttsId = nodeGtts('id');
+export const ttsId = require('node-gtts')('id');
 
 export async function clientBot(fn, dbSettings) {
   fn.decodeJid = (jid = '') => {
@@ -328,37 +326,40 @@ export async function clientBot(fn, dbSettings) {
       }
       const fileType = await FileType.fromFile(localPath);
       const mime = fileType?.mime || 'application/octet-stream';
-      const fileSizeInBytes = fs.statSync(localPath).size;
-      const fileSizeInMB = fileSizeInBytes / (1024 * 1024);
+      const fileSizeInMB = fs.statSync(localPath).size / (1024 * 1024);
       const quoted = options.quoted || null;
       const ephemeralExpiration = options?.quoted?.expiration ?? 0;
-      const quotedOptions = {
-        quoted,
-        ephemeralExpiration,
-        ...options
-      };
-      let messageContent = {};
+      const quotedOptions = { quoted, ephemeralExpiration, ...options };
       const fileName = path.basename(localPath);
+      let messageContent = {};
       if (fileSizeInMB > 200) {
         messageContent = {
           document: { stream: fs.createReadStream(localPath) },
           mimetype: mime,
-          fileName: fileName,
-          mentions: mentions,
+          fileName,
+          mentions,
           ...options
         };
+      } else if (mime.startsWith('audio/')) {
+        const convertedPath = await convertAudio(localPath, {
+          isNotVoice: !options?.ptt
+        });
+        const buffer = fs.readFileSync(convertedPath);
+        messageContent = {
+          audio: buffer, // { stream: fs.createReadStream(convertedPath) }
+          mimetype: options?.ptt ? 'audio/ogg; codecs=opus' : 'audio/mpeg',
+          ptt: true,
+          mentions,
+          ...options
+        };
+      } else if (mime.includes('gif')) {
+        messageContent = { video: { stream: fs.createReadStream(localPath) }, gifPlayback: true, mentions, ...options };
+      } else if (mime.startsWith('image/')) {
+        messageContent = { image: { stream: fs.createReadStream(localPath) }, caption, mentions, ...options };
+      } else if (mime.startsWith('video/')) {
+        messageContent = { video: { stream: fs.createReadStream(localPath) }, caption, mentions, ...options };
       } else {
-        if (mime.includes('gif')) {
-          messageContent = { video: { stream: fs.createReadStream(localPath) }, gifPlayback: true, mentions: mentions, ...options };
-        } else if (mime.startsWith('image/')) {
-          messageContent = { image: { stream: fs.createReadStream(localPath) }, caption: caption, mentions: mentions, ...options };
-        } else if (mime.startsWith('video/')) {
-          messageContent = { video: { stream: fs.createReadStream(localPath) }, caption: caption, mentions: mentions, ...options };
-        } else if (mime.startsWith('audio/')) {
-          messageContent = { audio: { stream: fs.createReadStream(localPath) }, mimetype: 'audio/mpeg', mentions: mentions, ptt: true, ...options };
-        } else {
-          messageContent = { document: { stream: fs.createReadStream(localPath) }, mimetype: mime, fileName: fileName, mentions: mentions, ...options };
-        }
+        messageContent = { document: { stream: fs.createReadStream(localPath) }, mimetype: mime, fileName, mentions, ...options };
       }
       return await fn.sendMessage(jid, messageContent, quotedOptions);
     } catch (error) {

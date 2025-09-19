@@ -151,6 +151,11 @@ const settingsSchema = new mongoose.Schema({
     type: Number,
     default: 50
   },
+  self: {
+    type: String,
+    default: 'false',
+    enum: ['true', 'false', 'auto']
+  },
   dataM: {
     type: Map,
     of: mongoose.Schema.Types.Mixed,
@@ -178,6 +183,36 @@ settingsSchema.virtual('totalhitcount').get(function () {
   this.totalHitCount = value;
 });
 
+settingsSchema.statics.setSelfMode = async function (mode) {
+  const validModes = ['true', 'false', 'auto'];
+  if (!validModes.includes(mode)) {
+    throw new Error('Mode self harus: true, false, atau auto');
+  }
+  
+  const settings = await this.getSettings();
+  settings.self = mode;
+  return settings.save();
+};
+settingsSchema.statics.getSelfMode = async function () {
+  const settings = await this.getSettings();
+  return settings.self;
+};
+settingsSchema.statics.toggleSelfMode = async function () {
+  const settings = await this.getSettings();
+  const modes = ['false', 'true', 'auto'];
+  const currentIndex = modes.indexOf(settings.self);
+  const nextIndex = (currentIndex + 1) % modes.length;
+  settings.self = modes[nextIndex];
+  return settings.save();
+};
+settingsSchema.statics.isSelfEnabled = async function () {
+  const settings = await this.getSettings();
+  return settings.self === 'true';
+};
+settingsSchema.statics.isSelfAuto = async function () {
+  const settings = await this.getSettings();
+  return settings.self === 'auto';
+};
 settingsSchema.statics.getSettings = async function () {
   let settings = await this.findOne();
   if (!settings) {
@@ -205,6 +240,30 @@ settingsSchema.statics.getSAdmins = async function () {
   return settings.sAdmin;
 };
 
+settingsSchema.methods.setSelfMode = function (mode) {
+  const validModes = ['true', 'false', 'auto'];
+  if (!validModes.includes(mode)) {
+    throw new Error('Mode self harus: true, false, atau auto');
+  }
+  this.self = mode;
+  return this.save();
+};
+settingsSchema.methods.getSelfMode = function () {
+  return this.self;
+};
+settingsSchema.methods.toggleSelfMode = function () {
+  const modes = ['false', 'true', 'auto'];
+  const currentIndex = modes.indexOf(this.self);
+  const nextIndex = (currentIndex + 1) % modes.length;
+  this.self = modes[nextIndex];
+  return this.save();
+};
+settingsSchema.methods.isSelfEnabled = function () {
+  return this.self === 'true';
+};
+settingsSchema.methods.isSelfAuto = function () {
+  return this.self === 'auto';
+};
 settingsSchema.methods.toggleMaintenance = function () {
   this.maintenance = !this.maintenance;
   return this.save();

@@ -16,6 +16,41 @@ import dayjs from '../utils/dayjs.js';
 import ffmpeg from '@ts-ffmpeg/fluent-ffmpeg';
 import { getDbSettings } from './settingsManager.js';
 
+export function checkDepth(currentObj, currentDepth = 0) {
+  if (typeof currentObj !== 'object' || currentObj === null) return currentDepth;
+  let maxDepth = currentDepth;
+  if (Array.isArray(currentObj)) {
+    for (const item of currentObj) {
+      const depth = checkDepth(item, currentDepth + 1);
+      maxDepth = Math.max(maxDepth, depth);
+    }
+  } else {
+    for (const key in currentObj) {
+      if (Object.prototype.hasOwnProperty.call(currentObj, key)) {
+        const depth = checkDepth(currentObj[key], currentDepth + 1);
+        maxDepth = Math.max(maxDepth, depth);
+      }
+    }
+  }
+  return maxDepth;
+};
+export function safeStringify(obj, space = 2) {
+  const seen = new WeakMap();
+  return JSON.stringify(obj, (key, value) => {
+    if (typeof value === 'object' && value !== null) {
+      if (seen.has(value)) {
+        const originalDepth = seen.get(value);
+        const currentPathDepth = checkDepth(value);
+        if (originalDepth + currentPathDepth > 4) return '[Circular]';
+        return value;
+      }
+      const depth = checkDepth(value);
+      seen.set(value, depth);
+    }
+    if (typeof value === 'function') return `[Function: ${value.name || 'anonymous'}]`;
+    return value;
+  }, space);
+};
 export function getSizeMedia(crots) {
   return new Promise((resolve, reject) => {
     if (typeof crots === 'string' && /http/.test(crots)) {
@@ -375,4 +410,26 @@ export async function convertAudio(inputPath, { isNotVoice = true, ffmpegPath = 
       .on('end', () => resolve(outputPath))
       .save(outputPath);
   });
+};
+export async function sendAndCleanupFile(fn, toId, localPath, m, dbSettings) {
+  try {
+    const ext = path.extname(localPath).toLowerCase();
+    const stickerExtensions = new Set(['.gif', '.webp']);
+    const mediaExtensions = new Set(['.png', '.jpg', '.jpeg', '.mp4']);
+    if (stickerExtensions.has(ext)) {
+      await fn.sendRawWebpAsSticker(toId, localPath, m, {
+        packname: dbSettings.packName,
+        author: dbSettings.packAuthor
+      });
+    } else if (mediaExtensions.has(ext)) {
+      await fn.sendFilePath(toId, dbSettings.autocommand, localPath, { quoted: m });
+    } else {
+      await fn.sendReply(toId, `File generated at: ${localPath}`, { quoted: m });
+    }
+  } catch (error) {
+    await log(`Error saat mengirim file hasil eval:\n${error}`, true);
+    await fn.sendReply(toId, `Gagal mengirim file: ${error.message}`, { quoted: m });
+  } finally {
+    await deleteFile(localPath);
+  }
 };

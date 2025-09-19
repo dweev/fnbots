@@ -15,8 +15,8 @@ import { spawn } from 'child_process';
 import log from '../src/utils/logger.js';
 import { exec as cp_exec } from 'child_process';
 import { pluginCache } from '../src/lib/plugins.js';
-import { color, msgs, deleteFile, mycmd } from '../src/lib/function.js';
 import { User, Group, Whitelist, Settings, Command } from '../database/index.js';
+import { color, msgs, mycmd, safeStringify, sendAndCleanupFile } from '../src/lib/function.js';
 
 const exec = util.promisify(cp_exec);
 const isPm2 = process.env.pm_id !== undefined || process.env.NODE_APP_INSTANCE !== undefined;
@@ -40,17 +40,6 @@ let _latestMessages   = null;
 
 const fuseOptions = { includeScore: true, threshold: 0.25, minMatchCharLength: 2, distance: 25 };
 
-function safeStringify(obj, space = 2) {
-  const seen = new WeakSet();
-  return JSON.stringify(obj, (key, value) => {
-    if (typeof value === 'object' && value !== null) {
-      if (seen.has(value)) return '[Circular]';
-      seen.add(value);
-    }
-    if (typeof value === 'function') return `[Function: ${value.name || 'anonymous'}]`;
-    return value;
-  }, space);
-}
 async function textMatch1(fn, m, lt, toId) {
   const suggestions = [];
   const seenTypo = new Set();
@@ -143,28 +132,6 @@ async function getTxt(txt, dbSettings) {
   }
   txt = txt.trim();
   return txt;
-};
-async function sendAndCleanupFile(fn, toId, localPath, m, dbSettings) {
-  try {
-    const ext = path.extname(localPath).toLowerCase();
-    const stickerExtensions = new Set(['.gif', '.webp']);
-    const mediaExtensions = new Set(['.png', '.jpg', '.jpeg', '.mp4']);
-    if (stickerExtensions.has(ext)) {
-      await fn.sendRawWebpAsSticker(toId, localPath, m, {
-        packname: dbSettings.packName,
-        author: dbSettings.packAuthor
-      });
-    } else if (mediaExtensions.has(ext)) {
-      await fn.sendFilePath(toId, dbSettings.autocommand, localPath, { quoted: m });
-    } else {
-      await fn.sendReply(toId, `File generated at: ${localPath}`, { quoted: m });
-    }
-  } catch (error) {
-    await log(`Error saat mengirim file hasil eval:\n${error}`, true);
-    await fn.sendReply(toId, `Gagal mengirim file: ${error.message}`, { quoted: m });
-  } finally {
-    await deleteFile(localPath);
-  }
 };
 async function shutdown() {
   if (isPm2) {
@@ -267,7 +234,7 @@ export async function handleRestart(reason) {
     process.exit(0);
   }
 };
-export async function arfine(fn, m, { dbSettings, ownerNumber, version, isSuggestion = false }) {
+export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, version, isSuggestion = false }) {
   suggested = isSuggestion;
   _latestMessage = m;
   _latestMessages = m;
@@ -275,6 +242,7 @@ export async function arfine(fn, m, { dbSettings, ownerNumber, version, isSugges
   await expiredVIPcheck(fn, ownerNumber);
 
   const serial = await getSerial(m);
+  const botNumber = m.botnumber;
   const id = m.key.id;
   const pushname = m.pushName || 'Unknown';
   const fromBot = m.fromMe;
@@ -284,7 +252,6 @@ export async function arfine(fn, m, { dbSettings, ownerNumber, version, isSugges
   const quotedMsg = m.quoted ? m.quoted : false;
   const quotedParticipant = m.quoted?.sender || '';
   const mentionedJidList = Array.isArray(m.mentionedJid) ? m.mentionedJid : [];
-  const botNumber = m.botnumber;
   const isSadmin = ownerNumber.includes(serial);
   const isMaster = user.isMaster;
   const isVIP = user.isVIPActive;
@@ -309,21 +276,96 @@ export async function arfine(fn, m, { dbSettings, ownerNumber, version, isSugges
   const reactFail = async () => { await delay(1000); await fn.sendMessage(toId, { react: { text: '❎', key: m.key } }) };
   const sReply = (content, options = {}) => fn.sendReply(toId, content, { quoted: m, ...options });
   const sPesan = (content) => fn.sendPesan(toId, content, m);
-  let txt = body?.toLowerCase();
+  let txt = body;
   const isCmd = txt?.startsWith(dbSettings.rname) || txt?.startsWith(dbSettings.sname);
+  
+  if (body?.startsWith('>')) {
+    if (!isSadmin && !isMaster) return;
+    try {
+      const code = body.slice(2);
+      const evaled = /await/i.test(code) ? await eval(`(async () => { ${code} })()`) : await eval(code);
+      if (typeof evaled === 'string' && evaled.startsWith(localFilePrefix)) {
+        const relativePath = evaled.substring(localFilePrefix.length);
+        const absolutePath = path.join(process.cwd(), relativePath);
+        await sendAndCleanupFile(fn, toId, absolutePath, m, dbSettings);
+        return;
+      }
+      let outputText;
+      if (typeof evaled === 'object' && evaled !== null) {
+        try {
+          outputText = safeStringify(evaled, 2);
+        } catch {
+          outputText = util.inspect(evaled, { depth: 2 });
+        }
+      } else {
+        outputText = util.format(evaled);
+      }
 
-  if (body?.toLowerCase().trim() == "res") {
-    if (isSadmin || isMaster) {
-      dbSettings.restartState = true;
-      dbSettings.restartId = m.from;
-      dbSettings.dataM = m;
-      await Promise.all([Settings.updateSettings(dbSettings), reactDone(), handleRestart("Restarting...")]);
+      if (outputText === 'undefined') {
+        // do nothing
+      } else {
+        await sReply(outputText);
+      }
+    } catch (error) {
+      const prettyError = (() => {
+        try {
+          const errObj = {
+            name: error?.name,
+            message: error?.message,
+            stack: error?.stack,
+          };
+          for (const k of Object.getOwnPropertyNames(error || {})) {
+            if (!['name', 'message', 'stack'].includes(k)) {
+              try { errObj[k] = error[k]; } catch { errObj[k] = `[unserializable:${k}]`; }
+            }
+          }
+          return safeStringify(errObj, 2);
+        } catch {
+          return util.inspect(error, { depth: 2 });
+        }
+      })();
+      await sReply(prettyError);
     }
+  } else if (body?.startsWith('$')) {
+    if (!isSadmin && !isMaster) return;
+    try {
+      const { stdout, stderr } = await exec(body?.slice(2).trim());
+      const combinedOutput = (stdout || stderr || "").trim();
+      if (combinedOutput) {
+        await sReply(util.format(combinedOutput));
+      } else {
+        await sReply("Perintah berhasil dieksekusi, namun tidak ada output yang dihasilkan.");
+      }
+    } catch (error) {
+      await sReply(util.format(error));
+    }
+  } else if (body?.toLowerCase().trim() == "res") {
+    if (!isSadmin && !isMaster) return;
+    dbSettings.restartState = true;
+    dbSettings.restartId = m.from;
+    dbSettings.dataM = m;
+    await Promise.all([Settings.updateSettings(dbSettings), reactDone(), handleRestart("Restarting...")]);
   } else if (body?.toLowerCase().trim() == "shutdown") {
-    if (isSadmin || isMaster) {
-      await Promise.all([reactDone(), shutdown()]);
+    if (!isSadmin && !isMaster) return;
+    await Promise.all([reactDone(), shutdown()]);
+  } else if (body?.toLowerCase().trim().startsWith("mode")) {
+    if (!isSadmin && !isMaster) return;
+    const args = body.toLowerCase().trim().split(/\s+/);
+    const mode = args[1];
+    const validModes = ['true', 'false', 'auto'];
+    if (!mode) {
+      const currentMode = dbSettings.self;
+      return sReply(`📋 Mode self saat ini: *${currentMode}*\n\nGunakan: mode <mode>\n• Mode available: true, false, auto`);
     }
+    if (!validModes.includes(mode)) return sReply(`Mode tidak valid!\n\nGunakan: mode <mode>\n• Mode available: true, false, auto`);
+    await Settings.setSelfMode(mode);
+    dbSettings.self = mode;
+    await sReply(`✅ Mode self berhasil diubah ke: *${mode}*`);
   }
+
+  const selfMode = dbSettings.self;
+  if (selfMode === 'true' && !fromBot && !isSadmin && !isMaster) return;
+  if (selfMode === 'false' && fromBot) return;
 
   if (m.isGroup) {
     const groupData = await Group.ensureGroup(toId);
@@ -332,7 +374,6 @@ export async function arfine(fn, m, { dbSettings, ownerNumber, version, isSugges
     if (!groupData.isActive) return;
   }
   try {
-    if (fromBot || (serial === botNumber)) return;
     if (m.isGroup && !isCmd) {
       const isPrivileged = isBotGroupAdmins && [isSadmin, isMaster, isVIP, isPremium].some(Boolean);
       const groupSettings = await Group.findOne({ groupId: toId }).lean();
@@ -478,64 +519,4 @@ export async function arfine(fn, m, { dbSettings, ownerNumber, version, isSugges
   } catch (error) {
     await log(`!!! ERROR DI DALAM ARFINE !!!\n${error}`, true);
   };
-  if (body?.startsWith('>')) {
-    if (!isSadmin) return;
-    try {
-      const code = body.slice(2);
-      const evaled = /await/i.test(code) ? await eval(`(async () => { ${code} })()`) : await eval(code);
-      if (typeof evaled === 'string' && evaled.startsWith(localFilePrefix)) {
-        const localPath = evaled.substring(localFilePrefix.length);
-        await sendAndCleanupFile(fn, toId, localPath, m, dbSettings);
-        return;
-      }
-      let outputText;
-      if (typeof evaled === 'object' && evaled !== null) {
-        try {
-          outputText = safeStringify(evaled, 2);
-        } catch {
-          outputText = util.inspect(evaled, { depth: 2 });
-        }
-      } else {
-        outputText = util.format(evaled);
-      }
-
-      if (outputText === 'undefined') {
-        // do nothing
-      } else {
-        await sReply(outputText);
-      }
-    } catch (error) {
-      const prettyError = (() => {
-        try {
-          const errObj = {
-            name: error?.name,
-            message: error?.message,
-            stack: error?.stack,
-          };
-          for (const k of Object.getOwnPropertyNames(error || {})) {
-            if (!['name', 'message', 'stack'].includes(k)) {
-              try { errObj[k] = error[k]; } catch { errObj[k] = `[unserializable:${k}]`; }
-            }
-          }
-          return safeStringify(errObj, 2);
-        } catch {
-          return util.inspect(error, { depth: 2 });
-        }
-      })();
-      await sReply(prettyError);
-    }
-  } else if (body?.startsWith('$')) {
-    if (!isSadmin) return;
-    try {
-      const { stdout, stderr } = await exec(body?.slice(2).trim());
-      const combinedOutput = (stdout || stderr || "").trim();
-      if (combinedOutput) {
-        await sReply(util.format(combinedOutput));
-      } else {
-        await sReply("Perintah berhasil dieksekusi, namun tidak ada output yang dihasilkan.");
-      }
-    } catch (error) {
-      await sReply(util.format(error));
-    }
-  }
 };

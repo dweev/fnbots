@@ -8,6 +8,7 @@
 
 import mongoose from 'mongoose';
 import config from '../../config.js';
+import { getDbSettings } from '../lib/settingsManager.js';
 
 async function addMembership(user, type, durationMs) {
   const fieldMap = {
@@ -135,12 +136,13 @@ const userSchema = new mongoose.Schema({
 });
 
 userSchema.pre('save', function (next) {
+  const dbSettings = getDbSettings();
   if (this.isNew) {
-    this.limit.current = this.isPremium ? 300 : 100;
-    this.limitgame.current = this.isPremium ? 300 : 100;
+    this.limit.current = this.isPremium ? dbSettings.limitCountPrem : dbSettings.limitCount;
+    this.limitgame.current = this.isPremium ? dbSettings.limitCountPrem : dbSettings.limitGame;
   } else if (this.isModified('isPremium')) {
-    this.limit.current = this.isPremium ? 300 : 100;
-    this.limitgame.current = this.isPremium ? 300 : 100;
+    this.limit.current = this.isPremium ? dbSettings.limitCountPrem : dbSettings.limitCount;
+    this.limitgame.current = this.isPremium ? dbSettings.limitCountPrem : dbSettings.limitGame;
   }
   next();
 });
@@ -205,11 +207,12 @@ userSchema.methods.isGameLimit = async function () {
   return false;
 };
 userSchema.methods.resetLimits = function () {
+  const dbSettings = getDbSettings();
   const now = new Date();
   const lastReset = new Date(this.limit.lastReset);
   if (now.getDate() !== lastReset.getDate() || now.getMonth() !== lastReset.getMonth()) {
-    this.limit.current = this.isPremium ? 300 : 100;
-    this.limitgame.current = this.isPremium ? 300 : 100;
+    this.limit.current = this.isPremium ? dbSettings.limitCountPrem : dbSettings.limitCount;
+    this.limitgame.current = this.isPremium ? dbSettings.limitCountPrem : dbSettings.limitGame;
     this.limit.lastReset = now;
     this.limitgame.lastReset = now;
     this.limit.warned = false;
@@ -416,12 +419,13 @@ userSchema.statics.removeMaster = async function (userId) {
   );
 };
 userSchema.statics.removePremium = function (userId) {
+  const dbSettings = getDbSettings();
   return this.updateOne({ userId }, {
     $set: {
       isPremium: false,
       premiumExpired: null,
-      'limit.current': 100,
-      'limitgame.current': 100
+      'limit.current': dbSettings.limitCount,
+      'limitgame.current': dbSettings.limitGame
     }
   });
 };
@@ -494,7 +498,7 @@ userSchema.statics.findActivePremiums = function () {
     premiumExpired: { $gt: new Date() }
   });
 };
-userSchema.statics.getMasterUsers = function () {
+userSchema.statics.getMasters = function () {
   return this.find({ isMaster: true });
 };
 userSchema.statics.getTopActiveUsers = function (limit = 10) {

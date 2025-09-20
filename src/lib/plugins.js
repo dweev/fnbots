@@ -60,14 +60,13 @@ export const loadPlugins = async (pluginPath) => {
               }
             }
           } catch (error) {
-            log(`Gagal memuat plugin '${file}' di kategori '${categoryName}': ${error.message}`, true);
+            log(error, true);
           }
         }
       }
     }
-    log(`Berhasil memuat ${pluginCache.commands.size} perintah dari ${categoryFolders.length} kategori.`);
   } catch (error) {
-    log(`Gagal memuat direktori plugin: ${error.message}`, true);
+    log(error, true);
     throw error;
   }
 };

@@ -134,7 +134,7 @@ export async function createWASocket(dbSettings) {
             await log('Sinkronisasi selesai. Tidak ada data grup usang ditemukan.');
           }
         } catch (error) {
-          await log(`Terjadi kesalahan saat sinkronisasi data grup: ${error}`, true);
+          await log(error, true);
         }
         await log(`WA Version: ${global.version.join('.')}`);
         await log(`BOT Number: ${jidNormalizedUser(fn.user.id).split('@')[0]}`);
@@ -166,7 +166,7 @@ export async function createWASocket(dbSettings) {
         }
       }
     } catch (error) {
-      await log(`Error connection.update:\n${error}`, true);
+      await log(error, true);
     }
   });
   return fn;

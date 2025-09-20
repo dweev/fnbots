@@ -6,6 +6,7 @@
 */
 // ─── Info main.js ────────────────────────
 
+console.clear(); // only effect if you use screen / tmux (pm2 didnt work)
 global.activeIntervals = [];
 import util from 'util';
 import path from 'path';
@@ -34,13 +35,13 @@ const isPm2 = process.env.pm_id !== undefined || process.env.NODE_APP_INSTANCE !
 const isSelfRestarted = process.env.RESTARTED_BY_SELF === '1';
 
 function logRestartInfo() {
-  log(`Mode Jalankan: ${isPm2 ? 'PM2' : 'Manual'} | RestartedBySelf: ${isSelfRestarted}`);
+  log('Starting Engine...')
+  log(`Running Mode: ${isPm2 ? 'PM2' : 'Node'} | RestartedBySelf: ${isSelfRestarted}`);
 };
 
 let dbSettings;
 let debugs = false;
 
-global.tmpDir = path.resolve(__dirname, '../src/sampah');
 global.randomSuffix = randomByte(16);
 global.debugs = debugs;
 
@@ -51,7 +52,7 @@ async function initializeDatabases() {
     dbSettings = await initializeDbSettings();
     pinoLogger.level = dbSettings.pinoLogger || 'silent';
   } catch (error) {
-    await log(`Database initialization failed:\n${error}`, true);
+    await log(error, true);
     throw error;
   }
 };
@@ -189,15 +190,13 @@ async function starts() {
         const storyResult = await Story.cleanupOldData();
         await exec('rm -rf ../logs/*');
         log(`Pembersihan selesai. Messages terhapus: ${chatResult.deletedCount}. Story terhapus: ${storyResult.deletedCount}. Log dihapus.`);
-      } catch (error) {
-        log(`Terjadi error saat tugas pembersihan data: ${error}`, true);
-      }
+      } catch (error) { await log(error, true); }
     }, {
       scheduled: true,
       timezone: "Asia/Jakarta"
     });
   } catch (error) {
-    await log(`Error loadStore\n${error}`, true);
+    await log(error, true);
     await handleRestart('Gagal memuat database store');
   }
 };
@@ -216,9 +215,7 @@ async function cleanup(signal) {
       await database.disconnect();
     }
     await log(`[OK] Semua data berhasil disimpan dan koneksi ditutup.`);
-  } catch (error) {
-    await log(`Error_cleanup:\n${error}`, true);
-  }
+  } catch (error) { await log(error, true); }
   process.exit(0);
 }
 
@@ -230,6 +227,6 @@ logRestartInfo();
 try {
   await starts();
 } catch (error) {
-  await log(`Fatal Error During BOT Startup:\n${error}`, true);
+  await log(error, true);
   process.exit(1);
 }

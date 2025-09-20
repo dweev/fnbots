@@ -72,7 +72,7 @@ class DBStore {
         await Contact.bulkUpsert(contactsToUpdate);
         this.pendingUpdates.contacts.clear();
       } catch (error) {
-        log(`Batch contacts update failed: ${error}. Data will be retried on the next interval.`, true);
+        log(error, true);
       }
     }
     if (this.pendingUpdates.groups.size > 0) {
@@ -81,7 +81,7 @@ class DBStore {
         await GroupMetadata.bulkUpsert(groupsToUpdate);
         this.pendingUpdates.groups.clear();
       } catch (error) {
-        log(`Batch groups update failed: ${error}. Data will be retried on the next interval.`, true);
+        log(error, true);
       }
     }
   }
@@ -93,7 +93,7 @@ class DBStore {
       allContacts.forEach(contact => this.addContactToCache(contact.jid, contact));
       log(`Cache warmed: ${this.contactsCache.size} contacts, ${this.groupMetadataCache.size} groups`);
     } catch (error) {
-      log(`Cache warming failed: ${error}`, true);
+      log(error, true);
     }
   }
   addLidToJidCache(lid, jid) {
@@ -168,7 +168,7 @@ class DBStore {
       }
       return contact;
     } catch (error) {
-      log(`getContact error: ${error}`, true);
+      log(error, true);
       return null;
     }
   }
@@ -193,7 +193,7 @@ class DBStore {
       }
       return metadata;
     } catch (error) {
-      log(`getGroupMetadata error: ${error}`, true);
+      log(error, true);
       return null;
     }
   }
@@ -395,7 +395,7 @@ class DBStore {
       }
       return jid;
     } catch (error) {
-      log(`Error in findJidByLid: ${error}`, true);
+      log(error, true);
       return null;
     }
   }
@@ -416,7 +416,7 @@ class DBStore {
         return chatHistory.messages[0];
       }
     } catch (error) {
-      log(`Error saat mengambil pesan dari DB untuk anti-delete: ${error}`, true);
+      log(error, true);
     }
     return null;
   }
@@ -444,7 +444,7 @@ class DBStore {
           this.addContactToCache(contact.jid, contact);
         }
       } catch (error) {
-        log(`getArrayContacts error: ${error}`, true);
+        log(error, true);
       }
     }
     return [...foundInCache, ...foundInDb];

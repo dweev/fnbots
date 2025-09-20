@@ -113,7 +113,7 @@ databaseBotSchema.statics.getDatabase = async function () {
     }
     return db;
   } catch (error) {
-    log(`Error saat mengambil atau membuat DatabaseBot: ${error}`, true);
+    log(error, true);
     throw error;
   }
 };

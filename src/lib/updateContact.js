@@ -14,6 +14,6 @@ export default async function updateContact(jid, data = {}) {
   try {
     await mongoStore.updateContact(jid, data);
   } catch (error) {
-    await log(`Error updating contact: ${error}`, true);
+    await log(error, true);
   }
 };

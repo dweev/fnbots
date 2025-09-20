@@ -67,7 +67,7 @@ export async function AuthStore() {
     ]);
     creds = (await readData('creds')) || initAuthCreds();
   } catch (error) {
-    await log(`Mutex failed: ${error}`, true);
+    await log(error, true);
     creds = initAuthCreds();
   } finally {
     if (release) release();

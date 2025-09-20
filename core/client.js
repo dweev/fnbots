@@ -12,7 +12,9 @@ import axios from 'axios';
 import FileType from 'file-type';
 import log from '../src/utils/logger.js';
 import { mongoStore } from '../database/index.js';
-import { randomByte, getBuffer, getSizeMedia, deleteFile, writeExif, convertAudio } from '../src/lib/function.js';
+import { tmpDir } from '../src/lib/tempManager.js';
+import { MediaValidationError, MediaProcessingError, MediaSizeError } from '../src/lib/errorManager.js'
+import { randomByte, getBuffer, getSizeMedia, writeExif, convertAudio } from '../src/lib/function.js';
 import { jidNormalizedUser, generateWAMessage, generateWAMessageFromContent, downloadContentFromMessage, jidDecode, jidEncode, getBinaryNodeChildString, getBinaryNodeChildren, getBinaryNodeChild, proto } from 'baileys';
 
 import { createRequire } from 'node:module';
@@ -31,7 +33,7 @@ export async function clientBot(fn, dbSettings) {
       };
       return jid;
     } catch (error) {
-      log(`Error decodeJid: ${jid}\n${error}`, true);
+      log(error, true);
       return jid;
     };
   };
@@ -65,10 +67,7 @@ export async function clientBot(fn, dbSettings) {
         mime: 'application/octet-stream',
         ext: 'bin'
       };
-      const filename = path.join(
-        global.tmpDir,
-        `${Date.now()}.${type.ext}`
-      );
+      const filename = tmpDir.createTempFile(type.ext);
       if (data.length > 0 && save) {
         await fs.writeFile(filename, data);
       }
@@ -80,8 +79,7 @@ export async function clientBot(fn, dbSettings) {
         data
       };
     } catch (error) {
-      console.error('Error in getFile:', error);
-      throw error;
+      throw new Error(error);
     }
   };
   fn.sendMediaBufferOrURL = async (jid, path, fileName = '', caption = '', quoted = '', options = {}) => {
@@ -94,7 +92,7 @@ export async function clientBot(fn, dbSettings) {
         author: options.author || dbSettings.packAuthor,
         categories: options.categories || [''],
       })
-      await deleteFile(filename);
+      tmpDir.deleteFile(filename);
       type = 'sticker';
       mimetype = 'image/webp';
     } else if (/image|video|audio/.test(mime)) {
@@ -102,7 +100,7 @@ export async function clientBot(fn, dbSettings) {
       mimetype = type == 'video' ? 'video/mp4' : type == 'audio' ? 'audio/mpeg' : mime
     }
     let anu = await fn.sendMessage(jid, { [type]: { url: pathFile }, caption, mimetype, fileName, ...options }, { quoted, ephemeralExpiration: quoted?.expiration ?? 0, messageId: randomByte(32), ...options });
-    await deleteFile(pathFile);
+    tmpDir.deleteFile(pathFile);
     return anu;
   };
   async function _internalSendMessage(chat, content, options = {}) {
@@ -131,8 +129,8 @@ export async function clientBot(fn, dbSettings) {
         } else {
           return await fn.sendMessage(chat, { text: content, ...opts }, { quoted, ephemeralExpiration, messageId: randomByte(32) });
         }
-      } catch (e) {
-        log(`Gagal mengambil media dari URL: ${content}\nError: ${e.message}`, true);
+      } catch (error) {
+        log(error, true);
         return await fn.sendMessage(chat, { text: content, ...opts }, { quoted, ephemeralExpiration, messageId: randomByte(32) });
       }
     }
@@ -147,7 +145,7 @@ export async function clientBot(fn, dbSettings) {
     return _internalSendMessage(chat, content, { ...options, quoted });
   };
   fn.sendAudioTts = async (jid, audioURL, quoted) => {
-    const tempFilePath = path.join(global.tmpDir, `resId-${Date.now()}.mp3`);
+    const tempFilePath = tmpDir.createTempFile('mp3');
     try {
       await new Promise((resolve, reject) => {
         ttsId.save(tempFilePath, audioURL, (err) => {
@@ -157,9 +155,9 @@ export async function clientBot(fn, dbSettings) {
       });
       await fn.sendMessage(jid, { audio: { stream: fs.createReadStream(tempFilePath) }, mimetype: 'audio/mpeg', }, { quoted, ephemeralExpiration: quoted?.expiration ?? 0, messageId: randomByte(32) });
     } catch (error) {
-      await log(`Error sendAudioTts:\n${error}`, true);
+      throw new Error(error);
     } finally {
-      await deleteFile(tempFilePath);
+      tmpDir.deleteFile(tempFilePath);
     }
   };
   fn.sendContact = async (jid, displayName, contactName, nomor, quoted) => {
@@ -199,8 +197,9 @@ export async function clientBot(fn, dbSettings) {
     }
   };
   fn.getMediaBuffer = async (message) => {
+    const MAX_FILE_SIZE = 100 * 1024 * 1024;
     try {
-      if (!message) throw new Error('Input untuk getMediaBuffer kosong');
+      if (!message) throw new MediaValidationError('Input message kosong');
       let messageType;
       let mediaMessage = message;
       if (message.mimetype) {
@@ -211,29 +210,30 @@ export async function clientBot(fn, dbSettings) {
         else if (type === 'sticker') messageType = 'sticker';
         else messageType = 'document';
       } else {
-        const foundKey = Object.keys(message).find((key) =>
-          ["imageMessage", "videoMessage", "stickerMessage", "audioMessage", "documentMessage"].includes(key)
-        );
+        const foundKey = Object.keys(message).find((key) => ["imageMessage", "videoMessage", "stickerMessage", "audioMessage", "documentMessage"].includes(key));
         if (foundKey) {
           messageType = foundKey.replace("Message", "");
           mediaMessage = message[foundKey];
         }
       }
-      if (!messageType) throw new Error('Error_getMediaBuffer_media_tidak_valid');
-      const stream = await downloadContentFromMessage(
-        mediaMessage,
-        messageType
-      );
-      if (!stream) throw new Error("Error_getMediaBuffer_stream");
+      if (!messageType) {
+        throw new MediaValidationError('Format media tidak didukung', {
+          availableKeys: Object.keys(message || {}),
+          mimetype: message?.mimetype
+        });
+      }
+      const fileLength = mediaMessage?.fileLength || mediaMessage?.fileLength?.low || mediaMessage?.fileLength?.high * 4294967296;
+      if (fileLength > MAX_FILE_SIZE) throw new MediaSizeError('File terlalu besar', fileLength, MAX_FILE_SIZE);
+      const stream = await downloadContentFromMessage(mediaMessage, messageType);
+      if (!stream) throw new MediaProcessingError('Gagal membuat stream download');
       let buffer = Buffer.from([]);
       for await (const chunk of stream) {
         buffer = Buffer.concat([buffer, chunk]);
       }
-      if (buffer.length === 0) throw new Error("Error_getMediaBuffer_buffer_kosong");
+      if (buffer.length === 0) throw new MediaProcessingError('Hasil download kosong');
       return buffer;
     } catch (error) {
-      await log(`Error getMediaBuffer:\n${error}`, true);
-      return null;
+      throw new Error(error);
     }
   };
   fn.removeParticipant = async (jid, target) => {
@@ -249,7 +249,7 @@ export async function clientBot(fn, dbSettings) {
     const buff = Buffer.isBuffer(path) ? path : /^data:.*?\/.*?;base64,/i.test(path) ? Buffer.from(path.split`,`[1], 'base64') : /^https?:\/\//.test(path) ? await getBuffer(path) : await fs.readFile(path) ? await fs.readFile(path) : Buffer.alloc(0);
     const result = await writeExif(buff, options);
     await fn.sendMessage(jid, { sticker: { url: result }, ...options }, { quoted, ephemeralExpiration: quoted?.expiration ?? 0, messageId: randomByte(32), ...options });
-    await deleteFile(result);
+    tmpDir.deleteFile(result);
   };
   fn.sendFileUrl = async (jid, url, caption, quoted, options = {}) => {
     const quotedOptions = {
@@ -334,7 +334,7 @@ export async function clientBot(fn, dbSettings) {
       }
       return await fn.sendMediaByType(jid, mimeType, dataBuffer, caption, quoted, options);
     } catch (error) {
-      throw new Error(error.message || 'Gagal mengambil atau mengirim file.');
+      throw new Error(error);
     }
   };
   fn.sendFilePath = async (jid, caption, localPath, options = {}) => {
@@ -383,8 +383,7 @@ export async function clientBot(fn, dbSettings) {
       }
       return await fn.sendMessage(jid, messageContent, quotedOptions);
     } catch (error) {
-      await log(`Error sendFilePath ${localPath}:\n${error}`, true);
-      throw error;
+      throw new Error(error);
     }
   };
   fn.extractGroupMetadata = (result) => {
@@ -511,7 +510,7 @@ export async function clientBot(fn, dbSettings) {
     await fs.writeFile(outputPath, imageBuffer);
     const caption = `@${memberNum}\n\n${messageText}`;
     await fn.sendFilePath(idGroup, caption, outputPath);
-    await deleteFile(outputPath);
+    tmpDir.deleteFile(outputPath);
   };
   */
   fn.sendAlbum = async (jid, array, options = {}) => {

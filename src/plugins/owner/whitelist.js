@@ -7,7 +7,6 @@
 // ─── Info ────────────────────────────────
 
 import { Whitelist } from '../../../database/index.js';
-import log from '../../utils/logger.js';
 
 export const command = {
   name: 'whitelist',
@@ -23,14 +22,9 @@ export const command = {
     } else if (subcmd === "add") {
       if (target.match(/(chat.whatsapp.com)/gi)) {
         const inviteCode = target.split("https://chat.whatsapp.com/")[1];
-        try {
-          const { id } = await fn.groupGetInviteInfo(inviteCode);
-          await Whitelist.addToWhitelist(id, 'group');
-          await reactDone();
-        } catch (error) {
-          await log(`Error command whitelist add\n${error}`, true);
-          await sReply(`Error: ${error.message}`);
-        }
+        const { id } = await fn.groupGetInviteInfo(inviteCode);
+        await Whitelist.addToWhitelist(id, 'group');
+        await reactDone();
       } else if (target.includes("@g.us")) {
         await Whitelist.addToWhitelist(target, 'group');
         await reactDone();

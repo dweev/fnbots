@@ -24,13 +24,13 @@ export async function initializeDbSettings() {
           }
           settingsCache = latestSettings;
         }
-      } catch (pollError) {
-        log(`Error saat polling pengaturan: ${pollError.message}`, true);
+      } catch (error) {
+        log(error, true);
       }
     }, POLLING_INTERVAL_MS);
     return settingsCache;
   } catch (error) {
-    log(`Gagal memuat pengaturan bot dari database. | ${error.message}`, true);
+    log(error, true);
     process.exit(1);
   }
 };

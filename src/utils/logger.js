@@ -31,16 +31,16 @@ const blockedKeywords = [
 export const appLogger = pino(pino.transport({
   targets: [
     {
-      level: 'info',
+      level: 'trace',
       target: 'pino-pretty',
       options: {
         colorize: true,
         translateTime: 'SYS:dd-mm-yyyy HH:MM:ss',
-        ignore: 'pid,hostname',
+        ignore: 'pid,hostname,level',
       }
     },
     {
-      level: 'info',
+      level: 'trace',
       target: 'pino-roll',
       options: {
         file: path.join(logFilePath, 'app_activity.log'),
@@ -54,16 +54,16 @@ export const appLogger = pino(pino.transport({
 export const pinoLogger = pino(pino.transport({
   targets: [
     {
-      level: 'info',
+      level: 'trace',
       target: 'pino-pretty',
       options: {
         colorize: true,
         translateTime: 'SYS:dd-mm-yyyy HH:MM:ss',
-        ignore: 'pid,hostname',
+        ignore: 'pid,hostname,level',
       }
     },
     {
-      level: 'info',
+      level: 'trace',
       target: 'pino-roll',
       options: {
         file: path.join(logFilePath, 'baileys.log'),
@@ -75,24 +75,62 @@ export const pinoLogger = pino(pino.transport({
   ],
 }));
 export default async function log(message, isError = false) {
-  const inspectedMessage = util.inspect(message);
-  if (blockedKeywords.some(keyword => inspectedMessage.includes(keyword))) {
-    return;
-  }
-  if (isError) {
+  try {
     if (message instanceof Error) {
-      appLogger.error(message);
-    } else {
-      const textMessage = typeof message === 'string' ? message : util.inspect(message, { depth: null });
-      appLogger.error(textMessage);
+      const errorObj = {
+        name: message.name,
+        message: message.message,
+        stack: message.stack,
+        ...Object.getOwnPropertyNames(message).reduce((acc, key) => {
+          if (!['name', 'message', 'stack'].includes(key)) {
+            try {
+              acc[key] = message[key];
+            } catch {
+              acc[key] = `[unserializable:${key}]`;
+            }
+          }
+          return acc;
+        }, {})
+      };
+      const errorString = util.inspect(errorObj, { depth: null, colors: false });
+      if (blockedKeywords.some(keyword => errorString.includes(keyword))) return;
+      appLogger.error(errorString);
+      return;
     }
-  } else {
-    const textMessage = typeof message === 'string' ? message : util.inspect(message, { depth: null });
-    appLogger.info(textMessage);
+    const inspectedMessage = typeof message === 'string' ? message : util.inspect(message, { depth: null });
+    if (blockedKeywords.some(keyword => inspectedMessage.includes(keyword))) return;
+    if (isError) {
+      appLogger.error(inspectedMessage);
+    } else {
+      appLogger.info(inspectedMessage);
+    }
+  } catch (loggerError) {
+    if (isError) {
+      console.error('Logger error:', loggerError);
+      if (message instanceof Error) {
+        console.error(message.message);
+        console.error(message.stack);
+      } else {
+        console.error(message);
+      }
+    } else {
+      console.log(message);
+    }
   }
 }
-
-console.log = (...args) => log(args.map(a => util.inspect(a, { depth: 1 })).join(" "));
-console.info = (...args) => log(args.map(a => util.inspect(a, { depth: 1 })).join(" "));
-console.warn = (...args) => log(args.map(a => util.inspect(a, { depth: 1 })).join(" "), true);
-console.error = (...args) => log(args.map(a => util.inspect(a, { depth: 1 })).join(" "), true);
+console.log = (...args) => {
+  const message = args.length === 1 ? args[0] : args;
+  log(message);
+};
+console.info = (...args) => {
+  const message = args.length === 1 ? args[0] : args;
+  log(message);
+};
+console.error = (...args) => {
+  const message = args.length === 1 ? args[0] : args;
+  log(message, true);
+};
+console.warn = (...args) => {
+  const message = args.length === 1 ? args[0] : args;
+  log(message, true);
+};

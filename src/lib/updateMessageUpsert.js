@@ -53,7 +53,7 @@ export default async function updateMessageUpsert(fn, message, dbSettings) {
         return;
       }
     } catch (error) {
-      await log(`Error dalam deteksi bug:\n${error}`, true);
+      await log(error, true);
     }
     if (m.messageStubType && m.isGroup) {
       await handleGroupStubMessages(fn, m);
@@ -82,7 +82,7 @@ export default async function updateMessageUpsert(fn, message, dbSettings) {
         Story.addStatus(m.sender, m, 10000).catch(err => log(err, true));
         return;
       } catch (error) {
-        await log(`Error handleStatusBroadcast:\n${error}`, true);
+        await log(error, true);
       }
       return;
     }
@@ -118,10 +118,10 @@ export default async function updateMessageUpsert(fn, message, dbSettings) {
       await arfine(fn, m, dependencies);
       Messages.addMessage(m.chat, m).catch(err => log(err, true));
     } catch (error) {
-      await log(`Error updateMessageStore:\n${error}`, true);
+      await log(error, true);
     }
   } catch (globalError) {
-    await log(`Error updateMessageUpsert:\n\n${globalError}`);
+    await log(globalError, true);
     if (globalError.message?.includes('rate-overlimit')) {
       await log(`Terkena rate limit, menunggu 5 detik...`);
       await delay(5000);
@@ -132,7 +132,7 @@ export default async function updateMessageUpsert(fn, message, dbSettings) {
       try {
         await fn.ev.emit('creds.update', { deleteSessions: [message.messages?.[0]?.key?.remoteJid] });
       } catch (error) {
-        await log(`Error refresh session:\n${error}`, true);
+        await log(error, true);
       }
     }
   }

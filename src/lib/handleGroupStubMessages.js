@@ -47,7 +47,7 @@ export default async function handleGroupStubMessages(fn, m) {
         }
       }
     } catch (error) {
-      await log(`Error handleGroupStubMessages ${m.chat}\n${error}`, true);
+      await log(error, true);
     }
   }
 };

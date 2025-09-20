@@ -13,6 +13,7 @@ import webp from 'node-webpmux';
 import FileType from 'file-type';
 import log from '../utils/logger.js';
 import dayjs from '../utils/dayjs.js';
+import { tmpDir } from './tempManager.js';
 import ffmpeg from '@ts-ffmpeg/fluent-ffmpeg';
 import { getDbSettings } from './settingsManager.js';
 
@@ -235,19 +236,9 @@ export async function mycmd(input) {
   }
   return input.split(';').map(cmd => cmd.trim()).filter(cmd => cmd.length > 0);
 };
-export async function deleteFile(path) {
-  try {
-    const fileExists = await fs.pathExists(path);
-    if (fileExists) {
-      await fs.unlink(path);
-    }
-  } catch (error) {
-    await log(`Error deleteFile ${path}:\n${error}`, true);
-  }
-};
 export async function gifToWebp(media) {
-  const tmpFileIn = path.join(global.tmpDir, `${global.randomSuffix}.gif`);
-  const tmpFileOut = path.join(global.tmpDir, `${global.randomSuffix}.webp`);
+  const tmpFileIn = tmpDir.createTempFile('gif');
+  const tmpFileOut = tmpDir.createTempFile('webp');
   await fs.writeFile(tmpFileIn, media);
   await new Promise((resolve, reject) => {
     ffmpeg(tmpFileIn)
@@ -263,13 +254,13 @@ export async function gifToWebp(media) {
       .save(tmpFileOut)
   });
   const buff = await fs.readFile(tmpFileOut);
-  await deleteFile(tmpFileOut);
-  await deleteFile(tmpFileIn);
+  tmpDir.deleteFile(tmpFileOut);
+  tmpDir.deleteFile(tmpFileIn);
   return buff;
 };
 export async function imageToWebp(media) {
-  const tmpFileOut = path.join(global.tmpDir, `${global.randomSuffix}.webp`);
-  const tmpFileIn = path.join(global.tmpDir, `${global.randomSuffix}.png`);
+  const tmpFileOut = tmpDir.createTempFile('webp');
+  const tmpFileIn = tmpDir.createTempFile('png');
   await fs.writeFile(tmpFileIn, media);
   await new Promise((resolve, reject) => {
     ffmpeg(tmpFileIn)
@@ -284,13 +275,13 @@ export async function imageToWebp(media) {
       .save(tmpFileOut)
   });
   const buff = await fs.readFile(tmpFileOut);
-  await deleteFile(tmpFileOut);
-  await deleteFile(tmpFileIn);
+  tmpDir.deleteFile(tmpFileOut);
+  tmpDir.deleteFile(tmpFileIn);
   return buff;
 };
 export async function videoToWebp(media) {
-  const tmpFileOut = path.join(global.tmpDir, `${global.randomSuffix}.webp`);
-  const tmpFileIn = path.join(global.tmpDir, `${global.randomSuffix}.mp4`);
+  const tmpFileOut = tmpDir.createTempFile('webp');
+  const tmpFileIn = tmpDir.createTempFile('mp4');
   await fs.writeFile(tmpFileIn, media);
   await new Promise((resolve, reject) => {
     ffmpeg(tmpFileIn)
@@ -317,8 +308,8 @@ export async function videoToWebp(media) {
       .save(tmpFileOut)
   });
   const buff = await fs.readFile(tmpFileOut);
-  await deleteFile(tmpFileOut);
-  await deleteFile(tmpFileIn);
+  tmpDir.deleteFile(tmpFileOut);
+  tmpDir.deleteFile(tmpFileIn);
   return buff;
 };
 export async function getBuffer(url, options = {}) {
@@ -333,7 +324,7 @@ export async function getBuffer(url, options = {}) {
     });
     return response.data;
   } catch (error) {
-    await log(`Error getBuffer ${url}\n${error}`, true);
+    await log(error, true);
     throw error;
   }
 };
@@ -353,8 +344,8 @@ export async function writeExif(media, data) {
   } else {
     throw new Error('Error_writeExif');
   }
-  const tmpFileIn = path.join(global.tmpDir, `${global.randomSuffix}.webp`);
-  const tmpFileOut = path.join(global.tmpDir, `FN-${global.randomSuffix}.webp`);
+  const tmpFileIn = tmpDir.createTempFile('webp');
+  const tmpFileOut = tmpDir.createTempFile('webp', 'tempIk');
   await fs.writeFile(tmpFileIn, wMedia);
   if (data) {
     const img = new webp.Image();
@@ -379,7 +370,7 @@ export async function writeExif(media, data) {
     const exif = Buffer.concat([exifAttr, jsonBuff]);
     exif.writeUIntLE(jsonBuff.length, 14, 4);
     await img.load(tmpFileIn);
-    await deleteFile(tmpFileIn);
+    tmpDir.deleteFile(tmpFileIn);
     img.exif = exif;
     await img.save(tmpFileOut);
     return tmpFileOut;
@@ -427,9 +418,9 @@ export async function sendAndCleanupFile(fn, toId, localPath, m, dbSettings) {
       await fn.sendReply(toId, `File generated at: ${localPath}`, { quoted: m });
     }
   } catch (error) {
-    await log(`Error saat mengirim file hasil eval:\n${error}`, true);
+    await log(error, true);
     await fn.sendReply(toId, `Gagal mengirim file: ${error.message}`, { quoted: m });
   } finally {
-    await deleteFile(localPath);
+    tmpDir.deleteFile(localPath);
   }
 };

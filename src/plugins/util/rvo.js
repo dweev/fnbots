@@ -6,9 +6,8 @@
 */
 // ─── Info ────────────────────────────────
 
-import path from 'path';
 import fs from 'fs-extra';
-import { deleteFile } from '../../lib/function.js'
+import { tmpDir } from '../../lib/tempManager.js';
 
 export const command = {
   name: 'rvo',
@@ -20,26 +19,21 @@ export const command = {
       const akuCrot = m.quoted[m.quoted.type] || m.quoted;
       if (akuCrot.viewOnce) {
         if (quotedMsg?.imageMessage || quotedMsg?.videoMessage || quotedMsg?.audioMessage) {
-          let mediaType;
           let extension;
           if (quotedMsg.imageMessage) {
-            mediaType = 'gambar';
             extension = '.png';
           } else if (quotedMsg.videoMessage) {
-            mediaType = 'video';
             extension = '.mp4';
           } else if (quotedMsg.audioMessage) {
-            mediaType = 'audio';
             extension = '.mp3';
           }
           const buffer = await fn.getMediaBuffer(quotedMsg);
-          if (!buffer) throw new Error(`Gagal mengunduh ${mediaType}.`);
-          const tempPath = path.join(global.tmpDir, `${global.randomSuffix}${extension}`);
+          const tempPath = tmpDir.createTempFile(extension);
           try {
             await fs.writeFile(tempPath, buffer);
             await fn.sendFilePath(toId, dbSettings.autocommand, tempPath, { quoted: m });
           } finally {
-            await deleteFile(tempPath);
+            tmpDir.deleteFile(tempPath);
           }
         }
       }

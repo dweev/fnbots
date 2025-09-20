@@ -38,8 +38,8 @@ export default async function groupParticipantsUpdate({ id, participants, action
                 log(`Bot bukan admin di grup ${id}.`);
               }
             }
-          } catch (metadataError) {
-            log(`Gagal mendapatkan metadata grup setelah bot ditambahkan: ${metadataError}`, true);
+          } catch (error) {
+            log(error, true);
           }
         } else {
           const freshMetadata = await fn.groupMetadata(id);
@@ -81,8 +81,8 @@ export default async function groupParticipantsUpdate({ id, participants, action
           try {
             const freshMetadata = await fn.groupMetadata(id);
             if (freshMetadata) await mongoStore.updateGroupMetadata(id, freshMetadata);
-          } catch (metadataError) {
-            log(`Gagal mendapatkan metadata grup setelah perubahan admin: ${metadataError}`, true);
+          } catch (error) {
+            log(error, true);
           }
         } else {
           const newStatus = action === 'promote' ? 'admin' : null;
@@ -112,6 +112,6 @@ export default async function groupParticipantsUpdate({ id, participants, action
       }
     }
   } catch (error) {
-    log(`Error saat menangani group-participants.update untuk ${id}:\n${error}`, true);
+    log(error, true);
   }
 };

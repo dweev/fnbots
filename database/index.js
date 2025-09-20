@@ -26,7 +26,7 @@ class DatabaseConnection {
       });
       mongoose.connection.on('error', (error) => {
         this.isConnected = false;
-        log(`MongoDB connection error: ${error}`, true);
+        log(error, true);
       });
       mongoose.connection.on('disconnected', () => {
         this.isConnected = false;
@@ -38,7 +38,7 @@ class DatabaseConnection {
         socketTimeoutMS: 45000,
       });
     } catch (error) {
-      log(`MongoDB initial connection failed:: ${error}`, true);
+      log(error, true);
       this.attemptReconnect();
       throw error;
     }

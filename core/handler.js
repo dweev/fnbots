@@ -278,7 +278,7 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
   const sPesan = (content) => fn.sendPesan(toId, content, m);
   let txt = body;
   const isCmd = txt?.startsWith(dbSettings.rname) || txt?.startsWith(dbSettings.sname);
-  
+
   if (body?.startsWith('>')) {
     if (!isSadmin && !isMaster) return;
     try {
@@ -351,16 +351,29 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
   } else if (body?.toLowerCase().trim().startsWith("mode")) {
     if (!isSadmin && !isMaster) return;
     const args = body.toLowerCase().trim().split(/\s+/);
-    const mode = args[1];
-    const validModes = ['true', 'false', 'auto'];
-    if (!mode) {
+    const modeInput = args[1];
+    const modeMap = {
+      'publik': 'false',
+      'selfbot': 'true',
+      'auto': 'auto'
+    };
+    const getDisplayMode = (internalMode) => {
+      const displayMap = {
+        'false': 'publik',
+        'true': 'selfbot',
+        'auto': 'auto'
+      };
+      return displayMap[internalMode] || internalMode;
+    };
+    if (!modeInput) {
       const currentMode = dbSettings.self;
-      return sReply(`📋 Mode self saat ini: *${currentMode}*\n\nGunakan: mode <mode>\n• Mode available: true, false, auto`);
+      const displayMode = getDisplayMode(currentMode);
+      return sReply(`Mode saat ini: *${displayMode}*\n\n Gunakan: mode <mode>\n • publik  - Hanya user yang bisa\n • selfbot - Hanya bot yang bisa\n • auto    - Hybrid user dan bot`);
     }
-    if (!validModes.includes(mode)) return sReply(`Mode tidak valid!\n\nGunakan: mode <mode>\n• Mode available: true, false, auto`);
-    await Settings.setSelfMode(mode);
-    dbSettings.self = mode;
-    await sReply(`✅ Mode self berhasil diubah ke: *${mode}*`);
+    const internalMode = modeMap[modeInput];
+    await Settings.setSelfMode(internalMode);
+    dbSettings.self = internalMode;
+    await sReply(`Mode berhasil diubah ke: *${modeInput}*`);
   }
 
   const selfMode = dbSettings.self;
@@ -393,9 +406,7 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
               try {
                 await fn.sendMessage(toId, { delete: { remoteJid: toId, fromMe: false, id: id, participant: serial } });
                 await fn.removeParticipant(toId, serial);
-              } catch (error) {
-                await log(`Error_kick_antitagSW:\n${error}`, true);
-              }
+              } catch (error) { await log(error, true); }
             }
           }
         }
@@ -460,7 +471,7 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
               }
             } catch (error) {
               await sReply(`Terjadi kesalahan saat menjalankan perintah "${command.name}": ${error.message}`);
-              log(`Error executing command ${command.name}:\n${error}`, true);
+              log(error, true);
               failedCommands.push(currentCommand);
             }
           } else {
@@ -528,20 +539,30 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
             const originalMessage = await mongoStore.loadMessage(remoteJid, deletedMsgId);
             if (originalMessage && !originalMessage.fromMe) {
               if (originalMessage.type === 'imageMessage') {
-                const buffer = await fn.getMediaBuffer(originalMessage.message);
-                if (buffer) await fn.sendMessage(toId, { image: buffer, caption: originalMessage.body });
+                try {
+                  const buffer = await fn.getMediaBuffer(originalMessage.message);
+                  await fn.sendMessage(toId, { image: buffer, caption: originalMessage.body });
+                } catch (error) { await log(error, true); }
               } else if (originalMessage.type === 'videoMessage') {
-                const buffer = await fn.getMediaBuffer(originalMessage.message);
-                if (buffer) await fn.sendMessage(toId, { video: buffer, caption: originalMessage.body });
+                try {
+                  const buffer = await fn.getMediaBuffer(originalMessage.message);
+                  await fn.sendMessage(toId, { video: buffer, caption: originalMessage.body });
+                } catch (error) { await log(error, true); }
               } else if (originalMessage.type === 'stickerMessage') {
-                const buffer = await fn.getMediaBuffer(originalMessage.message);
-                if (buffer) await fn.sendMessage(toId, { sticker: buffer });
+                try {
+                  const buffer = await fn.getMediaBuffer(originalMessage.message);
+                  await fn.sendMessage(toId, { sticker: buffer });
+                } catch (error) { await log(error, true); }
               } else if (originalMessage.type === 'audioMessage') {
-                const buffer = await fn.getMediaBuffer(originalMessage.message);
-                if (buffer) await fn.sendMessage(toId, { audio: buffer, mimetype: 'audio/mp4', ptt: originalMessage.message.ptt });
+                try {
+                  const buffer = await fn.getMediaBuffer(originalMessage.message);
+                  await fn.sendMessage(toId, { audio: buffer, mimetype: 'audio/mp4', ptt: originalMessage.message.ptt });
+                } catch (error) { await log(error, true); }
               } else if (originalMessage.type === 'documentMessage') {
-                const buffer = await fn.getMediaBuffer(originalMessage.message);
-                if (buffer) await fn.sendMessage(toId, { document: buffer, mimetype: originalMessage.mime, fileName: originalMessage.message.fileName });
+                try {
+                  const buffer = await fn.getMediaBuffer(originalMessage.message);
+                  await fn.sendMessage(toId, { document: buffer, mimetype: originalMessage.mime, fileName: originalMessage.message.fileName });
+                } catch (error) { await log(error, true); }
               } else if (originalMessage.type === 'locationMessage') {
                 await fn.sendMessage(toId, {
                   location: {
@@ -559,13 +580,9 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
                 }
               }
             }
-          } catch (error) {
-            await log(`Error pada fitur Anti-Delete:\n${error}`, true);
-          }
+          } catch (error) { await log(error, true); }
         }
       };
     }
-  } catch (error) {
-    await log(`!!! ERROR DI DALAM ARFINE !!!\n${error}`, true);
-  };
+  } catch (error) { await log(error, true); }
 };

@@ -49,20 +49,40 @@ export async function clientBot(fn, dbSettings) {
       return (contact?.name || contact?.verifiedName || contact?.notify || "Unknown?");
     }
   };
-  fn.getFile = async (path, save) => {
-    let res;
-    let filename;
-    let data = Buffer.isBuffer(path) ? path : /^data:.*?\/.*?;base64,/i.test(path) ? Buffer.from(path.split`,`[1], 'base64') : /^https?:\/\//.test(path) ? await getBuffer(path) : Buffer.alloc(0);
-    let type = await FileType.fromBuffer(data) || { mime: 'application/octet-stream', ext: '.bin' };
-    filename = path.join(global.tmpDir, new Date() * 1 + '.' + type.ext);
-    if (data.length > 0 && save) fs.writeFile(filename, data);
-    return {
-      res,
-      filename,
-      size: await getSizeMedia(data),
-      ...type,
-      data
-    };
+  fn.getFile = async (inputPath, save) => {
+    try {
+      let data;
+      if (Buffer.isBuffer(inputPath)) {
+        data = inputPath;
+      } else if (/^data:.*?\/.*?;base64,/i.test(inputPath)) {
+        data = Buffer.from(inputPath.split(',')[1], 'base64');
+      } else if (/^https?:\/\//.test(inputPath)) {
+        data = await getBuffer(inputPath);
+      } else {
+        data = await fs.readFile(inputPath);
+      }
+      const type = await FileType.fromBuffer(data) || {
+        mime: 'application/octet-stream',
+        ext: 'bin'
+      };
+      const filename = path.join(
+        global.tmpDir,
+        `${Date.now()}.${type.ext}`
+      );
+      if (data.length > 0 && save) {
+        await fs.writeFile(filename, data);
+      }
+      return {
+        filename,
+        size: await getSizeMedia(data),
+        mime: type.mime,
+        ext: type.ext,
+        data
+      };
+    } catch (error) {
+      console.error('Error in getFile:', error);
+      throw error;
+    }
   };
   fn.sendMediaBufferOrURL = async (jid, path, fileName = '', caption = '', quoted = '', options = {}) => {
     const { mime, data, filename } = await fn.getFile(path, true);

@@ -266,7 +266,7 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
     isMaster: isMaster,
     isVIP: isVIP,
     isPremium: isPremium,
-    isGroupAdmins: false,
+    isGroupAdmins: m.isGroup ? m.isAdmin : false,
     isWhiteList: isWhiteList,
     hakIstimewa: hakIstimewa,
     isMuted: false
@@ -515,6 +515,51 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
         await sReply("🏃💨 Bot sedang sibuk, coba lagi dalam beberapa saat...");
         setTimeout(() => { counter = 0; }, 6000);
       }
+    } else {
+      if (dbSettings.antideleted === true) {
+        if (m.type === 'protocolMessage' && m.protocolMessage.type === 0) {
+          try {
+            const deletedMsgId = m.protocolMessage.key.id;
+            const remoteJid = toId;
+            const originalMessage = await mongoStore.loadMessage(remoteJid, deletedMsgId);
+            if (originalMessage && !originalMessage.fromMe) {
+              if (originalMessage.type === 'imageMessage') {
+                const buffer = await fn.getMediaBuffer(originalMessage.message);
+                if (buffer) await fn.sendMessage(toId, { image: buffer, caption: originalMessage.body });
+              } else if (originalMessage.type === 'videoMessage') {
+                const buffer = await fn.getMediaBuffer(originalMessage.message);
+                if (buffer) await fn.sendMessage(toId, { video: buffer, caption: originalMessage.body });
+              } else if (originalMessage.type === 'stickerMessage') {
+                const buffer = await fn.getMediaBuffer(originalMessage.message);
+                if (buffer) await fn.sendMessage(toId, { sticker: buffer });
+              } else if (originalMessage.type === 'audioMessage') {
+                const buffer = await fn.getMediaBuffer(originalMessage.message);
+                if (buffer) await fn.sendMessage(toId, { audio: buffer, mimetype: 'audio/mp4', ptt: originalMessage.message.ptt });
+              } else if (originalMessage.type === 'documentMessage') {
+                const buffer = await fn.getMediaBuffer(originalMessage.message);
+                if (buffer) await fn.sendMessage(toId, { document: buffer, mimetype: originalMessage.mime, fileName: originalMessage.message.fileName });
+              } else if (originalMessage.type === 'locationMessage') {
+                await fn.sendMessage(toId, {
+                  location: {
+                    degreesLatitude: originalMessage.message.degreesLatitude,
+                    degreesLongitude: originalMessage.message.degreesLongitude,
+                    name: originalMessage.message.name,
+                    address: originalMessage.message.address
+                  }
+                });
+              } else if (originalMessage.type === 'contactMessage') {
+                await fn.sendMessage(toId, { contacts: { displayName: originalMessage.message.contactMessage.displayName, contacts: [{ vcard: originalMessage.message.contactMessage.vcard }] } });
+              } else if (originalMessage.type === 'extendedTextMessage' || originalMessage.type === 'conversation') {
+                if (originalMessage.body) {
+                  await fn.sendMessage(toId, { text: `*Isi Pesan Teks:* ${originalMessage.body}` });
+                }
+              }
+            }
+          } catch (error) {
+            await log(`Error pada fitur Anti-Delete:\n${error}`, true);
+          }
+        }
+      };
     }
   } catch (error) {
     await log(`!!! ERROR DI DALAM ARFINE !!!\n${error}`, true);

@@ -40,6 +40,7 @@ export default async function updateMessageUpsert(fn, message, dbSettings) {
       return;
     }
     const m = await serializeMessage(fn, msg);
+    if (!m) return;
     try {
       const bugType = isBug(m);
       if (bugType && m.key.fromMe === false) {

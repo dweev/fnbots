@@ -6,6 +6,7 @@
 */
 // ─── Info StoreDB.js ─────────────────────
 
+import Messages from '../src/models/StoreMessages.js'
 import Contact from '../src/models/StoreContact.js';
 import GroupMetadata from '../src/models/StoreGroupMetadata.js';
 import log from '../src/utils/logger.js';
@@ -386,6 +387,27 @@ class DBStore {
       this.cacheHits.delete(groupId);
       this.cacheTimestamps.delete(groupId);
     }
+  }
+  async loadMessage(remoteJid, id) {
+    const messageArray = this.messages?.[remoteJid];
+    if (messageArray) {
+      const messageFromCache = messageArray.find(msg => msg?.key?.id === id);
+      if (messageFromCache) {
+        return messageFromCache;
+      }
+    }
+    try {
+      const chatHistory = await Messages.findOne(
+        { chatId: remoteJid, 'messages.key.id': id },
+        { 'messages.$': 1 }
+      ).lean();
+      if (chatHistory && chatHistory.messages?.length > 0) {
+        return chatHistory.messages[0];
+      }
+    } catch (error) {
+      log(`Error saat mengambil pesan dari DB untuk anti-delete: ${error}`, true);
+    }
+    return null;
   }
 }
 

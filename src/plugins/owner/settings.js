@@ -17,11 +17,12 @@ export const command = {
     const messageParts = [];
     let globalSettingsText = "*- Bot Config -*\n";
     const globalFlags = [
-      { label: "Maintenance", value: dbSettings.maintenance },
-      { label: "Auto Correct", value: dbSettings.autocorrect },
-      { label: "Auto Like Story", value: dbSettings.autolikestory },
-      { label: "Auto Read Story", value: dbSettings.autoreadsw },
-      { label: "Auto Read Message", value: dbSettings.autoread },
+      { label: "Maintenance",         value: dbSettings.maintenance   },
+      { label: "Auto Correct",        value: dbSettings.autocorrect   },
+      { label: "Auto Like Story",     value: dbSettings.autolikestory },
+      { label: "Auto Read Story",     value: dbSettings.autoreadsw    },
+      { label: "Auto Read Message",   value: dbSettings.autoread      },
+      { label: "Auto Resend",         value: dbSettings.antideleted   },
     ];
     for (const { label, value } of globalFlags) {
       const icon = value ? "⚙" : "⚔";

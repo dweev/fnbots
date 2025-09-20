@@ -1,100 +1,71 @@
-<h1 align="center">FNBots WhatsApp - Multi-Function Bot</h1>
+---
 
-<pre>
+<h1 align="center">FNBots WhatsApp – Multi-Function Bot</h1>  
+
+---
+
+## Structure
+
+```
 .
-├── config.js
-├── core
-│   ├── client.js
-│   ├── connection.js
-│   ├── handler.js
-│   └── main.js
-├── database
-│   ├── auth.js
-│   ├── index.js
-│   └── StoreDB.js
-├── ecosystem.config.cjs
-├── eslint.config.mjs
-├── LICENSE
-├── logs
-│   └── a
-├── package.json
-├── README.md
-└── src
-    ├── lib
-    │   ├── function.js
-    │   ├── groupParticipantsUpdate.js
-    │   ├── handleGroupStubMessages.js
-    │   ├── plugins.js
-    │   ├── processContactUpdate.js
-    │   ├── serializeMessage.js
-    │   ├── settingsManager.js
-    │   ├── updateContact.js
-    │   └── updateMessageUpsert.js
-    ├── models
-    │   ├── Command.js
-    │   ├── DatabaseBot.js
-    │   ├── Group.js
-    │   ├── MutedMember.js
-    │   ├── Settings.js
-    │   ├── StoreContact.js
-    │   ├── StoreGroupMetadata.js
-    │   ├── StoreMessages.js
-    │   ├── StoreStory.js
-    │   ├── User.js
-    │   └── Whitelist.js
-    ├── plugins
-    │   ├── convert
-    │   │   └── sticker.js
-    │   ├── manage
-    │   │   ├── demote.js
-    │   │   ├── groupclose.js
-    │   │   ├── groupopen.js
-    │   │   ├── invite.js
-    │   │   ├── kick.js
-    │   │   └── promote.js
-    │   ├── master
-    │   │   ├── addalias.js
-    │   │   ├── addowner.js
-    │   │   ├── autocorrect.js
-    │   │   ├── debug.js
-    │   │   ├── delalias.js
-    │   │   ├── delowner.js
-    │   │   ├── listowner.js
-    │   │   ├── logger.js
-    │   │   ├── maintenance.js
-    │   │   └── resetcommands.js
-    │   ├── owner
-    │   │   ├── antihidetag.js
-    │   │   ├── antilink.js
-    │   │   ├── antitagsw.js
-    │   │   ├── autolikestory.js
-    │   │   ├── autoreadmessage.js
-    │   │   ├── autoreadstory.js
-    │   │   ├── listgroup.js
-    │   │   ├── premium.js
-    │   │   ├── runtime.js
-    │   │   ├── settings.js
-    │   │   ├── stats.js
-    │   │   ├── vip.js
-    │   │   └── whitelist.js
-    │   ├── premium
-    │   │   └── checkpremium.js
-    │   ├── util
-    │   │   ├── commands.js
-    │   │   ├── count.js
-    │   │   ├── hidetag.js
-    │   │   ├── limit.js
-    │   │   ├── mentionall.js
-    │   │   ├── ping.js
-    │   │   └── totag.js
-    │   └── vip
-    │       └── checkvip.js
-    ├── sampah
-    │   └── a
-    └── utils
-        ├── dayjs.js
-        ├── logger.js
-        └── security.js
-</pre>
+├── core/                 # Core engine & bot logic
+├── database/             # Database connections & session storage
+├── logs/                 # Activity and error logs
+├── src/
+│   ├── lib/              # Helper libraries & event handlers
+│   ├── models/           # MongoDB schemas & models
+│   ├── plugins/          # All bot commands (modular plugins)
+│   ├── sampah/           # Temporary media storage
+│   └── utils/            # Utilities (logger, security, etc.)
+├── test/                 # Automated testing files
+├── config.js             # Main configuration file
+├── ecosystem.config.cjs  # PM2 configuration (deployment)
+└── package.json          # Project dependencies
+```
 
-Dibuat dengan ❤️ dan 💦 oleh [Terror-Machine](https://github.com/Terror-Machine)
+---
+
+### Directory Descriptions
+
+* **`core/`**
+  The **heart** of the bot. Contains the main files managing the application lifecycle, including `connection.js` (connection handling), `handler.js` (message processing), and `client.js` (custom client functions).
+
+* **`database/`**
+  Manages everything related to the **database**.
+
+  * `index.js`: Handles the main MongoDB connection.
+  * `auth.js`: Stores login sessions.
+  * `StoreDB.js`: Provides a high-performance caching layer for frequently accessed data.
+
+* **`logs/`**
+  Automatically stores all **activity logs** (`app_activity.log`) and internal Baileys logs (`baileys.log`). Essential for debugging and error tracking.
+
+* **`src/lib/`**
+  A collection of **helper libraries** and logic modules. Contains reusable functions (`function.js`), plugin loader (`plugins.js`), and event-specific handlers like `groupParticipantsUpdate.js`.
+
+* **`src/models/`**
+  Contains all **data schemas** for MongoDB collections. Each file (e.g., `User.js`, `Group.js`) defines both the structure and business logic of its respective data.
+
+* **`src/plugins/`**
+  The **center of all bot commands**. Each subfolder represents a command category, making the bot highly modular and easy to extend or modify.
+
+* **`src/sampah/`**
+  A **temporary working directory** for storing downloaded media (images, videos, stickers) before processing or sending them back.
+
+* **`src/utils/`**
+  A set of **technical utilities** that support the entire application, such as logger configuration (`logger.js`), message security checks (`security.js`), and time utilities (`dayjs.js`).
+
+* **`test/`**
+  Contains all files for **automated testing**, ensuring each part of the bot works correctly after code changes.
+
+* **`config.js`**
+  The **main configuration file** for storing critical variables such as the MongoDB URI, owner numbers, and other sensitive settings.
+
+* **`ecosystem.config.cjs`**
+  The **PM2 configuration file**, used to keep the bot running reliably on a server and automatically restart it in case of a crash.
+
+---
+
+Made with ❤️ and 💦 by [Terror-Machine](https://github.com/Terror-Machine)
+
+---

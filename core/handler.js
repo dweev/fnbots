@@ -252,7 +252,7 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
   const quotedMsg = m.quoted ? m.quoted : false;
   const quotedParticipant = m.quoted?.sender || '';
   const mentionedJidList = Array.isArray(m.mentionedJid) ? m.mentionedJid : [];
-  const isSadmin = ownerNumber.includes(serial);
+  const isSadmin = ownerNumber.includes(serial) || (dbSettings.self === 'true' && fromBot);
   const isMaster = user.isMaster;
   const isVIP = user.isVIPActive;
   const isPremium = user.isPremiumActive;
@@ -364,7 +364,11 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
   }
 
   const selfMode = dbSettings.self;
-  if (selfMode === 'true' && !fromBot && !isSadmin && !isMaster) return;
+  if (selfMode === 'true') {
+    if (!(fromBot || isSadmin || isMaster)) {
+      return;
+    }
+  }
   if (selfMode === 'false' && fromBot) return;
 
   if (m.isGroup) {

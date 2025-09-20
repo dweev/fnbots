@@ -16,9 +16,7 @@ export const command = {
   aliases: ['lg', 'grouplist', 'mygroup'],
   execute: async ({ sReply }) => {
     const allGroups = await GroupMetadata.find({}, { groupId: 1, subject: 1, _id: 0 }).lean();
-    if (!allGroups || allGroups.length === 0) {
-      return sReply('Bot tidak berada di dalam grup manapun saat ini.');
-    }
+    if (!allGroups || allGroups.length === 0) return sReply('Bot tidak berada di dalam grup manapun saat ini.');
     allGroups.sort((a, b) => a.subject.localeCompare(b.subject));
     const groupJids = allGroups.map(g => g.groupId);
     updateMyGroup(groupJids);

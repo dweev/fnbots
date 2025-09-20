@@ -19,7 +19,8 @@ class DBStore {
     this.cacheTimestamps = new Map();
     this.lidToJidCache = new Map();
     this.maxCacheSize = {
-      groups: 100
+      groups: 100,
+      contacts: 5000
     };
     this.cacheTTL = {
       groups: 7 * 24 * 60 * 60 * 1000
@@ -54,58 +55,14 @@ class DBStore {
     log('MongoDB store ready');
     return this;
   }
+  async disconnect() {
+    await this.processBatchUpdates();
+    this.isConnected = false;
+    this.clearGroupsCache();
+  }
   startBatchProcessor() {
     const batchIntervalId = setInterval(() => this.processBatchUpdates(), this.batchInterval);
     global.activeIntervals.push(batchIntervalId);
-  }
-  startCacheCleanup() {
-    const cleanupIntervalId = setInterval(() => {
-      this.cleanupExpiredGroupsCache();
-    }, this.cacheCleanupInterval);
-    global.activeIntervals.push(cleanupIntervalId);
-  }
-  cleanupExpiredGroupsCache() {
-    if (!this.isConnected) return;
-    const now = Date.now();
-    let expiredCount = 0;
-    for (const [groupId, timestamp] of this.cacheTimestamps) {
-      if (this.groupMetadataCache.has(groupId)) {
-        if (now - timestamp > this.cacheTTL.groups) {
-          this.groupMetadataCache.delete(groupId);
-          this.cacheHits.delete(groupId);
-          this.cacheTimestamps.delete(groupId);
-          expiredCount++;
-          this.cacheStats.ttlExpirations++;
-        }
-      }
-    }
-    if (expiredCount > 0) {
-      log(`TTL cleanup: Removed ${expiredCount} expired group cache entries`);
-    }
-    if (this.groupMetadataCache.size > this.maxCacheSize.groups) {
-      this.applyLRUCleanup('groups', this.groupMetadataCache);
-    }
-  }
-  applyLRUCleanup(type, cache) {
-    const maxSize = this.maxCacheSize[type];
-    const entries = Array.from(this.cacheHits.entries());
-    if (entries.length > 0) {
-      const relevantEntries = entries.filter(([key]) => cache.has(key));
-      if (relevantEntries.length > 0) {
-        const sortedByHits = relevantEntries.sort((a, b) => a[1] - b[1]);
-        const itemsToRemove = cache.size - maxSize;
-        for (let i = 0; i < itemsToRemove && i < sortedByHits.length; i++) {
-          const [key] = sortedByHits[i];
-          if (cache.has(key)) {
-            cache.delete(key);
-            this.cacheHits.delete(key);
-            this.cacheTimestamps.delete(key);
-            this.cacheStats.evictions++;
-          }
-        }
-        log(`LRU cleanup: Removed ${itemsToRemove} ${type} due to size limit`);
-      }
-    }
   }
   async processBatchUpdates() {
     if (!this.isConnected) return;
@@ -158,21 +115,28 @@ class DBStore {
       return merged;
     }
     const existing = this.contactsCache.get(jid);
+    let finalData;
     if (existing) {
-      const mergedData = { ...safeMerge(existing, data), jid };
-      this.contactsCache.set(jid, mergedData);
-      if (mergedData.lid) {
-        this.addLidToJidCache(mergedData.lid, jid);
-      }
-      return mergedData;
+      finalData = { ...safeMerge(existing, data), jid };
     } else {
-      const newData = { ...data, jid };
-      this.contactsCache.set(jid, newData);
-      if (newData.lid) {
-        this.addLidToJidCache(newData.lid, jid);
-      }
-      return newData;
+      finalData = { ...data, jid };
     }
+    this.contactsCache.set(jid, finalData);
+    if (finalData.lid) {
+      this.addLidToJidCache(finalData.lid, jid);
+    }
+    if (this.contactsCache.size > this.maxCacheSize.contacts) {
+      const oldestJid = this.contactsCache.keys().next().value;
+      if (oldestJid) {
+        const contactToDelete = this.contactsCache.get(oldestJid);
+        this.contactsCache.delete(oldestJid);
+        if (contactToDelete && contactToDelete.lid) {
+          this.lidToJidCache.delete(contactToDelete.lid);
+        }
+        this.cacheStats.evictions++;
+      }
+    }
+    return finalData;
   }
   addGroupToCache(groupId, data) {
     const cache = this.groupMetadataCache;
@@ -191,7 +155,10 @@ class DBStore {
     if (!this.isConnected) return null;
     if (this.contactsCache.has(jid)) {
       this.cacheStats.hits++;
-      return this.contactsCache.get(jid);
+      const contactData = this.contactsCache.get(jid);
+      this.contactsCache.delete(jid);
+      this.contactsCache.set(jid, contactData);
+      return contactData;
     }
     this.cacheStats.misses++;
     try {
@@ -275,6 +242,32 @@ class DBStore {
       evictions: this.cacheStats.evictions
     };
   }
+  getCacheItemTTL(key) {
+    if (!this.cacheTimestamps.has(key) || !this.groupMetadataCache.has(key)) {
+      return null;
+    }
+    const timestamp = this.cacheTimestamps.get(key);
+    const now = Date.now();
+    const ttlMs = this.cacheTTL.groups - (now - timestamp);
+    return {
+      key,
+      type: 'groups',
+      ttlMs,
+      ttlFormatted: this.formatTTL(ttlMs),
+      expiresAt: new Date(timestamp + this.cacheTTL.groups),
+      hitCount: this.cacheHits.get(key) || 0
+    };
+  }
+  formatTTL(ms) {
+    if (ms <= 0) return 'Expired';
+    const days = Math.floor(ms / (24 * 60 * 60 * 1000));
+    const hours = Math.floor((ms % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
+    const minutes = Math.floor((ms % (60 * 60 * 1000)) / (60 * 1000));
+    return `${days}d ${hours}h ${minutes}m`;
+  }
+  getAllContacts() {
+    return Array.from(this.contactsCache.values());
+  }
   updateMessages(chatId, message, maxSize = 50) {
     if (!this.messages[chatId]) this.messages[chatId] = [];
     this.messages[chatId].push(message);
@@ -325,40 +318,65 @@ class DBStore {
     this.pendingUpdates.groups.clear();
     log('Groups cache cleared');
   }
-  async disconnect() {
-    await this.processBatchUpdates();
-    this.isConnected = false;
-    this.clearGroupsCache();
+  clearGroupCacheByKey(groupId) {
+    if (this.groupMetadataCache.has(groupId)) {
+      this.groupMetadataCache.delete(groupId);
+      this.cacheHits.delete(groupId);
+      this.cacheTimestamps.delete(groupId);
+    }
+  }
+  cleanupExpiredGroupsCache() {
+    if (!this.isConnected) return;
+    const now = Date.now();
+    let expiredCount = 0;
+    for (const [groupId, timestamp] of this.cacheTimestamps) {
+      if (this.groupMetadataCache.has(groupId)) {
+        if (now - timestamp > this.cacheTTL.groups) {
+          this.groupMetadataCache.delete(groupId);
+          this.cacheHits.delete(groupId);
+          this.cacheTimestamps.delete(groupId);
+          expiredCount++;
+          this.cacheStats.ttlExpirations++;
+        }
+      }
+    }
+    if (expiredCount > 0) {
+      log(`TTL cleanup: Removed ${expiredCount} expired group cache entries`);
+    }
+    if (this.groupMetadataCache.size > this.maxCacheSize.groups) {
+      this.applyLRUCleanup('groups', this.groupMetadataCache);
+    }
+  }
+  startCacheCleanup() {
+    const cleanupIntervalId = setInterval(() => {
+      this.cleanupExpiredGroupsCache();
+    }, this.cacheCleanupInterval);
+    global.activeIntervals.push(cleanupIntervalId);
+  }
+  applyLRUCleanup(type, cache) {
+    const maxSize = this.maxCacheSize[type];
+    const entries = Array.from(this.cacheHits.entries());
+    if (entries.length > 0) {
+      const relevantEntries = entries.filter(([key]) => cache.has(key));
+      if (relevantEntries.length > 0) {
+        const sortedByHits = relevantEntries.sort((a, b) => a[1] - b[1]);
+        const itemsToRemove = cache.size - maxSize;
+        for (let i = 0; i < itemsToRemove && i < sortedByHits.length; i++) {
+          const [key] = sortedByHits[i];
+          if (cache.has(key)) {
+            cache.delete(key);
+            this.cacheHits.delete(key);
+            this.cacheTimestamps.delete(key);
+            this.cacheStats.evictions++;
+          }
+        }
+        log(`LRU cleanup: Removed ${itemsToRemove} ${type} due to size limit`);
+      }
+    }
   }
   async forceCleanup() {
     log('Manual groups cache cleanup initiated');
     this.cleanupExpiredGroupsCache();
-  }
-  getCacheItemTTL(key) {
-    if (!this.cacheTimestamps.has(key) || !this.groupMetadataCache.has(key)) {
-      return null;
-    }
-    const timestamp = this.cacheTimestamps.get(key);
-    const now = Date.now();
-    const ttlMs = this.cacheTTL.groups - (now - timestamp);
-    return {
-      key,
-      type: 'groups',
-      ttlMs,
-      ttlFormatted: this.formatTTL(ttlMs),
-      expiresAt: new Date(timestamp + this.cacheTTL.groups),
-      hitCount: this.cacheHits.get(key) || 0
-    };
-  }
-  formatTTL(ms) {
-    if (ms <= 0) return 'Expired';
-    const days = Math.floor(ms / (24 * 60 * 60 * 1000));
-    const hours = Math.floor((ms % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
-    const minutes = Math.floor((ms % (60 * 60 * 1000)) / (60 * 1000));
-    return `${days}d ${hours}h ${minutes}m`;
-  }
-  getAllContacts() {
-    return Array.from(this.contactsCache.values());
   }
   findContacts(filterFn) {
     return Array.from(this.contactsCache.values()).filter(filterFn);
@@ -381,13 +399,6 @@ class DBStore {
       return null;
     }
   }
-  clearGroupCacheByKey(groupId) {
-    if (this.groupMetadataCache.has(groupId)) {
-      this.groupMetadataCache.delete(groupId);
-      this.cacheHits.delete(groupId);
-      this.cacheTimestamps.delete(groupId);
-    }
-  }
   async loadMessage(remoteJid, id) {
     const messageArray = this.messages?.[remoteJid];
     if (messageArray) {
@@ -408,6 +419,35 @@ class DBStore {
       log(`Error saat mengambil pesan dari DB untuk anti-delete: ${error}`, true);
     }
     return null;
+  }
+  async getArrayContacts(jids) {
+    if (!this.isConnected || !jids || jids.length === 0) return [];
+    const foundInCache = [];
+    const jidsToFetchFromDb = [];
+    for (const jid of jids) {
+      if (this.contactsCache.has(jid)) {
+        this.cacheStats.hits++;
+        const contactData = this.contactsCache.get(jid);
+        this.contactsCache.delete(jid);
+        this.contactsCache.set(jid, contactData);
+        foundInCache.push(contactData);
+      } else {
+        this.cacheStats.misses++;
+        jidsToFetchFromDb.push(jid);
+      }
+    }
+    let foundInDb = [];
+    if (jidsToFetchFromDb.length > 0) {
+      try {
+        foundInDb = await Contact.find({ jid: { $in: jidsToFetchFromDb } }).lean();
+        for (const contact of foundInDb) {
+          this.addContactToCache(contact.jid, contact);
+        }
+      } catch (error) {
+        log(`getArrayContacts error: ${error}`, true);
+      }
+    }
+    return [...foundInCache, ...foundInDb];
   }
 }
 

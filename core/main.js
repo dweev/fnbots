@@ -83,18 +83,21 @@ async function starts() {
     fn.ev.on('group-participants.update', async (update) => {
       await groupParticipantsUpdate(update, fn);
     });
-    fn.ev.on('groups.update', async (updates) => {
-      for (const newMeta of updates) {
-        const id = jidNormalizedUser(newMeta.id);
-        await mongoStore.updateGroupMetadata(id, {
-          ...((await mongoStore.getGroupMetadata(id)) || {}),
-          ...newMeta
-        });
-        if (newMeta.participants) {
-          for (const participant of newMeta.participants) {
-            const contactJid = jidNormalizedUser(participant.id);
-            const contactName = await fn.getName(contactJid);
-            await updateContact(contactJid, { lid: participant.lid, name: contactName });
+    fn.ev.on('groups.upsert', async (newMetas) => {
+      for (const daget of newMetas) {
+        const id = jidNormalizedUser(daget.id);
+        await mongoStore.updateGroupMetadata(id, daget);
+        if (daget.participants && daget.participants.length > 0) {
+          const participantJids = daget.participants.map(p => jidNormalizedUser(p.id));
+          const contacts = await mongoStore.getArrayContacts(participantJids);
+          if (contacts) {
+            const contactMap = new Map(contacts.map(c => [c.jid, c]));
+            for (const participant of daget.participants) {
+              const contactJid = jidNormalizedUser(participant.id);
+              const contact = contactMap.get(contactJid);
+              const contactName = contact?.name || contact?.notify || 'Unknown';
+              await updateContact(contactJid, { lid: participant.lid, name: contactName });
+            }
           }
         }
       }

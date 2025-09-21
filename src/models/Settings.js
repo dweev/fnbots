@@ -153,7 +153,7 @@ const settingsSchema = new mongoose.Schema({
   },
   self: {
     type: String,
-    default: 'false',
+    default: 'auto',
     enum: ['true', 'false', 'auto']
   },
   dataM: {

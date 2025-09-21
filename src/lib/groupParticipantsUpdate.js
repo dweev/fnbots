@@ -9,7 +9,7 @@
 import log from '../utils/logger.js';
 import { jidNormalizedUser } from 'baileys';
 import updateContact from './updateContact.js';
-import { mongoStore, GroupMetadata } from '../../database/index.js';
+import { mongoStore, StoreGroupMetadata } from '../../database/index.js';
 
 export default async function groupParticipantsUpdate({ id, participants, action }, fn) {
   log(`Event: group-participants.update | Aksi: ${action} | Grup: ${id}`);
@@ -27,23 +27,17 @@ export default async function groupParticipantsUpdate({ id, participants, action
           }
         }
         if (isBotAdded) {
-          try {
-            const freshMetadata = await fn.groupMetadata(id);
-            if (freshMetadata) {
-              await mongoStore.updateGroupMetadata(id, freshMetadata);
-              const botParticipant = freshMetadata.participants.find(p => p.id === botJid || jidNormalizedUser(p.id) === botJid);
-              if (botParticipant && botParticipant.admin) {
-                log(`Bot adalah admin di grup ${id}. Siap untuk operasi.`);
-              } else {
-                log(`Bot bukan admin di grup ${id}.`);
-              }
+          const freshMetadata = await mongoStore.syncGroupMetadata(fn, id);
+          if (freshMetadata) {
+            const botParticipant = freshMetadata.participants.find(p => p.id === botJid || jidNormalizedUser(p.id) === botJid);
+            if (botParticipant && botParticipant.admin) {
+              log(`Bot adalah admin di grup ${id}. Siap untuk operasi.`);
+            } else {
+              log(`Bot bukan admin di grup ${id}.`);
             }
-          } catch (error) {
-            log(error, true);
           }
         } else {
-          const freshMetadata = await fn.groupMetadata(id);
-          if (freshMetadata) await mongoStore.updateGroupMetadata(id, freshMetadata);
+          await mongoStore.syncGroupMetadata(fn, id);
         }
         break;
       }
@@ -58,12 +52,11 @@ export default async function groupParticipantsUpdate({ id, participants, action
         }
         if (isBotRemoved) {
           log(`Bot dikeluarkan dari grup ${id}. Membersihkan metadata...`);
-          await GroupMetadata.deleteOne({ groupId: id });
+          await StoreGroupMetadata.deleteOne({ groupId: id });
           mongoStore.clearGroupCacheByKey(id);
           return;
         } else {
-          const freshMetadata = await fn.groupMetadata(id);
-          if (freshMetadata) await mongoStore.updateGroupMetadata(id, freshMetadata);
+          await mongoStore.syncGroupMetadata(fn, id);
         }
         break;
       }
@@ -78,12 +71,7 @@ export default async function groupParticipantsUpdate({ id, participants, action
           }
         }
         if (isBotAffected) {
-          try {
-            const freshMetadata = await fn.groupMetadata(id);
-            if (freshMetadata) await mongoStore.updateGroupMetadata(id, freshMetadata);
-          } catch (error) {
-            log(error, true);
-          }
+          await mongoStore.syncGroupMetadata(fn, id);
         } else {
           const newStatus = action === 'promote' ? 'admin' : null;
           const currentMetadata = await mongoStore.getGroupMetadata(id);

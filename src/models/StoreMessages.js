@@ -4,7 +4,7 @@
 * Follow https://github.com/Terror-Machine
 * Feel Free To Use
 */
-// ─── Info Messages.js ────────────────────
+// ─── Info StoreMessages.js ───────────────
 
 import mongoose from 'mongoose';
 
@@ -111,4 +111,4 @@ messagesSchema.statics.cleanupOldData = async function () {
   return this.deleteMany({ lastUpdatedAt: { $lt: FIFTEEN_DAYS_AGO } });
 };
 
-export default mongoose.model('Messages', messagesSchema);
+export default mongoose.model('StoreMessages', messagesSchema);

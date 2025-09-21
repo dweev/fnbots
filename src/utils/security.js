@@ -8,11 +8,11 @@
 
 import { getContentType } from 'baileys';
 
+const RLO_RE = /\u202E/;
+const NULL_RE = /\u0000/;
+const EMOJI_UNICODE_RE = /\p{Emoji}/u;
 const EMOJI_RE = /[\u{1F000}-\u{1FAFF}]/u;
 const ZW_RE = /[\u200B-\u200D\u2060\u3164]/;
-const NULL_RE = /\u0000/;
-const RLO_RE = /\u202E/;
-const EMOJI_UNICODE_RE = /\p{Emoji}/u;
 
 export function isBug(protoMsg) {
   const msg = protoMsg.message || {};

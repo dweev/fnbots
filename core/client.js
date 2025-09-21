@@ -13,8 +13,8 @@ import FileType from 'file-type';
 import log from '../src/utils/logger.js';
 import { mongoStore } from '../database/index.js';
 import { tmpDir } from '../src/lib/tempManager.js';
-import { MediaValidationError, MediaProcessingError, MediaSizeError } from '../src/lib/errorManager.js'
 import { randomByte, getBuffer, getSizeMedia, writeExif, convertAudio } from '../src/lib/function.js';
+import { MediaValidationError, MediaProcessingError, MediaSizeError } from '../src/lib/errorManager.js';
 import { jidNormalizedUser, generateWAMessage, generateWAMessageFromContent, downloadContentFromMessage, jidDecode, jidEncode, getBinaryNodeChildString, getBinaryNodeChildren, getBinaryNodeChild, proto } from 'baileys';
 
 import { createRequire } from 'node:module';

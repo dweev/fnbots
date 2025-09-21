@@ -6,9 +6,9 @@
 */
 // ─── Info ────────────────────────────────
 
+import dayjs from '../../utils/dayjs.js';
 import { User } from '../../../database/index.js';
 import { formatDurationMessage } from '../../lib/function.js';
-import dayjs from '../../utils/dayjs.js';
 
 export const command = {
   name: 'checkpremium',

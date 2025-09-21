@@ -4,7 +4,7 @@
 * Follow https://github.com/Terror-Machine
 * Feel Free To Use
 */
-// ─── Info Story.js ───────────────────────
+// ─── Info StoreStory.js ──────────────────
 
 import mongoose from 'mongoose';
 
@@ -54,4 +54,4 @@ statusDataSchema.statics.cleanupOldData = async function () {
   return this.deleteMany({ lastUpdatedAt: { $lt: FIFTEEN_DAYS_AGO } });
 };
 
-export default mongoose.model('Story', statusDataSchema);
+export default mongoose.model('StoreStory', statusDataSchema);

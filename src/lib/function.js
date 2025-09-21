@@ -324,8 +324,7 @@ export async function getBuffer(url, options = {}) {
     });
     return response.data;
   } catch (error) {
-    await log(error, true);
-    throw error;
+    throw new Error(error);
   }
 };
 export async function writeExif(media, data) {

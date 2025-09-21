@@ -6,13 +6,13 @@
 */
 // ─── Info ────────────────────────────────
 
-import { Command, Settings, User } from '../../../database/index.js';
-import { waktu, bytesToSize } from '../../lib/function.js';
 import os from 'os';
+import util from 'util';
 import fs from 'fs-extra';
 import axios from 'axios';
-import util from 'util';
 import { exec as cp_exec } from 'child_process';
+import { waktu, bytesToSize } from '../../lib/function.js';
+import { Command, Settings, User } from '../../../database/index.js';
 
 const exec = util.promisify(cp_exec);
 const cache = new Map();

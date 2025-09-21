@@ -6,10 +6,11 @@
 */
 // ─── Info StoreDB.js ─────────────────────
 
-import Messages from '../src/models/StoreMessages.js'
-import Contact from '../src/models/StoreContact.js';
-import GroupMetadata from '../src/models/StoreGroupMetadata.js';
 import log from '../src/utils/logger.js';
+import { jidNormalizedUser } from 'baileys';
+import StoreContact from '../src/models/StoreContact.js';
+import StoreMessages from '../src/models/StoreMessages.js';
+import StoreGroupMetadata from '../src/models/StoreGroupMetadata.js';
 
 class DBStore {
   constructor() {
@@ -69,7 +70,7 @@ class DBStore {
     if (this.pendingUpdates.contacts.size > 0) {
       const contactsToUpdate = Array.from(this.pendingUpdates.contacts.values());
       try {
-        await Contact.bulkUpsert(contactsToUpdate);
+        await StoreContact.bulkUpsert(contactsToUpdate);
         this.pendingUpdates.contacts.clear();
       } catch (error) {
         log(error, true);
@@ -78,7 +79,7 @@ class DBStore {
     if (this.pendingUpdates.groups.size > 0) {
       const groupsToUpdate = Array.from(this.pendingUpdates.groups.values());
       try {
-        await GroupMetadata.bulkUpsert(groupsToUpdate);
+        await StoreGroupMetadata.bulkUpsert(groupsToUpdate);
         this.pendingUpdates.groups.clear();
       } catch (error) {
         log(error, true);
@@ -87,9 +88,9 @@ class DBStore {
   }
   async warmCaches() {
     try {
-      const activeGroups = await GroupMetadata.find().sort({ lastUpdated: -1 }).limit(50).lean();
+      const activeGroups = await StoreGroupMetadata.find().sort({ lastUpdated: -1 }).limit(50).lean();
       activeGroups.forEach(group => this.addGroupToCache(group.groupId, group));
-      const allContacts = await Contact.find({}).lean();
+      const allContacts = await StoreContact.find({}).lean();
       allContacts.forEach(contact => this.addContactToCache(contact.jid, contact));
       log(`Cache warmed: ${this.contactsCache.size} contacts, ${this.groupMetadataCache.size} groups`);
     } catch (error) {
@@ -162,7 +163,7 @@ class DBStore {
     }
     this.cacheStats.misses++;
     try {
-      const contact = await Contact.findOne({ jid }).lean();
+      const contact = await StoreContact.findOne({ jid }).lean();
       if (contact) {
         this.addContactToCache(jid, contact);
       }
@@ -187,7 +188,7 @@ class DBStore {
     }
     this.cacheStats.misses++;
     try {
-      const metadata = await GroupMetadata.findOne({ groupId }).lean();
+      const metadata = await StoreGroupMetadata.findOne({ groupId }).lean();
       if (metadata) {
         this.addGroupToCache(groupId, metadata);
       }
@@ -381,6 +382,16 @@ class DBStore {
   findContacts(filterFn) {
     return Array.from(this.contactsCache.values()).filter(filterFn);
   }
+  async resolveJid(id) {
+    if (!id) return null;
+    if (id.endsWith('@s.whatsapp.net')) {
+      return jidNormalizedUser(id);
+    }
+    if (id.endsWith('@lid')) {
+      return this.findJidByLid(id);
+    }
+    return id;
+  }
   async findJidByLid(lid) {
     if (!lid) return null;
     const cachedJid = this.getJidFromLidCache(lid);
@@ -388,7 +399,7 @@ class DBStore {
       return cachedJid;
     }
     try {
-      const contact = await Contact.findOne({ lid }).lean();
+      const contact = await StoreContact.findOne({ lid }).lean();
       const jid = contact?.jid || null;
       if (jid) {
         this.addLidToJidCache(lid, jid);
@@ -408,7 +419,7 @@ class DBStore {
       }
     }
     try {
-      const chatHistory = await Messages.findOne(
+      const chatHistory = await StoreMessages.findOne(
         { chatId: remoteJid, 'messages.key.id': id },
         { 'messages.$': 1 }
       ).lean();
@@ -439,7 +450,7 @@ class DBStore {
     let foundInDb = [];
     if (jidsToFetchFromDb.length > 0) {
       try {
-        foundInDb = await Contact.find({ jid: { $in: jidsToFetchFromDb } }).lean();
+        foundInDb = await StoreContact.find({ jid: { $in: jidsToFetchFromDb } }).lean();
         for (const contact of foundInDb) {
           this.addContactToCache(contact.jid, contact);
         }
@@ -448,6 +459,19 @@ class DBStore {
       }
     }
     return [...foundInCache, ...foundInDb];
+  }
+  async syncGroupMetadata(fn, groupId) {
+    if (!fn || !groupId) return null;
+    try {
+      const freshMetadata = await fn.groupMetadata(groupId);
+      if (freshMetadata) {
+        await this.updateGroupMetadata(groupId, freshMetadata);
+        return freshMetadata;
+      }
+    } catch (error) {
+      log(error, true);
+    }
+    return null;
   }
 }
 

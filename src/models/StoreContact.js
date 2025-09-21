@@ -4,7 +4,7 @@
 * Follow https://github.com/Terror-Machine
 * Feel Free To Use
 */
-// ─── Info Contact.js ─────────────────────
+// ─── Info StoreContact.js ────────────────
 
 import mongoose from 'mongoose';
 
@@ -70,4 +70,4 @@ contactSchema.statics.bulkUpsert = async function (contactsArray) {
   return await this.bulkWrite(operations, { ordered: false });
 };
 
-export default mongoose.model('Contact', contactSchema);
+export default mongoose.model('StoreContact', contactSchema);

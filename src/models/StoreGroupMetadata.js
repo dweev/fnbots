@@ -4,7 +4,7 @@
 * Follow https://github.com/Terror-Machine
 * Feel Free To Use
 */
-// ─── Info GroupMetadata.js ───────────────
+// ─── Info StoreGroupMetadata.js ──────────
 
 import mongoose from 'mongoose';
 
@@ -191,4 +191,4 @@ groupMetadataSchema.index({ 'participants.admin': 1 });
 groupMetadataSchema.index({ lastUpdated: -1 });
 groupMetadataSchema.index({ size: -1 });
 
-export default mongoose.model('GroupMetadata', groupMetadataSchema);
+export default mongoose.model('StoreGroupMetadata', groupMetadataSchema);

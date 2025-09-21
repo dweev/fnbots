@@ -8,8 +8,8 @@
 
 import pino from 'pino';
 import path from 'path';
-import process from 'process';
 import util from 'util';
+import process from 'process';
 
 const logFilePath = path.join(process.cwd(), 'logs');
 const blockedKeywords = [

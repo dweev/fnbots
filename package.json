@@ -21,6 +21,7 @@
   "dependencies": {
     "awesome-phonenumber": "^7.5.0",
     "baileys": "github:Terror-Machine/Baileys#hyhy",
+    "chokidar": "^4.0.3",
     "dayjs": "^1.11.13",
     "dotenv": "^16.6.1",
     "fs-extra": "^11.3.2",

@@ -15,6 +15,7 @@ import process from 'process';
 import { dirname } from 'path';
 import { fileURLToPath } from 'url';
 const exec = util.promisify(cp_exec);
+import { jidNormalizedUser } from 'baileys';
 import { exec as cp_exec } from 'child_process';
 import { createWASocket } from './connection.js';
 import { randomByte } from '../src/lib/function.js';
@@ -22,12 +23,12 @@ import { loadPlugins } from '../src/lib/plugins.js';
 import updateContact from '../src/lib/updateContact.js';
 import log, { pinoLogger } from '../src/utils/logger.js';
 import { handleRestart, initializeFuse } from './handler.js';
+import startPluginWatcher from '../src/lib/watcherPlugins.js';
 import updateMessageUpsert from '../src/lib/updateMessageUpsert.js';
 import { initializeDbSettings } from '../src/lib/settingsManager.js';
 import processContactUpdate from '../src/lib/processContactUpdate.js';
 import groupParticipantsUpdate from '../src/lib/groupParticipantsUpdate.js';
-import { database, Settings, mongoStore, Messages, Story } from '../database/index.js';
-import { jidNormalizedUser } from 'baileys';
+import { database, Settings, mongoStore, StoreMessages, StoreStory } from '../database/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -61,6 +62,7 @@ async function starts() {
     await initializeDatabases();
     await loadPlugins(path.join(__dirname, '..', 'src', 'plugins'));
     await initializeFuse();
+    startPluginWatcher();
     mongoStore.init();
     const fn = await createWASocket(dbSettings);
     fn.ev.on('messaging-history.set', async (event) => {
@@ -165,7 +167,7 @@ async function starts() {
         };
       }
       mongoStore.updatePresences(id, update);
-      Messages.updatePresences(id, update).catch(err => log(err, true));
+      StoreMessages.updatePresences(id, update).catch(err => log(err, true));
     });
     const keepAliveInterval = setInterval(async () => {
       try {
@@ -186,8 +188,8 @@ async function starts() {
     cron.schedule('0 21 * * 2', async () => {
       log('Menjalankan tugas pembersihan data lama...');
       try {
-        const chatResult = await Messages.cleanupOldData();
-        const storyResult = await Story.cleanupOldData();
+        const chatResult = await StoreMessages.cleanupOldData();
+        const storyResult = await StoreStory.cleanupOldData();
         await exec('rm -rf ../logs/*');
         log(`Pembersihan selesai. Messages terhapus: ${chatResult.deletedCount}. Story terhapus: ${storyResult.deletedCount}. Log dihapus.`);
       } catch (error) { await log(error, true); }

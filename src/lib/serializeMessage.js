@@ -10,15 +10,6 @@ import updateContact from './updateContact.js';
 import { mongoStore } from '../../database/index.js';
 import { jidNormalizedUser, extractMessageContent, getDevice, areJidsSameUser } from 'baileys';
 
-async function safeFindJidByLid(lid) {
-  try {
-    const jid = await mongoStore.findJidByLid(lid);
-    return (jid && jid !== lid) ? jid : null;
-  } catch (error) {
-    console.error('Error resolving LID to JID:', lid, error);
-    return null;
-  }
-};
 function normalizeMentionsInBody(body, originalMentionedJids, resolvedMentionedJids) {
   if (!body || !Array.isArray(originalMentionedJids) || !Array.isArray(resolvedMentionedJids)) return body;
   let normalizedBody = body;
@@ -95,16 +86,7 @@ export default async function serializeMessage(fn, msg) {
     if (msg.messageStubType) {
       m.messageStubType = msg.messageStubType;
       const rawParams = msg.messageStubParameters || [];
-      const resolvedParams = [];
-      for (const param of rawParams) {
-        if (typeof param === 'string' && param.endsWith('@lid')) {
-          const resolved = await safeFindJidByLid(param);
-          resolvedParams.push(resolved || param);
-        } else {
-          resolvedParams.push(param);
-        }
-      }
-      m.messageStubParameters = resolvedParams;
+      m.messageStubParameters = await Promise.all(rawParams.map(param => mongoStore.resolveJid(param)));
       return m;
     }
     if (!msg || !msg.message) return null;
@@ -133,14 +115,14 @@ export default async function serializeMessage(fn, msg) {
         tempSenderJid = rawParticipant;
       } else if (rawParticipant?.endsWith('@lid')) {
         tempSenderLid = rawParticipant;
-        tempSenderJid = await safeFindJidByLid(rawParticipant);
+        tempSenderJid = await mongoStore.resolveJid(rawParticipant);
       }
       if (!tempSenderJid && rawParticipantAlt?.endsWith('@s.whatsapp.net')) {
         tempSenderJid = rawParticipantAlt;
       } else if (!tempSenderLid && rawParticipantAlt?.endsWith('@lid')) {
         tempSenderLid = rawParticipantAlt;
         if (!tempSenderJid) {
-          tempSenderJid = await safeFindJidByLid(rawParticipantAlt);
+          tempSenderJid = await mongoStore.resolveJid(rawParticipantAlt);
         }
       }
       senderJid = tempSenderJid;
@@ -209,17 +191,8 @@ export default async function serializeMessage(fn, msg) {
       const kamuCrot = m.message[m.type] || m.message;
       const originalBody = m.message?.conversation || kamuCrot?.text || kamuCrot?.conversation || kamuCrot?.caption || kamuCrot?.selectedButtonId || kamuCrot?.singleSelectReply?.selectedRowId || kamuCrot?.selectedId || kamuCrot?.contentText || kamuCrot?.selectedDisplayText || kamuCrot?.title || kamuCrot?.name || '';
       const rawMentionedJid = kamuCrot?.contextInfo?.mentionedJid || [];
-      const resolvedJids = [];
-      for (const mentionId of rawMentionedJid) {
-        if (mentionId.endsWith('@lid')) {
-          const resolved = await safeFindJidByLid(mentionId);
-          resolvedJids.push(resolved || mentionId);
-        } else {
-          resolvedJids.push(mentionId);
-        }
-      }
-      m.mentionedJid = resolvedJids;
-      m.body = normalizeMentionsInBody(originalBody, rawMentionedJid, resolvedJids);
+      m.mentionedJid = await Promise.all(rawMentionedJid.map(mentionId => mongoStore.resolveJid(mentionId)));
+      m.body = normalizeMentionsInBody(originalBody, rawMentionedJid, m.mentionedJid);
       m.device = getDevice(m.key.id);
       m.expiration = kamuCrot?.contextInfo?.expiration || 0;
       const parseTimestamp = (t) => typeof t === 'number' ? t : t?.low || t?.high || 0;
@@ -242,7 +215,7 @@ export default async function serializeMessage(fn, msg) {
       if (m.type === 'messageContextInfo' && kamuCrot?.edit) { m.editedMessage = kamuCrot.edit; }
       if (kamuCrot?.contextInfo?.participant?.endsWith('@lid')) {
         const participantLid = kamuCrot.contextInfo.participant;
-        const resolved = await safeFindJidByLid(participantLid);
+        const resolved = await mongoStore.resolveJid(participantLid);
         if (resolved) {
           kamuCrot.contextInfo.participant = resolved;
         }
@@ -263,7 +236,7 @@ export default async function serializeMessage(fn, msg) {
           };
           m.quoted.sender = jidNormalizedUser(m.quoted.key.participant);
           if (m.quoted.sender?.endsWith('@lid')) {
-            const resolved = await safeFindJidByLid(m.quoted.sender);
+            const resolved = await mongoStore.resolveJid(m.quoted.sender);
             if (resolved) {
               m.quoted.key.participant = resolved;
               m.quoted.sender = resolved;
@@ -272,18 +245,7 @@ export default async function serializeMessage(fn, msg) {
           if (akuCrot?.contextInfo) {
             const rawQuotedMentionedJid = akuCrot.contextInfo.mentionedJid || [];
             const lidToJidMap = new Map();
-            const resolvedJids = await Promise.all(
-              rawQuotedMentionedJid.map(async (mentionId) => {
-                if (mentionId.endsWith('@lid')) {
-                  const resolved = await safeFindJidByLid(mentionId);
-                  if (resolved) {
-                    lidToJidMap.set(mentionId.split('@')[0], resolved.split('@')[0]);
-                    return resolved;
-                  }
-                }
-                return mentionId;
-              })
-            );
+            const resolvedJids = await Promise.all(rawQuotedMentionedJid.map(mentionId => mongoStore.resolveJid(mentionId)));
             m.quoted.mentionedJid = resolvedJids;
             akuCrot.contextInfo.mentionedJid = resolvedJids;
             let quotedBody = akuCrot?.text || akuCrot?.caption || akuCrot?.conversation || akuCrot?.selectedButtonId || akuCrot?.singleSelectReply?.selectedRowId || akuCrot?.selectedId || akuCrot?.contentText || akuCrot?.selectedDisplayText || akuCrot?.title || akuCrot?.name || m.quoted.caption || m.quoted.conversation || m.quoted.contentText || m.quoted.selectedDisplayText || m.quoted.title || '';

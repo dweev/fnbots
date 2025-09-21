@@ -59,12 +59,18 @@ export function membershipUser(config) {
             if (target.includes('@') || !/^\d+$/.test(target)) {
               await processDelete(formatUserId(target));
             } else {
-              const allUsers = await User[userModelMethods.findActive]();
-              const index = parseInt(target);
-              if (index >= 1 && index <= allUsers.length) {
-                await processDelete(allUsers[index - 1].userId);
+              const index = parseInt(target, 10);
+              if (isNaN(index) || index < 1) throw new Error(`Index '${target}' tidak valid.`);
+              const userToFind = await User.find({ [userModelMethods.findActive.replace('findActive', 'is').slice(0, -1)]: true })
+                .sort({ createdAt: 1 })
+                .skip(index - 1)
+                .limit(1)
+                .lean();
+              if (userToFind && userToFind.length > 0) {
+                await processDelete(userToFind[0].userId);
               } else {
-                throw new Error(`Index ${target} tidak valid. Range: 1-${allUsers.length}`);
+                const totalUsers = await User.countDocuments({ [userModelMethods.findActive.replace('findActive', 'is').slice(0, -1)]: true });
+                throw new Error(`Index ${index} tidak valid. Range: 1-${totalUsers}`);
               }
             }
           }

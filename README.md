@@ -4,6 +4,13 @@
 
 ---
 
+## Project Architecture Diagram
+
+![flow1](https://github.com/user-attachments/assets/e6b8bbde-7d88-4f10-aae6-34c9ade16f46)
+![flow2](https://github.com/user-attachments/assets/bd9a33e3-43ff-417e-9123-44a9efad9d5e)
+
+---
+
 ## Project Structure
 
 ```

@@ -6,7 +6,9 @@
 */
 // ─── Info connection.js ──────────────────
 
+import 'dotenv/config';
 import axios from 'axios';
+import process from 'process';
 import readline from 'readline';
 import config from '../config.js';
 import { Boom } from '@hapi/boom';
@@ -16,7 +18,7 @@ import { handleRestart } from './handler.js';
 import { parsePhoneNumber } from 'awesome-phonenumber';
 import log, { pinoLogger } from '../src/utils/logger.js';
 import { AuthStore, BaileysSession } from '../database/auth.js';
-import { Settings, mongoStore, GroupMetadata } from '../database/index.js';
+import { Settings, mongoStore, StoreGroupMetadata } from '../database/index.js';
 import { default as makeWASocket, jidNormalizedUser, Browsers, makeCacheableSignalKeyStore, isJidBroadcast, fetchLatestBaileysVersion } from 'baileys';
 
 let phoneNumber;
@@ -121,12 +123,12 @@ export async function createWASocket(dbSettings) {
         await log('Memulai sinkronisasi data grup...');
         try {
           const currentGroupIds = new Set(Object.keys(participatingGroups));
-          const storedMetadatas = await GroupMetadata.find({}, { groupId: 1, _id: 0 }).lean();
+          const storedMetadatas = await StoreGroupMetadata.find({}, { groupId: 1, _id: 0 }).lean();
           const storedGroupIds = storedMetadatas.map(g => g.groupId);
           const staleGroupIds = storedGroupIds.filter(id => !currentGroupIds.has(id));
           if (staleGroupIds.length > 0) {
             await log(`Mendeteksi ${staleGroupIds.length} grup usang. Memulai pembersihan...`);
-            const deleteResult = await GroupMetadata.deleteMany({ groupId: { $in: staleGroupIds } });
+            const deleteResult = await StoreGroupMetadata.deleteMany({ groupId: { $in: staleGroupIds } });
             await log(`Pembersihan database selesai: ${deleteResult.deletedCount} metadata grup usang telah dihapus.`);
             staleGroupIds.forEach(id => mongoStore.clearGroupCacheByKey(id));
             await log(`Cache untuk ${staleGroupIds.length} grup usang telah dibersihkan dari StoreDB.`);
@@ -140,7 +142,7 @@ export async function createWASocket(dbSettings) {
         await log(`BOT Number: ${jidNormalizedUser(fn.user.id).split('@')[0]}`);
         await log(`${dbSettings.botName} Berhasil tersambung ke whatsapp...`);
         if (config.restartAttempts > 0) {
-          process.env.RESTART_ATTEMPTS = '0';
+          config.restartAttempts = 0;
         }
       }
       if (connection === 'close') {

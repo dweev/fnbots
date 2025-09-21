@@ -38,7 +38,6 @@ class DatabaseConnection {
         socketTimeoutMS: 45000,
       });
     } catch (error) {
-      log(error, true);
       this.attemptReconnect();
       throw error;
     }
@@ -106,23 +105,23 @@ import Group from '../src/models/Group.js';
 import Command from '../src/models/Command.js';
 import Settings from '../src/models/Settings.js';
 import Whitelist from '../src/models/Whitelist.js';
-import Contact from '../src/models/StoreContact.js';
-import GroupMetadata from '../src/models/StoreGroupMetadata.js';
+import StoreContact from '../src/models/StoreContact.js';
+import StoreGroupMetadata from '../src/models/StoreGroupMetadata.js';
 import DatabaseBot from '../src/models/DatabaseBot.js'
-import Messages from '../src/models/StoreMessages.js';
-import Story from '../src/models/StoreStory.js';
+import StoreMessages from '../src/models/StoreMessages.js';
+import StoreStory from '../src/models/StoreStory.js';
 
 export {
   database,
-  mongoStore,
   User,
   Group,
-  Contact,
   Command,
   Settings,
   Whitelist,
-  GroupMetadata,
+  mongoStore,
   DatabaseBot,
-  Messages,
-  Story
+  StoreContact,
+  StoreGroupMetadata,
+  StoreMessages,
+  StoreStory
 };

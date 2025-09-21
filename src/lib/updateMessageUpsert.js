@@ -13,7 +13,7 @@ import { arfine } from '../../core/handler.js';
 import { isBug } from '../utils/security.js';
 import { jidNormalizedUser, delay } from 'baileys';
 import serializeMessage from './serializeMessage.js';
-import { mongoStore, Messages, Story } from '../../database/index.js';
+import { mongoStore, StoreMessages, StoreStory } from '../../database/index.js';
 import handleGroupStubMessages from './handleGroupStubMessages.js';
 
 class CrotToLive extends Map {
@@ -79,7 +79,7 @@ export default async function updateMessageUpsert(fn, message, dbSettings) {
           }
         }
         mongoStore.addStatus(m.sender, m, 10000);
-        Story.addStatus(m.sender, m, 10000).catch(err => log(err, true));
+        StoreStory.addStatus(m.sender, m, 10000).catch(err => log(err, true));
         return;
       } catch (error) {
         await log(error, true);
@@ -105,7 +105,7 @@ export default async function updateMessageUpsert(fn, message, dbSettings) {
             keyId: m.key.id
           };
           mongoStore.updateConversations(m.chat, conversationData, 10000);
-          Messages.addConversation(m.chat, conversationData).catch(err => log(err, true));
+          StoreMessages.addConversation(m.chat, conversationData).catch(err => log(err, true));
         }
       }
       const dependencies = {
@@ -116,7 +116,7 @@ export default async function updateMessageUpsert(fn, message, dbSettings) {
       };
       dependencies.isSuggestion = false;
       await arfine(fn, m, dependencies);
-      Messages.addMessage(m.chat, m).catch(err => log(err, true));
+      StoreMessages.addMessage(m.chat, m).catch(err => log(err, true));
     } catch (error) {
       await log(error, true);
     }

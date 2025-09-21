@@ -8,9 +8,9 @@
 
 import mongoose from 'mongoose';
 import { BufferJSON, initAuthCreds, proto } from 'baileys';
-import Contact from '../src/models/StoreContact.js';
-import { Mutex } from 'async-mutex';
+import StoreContact from '../src/models/StoreContact.js';
 import log from '../src/utils/logger.js';
+import { Mutex } from 'async-mutex';
 
 const ACQUIRE_TIMEOUT = 5000;
 const BaileysSessionSchema = new mongoose.Schema({
@@ -100,10 +100,8 @@ export async function AuthStore() {
               if (value) {
                 if (key.startsWith('lid-mapping-')) {
                   const base = key.replace('lid-mapping-', '').replace('_reverse', '');
-                  const [pn, lid] = key.endsWith('_reverse')
-                    ? [String(value) + '@s.whatsapp.net', base + '@lid']
-                    : [base + '@s.whatsapp.net', String(value) + '@lid'];
-                  await Contact.findOneAndUpdate(
+                  const [pn, lid] = key.endsWith('_reverse') ? [String(value) + '@s.whatsapp.net', base + '@lid'] : [base + '@s.whatsapp.net', String(value) + '@lid'];
+                  await StoreContact.findOneAndUpdate(
                     { jid: pn },
                     { $set: { lid: lid } },
                     { upsert: true }

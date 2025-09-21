@@ -6,8 +6,8 @@
 */
 // ─── Info ────────────────────────────────
 
-import { GroupMetadata } from '../../../database/index.js';
 import { updateMyGroup } from '../../../core/handler.js';
+import { StoreGroupMetadata } from '../../../database/index.js';
 
 export const command = {
   name: 'listgroup',
@@ -15,7 +15,7 @@ export const command = {
   description: 'Menampilkan daftar semua grup dan memperbarui cache untuk remote command.',
   aliases: ['lg', 'grouplist', 'mygroup'],
   execute: async ({ sReply }) => {
-    const allGroups = await GroupMetadata.find({}, { groupId: 1, subject: 1, _id: 0 }).lean();
+    const allGroups = await StoreGroupMetadata.find({}, { groupId: 1, subject: 1, _id: 0 }).lean();
     if (!allGroups || allGroups.length === 0) return sReply('Bot tidak berada di dalam grup manapun saat ini.');
     allGroups.sort((a, b) => a.subject.localeCompare(b.subject));
     const groupJids = allGroups.map(g => g.groupId);

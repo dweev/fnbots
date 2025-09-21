@@ -552,5 +552,19 @@ export async function clientBot(fn, dbSettings) {
     }
     return album;
   };
+  fn.forwardMessage = async (jid, message) => {
+    return await fn.sendMessage(jid, {
+      forward: {
+        key: {
+          remoteJid: message.key.remoteJid,
+          fromMe: message.key.fromMe,
+          id: message.key.id,
+          ...(message.key.participant && { participant: message.key.participant })
+        },
+        message: message.message,
+        messageTimestamp: message.messageTimestamp
+      }
+    });
+  };
   return fn
 };

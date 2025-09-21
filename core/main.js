@@ -6,7 +6,7 @@
 */
 // ─── Info main.js ────────────────────────
 
-console.clear(); // only effect if you use screen / tmux (pm2 didnt work)
+// console.clear(); // only effect if you use screen / tmux (pm2 didnt work)
 global.activeIntervals = [];
 import util from 'util';
 import path from 'path';

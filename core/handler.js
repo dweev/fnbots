@@ -365,15 +365,16 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
       };
       return displayMap[internalMode] || internalMode;
     };
-    if (!modeInput) {
+    if (modeInput) {
+      const internalMode = modeMap[modeInput];
+      await Settings.setSelfMode(internalMode);
+      dbSettings.self = internalMode;
+      await sReply(`Mode berhasil diubah ke: *${modeInput}*`);
+    } else {
       const currentMode = dbSettings.self;
       const displayMode = getDisplayMode(currentMode);
-      return sReply(`Mode saat ini: *${displayMode}*\n\n Gunakan: mode <mode>\n • publik  - Hanya user yang bisa\n • selfbot - Hanya bot yang bisa\n • auto    - Hybrid user dan bot`);
+      return sReply(`Mode saat ini: *${displayMode}*\nGunakan: mode <mode>\n • publik\n • selfbot\n • auto`);
     }
-    const internalMode = modeMap[modeInput];
-    await Settings.setSelfMode(internalMode);
-    dbSettings.self = internalMode;
-    await sReply(`Mode berhasil diubah ke: *${modeInput}*`);
   }
 
   const selfMode = dbSettings.self;
@@ -420,10 +421,10 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
     }
     if (isCmd) {
       let commandText = await getTxt(txt, dbSettings);
-      const remoteMatch = commandText.match(/^r:(\d+)\s+(.*)/s);
-      if (remoteMatch && (isSadmin || isMaster)) {
-        const index = parseInt(remoteMatch[1]) - 1;
-        const remainingText = remoteMatch[2];
+      const remoteCommandMatch = commandText.match(/^r:(\d+)\s+(.*)/s);
+      if (remoteCommandMatch && (isSadmin || isMaster)) {
+        const index = parseInt(remoteCommandMatch[1]) - 1;
+        const remainingText = remoteCommandMatch[2];
         if (mygroup[index]) {
           toId = mygroup[index];
           chainingCommands = await mycmd(remainingText);
@@ -503,7 +504,7 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
           setTimeout(() => { counter--; }, 1000);
           recentcmd.add(usr);
           setTimeout(() => { recentcmd.delete(usr); }, 1000);
-          setTimeout(() => { fspamm.delete(usr); }, 10000);
+          setTimeout(() => { fspamm.delete(usr); }, 15000);
           setTimeout(() => { sban.delete(usr); }, 900000);
           const failedCommands = await executeCommandChain(chainingCommands);
           if (failedCommands.length > 0 && dbSettings.autocorrect === 2 && !suggested) {
@@ -533,54 +534,52 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
     } else {
       if (dbSettings.antideleted === true) {
         if (m.type === 'protocolMessage' && m.protocolMessage.type === 0) {
-          try {
-            const deletedMsgId = m.protocolMessage.key.id;
-            const remoteJid = toId;
-            const originalMessage = await mongoStore.loadMessage(remoteJid, deletedMsgId);
-            if (originalMessage && !originalMessage.fromMe) {
-              if (originalMessage.type === 'imageMessage') {
-                try {
-                  const buffer = await fn.getMediaBuffer(originalMessage.message);
-                  await fn.sendMessage(toId, { image: buffer, caption: originalMessage.body });
-                } catch (error) { await log(error, true); }
-              } else if (originalMessage.type === 'videoMessage') {
-                try {
-                  const buffer = await fn.getMediaBuffer(originalMessage.message);
-                  await fn.sendMessage(toId, { video: buffer, caption: originalMessage.body });
-                } catch (error) { await log(error, true); }
-              } else if (originalMessage.type === 'stickerMessage') {
-                try {
-                  const buffer = await fn.getMediaBuffer(originalMessage.message);
-                  await fn.sendMessage(toId, { sticker: buffer });
-                } catch (error) { await log(error, true); }
-              } else if (originalMessage.type === 'audioMessage') {
-                try {
-                  const buffer = await fn.getMediaBuffer(originalMessage.message);
-                  await fn.sendMessage(toId, { audio: buffer, mimetype: 'audio/mp4', ptt: originalMessage.message.ptt });
-                } catch (error) { await log(error, true); }
-              } else if (originalMessage.type === 'documentMessage') {
-                try {
-                  const buffer = await fn.getMediaBuffer(originalMessage.message);
-                  await fn.sendMessage(toId, { document: buffer, mimetype: originalMessage.mime, fileName: originalMessage.message.fileName });
-                } catch (error) { await log(error, true); }
-              } else if (originalMessage.type === 'locationMessage') {
-                await fn.sendMessage(toId, {
-                  location: {
-                    degreesLatitude: originalMessage.message.degreesLatitude,
-                    degreesLongitude: originalMessage.message.degreesLongitude,
-                    name: originalMessage.message.name,
-                    address: originalMessage.message.address
-                  }
-                });
-              } else if (originalMessage.type === 'contactMessage') {
-                await fn.sendMessage(toId, { contacts: { displayName: originalMessage.message.contactMessage.displayName, contacts: [{ vcard: originalMessage.message.contactMessage.vcard }] } });
-              } else if (originalMessage.type === 'extendedTextMessage' || originalMessage.type === 'conversation') {
-                if (originalMessage.body) {
-                  await fn.sendMessage(toId, { text: `*Isi Pesan Teks:* ${originalMessage.body}` });
+          const deletedMsgId = m.protocolMessage.key.id;
+          const remoteJid = toId;
+          const originalMessage = await mongoStore.loadMessage(remoteJid, deletedMsgId);
+          if (originalMessage && !originalMessage.fromMe) {
+            if (originalMessage.type === 'imageMessage') {
+              try {
+                const buffer = await fn.getMediaBuffer(originalMessage.message);
+                await fn.sendMessage(toId, { image: buffer, caption: originalMessage.body });
+              } catch (error) { await log(error, true); }
+            } else if (originalMessage.type === 'videoMessage') {
+              try {
+                const buffer = await fn.getMediaBuffer(originalMessage.message);
+                await fn.sendMessage(toId, { video: buffer, caption: originalMessage.body });
+              } catch (error) { await log(error, true); }
+            } else if (originalMessage.type === 'stickerMessage') {
+              try {
+                const buffer = await fn.getMediaBuffer(originalMessage.message);
+                await fn.sendMessage(toId, { sticker: buffer });
+              } catch (error) { await log(error, true); }
+            } else if (originalMessage.type === 'audioMessage') {
+              try {
+                const buffer = await fn.getMediaBuffer(originalMessage.message);
+                await fn.sendMessage(toId, { audio: buffer, mimetype: 'audio/mp4', ptt: originalMessage.message.ptt });
+              } catch (error) { await log(error, true); }
+            } else if (originalMessage.type === 'documentMessage') {
+              try {
+                const buffer = await fn.getMediaBuffer(originalMessage.message);
+                await fn.sendMessage(toId, { document: buffer, mimetype: originalMessage.mime, fileName: originalMessage.message.fileName });
+              } catch (error) { await log(error, true); }
+            } else if (originalMessage.type === 'locationMessage') {
+              await fn.sendMessage(toId, {
+                location: {
+                  degreesLatitude: originalMessage.message.degreesLatitude,
+                  degreesLongitude: originalMessage.message.degreesLongitude,
+                  name: originalMessage.message.name,
+                  address: originalMessage.message.address
                 }
+              });
+            } else if (originalMessage.type === 'contactMessage') {
+              await fn.sendMessage(toId, { contacts: { displayName: originalMessage.message.contactMessage.displayName, contacts: [{ vcard: originalMessage.message.contactMessage.vcard }] } });
+            } else if (originalMessage.type === 'extendedTextMessage' || originalMessage.type === 'conversation') {
+              if (originalMessage.body) {
+                await fn.forwardMessage(toId, originalMessage);
               }
             }
-          } catch (error) { await log(error, true); }
+          }
         }
       };
     }

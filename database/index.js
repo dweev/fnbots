@@ -110,6 +110,7 @@ import StoreGroupMetadata from '../src/models/StoreGroupMetadata.js';
 import StoreMessages from '../src/models/StoreMessages.js';
 import DatabaseBot from '../src/models/DatabaseBot.js';
 import StoreStory from '../src/models/StoreStory.js';
+import OTPSession from '../src/models/OtpSession.js';
 
 export {
   database,
@@ -123,5 +124,6 @@ export {
   StoreContact,
   StoreGroupMetadata,
   StoreMessages,
-  StoreStory
+  StoreStory,
+  OTPSession
 };

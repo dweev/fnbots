@@ -18,13 +18,24 @@ import { handleRestart } from './handler.js';
 import { parsePhoneNumber } from 'awesome-phonenumber';
 import log, { pinoLogger } from '../src/lib/logger.js';
 import { AuthStore, BaileysSession } from '../database/auth.js';
-import { Settings, mongoStore, StoreGroupMetadata } from '../database/index.js';
+import { Settings, mongoStore, StoreGroupMetadata, OTPSession } from '../database/index.js';
 import { default as makeWASocket, jidNormalizedUser, Browsers, makeCacheableSignalKeyStore, isJidBroadcast, fetchLatestBaileysVersion } from 'baileys';
 
 let phoneNumber;
 let pairingStarted = false;
 
-const pairingCode = process.argv.includes('--qr') ? false : process.argv.includes('--pairing-code') || config.usePairingCode;;
+async function cleanupExpiredOTPSessions() {
+  try {
+    const cleanedCount = await OTPSession.cleanupExpired();
+    if (cleanedCount > 0) {
+      await log(`Membersihkan ${cleanedCount} sesi OTP yang kedaluwarsa.`);
+    }
+  } catch (error) {
+    await log(`Error membersihkan session OTP: ${error.message}`, true);
+  }
+}
+
+const pairingCode = process.argv.includes('--qr') ? false : process.argv.includes('--pairing-code') || config.usePairingCode;
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 const question = (text) => new Promise((resolve) => rl.question(text, resolve));
 
@@ -149,6 +160,7 @@ export async function createWASocket(dbSettings) {
         if (config.restartAttempts > 0) {
           config.restartAttempts = 0;
         }
+        setInterval(cleanupExpiredOTPSessions, config.performance.defaultInterval);
       }
       if (connection === 'close') {
         await log(`Connection closed. Code: ${statusCode}`);

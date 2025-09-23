@@ -15,8 +15,8 @@ import { spawn } from 'child_process';
 import log from '../src/lib/logger.js';
 import { exec as cp_exec } from 'child_process';
 import { pluginCache } from '../src/lib/plugins.js';
-import { User, Group, Whitelist, Settings, Command, StoreMessages } from '../database/index.js';
 import { color, msgs, mycmd, safeStringify, sendAndCleanupFile, waktu } from '../src/lib/function.js';
+import { User, Group, Whitelist, Settings, Command, StoreMessages, OTPSession } from '../database/index.js';
 
 const exec = util.promisify(cp_exec);
 const isPm2 = process.env.pm_id !== undefined || process.env.NODE_APP_INSTANCE !== undefined;
@@ -394,6 +394,38 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
     await groupData.incrementMessageCount();
     await groupData.incrementCommandCount();
     if (!groupData.isActive) return;
+  }
+  if (!m.isGroup) {
+    const otpSession = await OTPSession.getSession(serial);
+    if (otpSession) {
+      const verificationResult = await OTPSession.verifyOTP(serial, body);
+      switch (verificationResult.reason) {
+        case 'OTP_VERIFIED': {
+          await sPesan('Verifikasi berhasil!\n\nPermintaan Anda telah diteruskan ke Admin untuk persetujuan akhir. Mohon tunggu.');
+          const adminNotification =
+            `*Permintaan Bergabung Baru*\n\n` +
+            `Pengguna: @${serial.split('@')[0]}\n` +
+            `Status: Berhasil verifikasi OTP\n\n` +
+            `Untuk menyetujui, kirim perintah:\n` +
+            `\`${dbSettings.rname}requestjoin\``;
+          await fn.sendPesan(verificationResult.groupId, adminNotification, m);
+          break;
+        }
+        case 'WRONG_OTP': {
+          const remaining = 4 - verificationResult.attempts;
+          await sPesan(`Kode OTP salah!\n\nPercobaan: ${verificationResult.attempts}/4\nSisa kesempatan: ${remaining}`);
+          break;
+        }
+        case 'MAX_ATTEMPTS_EXCEEDED':
+          await sPesan(`*Akses Ditolak*\n\nAnda telah gagal verifikasi OTP sebanyak 4 kali.\nAkun Anda diBanned dari group untuk mencegah hal hal yang tidak diinginkan!`);
+          await Group.banMember(serial);
+          await log(`User ${serial} diBanned dari group karena gagal verifikasi OTP lebih dari 4x`, true);
+          break;
+        case 'SESSION_NOT_FOUND':
+          break;
+      }
+      return;
+    }
   }
   try {
     if (m.isGroup && !isCmd) {

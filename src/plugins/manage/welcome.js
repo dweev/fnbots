@@ -10,7 +10,7 @@ import { Group } from '../../../database/index.js';
 
 export const command = {
   name: 'welcome',
-  category: 'master',
+  category: 'manage',
   description: 'Mengaktifkan, menonaktifkan, atau mengubah pesan welcome untuk grup.',
   aliases: ['groupwelcome'],
   execute: async ({ dbSettings, reactDone, ar, sReply, toId, m }) => {

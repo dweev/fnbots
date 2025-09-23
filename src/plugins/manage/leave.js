@@ -10,7 +10,7 @@ import { Group } from '../../../database/index.js';
 
 export const command = {
   name: 'leave',
-  category: 'master',
+  category: 'manage',
   description: 'Mengaktifkan, menonaktifkan, atau mengubah pesan leave untuk grup.',
   aliases: ['groupleave'],
   execute: async ({ dbSettings, reactDone, ar, sReply, toId, m }) => {

@@ -47,6 +47,7 @@ export const command = {
         { label: 'Anti Tag Story',  value: current.antiTagStory },
         { label: 'Anti Link',       value: current.antilink },
         { label: 'Anti Hidetag',    value: current.antiHidetag },
+        { label: "Verify Member",   value: current.verifyMember },
         { 
           label: 'Auto Kick Warn',  
           value: current.warnings?.state,

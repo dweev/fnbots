@@ -9,6 +9,12 @@
 import mongoose from 'mongoose';
 import MutedMember from './MutedMember.js';
 
+const { Schema } = mongoose;
+
+function sanitizeKey(jid) {
+  return jid.replace(/\./g, '_').replace(/@/g, '_');
+}
+
 const groupSchema = new mongoose.Schema({
   groupId: {
     type: String,
@@ -90,8 +96,11 @@ const groupSchema = new mongoose.Schema({
     default: 0
   },
   warnings: {
-    type: Map,
-    of: Number,
+    type: new Schema({
+      users: { type: Map, of: Number, default: {} },
+      state: { type: Boolean, default: true },
+      count: { type: Number, default: 5 }
+    }, { _id: false }),
     default: {}
   },
   muteDuration: {
@@ -165,7 +174,8 @@ const groupSchema = new mongoose.Schema({
 });
 
 groupSchema.virtual('warningCount').get(function () {
-  return Array.from(this.warnings.values()).reduce((sum, count) => sum + count, 0);
+  if (!this.warnings || !this.warnings.users) return 0;
+  return Array.from(this.warnings.users.values()).reduce((sum, count) => sum + count, 0);
 });
 groupSchema.virtual('activeMemberCount').get(function () {
   return this.memberCount - this.bannedMembers.length;
@@ -177,22 +187,82 @@ groupSchema.virtual('mutechatDuration').get(function () {
   if (!this.isMuted || !this.mutedAt) return null;
   return Date.now() - this.mutedAt.getTime();
 });
-
 groupSchema.methods.addWarning = function (userId) {
-  const currentWarnings = this.warnings.get(userId) || 0;
-  this.warnings.set(userId, currentWarnings + 1);
+  if (!this.warnings) {
+    this.warnings = { users: new Map(), state: true, count: 5 };
+  }
+  if (!this.warnings.users) {
+    this.warnings.users = new Map();
+  }
+  const key = sanitizeKey(userId);
+  const currentWarnings = this.warnings.users.get(key) || 0;
+  this.warnings.users.set(key, currentWarnings + 1);
   return this.save();
 };
+groupSchema.methods.decrementWarning = function (userId) {
+  if (!this.warnings || !this.warnings.users) return null;
+  const key = sanitizeKey(userId);
+  const current = this.warnings.users.get(key) || 0;
+  if (current > 1) {
+    this.warnings.users.set(key, current - 1);
+    return current - 1;
+  } else if (current === 1) {
+    this.warnings.users.delete(key);
+    return 0;
+  }
+  return null;
+};
 groupSchema.methods.resetWarnings = function (userId) {
-  this.warnings.delete(userId);
+  if (this.warnings && this.warnings.users) {
+    const key = sanitizeKey(userId);
+    this.warnings.users.delete(key);
+  }
   return this.save();
 };
 groupSchema.methods.getWarnings = function (userId) {
-  return this.warnings.get(userId) || 0;
+  if (!this.warnings || !this.warnings.users) return 0;
+  const key = sanitizeKey(userId);
+  return this.warnings.users.get(key) || 0;
 };
 groupSchema.methods.clearAllWarnings = function () {
-  this.warnings.clear();
+  if (this.warnings && this.warnings.users) {
+    this.warnings.users.clear();
+  }
   return this.save();
+};
+groupSchema.methods.setWarningState = function (state) {
+  if (!this.warnings) {
+    this.warnings = { users: new Map(), state: true, count: 5 };
+  }
+  this.warnings.state = state;
+  return this.save();
+};
+groupSchema.methods.toggleWarningState = function () {
+  if (!this.warnings) {
+    this.warnings = { users: new Map(), state: true, count: 5 };
+  }
+  this.warnings.state = !this.warnings.state;
+  return this.save();
+};
+groupSchema.methods.setWarningLimit = function (count) {
+  if (!this.warnings) {
+    this.warnings = { users: new Map(), state: true, count: 5 };
+  }
+  this.warnings.count = count;
+  return this.save();
+};
+groupSchema.methods.getWarningLimit = function () {
+  if (!this.warnings) return 5;
+  return this.warnings.count || 5;
+};
+groupSchema.methods.isWarningEnabled = function () {
+  if (!this.warnings) return true;
+  return this.warnings.state !== false;
+};
+groupSchema.methods.checkWarningLimit = function (userId) {
+  const userWarnings = this.getWarnings(userId);
+  const limit = this.getWarningLimit();
+  return userWarnings >= limit;
 };
 groupSchema.methods.muteMember = async function (userId, durationMs = this.muteDuration * 1000) {
   const expiryDate = new Date(Date.now() + durationMs);
@@ -381,7 +451,7 @@ groupSchema.statics.findBySetting = function (settingName, value = true) {
 };
 groupSchema.statics.findGroupsWithWarnings = function () {
   return this.find({
-    $expr: { $gt: [{ $size: { $objectToArray: "$warnings" } }, 0] }
+    'warnings.users': { $exists: true, $ne: {} }
   });
 };
 groupSchema.statics.findGroupsWithAfkUsers = function () {
@@ -456,6 +526,12 @@ groupSchema.statics.findFilteredWords = function (groupId) {
     .select('filterWords')
     .then(group => group ? group.filterWords : []);
 };
+groupSchema.statics.findGroupsWithWarningsEnabled = function () {
+  return this.find({ 'warnings.state': true });
+};
+groupSchema.statics.findGroupsWithWarningsDisabled = function () {
+  return this.find({ 'warnings.state': false });
+};
 
 groupSchema.index({ lastActivity: -1 });
 groupSchema.index({ memberCount: -1 });
@@ -465,10 +541,15 @@ groupSchema.index({ filter: 1 });
 groupSchema.index({ filterWords: 1 });
 groupSchema.index({ 'afkUsers.userId': 1 });
 groupSchema.index({ 'afkUsers.time': -1 });
+groupSchema.index({ 'warnings.state': 1 });
+groupSchema.index({ 'warnings.count': 1 });
 
 groupSchema.pre('save', function (next) {
   if (this.isModified()) {
     this.lastActivity = new Date();
+  }
+  if (!this.warnings) {
+    this.warnings = { users: new Map(), state: true, count: 5 };
   }
   next();
 });

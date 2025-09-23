@@ -37,7 +37,8 @@ export const command = {
         antilink: false,
         antiHidetag: false,
         welcome: { state: false, pesan: '' },
-        leave: { state: false, pesan: '' }
+        leave: { state: false, pesan: '' },
+        warnings: { state: false, count: 5 }
       };
       const current = { ...defaults, ...groupData };
       const groupFeatures = [
@@ -45,12 +46,17 @@ export const command = {
         { label: 'Leave',           value: current.leave?.state },
         { label: 'Anti Tag Story',  value: current.antiTagStory },
         { label: 'Anti Link',       value: current.antilink },
-        { label: 'Anti Hidetag',    value: current.antiHidetag }
+        { label: 'Anti Hidetag',    value: current.antiHidetag },
+        { 
+          label: 'Auto Kick Warn',  
+          value: current.warnings?.state,
+          extra: current.warnings?.state ? ` (${current.warnings?.count || 5})` : ''
+        }
       ];
-      for (const { label, value } of groupFeatures) {
+      for (const { label, value, extra = '' } of groupFeatures) {
         const icon = value ? '⚙' : '⚔';
         const status = value ? 'On' : 'Off';
-        groupSettingsText += `\n${icon} ${label} : ${status}`;
+        groupSettingsText += `\n${icon} ${label} : ${status}${extra}`;
       }
       messageParts.push(groupSettingsText);
     }

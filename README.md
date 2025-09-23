@@ -350,7 +350,7 @@ erDiagram
 4. **Verify Configuration**
    Make sure `config.js` correctly reads values from `.env`.
    
-   * Set `config.js` to `true` if using pairing code login
+   * Set `usePairingCode` to `true` if using pairing code login
 
 ---
 
@@ -370,8 +370,8 @@ erDiagram
 
 2. **Pair or Scan QR Code**
 
-   * If `PAIRING_CODE=false`: Scan the QR code printed in the terminal.
-   * If `PAIRING_CODE=true`: Enter the pairing code displayed.
+   * If `usePairingCode=false`: Scan the QR code printed in the terminal.
+   * If `usePairingCode=true`: Enter the pairing code displayed.
 
 3. **Start Using the Bot**
 

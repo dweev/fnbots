@@ -43,6 +43,7 @@
     "@ts-ffmpeg/fluent-ffmpeg": "^2.2.6",
     "async-mutex": "^0.5.0",
     "axios": "^1.12.1",
+    "canvas": "^3.2.0",
     "eslint": "^9.32.0",
     "file-type": "^16.5.4",
     "form-data": "^4.0.4",

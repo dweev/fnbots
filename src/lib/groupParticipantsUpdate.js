@@ -9,7 +9,7 @@
 import log from './logger.js';
 import { jidNormalizedUser } from 'baileys';
 import { updateContact } from './function.js';
-import { mongoStore, StoreGroupMetadata } from '../../database/index.js';
+import { mongoStore, StoreGroupMetadata, Group } from '../../database/index.js';
 
 export default async function groupParticipantsUpdate({ id, participants, action }, fn) {
   log(`Event: group-participants.update | Aksi: ${action} | Grup: ${id}`);
@@ -37,6 +37,28 @@ export default async function groupParticipantsUpdate({ id, participants, action
             }
           }
         } else {
+          const groupData = await Group.findOne({ groupId: id }).lean();
+          if (groupData?.welcome?.state) {
+            const metadata = await mongoStore.getGroupMetadata(id);
+            for (const userId of participants) {
+              let newMemberJid;
+              if (userId.endsWith('@lid')) {
+                newMemberJid = await mongoStore.findJidByLid(userId);
+              } else {
+                newMemberJid = jidNormalizedUser(userId);
+              }
+              if (newMemberJid) {
+                await fn.handleGroupEventImage(id, {
+                  memberJid: newMemberJid,
+                  eventText: 'Selamat Datang Di',
+                  subject: metadata.subject,
+                  messageText: groupData.welcome.pesan
+                });
+              } else {
+                await log(`Gagal menemukan JID untuk ${userId}. Pesan dilewati.`);
+              }
+            }
+          }
           await mongoStore.syncGroupMetadata(fn, id);
         }
         break;
@@ -56,6 +78,29 @@ export default async function groupParticipantsUpdate({ id, participants, action
           mongoStore.clearGroupCacheByKey(id);
           return;
         } else {
+          const groupData = await Group.findOne({ groupId: id }).lean();
+          if (groupData?.leave?.state) {
+            const metadata = await mongoStore.getGroupMetadata(id);
+            for (const userId of participants) {
+              let leaveMemberJid;
+              if (userId.endsWith('@lid')) {
+                leaveMemberJid = await mongoStore.findJidByLid(userId);
+              } else {
+                leaveMemberJid = jidNormalizedUser(userId);
+              }
+              if (leaveMemberJid && leaveMemberJid.includes(botJid)) continue;
+              if (leaveMemberJid) {
+                await fn.handleGroupEventImage(id, {
+                  memberJid: leaveMemberJid,
+                  eventText: 'Selamat Tinggal!!',
+                  subject: metadata.subject,
+                  messageText: groupData.leave.pesan
+                });
+              } else {
+                await log(`Gagal mengidentifikasi JID untuk anggota: ${userId}. Pesan dilewati.`);
+              }
+            }
+          }
           await mongoStore.syncGroupMetadata(fn, id);
         }
         break;

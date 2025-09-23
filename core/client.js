@@ -14,8 +14,8 @@ import config from '../config.js';
 import log from '../src/lib/logger.js';
 import { mongoStore } from '../database/index.js';
 import { tmpDir } from '../src/lib/tempManager.js';
-import { randomByte, getBuffer, getSizeMedia, writeExif, convertAudio } from '../src/lib/function.js';
 import { MediaValidationError, MediaProcessingError, MediaSizeError } from '../src/lib/errorManager.js';
+import { randomByte, getBuffer, getSizeMedia, writeExif, convertAudio, groupImage } from '../src/lib/function.js';
 import { jidNormalizedUser, generateWAMessage, generateWAMessageFromContent, downloadContentFromMessage, jidDecode, jidEncode, getBinaryNodeChildString, getBinaryNodeChildren, getBinaryNodeChild, proto } from 'baileys';
 
 import { createRequire } from 'node:module';
@@ -493,7 +493,6 @@ export async function clientBot(fn, dbSettings) {
       }
     });
   };
-  /*
   fn.handleGroupEventImage = async (idGroup, eventDetails) => {
     const { memberJid, eventText, subject, messageText } = eventDetails;
     const memberNum = memberJid.split('@')[0];
@@ -504,12 +503,11 @@ export async function clientBot(fn, dbSettings) {
       profilePictureUrl = './src/media/apatar.png';
     }
     const imageBuffer = await groupImage(memberNum, subject, eventText, profilePictureUrl);
-    const outputPath = `./src/sampah/${Date.now()}_${memberNum}.png`;
+    const outputPath = tmpDir.createTempFile('png');
     await fs.writeFile(outputPath, imageBuffer);
     const caption = `@${memberNum}\n\n${messageText}`;
     await fn.sendFilePath(idGroup, caption, outputPath);
     tmpDir.deleteFile(outputPath);
   };
-  */
   return fn;
 };

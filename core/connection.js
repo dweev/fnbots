@@ -151,7 +151,7 @@ export async function createWASocket(dbSettings) {
         }
       }
       if (connection === 'close') {
-        await log(`[DISCONNECTED] Connection closed. Code: ${statusCode}`);
+        await log(`Connection closed. Code: ${statusCode}`);
         const code = [401, 402, 403, 411, 500];
         if (code.includes(statusCode)) {
           dbSettings.botNumber = null;

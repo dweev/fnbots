@@ -34,13 +34,15 @@ const groupSchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   },
-  welcomeMessage: {
-    type: String,
-    default: ''
+  welcome: {
+    state: { type: Boolean, default: false, index: true },
+    pesan: { type: String, default: '' },
+    templateId: { type: String, default: null }
   },
-  leaveMessage: {
-    type: String,
-    default: ''
+  leave: {
+    state: { type: Boolean, default: false, index: true },
+    pesan: { type: String, default: '' },
+    templateId: { type: String, default: null }
   },
   promoteMessage: {
     type: String,

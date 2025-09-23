@@ -6,9 +6,9 @@
 */
 // ─── Info userMembership.js ──────────────
 
-import { formatDuration, formatDurationMessage } from './function.js';
-import { User } from '../../database/index.js';
 import dayjs from '../utils/dayjs.js';
+import { User } from '../../database/index.js';
+import { formatDuration, formatDurationMessage } from './function.js';
 
 export function membershipUser(config) {
   const { type, aliases } = config;
@@ -25,9 +25,9 @@ export function membershipUser(config) {
     aliases: aliases,
     execute: async ({ sReply, args, arg, mentionedJidList, dbSettings }) => {
       const validateDuration = (duration) => {
-        if (!duration) throw new Error('Durasi tidak boleh kosong. Contoh: 7d, 30d, 1M');
+        if (!duration) return sReply('Durasi tidak boleh kosong. Contoh: 7d, 30d, 1M');
         const durationRegex = /^\d+[smhdwyM]$/i;
-        if (!durationRegex.test(duration)) throw new Error('Format durasi tidak valid. Gunakan: angka + s/m/h/d/w/M/y');
+        if (!durationRegex.test(duration)) return sReply('Format durasi tidak valid. Gunakan: angka + s/m/h/d/w/M/y');
         return true;
       };
       const formatUserId = (input) => {
@@ -39,7 +39,7 @@ export function membershipUser(config) {
         validateDuration(duration);
         const durationParsed = formatDuration(duration);
         const msToAdd = durationParsed.asMilliseconds();
-        if (msToAdd <= 0) throw new Error('Durasi harus lebih dari 0');
+        if (msToAdd <= 0) return await sReply('Durasi harus lebih dari 0');
         await User[userModelMethods.add](userId, msToAdd);
         const durationMessage = formatDurationMessage(durationParsed);
         await sReply(`*「 ${capitalizedType} 」*\n\n*ID*: @${userId.split('@')[0]}\n${durationMessage}`);
@@ -54,13 +54,13 @@ export function membershipUser(config) {
           for (const userId of mentionedJidList) await processDelete(userId);
         } else {
           const targets = input.split(",").map(s => s.trim()).filter(Boolean);
-          if (targets.length === 0) throw new Error('Input tidak valid');
+          if (targets.length === 0) return await sReply('Input tidak valid');
           for (const target of targets) {
             if (target.includes('@') || !/^\d+$/.test(target)) {
               await processDelete(formatUserId(target));
             } else {
               const index = parseInt(target, 10);
-              if (isNaN(index) || index < 1) throw new Error(`Index '${target}' tidak valid.`);
+              if (isNaN(index) || index < 1) return await sReply(`Index '${target}' tidak valid.`);
               const userToFind = await User.find({ [userModelMethods.findActive.replace('findActive', 'is').slice(0, -1)]: true })
                 .sort({ createdAt: 1 })
                 .skip(index - 1)
@@ -70,7 +70,7 @@ export function membershipUser(config) {
                 await processDelete(userToFind[0].userId);
               } else {
                 const totalUsers = await User.countDocuments({ [userModelMethods.findActive.replace('findActive', 'is').slice(0, -1)]: true });
-                throw new Error(`Index ${index} tidak valid. Range: 1-${totalUsers}`);
+                return await sReply(`Index ${index} tidak valid. Range: 1-${totalUsers}`);
               }
             }
           }
@@ -105,24 +105,24 @@ export function membershipUser(config) {
         switch (subCmd) {
           case 'add': {
             const duration = args[2];
-            if (!duration) throw new Error(`Durasi tidak boleh kosong. Contoh: ${dbSettings.rname}${type.toLowerCase()} add @user 30d`);
+            if (!duration) return await sReply(`Durasi tidak boleh kosong. Contoh: ${dbSettings.rname}${type.toLowerCase()} add @user 30d`);
             if (mentionedJidList.length > 0) {
               for (const jid of mentionedJidList) await handleAddUser(jid, duration);
             } else {
-              if (!args[1]) throw new Error('User ID tidak boleh kosong');
+              if (!args[1]) return await sReply('User ID tidak boleh kosong');
               await handleAddUser(formatUserId(args[1]), duration);
             }
             break;
           }
           case 'del':
-            if (!input) throw new Error(`User tidak boleh kosong. Contoh: ${dbSettings.rname}${type.toLowerCase()} del @user`);
+            if (!input) return await sReply(`User tidak boleh kosong. Contoh: ${dbSettings.rname}${type.toLowerCase()} del @user`);
             await handleDeleteUser(input);
             break;
           case 'list':
             await handleListUsers();
             break;
           default:
-            throw new Error(`Sub-perintah '${subCmd}' tidak valid. Gunakan 'add', 'del', atau 'list'.`);
+            return await sReply(`Sub-perintah '${subCmd}' tidak valid. Gunakan 'add', 'del', atau 'list'.`);
         }
       } catch (error) {
         await sReply(`*「 ${capitalizedType} 」*\n\n*Error*: ${error.message}`);

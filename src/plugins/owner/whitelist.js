@@ -33,7 +33,7 @@ export const command = {
           await Whitelist.addToWhitelist(m.key.remoteJid, 'group');
           await reactDone();
         } else {
-          throw new Error("Perintah `whitelist add` tanpa target hanya bisa digunakan di dalam grup.");
+          return await sReply("Perintah `whitelist add` tanpa target hanya bisa digunakan di dalam grup.");
         }
       }
     } else if (subcmd === "del") {
@@ -45,7 +45,7 @@ export const command = {
           await Whitelist.removeFromWhitelist(m.key.remoteJid, 'group');
           await reactDone();
         } else {
-          throw new Error("Perintah `whitelist del` tanpa target hanya bisa digunakan di dalam grup.");
+          return await sReply("Perintah `whitelist del` tanpa target hanya bisa digunakan di dalam grup.");
         }
       }
     } else if (subcmd === "list") {

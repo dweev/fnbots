@@ -33,7 +33,7 @@ export const command = {
             await fs.writeFile(tempPath, buffer);
             await fn.sendFilePath(toId, dbSettings.autocommand, tempPath, { quoted: m });
           } finally {
-            tmpDir.deleteFile(tempPath);
+            await tmpDir.deleteFile(tempPath);
           }
         }
       }

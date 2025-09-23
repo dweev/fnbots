@@ -7,12 +7,13 @@
 // ─── Info auth.js ────────────────────────
 
 import mongoose from 'mongoose';
-import { BufferJSON, initAuthCreds, proto } from 'baileys';
-import StoreContact from '../src/models/StoreContact.js';
-import log from '../src/utils/logger.js';
+import config from '../config.js';
 import { Mutex } from 'async-mutex';
+import log from '../src/lib/logger.js';
+import StoreContact from '../src/models/StoreContact.js';
+import { BufferJSON, initAuthCreds, proto } from 'baileys';
 
-const ACQUIRE_TIMEOUT = 5000;
+const ACQUIRE_TIMEOUT = config.performance.acquireMutexInterval;
 const BaileysSessionSchema = new mongoose.Schema({
   key: {
     type: String,

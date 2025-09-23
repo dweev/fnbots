@@ -10,7 +10,8 @@ import path from 'path';
 import fs from 'fs-extra';
 import axios from 'axios';
 import FileType from 'file-type';
-import log from '../src/utils/logger.js';
+import config from '../config.js';
+import log from '../src/lib/logger.js';
 import { mongoStore } from '../database/index.js';
 import { tmpDir } from '../src/lib/tempManager.js';
 import { randomByte, getBuffer, getSizeMedia, writeExif, convertAudio } from '../src/lib/function.js';
@@ -21,6 +22,56 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 export const ttsId = require('node-gtts')('id');
 
+const createQuotedOptions = (quoted, options = {}) => ({
+  quoted,
+  ephemeralExpiration: quoted?.expiration ?? 0,
+  messageId: randomByte(32),
+  ...options
+});
+const extractMentions = (text) => {
+  if (!text || typeof text !== 'string') return [];
+  return [...text.matchAll(/@(\d{0,16})(@lid|@s\.whatsapp\.net)?/g)].map(v => v[1] + (v[2] || '@s.whatsapp.net'));
+};
+const detectMimeType = async (data, headers = {}) => {
+  let mime = headers['content-type'];
+  if (!mime || mime.includes('octet-stream')) {
+    const fileType = await FileType.fromBuffer(data);
+    mime = fileType?.mime || 'application/octet-stream';
+  }
+  return mime;
+};
+const handleBufferInput = async (input) => {
+  if (Buffer.isBuffer(input)) {
+    return input;
+  } else if (/^data:.*?\/.*?;base64,/i.test(input)) {
+    return Buffer.from(input.split(',')[1], 'base64');
+  } else if (/^https?:\/\//.test(input)) {
+    return await getBuffer(input);
+  } else {
+    return await fs.readFile(input);
+  }
+};
+const createMediaMessage = (mime, data, caption, options = {}) => {
+  if (mime.includes('gif')) {
+    return { video: data, caption, gifPlayback: true, ...options };
+  } else if (mime === 'image/webp' && options.asSticker) {
+    return { sticker: data, ...options };
+  } else if (mime.startsWith('image/')) {
+    return { image: data, caption, ...options };
+  } else if (mime.startsWith('video/')) {
+    return { video: data, caption, mimetype: mime, ...options };
+  } else if (mime.startsWith('audio/')) {
+    return { audio: data, mimetype: mime, ...options };
+  } else {
+    return {
+      document: data,
+      mimetype: mime,
+      fileName: options.fileName || `file.${mime.split('/')[1] || 'bin'}`,
+      caption,
+      ...options
+    };
+  }
+};
 export async function clientBot(fn, dbSettings) {
   fn.decodeJid = (jid = '') => {
     try {
@@ -53,23 +104,14 @@ export async function clientBot(fn, dbSettings) {
   };
   fn.getFile = async (inputPath, save) => {
     try {
-      let data;
-      if (Buffer.isBuffer(inputPath)) {
-        data = inputPath;
-      } else if (/^data:.*?\/.*?;base64,/i.test(inputPath)) {
-        data = Buffer.from(inputPath.split(',')[1], 'base64');
-      } else if (/^https?:\/\//.test(inputPath)) {
-        data = await getBuffer(inputPath);
-      } else {
-        data = await fs.readFile(inputPath);
-      }
+      const data = await handleBufferInput(inputPath);
       const type = await FileType.fromBuffer(data) || {
         mime: 'application/octet-stream',
         ext: 'bin'
       };
-      const filename = tmpDir.createTempFile(type.ext);
+      let filename;
       if (data.length > 0 && save) {
-        await fs.writeFile(filename, data);
+        filename = await tmpDir.createTempFileWithContent(data, type.ext);
       }
       return {
         filename,
@@ -79,59 +121,61 @@ export async function clientBot(fn, dbSettings) {
         data
       };
     } catch (error) {
-      throw new Error(error);
+      log(`Error: ${error.message}`, true); throw error;
     }
   };
   fn.sendMediaBufferOrURL = async (jid, path, fileName = '', caption = '', quoted = '', options = {}) => {
     const { mime, data, filename } = await fn.getFile(path, true);
     const isWebpSticker = options.asSticker || /webp/.test(mime);
-    let type = 'document', mimetype = mime, pathFile = filename;
+    let pathFile = filename;
+    let messageContent;
     if (isWebpSticker) {
       pathFile = await writeExif(data, {
         packname: options.packname || dbSettings.packName,
         author: options.author || dbSettings.packAuthor,
         categories: options.categories || [''],
       })
-      tmpDir.deleteFile(filename);
-      type = 'sticker';
-      mimetype = 'image/webp';
-    } else if (/image|video|audio/.test(mime)) {
-      type = mime.split('/')[0];
-      mimetype = type == 'video' ? 'video/mp4' : type == 'audio' ? 'audio/mpeg' : mime
+      await tmpDir.deleteFile(filename);
+      messageContent = { sticker: { url: pathFile }, ...options };
+    } else {
+      const mediaType = mime.startsWith('image') ? 'image' : mime.startsWith('video') ? 'video' : mime.startsWith('audio') ? 'audio' : 'document';
+      const mimetype = mediaType === 'video' ? 'video/mp4' : mediaType === 'audio' ? 'audio/mpeg' : mime;
+      messageContent = {
+        [mediaType]: { url: pathFile },
+        caption,
+        mimetype,
+        fileName,
+        ...options
+      };
     }
-    let anu = await fn.sendMessage(jid, { [type]: { url: pathFile }, caption, mimetype, fileName, ...options }, { quoted, ephemeralExpiration: quoted?.expiration ?? 0, messageId: randomByte(32), ...options });
-    tmpDir.deleteFile(pathFile);
-    return anu;
+    const result = await fn.sendMessage(jid, messageContent, createQuotedOptions(quoted, options));
+    await tmpDir.deleteFile(pathFile);
+    return result;
   };
   async function _internalSendMessage(chat, content, options = {}) {
     const { quoted, ...restOptions } = options;
-    const ephemeralExpiration = quoted?.expiration ?? 0;
     let mentions = [];
-    if (typeof content === 'string' || typeof content?.text === 'string' || typeof content?.caption === 'string') {
+    if (typeof content === 'string' || content?.text || content?.caption) {
       const textToParse = content.text || content.caption || content;
-      mentions = [...textToParse.matchAll(/@(\d{0,16})(@lid|@s\.whatsapp\.net)?/g)]
-        .map(v => v[1] + (v[2] || '@s.whatsapp.net'));
+      mentions = extractMentions(textToParse);
     }
     const opts = typeof content === 'object' ? { ...restOptions, ...content } : { ...restOptions, mentions };
     if (typeof content === 'object') {
-      return await fn.sendMessage(chat, content, { ...opts, quoted, ephemeralExpiration, messageId: randomByte(32) });
+      return await fn.sendMessage(chat, content, createQuotedOptions(quoted, opts));
     } else if (typeof content === 'string') {
       try {
         if (/^https?:\/\//.test(content)) {
           const data = await axios.get(content, { responseType: 'arraybuffer' });
-          const mime = data.headers['content-type'] || (await FileType.fromBuffer(data.data))?.mime;
+          const mime = await detectMimeType(data.data, data.headers);
           const finalCaption = opts.caption || '';
           if (/gif|image|video|audio|pdf|stream/i.test(mime)) {
             return await fn.sendMediaBufferOrURL(chat, data.data, '', finalCaption, quoted, opts);
-          } else {
-            return await fn.sendMessage(chat, { text: content, ...opts }, { quoted, ephemeralExpiration, messageId: randomByte(32) });
           }
-        } else {
-          return await fn.sendMessage(chat, { text: content, ...opts }, { quoted, ephemeralExpiration, messageId: randomByte(32) });
         }
+        return await fn.sendMessage(chat, { text: content, ...opts }, createQuotedOptions(quoted));
       } catch (error) {
         log(error, true);
-        return await fn.sendMessage(chat, { text: content, ...opts }, { quoted, ephemeralExpiration, messageId: randomByte(32) });
+        return await fn.sendMessage(chat, { text: content, ...opts }, createQuotedOptions(quoted));
       }
     }
   };
@@ -153,62 +197,36 @@ export async function clientBot(fn, dbSettings) {
           resolve();
         });
       });
-      await fn.sendMessage(jid, { audio: { stream: fs.createReadStream(tempFilePath) }, mimetype: 'audio/mpeg', }, { quoted, ephemeralExpiration: quoted?.expiration ?? 0, messageId: randomByte(32) });
+      await fn.sendMessage(jid, { audio: { stream: fs.createReadStream(tempFilePath) }, mimetype: 'audio/mpeg' }, createQuotedOptions(quoted));
     } catch (error) {
-      throw new Error(error);
+      log(`Error: ${error.message}`, true); throw error;
     } finally {
-      tmpDir.deleteFile(tempFilePath);
+      await tmpDir.deleteFile(tempFilePath);
     }
   };
   fn.sendContact = async (jid, displayName, contactName, nomor, quoted) => {
-    const vcard =
-      `BEGIN:VCARD\n` +
-      `VERSION:3.0\n` +
-      `N:${displayName}\n` +
-      `FN:${contactName}\n` +
-      `ORG:${contactName}\n` +
-      `TEL;type=CELL;type=VOICE;waid=${nomor}:+${nomor}\n` +
-      `END:VCARD`;
-    await fn.sendMessage(jid, { contacts: { displayName: displayName, contacts: [{ vcard }] } }, { quoted, ephemeralExpiration: quoted?.expiration ?? 0, messageId: randomByte(32) });
+    const vcard = `BEGIN:VCARD\nVERSION:3.0\nN:${displayName}\nFN:${contactName}\nORG:${contactName}\nTEL;type=CELL;type=VOICE;waid=${nomor}:+${nomor}\nEND:VCARD`;
+    await fn.sendMessage(jid, { contacts: { displayName: displayName, contacts: [{ vcard }] } }, createQuotedOptions(quoted));
   };
-  fn.sendMediaByType = async (jid, mime, dataBuffer, caption, quoted, options) => {
-    const quotedOptions = {
-      quoted,
-      ephemeralExpiration: quoted?.expiration ?? 0,
-      messageId: randomByte(32),
-      ...options
-    };
+  fn.sendMediaByType = async (jid, mime, dataBuffer, caption, quoted, options = {}) => {
     if (!mime) {
-      return await fn.sendMessage(jid, { document: dataBuffer, mimetype: 'application/octet-stream', fileName: 'file', caption, ...options }, quotedOptions);
+      return await fn.sendMessage(jid, { document: dataBuffer, mimetype: 'application/octet-stream', fileName: 'file', caption, ...options }, createQuotedOptions(quoted, options));
     }
-    if (mime.includes('gif')) {
-      return await fn.sendMessage(jid, { video: dataBuffer, caption, gifPlayback: true, ...options }, quotedOptions);
-    } else if (mime.startsWith('image/')) {
-      if (mime === 'image/webp') {
-        return await fn.sendRawWebpAsSticker(jid, dataBuffer, quoted, options);
-      }
-      return await fn.sendMessage(jid, { image: dataBuffer, caption, ...options }, quotedOptions);
-    } else if (mime.startsWith('video/')) {
-      return await fn.sendMessage(jid, { video: dataBuffer, caption, mimetype: mime, ...options }, quotedOptions);
-    } else if (mime.startsWith('audio/')) {
-      return await fn.sendMessage(jid, { audio: dataBuffer, mimetype: mime, ...options }, quotedOptions);
-    } else {
-      return await fn.sendMessage(jid, { document: dataBuffer, mimetype: mime, fileName: `file.${mime.split('/')[1] || 'bin'}`, caption, ...options }, quotedOptions);
+    if (mime === 'image/webp') {
+      return await fn.sendRawWebpAsSticker(jid, dataBuffer, quoted, options);
     }
+    const messageContent = createMediaMessage(mime, dataBuffer, caption, options);
+    return await fn.sendMessage(jid, messageContent, createQuotedOptions(quoted, options));
   };
   fn.getMediaBuffer = async (message) => {
-    const MAX_FILE_SIZE = 100 * 1024 * 1024;
+    const MAX_FILE_SIZE = config.performance.maxFileSize;
     try {
       if (!message) throw new MediaValidationError('Input message kosong');
       let messageType;
       let mediaMessage = message;
       if (message.mimetype) {
         const type = message.mimetype.split('/')[0];
-        if (type === 'audio') messageType = 'audio';
-        else if (type === 'image') messageType = 'image';
-        else if (type === 'video') messageType = 'video';
-        else if (type === 'sticker') messageType = 'sticker';
-        else messageType = 'document';
+        messageType = type === 'audio' ? 'audio' : type === 'image' ? 'image' : type === 'video' ? 'video' : type === 'sticker' ? 'sticker' : 'document';
       } else {
         const foundKey = Object.keys(message).find((key) => ["imageMessage", "videoMessage", "stickerMessage", "audioMessage", "documentMessage"].includes(key));
         if (foundKey) {
@@ -233,7 +251,7 @@ export async function clientBot(fn, dbSettings) {
       if (buffer.length === 0) throw new MediaProcessingError('Hasil download kosong');
       return buffer;
     } catch (error) {
-      throw new Error(error);
+      log(`Error: ${error.message}`, true); throw error;
     }
   };
   fn.removeParticipant = async (jid, target) => {
@@ -246,48 +264,25 @@ export async function clientBot(fn, dbSettings) {
     await fn.groupParticipantsUpdate(jid, [target], "demote");
   };
   fn.sendRawWebpAsSticker = async (jid, path, quoted, options = {}) => {
-    const buff = Buffer.isBuffer(path) ? path : /^data:.*?\/.*?;base64,/i.test(path) ? Buffer.from(path.split`,`[1], 'base64') : /^https?:\/\//.test(path) ? await getBuffer(path) : await fs.readFile(path) ? await fs.readFile(path) : Buffer.alloc(0);
+    const buff = await handleBufferInput(path);
     const result = await writeExif(buff, options);
-    await fn.sendMessage(jid, { sticker: { url: result }, ...options }, { quoted, ephemeralExpiration: quoted?.expiration ?? 0, messageId: randomByte(32), ...options });
-    tmpDir.deleteFile(result);
+    await fn.sendMessage(jid, { sticker: { url: result }, ...options }, createQuotedOptions(quoted, options));
+    await tmpDir.deleteFile(result);
   };
   fn.sendFileUrl = async (jid, url, caption, quoted, options = {}) => {
-    const quotedOptions = {
-      quoted,
-      ephemeralExpiration: quoted?.expiration ?? 0,
-      messageId: randomByte(32),
-      ...options
-    };
-    async function getFileUrl(res, mime) {
-      const data = res.data;
-      if (!mime) return;
-      if (mime.includes('gif')) {
-        return await fn.sendMessage(jid, { video: data, caption, gifPlayback: true, ...options }, quotedOptions);
-      } else if (mime === 'application/pdf') {
-        return await fn.sendMessage(jid, { document: data, mimetype: mime, caption, ...options }, quotedOptions);
-      } else if (mime.startsWith('image/')) {
-        return await fn.sendMessage(jid, { image: data, caption, ...options }, quotedOptions);
-      } else if (mime.startsWith('video/')) {
-        return await fn.sendMessage(jid, { video: data, caption, mimetype: mime, ...options }, quotedOptions);
-      } else if (mime === 'image/webp') {
-        return await fn.sendRawWebpAsSticker(jid, data, quoted, options);
-      } else if (mime.startsWith('audio/')) {
-        return await fn.sendMessage(jid, { audio: data, mimetype: mime, ptt: true, ...options }, quotedOptions);
-      }
+    try {
+      const res = await axios({
+        method: 'get',
+        url: url,
+        responseType: 'arraybuffer',
+        family: config.security.networkFamily,
+        headers: { 'User-Agent': config.security.userAgent }
+      });
+      const mime = await detectMimeType(res.data, res.headers);
+      return await fn.sendMediaByType(jid, mime, res.data, caption, quoted, options);
+    } catch (error) {
+      log(`Error: ${error.message}`, true); throw error;
     }
-    const res = await axios({
-      method: 'get',
-      url: url,
-      responseType: 'arraybuffer',
-      family: 4,
-      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36' }
-    });
-    let mime = res.headers['content-type'];
-    if (!mime || mime.includes('octet-stream')) {
-      const fileType = await FileType.fromBuffer(res.data);
-      mime = fileType?.mime || null;
-    }
-    return await getFileUrl(res, mime);
   };
   fn.sendFileUrl2 = async (jid, url, caption, quoted, options = {}) => {
     try {
@@ -295,27 +290,14 @@ export async function clientBot(fn, dbSettings) {
         const [meta, data] = url.split(',');
         const mime = meta.match(/:(.*?);/)[1];
         const buffer = Buffer.from(data, 'base64');
-        const quotedOptions = { quoted, ...options };
-        let messageContent = {};
-        if (mime.includes('gif')) {
-          return await fn.sendMessage(jid, { video: buffer, caption, gifPlayback: true, ...options }, quotedOptions);
-        } else if (mime.startsWith('image/')) {
-          messageContent = { image: buffer, caption, ...options };
-        } else if (mime.startsWith('video/')) {
-          messageContent = { video: buffer, caption, mimetype: mime, ...options };
-        } else if (mime.startsWith('audio/')) {
-          messageContent = { audio: buffer, mimetype: mime, ...options };
-        } else {
-          messageContent = { document: buffer, mimetype: mime, fileName: caption || 'file', ...options };
-        }
-        return await fn.sendMessage(jid, messageContent, quotedOptions);
+        return await fn.sendMediaByType(jid, mime, buffer, caption, quoted, options);
       }
-      const MAX_FILE_SIZE_BYTES = 1024 * 1024 * 1024;
+      const MAX_FILE_SIZE_BYTES = config.performance.maxFileSize;
       const headResponse = await axios({
         method: 'head',
         url: url,
-        family: 4,
-        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36' }
+        family: config.security.networkFamily,
+        headers: { 'User-Agent': config.security.userAgent }
       });
       const contentLength = headResponse.headers['content-length'];
       if (contentLength && parseInt(contentLength, 10) > MAX_FILE_SIZE_BYTES) throw new Error(`File terlalu besar (>${MAX_FILE_SIZE_BYTES / 1024 / 1024}MB).`);
@@ -323,67 +305,46 @@ export async function clientBot(fn, dbSettings) {
         method: 'get',
         url: url,
         responseType: 'arraybuffer',
-        family: 4,
-        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36' }
+        family: config.security.networkFamily,
+        headers: { 'User-Agent': config.security.userAgent }
       });
-      const dataBuffer = dataResponse.data;
-      let mimeType = dataResponse.headers['content-type'];
-      if (!mimeType || mimeType.includes('octet-stream')) {
-        const fileType = await FileType.fromBuffer(dataBuffer);
-        mimeType = fileType?.mime || null;
-      }
-      return await fn.sendMediaByType(jid, mimeType, dataBuffer, caption, quoted, options);
+      const mimeType = await detectMimeType(dataResponse.data, dataResponse.headers);
+      return await fn.sendMediaByType(jid, mimeType, dataResponse.data, caption, quoted, options);
     } catch (error) {
-      throw new Error(error);
+      log(`Error: ${error.message}`, true); throw error;
     }
   };
   fn.sendFilePath = async (jid, caption, localPath, options = {}) => {
+    let convertedPath;
     try {
-      if (!fs.existsSync(localPath)) throw new Error(`File tidak ditemukan di path: ${localPath}`);
-      let mentions = [];
-      if (caption && typeof caption === 'string') {
-        mentions = [...caption.matchAll(/@(\d+)/g)].map(v => v[1] + '@s.whatsapp.net');
+      try {
+        await fs.access(localPath);
+      } catch {
+        throw new Error(`File tidak ditemukan di path: ${localPath}`);
       }
+      const mentions = extractMentions(caption);
       const fileType = await FileType.fromFile(localPath);
       const mime = fileType?.mime || 'application/octet-stream';
-      const fileSizeInMB = fs.statSync(localPath).size / (1024 * 1024);
-      const quoted = options.quoted || null;
-      const ephemeralExpiration = options?.quoted?.expiration ?? 0;
-      const quotedOptions = { quoted, ephemeralExpiration, ...options };
+      const stats = await fs.stat(localPath);
+      const fileSizeInMB = stats.size / (1024 * 1024);
       const fileName = path.basename(localPath);
+      const quotedOptions = createQuotedOptions(options.quoted, options);
       let messageContent = {};
       if (fileSizeInMB > 200) {
-        messageContent = {
-          document: { stream: fs.createReadStream(localPath) },
-          mimetype: mime,
-          fileName,
-          mentions,
-          ...options
-        };
-      } else if (mime.startsWith('audio/')) {
-        const convertedPath = await convertAudio(localPath, {
-          isNotVoice: !options?.ptt
-        });
-        const buffer = fs.readFileSync(convertedPath);
-        messageContent = {
-          audio: buffer, // { stream: fs.createReadStream(convertedPath) }
-          mimetype: options?.ptt ? 'audio/ogg; codecs=opus' : 'audio/mpeg',
-          ptt: true,
-          mentions,
-          ...options
-        };
-      } else if (mime.includes('gif')) {
-        messageContent = { video: { stream: fs.createReadStream(localPath) }, gifPlayback: true, mentions, ...options };
-      } else if (mime.startsWith('image/')) {
-        messageContent = { image: { stream: fs.createReadStream(localPath) }, caption, mentions, ...options };
-      } else if (mime.startsWith('video/')) {
-        messageContent = { video: { stream: fs.createReadStream(localPath) }, caption, mentions, ...options };
-      } else {
         messageContent = { document: { stream: fs.createReadStream(localPath) }, mimetype: mime, fileName, mentions, ...options };
+      } else if (mime.startsWith('audio/')) {
+        convertedPath = await convertAudio(localPath, { isNotVoice: !options?.ptt });
+        messageContent = { audio: { stream: fs.createReadStream(convertedPath) }, mimetype: options?.ptt ? 'audio/ogg; codecs=opus' : 'audio/mpeg', ptt: options?.ptt || true, mentions, ...options };
+      } else {
+        const streamContent = { stream: fs.createReadStream(localPath) };
+        messageContent = createMediaMessage(mime, streamContent, caption, { mentions, fileName, ...options });
       }
       return await fn.sendMessage(jid, messageContent, quotedOptions);
     } catch (error) {
-      throw new Error(error);
+      log(`Error in sendFilePath: ${error.message}`, true);
+      throw error;
+    } finally {
+      if (convertedPath) await tmpDir.deleteFile(convertedPath);
     }
   };
   fn.extractGroupMetadata = (result) => {
@@ -426,11 +387,7 @@ export async function clientBot(fn, dbSettings) {
   fn.groupMetadata = async (jid) => {
     const result = await fn.query({
       tag: 'iq',
-      attrs: {
-        type: 'get',
-        xmlns: 'w:g2',
-        to: jid
-      },
+      attrs: { type: 'get', xmlns: 'w:g2', to: jid },
       content: [{ tag: 'query', attrs: { request: 'interactive' } }]
     });
     return fn.extractGroupMetadata(result);
@@ -458,12 +415,7 @@ export async function clientBot(fn, dbSettings) {
           attrs: {},
           content: [groupNode]
         });
-        if (meta.isCommunity) {
-          continue;
-        }
-        if (meta.announce) {
-          continue;
-        }
+        if (meta.isCommunity || meta.announce) continue;
         data[meta.id] = meta;
       }
     }
@@ -474,19 +426,16 @@ export async function clientBot(fn, dbSettings) {
     const msg = proto.Message.create({
       groupInviteMessage: {
         inviteCode,
-        inviteExpiration: parseInt(inviteExpiration) || + new Date(new Date + (3 * 86400000)),
+        inviteExpiration: parseInt(inviteExpiration) || + new Date(new Date + (config.performance.inviteExpiration)),
         groupJid: jid,
         groupName,
         jpegThumbnail: Buffer.isBuffer(jpegThumbnail) ? jpegThumbnail : null,
         caption,
-        contextInfo: {
-          mentionedJid: options.mentions || []
-        }
+        contextInfo: { mentionedJid: options.mentions || [] }
       }
     });
     const message = generateWAMessageFromContent(participant, msg, options);
-    const invite = await fn.relayMessage(participant, message.message, { messageId: message.key.id })
-    return invite
+    return await fn.relayMessage(participant, message.message, { messageId: message.key.id });
   };
   fn.deleteBugMessage = async (key, timestamp) => {
     if (key.remoteJid.endsWith('@g.us')) {
@@ -495,30 +444,10 @@ export async function clientBot(fn, dbSettings) {
     }
     await fn.chatModify({ deleteForMe: { key, timestamp, deleteMedia: true } }, key.remoteJid);
   };
-  /*
-  fn.handleGroupEventImage = async (idGroup, eventDetails) => {
-    const { memberJid, eventText, subject, messageText } = eventDetails;
-    const memberNum = memberJid.split('@')[0];
-    let profilePictureUrl;
-    try {
-      profilePictureUrl = await fn.profilePictureUrl(memberJid, 'image');
-    } catch {
-      profilePictureUrl = './src/media/apatar.png';
-    }
-    const imageBuffer = await groupImage(memberNum, subject, eventText, profilePictureUrl);
-    const outputPath = `./src/sampah/${Date.now()}_${memberNum}.png`;
-    await fs.writeFile(outputPath, imageBuffer);
-    const caption = `@${memberNum}\n\n${messageText}`;
-    await fn.sendFilePath(idGroup, caption, outputPath);
-    tmpDir.deleteFile(outputPath);
-  };
-  */
   fn.sendAlbum = async (jid, array, options = {}) => {
     if (!Array.isArray(array) || array.length < 2) throw new RangeError("Parameter 'array' harus berupa array dengan minimal 2 media.");
     const messageContent = {
-      messageContextInfo: {
-        messageSecret: randomByte(32),
-      },
+      messageContextInfo: { messageSecret: randomByte(32) },
       albumMessage: {
         expectedImageCount: array.filter((a) => a.image).length,
         expectedVideoCount: array.filter((a) => a.video).length,
@@ -531,9 +460,7 @@ export async function clientBot(fn, dbSettings) {
       ephemeralExpiration: options?.quoted?.expiration ?? 0
     };
     const album = generateWAMessageFromContent(jid, messageContent, generationOptions);
-    await fn.relayMessage(album.key.remoteJid, album.message, {
-      messageId: album.key.id,
-    });
+    await fn.relayMessage(album.key.remoteJid, album.message, { messageId: album.key.id });
     for (const content of array) {
       const mediaMessage = await generateWAMessage(album.key.remoteJid, content, {
         upload: fn.waUploadToServer,
@@ -566,5 +493,23 @@ export async function clientBot(fn, dbSettings) {
       }
     });
   };
-  return fn
+  /*
+  fn.handleGroupEventImage = async (idGroup, eventDetails) => {
+    const { memberJid, eventText, subject, messageText } = eventDetails;
+    const memberNum = memberJid.split('@')[0];
+    let profilePictureUrl;
+    try {
+      profilePictureUrl = await fn.profilePictureUrl(memberJid, 'image');
+    } catch {
+      profilePictureUrl = './src/media/apatar.png';
+    }
+    const imageBuffer = await groupImage(memberNum, subject, eventText, profilePictureUrl);
+    const outputPath = `./src/sampah/${Date.now()}_${memberNum}.png`;
+    await fs.writeFile(outputPath, imageBuffer);
+    const caption = `@${memberNum}\n\n${messageText}`;
+    await fn.sendFilePath(idGroup, caption, outputPath);
+    tmpDir.deleteFile(outputPath);
+  };
+  */
+  return fn;
 };

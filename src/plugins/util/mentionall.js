@@ -11,8 +11,8 @@ export const command = {
   category: 'util',
   description: 'Menyebutkan semua anggota grup.',
   aliases: ['tagall', 'tag'],
-  execute: async ({ fn, m, toId }) => {
-    if (!m.isGroup) throw new Error("Perintah ini hanya bisa digunakan di grup.");
+  execute: async ({ fn, m, toId, sReply }) => {
+    if (!m.isGroup) return await sReply("Perintah ini hanya bisa digunakan di grup.");
     const groupMetadata = await fn.groupMetadata(toId);
     const mentions = groupMetadata.participants.map(member => member.id);
     let message = "📢 MENTIONALL MEMBER\n";

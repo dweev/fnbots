@@ -12,8 +12,8 @@ export const command = {
   description: 'Membuka grup, semua anggota bisa mengirim pesan.',
   aliases: ['open'],
   execute: async ({ fn, m, sReply, isBotGroupAdmins, reactDone }) => {
-    if (!m.isGroup) throw new Error('Perintah ini hanya bisa digunakan di grup.');
-    if (!isBotGroupAdmins) throw new Error('Bot harus menjadi admin grup untuk menjalankan perintah ini.');
+    if (!m.isGroup) return await sReply('Perintah ini hanya bisa digunakan di grup.');
+    if (!isBotGroupAdmins) return await sReply('Bot harus menjadi admin grup untuk menjalankan perintah ini.');
     await Promise.all([fn.groupSettingUpdate(m.chat, 'not_announcement'), reactDone(), sReply('Grup berhasil dibuka, semua anggota dapat mengirim pesan.')]);
   }
 }

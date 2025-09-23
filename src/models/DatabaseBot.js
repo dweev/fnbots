@@ -7,7 +7,7 @@
 // ─── Info DatabaseBot.js ─────────────────
 
 import mongoose from 'mongoose';
-import log from '../utils/logger.js';
+import log from '../lib/logger.js';
 
 const databaseBotSchema = new mongoose.Schema({
   docId: {

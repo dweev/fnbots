@@ -14,7 +14,7 @@ export const command = {
   description: 'Menambahkan alias untuk perintah yang sudah ada.',
   aliases: ['delaliases', 'delcoms'],
   execute: async ({ sReply, args, dbSettings }) => {
-    if (args.length !== 2) throw new Error(`Gunakan format: ${dbSettings.rname}delalias <perintah_utama> <alias_yang_dihapus>`);
+    if (args.length !== 2) return await sReply(`Gunakan format: ${dbSettings.rname}delalias <perintah_utama> <alias_yang_dihapus>`);
     const commandName = args[0].toLowerCase();
     const aliasToRemove = args[1].toLowerCase();
     await Command.removeAlias(commandName, aliasToRemove);

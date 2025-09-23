@@ -10,24 +10,76 @@ import pino from 'pino';
 import path from 'path';
 import util from 'util';
 import process from 'process';
+import config from '../../config.js';
 
-const logFilePath = path.join(process.cwd(), 'logs');
-const blockedKeywords = [
-  "WARNING: Expected pubkey of length 33, please report the ST and client that generated the pubkey",
-  "Unhandled bucket type (for naming):",
-  "Closing stale open session for new outgoing prekey bundle",
-  "Closing open session in favor of incoming prekey bundle",
-  "Failed to decrypt message with any known session...",
-  "Session error:",
-  "Decrypted message with closed session.",
-  "V1 session storage migration error: registrationId",
-  "Migrating session to:",
-  "Session already closed",
-  "Session already open",
-  "Removing old closed session:",
-  "Closing session:"
-];
+const logFilePath = path.join(process.cwd(), config.paths.logsDir);
+const blockedKeywords = config.logger.blockedKeywords;
 
+class BaileysLoggerWrapper {
+  constructor() {
+    this.consoleLogger = pino(pino.transport({
+      target: 'pino-pretty',
+      options: {
+        colorize: true,
+        translateTime: 'SYS:dd-mm-yyyy HH:MM:ss',
+        ignore: 'pid,hostname,level',
+      }
+    }));
+    this.fileLogger = pino(pino.transport({
+      target: 'pino-roll',
+      options: {
+        file: path.join(logFilePath, 'baileys.log'),
+        frequency: 'daily',
+        size: '10M',
+        mkdir: true,
+      },
+    }));
+    this._level = 'trace';
+  }
+  get level() {
+    return this._level;
+  }
+  set level(newLevel) {
+    this._level = newLevel;
+    this.consoleLogger.level = newLevel;
+  }
+  trace(msg, ...args) {
+    this.consoleLogger.trace(msg, ...args);
+    this.fileLogger.trace(msg, ...args);
+  }
+  debug(msg, ...args) {
+    this.consoleLogger.debug(msg, ...args);
+    this.fileLogger.debug(msg, ...args);
+  }
+  info(msg, ...args) {
+    this.consoleLogger.info(msg, ...args);
+    this.fileLogger.info(msg, ...args);
+  }
+  warn(msg, ...args) {
+    this.consoleLogger.warn(msg, ...args);
+    this.fileLogger.warn(msg, ...args);
+  }
+  error(msg, ...args) {
+    this.consoleLogger.error(msg, ...args);
+    this.fileLogger.error(msg, ...args);
+  }
+  fatal(msg, ...args) {
+    this.consoleLogger.fatal(msg, ...args);
+    this.fileLogger.fatal(msg, ...args);
+  }
+  child(options) {
+    const childWrapper = new BaileysLoggerWrapper();
+    childWrapper._level = this._level;
+    childWrapper.consoleLogger = this.consoleLogger.child(options);
+    childWrapper.fileLogger = this.fileLogger.child(options);
+    return childWrapper;
+  }
+  bind() {
+    return this;
+  }
+}
+
+export const pinoLogger = new BaileysLoggerWrapper();
 export const appLogger = pino(pino.transport({
   targets: [
     {
@@ -51,29 +103,7 @@ export const appLogger = pino(pino.transport({
     },
   ],
 }));
-export const pinoLogger = pino(pino.transport({
-  targets: [
-    {
-      level: 'trace',
-      target: 'pino-pretty',
-      options: {
-        colorize: true,
-        translateTime: 'SYS:dd-mm-yyyy HH:MM:ss',
-        ignore: 'pid,hostname,level',
-      }
-    },
-    {
-      level: 'trace',
-      target: 'pino-roll',
-      options: {
-        file: path.join(logFilePath, 'baileys.log'),
-        frequency: 'daily',
-        size: '10M',
-        mkdir: true,
-      },
-    },
-  ],
-}));
+
 export default async function log(message, isError = false) {
   try {
     if (message instanceof Error) {
@@ -118,6 +148,10 @@ export default async function log(message, isError = false) {
     }
   }
 }
+export function updatePinoLoggerLevel(level) {
+  pinoLogger.level = level;
+}
+
 console.log = (...args) => {
   const message = args.length === 1 ? args[0] : args;
   log(message);

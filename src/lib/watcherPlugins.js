@@ -7,10 +7,10 @@
 // ─── Info watcherPlugins.js ──────────────
 
 import path from 'path';
+import log from './logger.js';
 import { dirname } from 'path';
 import chokidar from 'chokidar';
 import { fileURLToPath } from 'url';
-import log from '../utils/logger.js';
 import { loadPlugins } from './plugins.js';
 import { initializeFuse } from '../../core/handler.js';
 
@@ -19,14 +19,12 @@ const __dirname = dirname(__filename);
 const pluginPath = path.join(__dirname, '..', 'plugins');
 
 let reloadTimeout;
-async function debouncedReload(reason = 'File change detected') {
+async function debouncedReload() {
   clearTimeout(reloadTimeout);
   reloadTimeout = setTimeout(async () => {
     try {
-      log(reason);
       await loadPlugins(pluginPath);
       await initializeFuse();
-      log('Plugin berhasil dimuat ulang.');
     } catch (error) {
       log(error, true);
     }
@@ -47,10 +45,10 @@ export default function startPluginWatcher() {
     if (!filePath.endsWith('.js')) return;
     const relativePath = path.relative(pluginPath, filePath);
     log(`File ${event}: ${relativePath}`);
-    debouncedReload(`${event}: ${relativePath}`);
+    debouncedReload();
   });
   watcher.on('ready', () => {
-    log(`Mengawasi perubahan pada: ${pluginPath}`);
+    log(`Watcher Ready: ${pluginPath}`);
   });
   watcher.on('error', (error) => {
     log(`Watcher error: ${error.message}`, true);

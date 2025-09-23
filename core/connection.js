@@ -6,7 +6,7 @@
 */
 // ─── Info connection.js ──────────────────
 
-import 'dotenv/config';
+import 'dotenv/config.js';
 import axios from 'axios';
 import process from 'process';
 import readline from 'readline';
@@ -16,7 +16,7 @@ import qrcode from 'qrcode-terminal';
 import { clientBot } from './client.js';
 import { handleRestart } from './handler.js';
 import { parsePhoneNumber } from 'awesome-phonenumber';
-import log, { pinoLogger } from '../src/utils/logger.js';
+import log, { pinoLogger } from '../src/lib/logger.js';
 import { AuthStore, BaileysSession } from '../database/auth.js';
 import { Settings, mongoStore, StoreGroupMetadata } from '../database/index.js';
 import { default as makeWASocket, jidNormalizedUser, Browsers, makeCacheableSignalKeyStore, isJidBroadcast, fetchLatestBaileysVersion } from 'baileys';
@@ -51,16 +51,16 @@ export async function createWASocket(dbSettings) {
   global.version = await getBaileysVersion();
   const { state, saveCreds } = await AuthStore();
   const fn = makeWASocket({
-    connectTimeoutMs: 60000,
+    qrTimeout: config.performance.qrTimeout,
+    connectTimeoutMs: config.performance.connectTimeoutMs,
+    keepAliveIntervalMs: config.performance.keepAliveIntervals,
     defaultQueryTimeoutMs: undefined,
-    keepAliveIntervalMs: 6000,
     logger: pinoLogger,
     version: global.version,
     browser: Browsers.ubuntu('Chrome'),
     emitOwnEvents: true,
     retryRequestDelayMs: 1000,
     maxMsgRetryCount: 5,
-    qrTimeout: 60000,
     auth: { creds: state.creds, keys: makeCacheableSignalKeyStore(state.keys, pinoLogger) },
     transactionOpts: { maxCommitRetries: 5, delayBetweenTriesMs: 1000 },
     markOnlineOnConnect: true,
@@ -122,6 +122,11 @@ export async function createWASocket(dbSettings) {
         const participatingGroups = await fn.groupFetchAllParticipating();
         await log('Memulai sinkronisasi data grup...');
         try {
+          const groupsToUpdate = Object.values(participatingGroups);
+          if (groupsToUpdate.length > 0) {
+            await StoreGroupMetadata.bulkUpsert(groupsToUpdate);
+          }
+          await log('Memeriksa grup usang untuk dibersihkan...');
           const currentGroupIds = new Set(Object.keys(participatingGroups));
           const storedMetadatas = await StoreGroupMetadata.find({}, { groupId: 1, _id: 0 }).lean();
           const storedGroupIds = storedMetadatas.map(g => g.groupId);
@@ -131,9 +136,9 @@ export async function createWASocket(dbSettings) {
             const deleteResult = await StoreGroupMetadata.deleteMany({ groupId: { $in: staleGroupIds } });
             await log(`Pembersihan database selesai: ${deleteResult.deletedCount} metadata grup usang telah dihapus.`);
             staleGroupIds.forEach(id => mongoStore.clearGroupCacheByKey(id));
-            await log(`Cache untuk ${staleGroupIds.length} grup usang telah dibersihkan dari StoreDB.`);
+            await log(`Cache untuk ${staleGroupIds.length} grup usang telah dibersihkan...`);
           } else {
-            await log('Sinkronisasi selesai. Tidak ada data grup usang ditemukan.');
+            await log('Sinkronisasi selesai...');
           }
         } catch (error) {
           await log(error, true);

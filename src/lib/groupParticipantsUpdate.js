@@ -6,9 +6,9 @@
 */
 // ─── Info groupParticipantsUpdate.js ─────
 
-import log from '../utils/logger.js';
+import log from './logger.js';
 import { jidNormalizedUser } from 'baileys';
-import updateContact from './updateContact.js';
+import { updateContact } from './function.js';
 import { mongoStore, StoreGroupMetadata } from '../../database/index.js';
 
 export default async function groupParticipantsUpdate({ id, participants, action }, fn) {

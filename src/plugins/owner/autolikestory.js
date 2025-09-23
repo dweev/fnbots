@@ -13,9 +13,9 @@ export const command = {
   category: 'owner',
   description: 'Mengaktifkan atau menonaktifkan mode autolikestory.',
   aliases: ['autolikesw'],
-  execute: async ({ dbSettings, reactDone, args }) => {
+  execute: async ({ dbSettings, reactDone, args, sReply }) => {
     const mode = (args[0] || '').toLowerCase();
-    if (!['on', 'off'].includes(mode)) throw new Error(`gunakan perintah dengan benar, contoh: ${dbSettings.rname}autolikestory on/off`);
+    if (!['on', 'off'].includes(mode)) return await sReply(`gunakan perintah dengan benar, contoh: ${dbSettings.rname}autolikestory on/off`);
     dbSettings.autolikestory = mode === 'on';
     await Settings.updateSettings(dbSettings);
     await reactDone();

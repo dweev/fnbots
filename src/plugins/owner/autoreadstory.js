@@ -13,9 +13,9 @@ export const command = {
   category: 'owner',
   description: 'Mengaktifkan atau menonaktifkan mode autoreadstory.',
   aliases: ['autoreadsw'],
-  execute: async ({ dbSettings, reactDone, args }) => {
+  execute: async ({ dbSettings, reactDone, args, sReply }) => {
     const mode = (args[0] || '').toLowerCase();
-    if (!['on', 'off'].includes(mode)) throw new Error(`gunakan perintah dengan benar, contoh: ${dbSettings.rname}autoreadstory on/off`);
+    if (!['on', 'off'].includes(mode)) return await sReply(`gunakan perintah dengan benar, contoh: ${dbSettings.rname}autoreadstory on/off`);
     dbSettings.autoreadsw = mode === 'on';
     await Settings.updateSettings(dbSettings);
     await reactDone();

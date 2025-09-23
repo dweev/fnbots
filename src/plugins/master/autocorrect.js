@@ -13,10 +13,10 @@ export const command = {
   category: 'master',
   description: 'Mengaktifkan atau menonaktifkan mode autocorrect.',
   aliases: ['suggest'],
-  execute: async ({ dbSettings, reactDone, args }) => {
+  execute: async ({ dbSettings, reactDone, args, sReply }) => {
     const mode = (args[0] || '').toLowerCase();
     const modes = { on: 1, auto: 2, off: 0 };
-    if (!(mode in modes)) throw new Error(`gunakan perintah dengan benar, contoh: ${dbSettings.rname}autocorrect on/auto/off`);
+    if (!(mode in modes)) return await sReply(`gunakan perintah dengan benar, contoh: ${dbSettings.rname}autocorrect on/auto/off`);
     dbSettings.autocorrect = modes[mode];
     await Settings.updateSettings(dbSettings);
     await reactDone();

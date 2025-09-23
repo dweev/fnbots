@@ -10,6 +10,7 @@ import os from 'os';
 import util from 'util';
 import fs from 'fs-extra';
 import axios from 'axios';
+import config from '../../../config.js';
 import { exec as cp_exec } from 'child_process';
 import { waktu, bytesToSize } from '../../lib/function.js';
 import { Command, Settings, User } from '../../../database/index.js';
@@ -43,8 +44,8 @@ export const command = {
           return cache.get(cacheKey);
         }
         try {
-          const response = await axios.get('https://ipinfo.io/json', { timeout: 5000 });
-          cache.set(cacheKey, response, 3600000); // Cache for 1 hour
+          const response = await axios.get('https://ipinfo.io/json', { timeout: config.performance.defaultTimeoutMs });
+          cache.set(cacheKey, response, config.performance.maxAgeHours);
           return response;
         } catch {
           return { data: {} };

@@ -6,8 +6,8 @@
 */
 // ─── Info Commands.js ────────────────────
 
-import config from '../../config.js';
 import mongoose from 'mongoose';
+import config from '../../config.js';
 
 const VALID_CATEGORIES = config.commandCategories;
 const commandSchema = new mongoose.Schema({

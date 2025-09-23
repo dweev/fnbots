@@ -13,21 +13,21 @@ import path from 'path';
 import cron from 'node-cron';
 import process from 'process';
 import { dirname } from 'path';
+import config from '../config.js';
 import { fileURLToPath } from 'url';
 const exec = util.promisify(cp_exec);
 import { jidNormalizedUser } from 'baileys';
 import { exec as cp_exec } from 'child_process';
 import { createWASocket } from './connection.js';
-import { randomByte } from '../src/lib/function.js';
+import { tmpDir } from '../src/lib/tempManager.js';
 import { loadPlugins } from '../src/lib/plugins.js';
-import updateContact from '../src/lib/updateContact.js';
-import log, { pinoLogger } from '../src/utils/logger.js';
+import log, { pinoLogger } from '../src/lib/logger.js';
 import { handleRestart, initializeFuse } from './handler.js';
 import startPluginWatcher from '../src/lib/watcherPlugins.js';
 import updateMessageUpsert from '../src/lib/updateMessageUpsert.js';
 import { initializeDbSettings } from '../src/lib/settingsManager.js';
-import processContactUpdate from '../src/lib/processContactUpdate.js';
 import groupParticipantsUpdate from '../src/lib/groupParticipantsUpdate.js';
+import { randomByte, updateContact, processContactUpdate } from '../src/lib/function.js';
 import { database, Settings, mongoStore, StoreMessages, StoreStory } from '../database/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -59,6 +59,7 @@ async function initializeDatabases() {
 };
 async function starts() {
   try {
+    await tmpDir.ensureDirectory();
     await initializeDatabases();
     await loadPlugins(path.join(__dirname, '..', 'src', 'plugins'));
     await initializeFuse();
@@ -169,7 +170,7 @@ async function starts() {
       mongoStore.updatePresences(id, update);
       StoreMessages.updatePresences(id, update).catch(err => log(err, true));
     });
-    const keepAliveInterval = setInterval(async () => {
+    const aliveInterval = setInterval(async () => {
       try {
         await fn.query({
           tag: "iq",
@@ -178,12 +179,12 @@ async function starts() {
       } catch {
         await starts();
       }
-    }, 4 * 60 * 1000);
-    global.activeIntervals.push(keepAliveInterval);
+    }, config.performance.aliveInterval);
+    global.activeIntervals.push(aliveInterval);
     const memoryUsageInterval = setInterval(() => {
       const memUsage = process.memoryUsage();
       log(`Memory usage: ${Math.round(memUsage.heapUsed / 1024 / 1024)}MB`);
-    }, 300000);
+    }, config.performance.checkMemoryUsageInterval);
     global.activeIntervals.push(memoryUsageInterval);
     cron.schedule('0 21 * * 2', async () => {
       log('Menjalankan tugas pembersihan data lama...');

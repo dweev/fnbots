@@ -12,17 +12,17 @@ import Fuse from 'fuse.js';
 import { delay } from 'baileys';
 import config from '../config.js';
 import { spawn } from 'child_process';
-import log from '../src/utils/logger.js';
+import log from '../src/lib/logger.js';
 import { exec as cp_exec } from 'child_process';
 import { pluginCache } from '../src/lib/plugins.js';
-import { User, Group, Whitelist, Settings, Command } from '../database/index.js';
-import { color, msgs, mycmd, safeStringify, sendAndCleanupFile } from '../src/lib/function.js';
+import { User, Group, Whitelist, Settings, Command, StoreMessages } from '../database/index.js';
+import { color, msgs, mycmd, safeStringify, sendAndCleanupFile, waktu } from '../src/lib/function.js';
 
 const exec = util.promisify(cp_exec);
 const isPm2 = process.env.pm_id !== undefined || process.env.NODE_APP_INSTANCE !== undefined;
-const MAX_RECONNECT_ATTEMPTS = 5;
-const RECONNECT_DELAY_MS = 5000;
-const localFilePrefix = 'local-file://';
+const MAX_RECONNECT_ATTEMPTS = config.performance.maxReconnectAttemps;
+const RECONNECT_DELAY_MS = config.performance.reconnectDelay;
+const localFilePrefix = config.localPrefix;
 
 let fuse;
 let recentcmd         = new Set();
@@ -35,8 +35,6 @@ let counter           = 0;
 let suggested         = false;
 let _checkVIP         = false;
 let _checkPremium     = false;
-let _latestMessage    = null;
-let _latestMessages   = null;
 
 const fuseOptions = { includeScore: true, threshold: 0.25, minMatchCharLength: 2, distance: 25 };
 
@@ -97,12 +95,16 @@ async function expiredCheck(fn, ownerNumber) {
   const premiumCheckInterval = setInterval(async () => {
     const expiredUsers = await User.getExpiredPremiumUsers();
     for (const user of expiredUsers) {
-      if (_latestMessages) {
-        await fn.sendPesan(ownerNumber[0], `Premium expired: @${user.userId.split('@')[0]}`, _latestMessages);
-        await User.removePremium(user.userId);
+      const latestMessageFromOwner = await StoreMessages.getLatestMessage(ownerNumber[0]);
+      const notificationText = `Premium expired: @${user.userId.split('@')[0]}`;
+      if (latestMessageFromOwner) {
+        await fn.sendPesan(ownerNumber[0], notificationText, { quoted: latestMessageFromOwner });
+      } else {
+        await fn.sendPesan(ownerNumber[0], notificationText);
       }
+      await User.removePremium(user.userId);
     }
-  }, 60000);
+  }, config.performance.defaultInterval);
   global.activeIntervals.push(premiumCheckInterval);
 };
 async function expiredVIPcheck(fn, ownerNumber) {
@@ -111,12 +113,16 @@ async function expiredVIPcheck(fn, ownerNumber) {
   const vipCheckInterval = setInterval(async () => {
     const expiredUsers = await User.getExpiredVIPUsers();
     for (const user of expiredUsers) {
-      if (_latestMessage) {
-        await fn.sendPesan(ownerNumber[0], `VIP expired: @${user.userId.split('@')[0]}`, _latestMessage);
-        await User.removeVIP(user.userId);
+      const latestMessageFromOwner = await StoreMessages.getLatestMessage(ownerNumber[0]);
+      const notificationText = `VIP expired: @${user.userId.split('@')[0]}`;
+      if (latestMessageFromOwner) {
+        await fn.sendPesan(ownerNumber[0], notificationText, { quoted: latestMessageFromOwner });
+      } else {
+        await fn.sendPesan(ownerNumber[0], notificationText);
       }
+      await User.removeVIP(user.userId);
     }
-  }, 60000);
+  }, config.performance.defaultInterval);
   global.activeIntervals.push(vipCheckInterval);
 };
 async function getSerial(m) {
@@ -236,8 +242,6 @@ export async function handleRestart(reason) {
 };
 export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, version, isSuggestion = false }) {
   suggested = isSuggestion;
-  _latestMessage = m;
-  _latestMessages = m;
   await expiredCheck(fn, ownerNumber);
   await expiredVIPcheck(fn, ownerNumber);
 
@@ -488,7 +492,7 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
         }
         return failedCommands;
       }
-      if (counter <= 25) {
+      if (counter <= config.performance.commandCooldown) {
         counter++;
         if (botNumber === serial) return;
         const usr = serial;
@@ -497,15 +501,16 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
             await sReply(`*Hei @${usr.split('@')[0]} you are on cooldown!*`);
             fspamm.add(usr);
           } else if (!sban.has(usr)) {
-            await sReply(`*Hei @${usr.split('@')[0]}*\n*COMMAND SPAM DETECTED*\n*Command banned for 15 minutes*`);
+            const durationText = waktu(config.performance.banDuration / 1000);
+            await sReply(`*Hei @${usr.split('@')[0]}*\n*COMMAND SPAM DETECTED*\n*Command banned for ${durationText}*`);
             sban.add(usr);
           }
         } else {
           setTimeout(() => { counter--; }, 1000);
           recentcmd.add(usr);
           setTimeout(() => { recentcmd.delete(usr); }, 1000);
-          setTimeout(() => { fspamm.delete(usr); }, 15000);
-          setTimeout(() => { sban.delete(usr); }, 900000);
+          setTimeout(() => { fspamm.delete(usr); }, config.performance.spamDuration);
+          setTimeout(() => { sban.delete(usr); }, config.performance.banDuration);
           const failedCommands = await executeCommandChain(chainingCommands);
           if (failedCommands.length > 0 && dbSettings.autocorrect === 2 && !suggested) {
             const correctedCommands = [];
@@ -529,7 +534,7 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
         }
       } else {
         await sReply("🏃💨 Bot sedang sibuk, coba lagi dalam beberapa saat...");
-        setTimeout(() => { counter = 0; }, 6000);
+        setTimeout(() => { counter = 0; }, config.performance.cooldownReset);
       }
     } else {
       if (dbSettings.antideleted === true) {

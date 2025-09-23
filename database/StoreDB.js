@@ -6,7 +6,8 @@
 */
 // ─── Info StoreDB.js ─────────────────────
 
-import log from '../src/utils/logger.js';
+import config from '../config.js';
+import log from '../src/lib/logger.js';
 import { jidNormalizedUser } from 'baileys';
 import StoreContact from '../src/models/StoreContact.js';
 import StoreMessages from '../src/models/StoreMessages.js';
@@ -19,19 +20,16 @@ class DBStore {
     this.cacheHits = new Map();
     this.cacheTimestamps = new Map();
     this.lidToJidCache = new Map();
-    this.maxCacheSize = {
-      groups: 100,
-      contacts: 5000
-    };
+    this.maxCacheSize = config.performance.maxCacheSize
     this.cacheTTL = {
-      groups: 7 * 24 * 60 * 60 * 1000
+      groups: config.performance.cacheTTL
     };
     this.pendingUpdates = {
       contacts: new Map(),
       groups: new Map()
     };
     this.batchInterval = 2000;
-    this.cacheCleanupInterval = 60 * 60 * 1000;
+    this.cacheCleanupInterval = config.performance.cacheCleanup;
     this.cacheStats = {
       hits: 0,
       misses: 0,
@@ -209,7 +207,7 @@ class DBStore {
       const totalAccess = stats.contacts.hits + stats.contacts.misses;
       if (totalAccess > 0) {
         /*
-        console.log('Cache Stats:', {
+        log('Cache Stats:', {
         hitRate: `${(stats.contacts.hitRate * 100).toFixed(1)}%`,
         contacts: stats.contacts.size,
         groups: `${stats.groups.size}/${this.maxCacheSize.groups}`,

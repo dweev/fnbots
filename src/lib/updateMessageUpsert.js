@@ -7,14 +7,14 @@
 // ─── Info updateMessageUpsert.js ──────────
 
 import util from 'util';
+import log from './logger.js';
 import config from '../../config.js';
-import log from '../utils/logger.js';
-import { arfine } from '../../core/handler.js';
 import { isBug } from '../utils/security.js';
+import { arfine } from '../../core/handler.js';
 import { jidNormalizedUser, delay } from 'baileys';
 import serializeMessage from './serializeMessage.js';
-import { mongoStore, StoreMessages, StoreStory } from '../../database/index.js';
 import handleGroupStubMessages from './handleGroupStubMessages.js';
+import { mongoStore, StoreMessages, StoreStory } from '../../database/index.js';
 
 class CrotToLive extends Map {
   set(key, value, ttl) {
@@ -78,8 +78,8 @@ export default async function updateMessageUpsert(fn, message, dbSettings) {
             await fn.readMessages([m.key]);
           }
         }
-        mongoStore.addStatus(m.sender, m, 10000);
-        StoreStory.addStatus(m.sender, m, 10000).catch(err => log(err, true));
+        mongoStore.addStatus(m.sender, m, config.performance.maxStoreSaved);
+        StoreStory.addStatus(m.sender, m, config.performance.maxStoreSaved).catch(err => log(err, true));
         return;
       } catch (error) {
         await log(error, true);
@@ -91,8 +91,8 @@ export default async function updateMessageUpsert(fn, message, dbSettings) {
         await fn.readMessages([m.key]);
       }
       if (duplexM.has(m.key.id)) return;
-      duplexM.set(m.key.id, Date.now(), 60000);
-      mongoStore.updateMessages(m.chat, m, 10000);
+      duplexM.set(m.key.id, Date.now(), config.performance.defaultInterval);
+      mongoStore.updateMessages(m.chat, m, config.performance.maxStoreSaved);
       if (m.type === 'conversation' || m.type === 'extendedTextMessage') {
         if (m.body?.trim()) {
           const conversationData = {
@@ -104,7 +104,7 @@ export default async function updateMessageUpsert(fn, message, dbSettings) {
             quotedSender: m.quoted?.sender || null,
             keyId: m.key.id
           };
-          mongoStore.updateConversations(m.chat, conversationData, 10000);
+          mongoStore.updateConversations(m.chat, conversationData, config.performance.maxStoreSaved);
           StoreMessages.addConversation(m.chat, conversationData).catch(err => log(err, true));
         }
       }

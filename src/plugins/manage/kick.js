@@ -12,15 +12,15 @@ export const command = {
   description: 'Mengeluarkan anggota dari grup.',
   aliases: ['tendang', 'pancal', 'gajul'],
   execute: async ({ fn, m, toId, sReply, isBotGroupAdmins, quotedMsg, mentionedJidList, ownerNumber, reactDone }) => {
-    if (!m.isGroup) throw new Error(`Perintah ini hanya bisa digunakan di grup.`);
-    if (!isBotGroupAdmins) throw new Error(`Bot harus menjadi admin grup untuk menjalankan perintah ini.`);
+    if (!m.isGroup) return await sReply(`Perintah ini hanya bisa digunakan di grup.`);
+    if (!isBotGroupAdmins) return await sReply(`Bot harus menjadi admin grup untuk menjalankan perintah ini.`);
     let targets = [];
     if (quotedMsg) {
       targets.push(m.quoted.sender);
     } else if (mentionedJidList.length > 0) {
       targets.push(...mentionedJidList);
     } else {
-      throw new Error(`Gunakan perintah ini dengan membalas pesan atau tag @user yang ingin di-kick.`);
+      return await sReply(`Gunakan perintah ini dengan membalas pesan atau tag @user yang ingin di-kick.`);
     }
     let failedUsers = [];
     const metadata = await fn.groupMetadata(toId);

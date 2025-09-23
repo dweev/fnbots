@@ -7,6 +7,7 @@
 // ─── Info StoreMessages.js ───────────────
 
 import mongoose from 'mongoose';
+import config from '../../config.js';
 
 const ConversationSchema = new mongoose.Schema({
   sender: String,
@@ -107,8 +108,15 @@ messagesSchema.statics.updatePresences = function (chatId, presenceObject) {
   );
 };
 messagesSchema.statics.cleanupOldData = async function () {
-  const FIFTEEN_DAYS_AGO = new Date(Date.now() - 15 * 24 * 60 * 60 * 1000);
+  const FIFTEEN_DAYS_AGO = new Date(Date.now() - config.performance.fifteenDays);
   return this.deleteMany({ lastUpdatedAt: { $lt: FIFTEEN_DAYS_AGO } });
+};
+messagesSchema.statics.getLatestMessage = async function (chatId) {
+  const chat = await this.findOne(
+    { chatId: chatId },
+    { messages: { $slice: -1 } }
+  ).lean();
+  return chat?.messages?.[0] || null;
 };
 
 export default mongoose.model('StoreMessages', messagesSchema);

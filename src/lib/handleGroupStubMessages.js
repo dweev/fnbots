@@ -6,8 +6,8 @@
 */
 // ─── Info handleGroupStubMessages.js ─────
 
-import log from '../utils/logger.js';
-import updateContact from './updateContact.js';
+import log from './logger.js';
+import { updateContact } from './function.js';
 import { mongoStore } from '../../database/index.js';
 import { jidNormalizedUser, WAMessageStubType } from 'baileys';
 
@@ -36,13 +36,11 @@ export default async function handleGroupStubMessages(fn, m) {
   }
   if (needsMetadataRefresh) {
     try {
-      const freshMetadata = await fn.groupMetadata(m.chat);
-      if (!freshMetadata) return;
-      await mongoStore.updateGroupMetadata(m.chat, freshMetadata);
-      if (freshMetadata.participants) {
+      const freshMetadata = await mongoStore.syncGroupMetadata(fn, m.chat);
+      if (freshMetadata && freshMetadata.participants) {
         for (const participant of freshMetadata.participants) {
           const contactJid = jidNormalizedUser(participant.id);
-          const contactName = fn.getName(contactJid);
+          const contactName = await fn.getName(contactJid);
           await updateContact(contactJid, { lid: participant.lid, name: contactName });
         }
       }

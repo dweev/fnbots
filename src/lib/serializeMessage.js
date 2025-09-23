@@ -6,7 +6,8 @@
 */
 // ─── Info serializeMessage.js ─────────────
 
-import updateContact from './updateContact.js';
+import log from './logger.js';
+import { updateContact } from './function.js';
 import { mongoStore } from '../../database/index.js';
 import { jidNormalizedUser, extractMessageContent, getDevice, areJidsSameUser } from 'baileys';
 
@@ -148,7 +149,7 @@ export default async function serializeMessage(fn, msg) {
         const contactName = msg.pushName || (await mongoStore.getContact(senderJid))?.name || await fn.getName(senderJid);
         await updateContact(senderJid, { lid: senderLid, name: contactName });
       } catch (error) {
-        console.error('Error updating contact:', error);
+        log(`Error updating contact: ${error}`, true);
       }
     }
     if (m.isGroup) {
@@ -172,7 +173,7 @@ export default async function serializeMessage(fn, msg) {
           return a;
         }, []) || [];
       } catch (error) {
-        console.error('Error getting group metadata:', error);
+        log(`Error getting group metadata: ${error}`, true);
         m.metadata = null;
         groupAdmins = [];
       }
@@ -271,7 +272,7 @@ export default async function serializeMessage(fn, msg) {
     }
     return m;
   } catch (error) {
-    console.error('Error in serializeMessage:', error);
+    log(`Error in serializeMessage: ${error}`, true);
     return null;
   }
 };

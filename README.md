@@ -1,13 +1,175 @@
 ---
 
-<h1 align="center">FNBots WhatsApp – Multi-Function Bot</h1>  
+<h1 align="center">FN WHATSAPP BOT</h1> 
 
 ---
 
 ## Project Architecture Diagram
 
-![flow1](https://github.com/user-attachments/assets/e6b8bbde-7d88-4f10-aae6-34c9ade16f46)
-![flow2](https://github.com/user-attachments/assets/bd9a33e3-43ff-417e-9123-44a9efad9d5e)
+```mermaid
+graph TB
+    subgraph Startup
+        A[Starting Engine] --> B(Load .env & config.js)
+        B --> C(Connect Database)
+        C --> D(Initialize Settings Manager)
+        D --> E(Load Plugins)
+        E --> F(Warm Caches - StoreDB)
+        F --> G(Create WA Socket)
+        A --> BG(Start Background Processes)
+    end
+
+    subgraph Message_Processing_Reaktif
+        H(Event: messages.upsert) --> I[updateMessageUpsert]
+        I --> J(serializeMessage)
+        J --> K{isBug?}
+        K -- Yes --> L(Block User & Delete Msg)
+        K -- No --> M{isStub?}
+        M -- Yes --> N(handleGroupStubMessages.js)
+        M -- No --> O{isStatus?}
+        O -- Yes --> P(Handle Status Logic)
+        O -- No --> AD_Check{isDeleteEvent?}
+        AD_Check -- Yes --> AD_Action(Handle Anti-Delete)
+        AD_Check -- No --> Q[handler.js - arfine]
+    end
+
+    subgraph Command_Execution
+        Q --> SM_Check{Self Mode Check}
+        SM_Check -- Process --> R(Gather Context)
+        SM_Check -- Ignore --> Z(End)
+        R --> S{isCmd?}
+        S -- No --> GM_Check{isGroup?}
+        GM_Check -- Yes --> GM_Action(Group Moderation)
+        GM_Check -- No --> Z
+        
+        S -- Yes --> RC_Check{Remote Command?}
+        RC_Check -- Yes --> CCA_Admin{Is SAdmin?}
+        CCA_Admin -- Yes --> RC_Action(Change Target Chat)
+        CCA_Admin -- No --> Z
+        RC_Check -- No --> AS_Check
+        RC_Action --> AS_Check
+        
+        AS_Check{Anti-Flood Check} -- Pass --> T(Find Command in PluginCache)
+        AS_Check -- Fail --> Z
+
+        T --> T_Result{Command Found?}
+        T_Result -- No --> AC_Check{Auto-Correct?}
+        AC_Check -- Suggest --> AC1(Suggest Correction)
+        AC_Check -- Auto-run --> T
+        AC_Check -- No --> Z
+        AC1 --> Z
+        
+        T_Result -- Yes --> CCA1(Check Limits & Access)
+        CCA1 --> CCA2{Lolos?}
+        CCA2 -- No --> Z
+        CCA2 -- Yes --> CCA3{Is SAdmin?}
+        CCA3 -- Yes --> U(Execute Command)
+        CCA3 -- No --> CCA4{Role Matches?}
+        CCA4 -- Yes --> U
+        CCA4 -- No --> Z
+
+        U --> V(Interact with StoreDB Cache)
+        V --> V_DB(Database Models)
+        V --> W(BOT Response)
+        V_DB --> W
+    end
+
+    subgraph Background_Processes
+        BG1[Interval: Check Expired Users]
+        BG2[Cron Job: Cleanup Data]
+        BG3[Interval: Poll Settings]
+        BG4[Interval: Batch DB Writes]
+        BG5[Interval: Listen Plugin Folders]
+    end
+
+    G --> H
+    GM_Action --> BG1
+```
+
+```mermaid
+erDiagram
+  USER {
+    string userId PK
+    bool isPremium
+    bool isVIP
+    bigint balance
+    int xp
+    int level
+    map commandStats
+    map inventory
+  }
+
+  GROUP {
+    string groupId PK
+    string groupName
+    bool antilink
+    bool isMuted
+    map warnings
+    array afkUsers
+  }
+
+  MUTED_MEMBER {
+    string groupId FK
+    string userId FK
+    date expireAt
+  }
+
+  COMMAND {
+    string name PK
+    string category
+    int count
+    array aliases
+  }
+
+  SETTINGS {
+    string botName
+    bool maintenance
+    string selfMode
+  }
+
+  WHITELIST {
+    string type
+    string targetId
+  }
+
+  DATABASE_BOT {
+    string docId PK
+    map chat
+    array bacot
+    map sticker
+  }
+
+  STORE_CONTACT {
+    string jid PK
+    string name
+    string lid
+  }
+
+  STORE_GROUP_METADATA {
+    string groupId PK
+    string subject
+    array participants
+  }
+
+  STORE_MESSAGES {
+    string chatId PK
+    array messages
+    array conversations
+  }
+
+  STORE_STORY {
+    string userId PK
+    array statuses
+  }
+
+  USER ||--o{ STORE_STORY : "posts"
+  USER ||--o{ STORE_CONTACT : "has"
+  GROUP ||--o{ STORE_GROUP_METADATA : "has"
+  GROUP ||--o{ MUTED_MEMBER : "has"
+  GROUP ||--o{ STORE_MESSAGES : "contains"
+  WHITELIST }o--|| USER : "includes"
+  WHITELIST }o--|| GROUP : "includes"
+  USER }o--|| COMMAND : "uses"
+```
 
 ---
 
@@ -184,10 +346,11 @@
    * `MONGODB_URI` (local or Atlas)
    * `OWNER_NUMBER` (JSON array of owner number)
    * `BOT_NUMBER` (your bot's number)
-   * Set `PAIRING_CODE` to `true` if using pairing code login
 
 4. **Verify Configuration**
    Make sure `config.js` correctly reads values from `.env`.
+   
+   * Set `config.js` to `true` if using pairing code login
 
 ---
 

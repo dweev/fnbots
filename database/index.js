@@ -6,9 +6,9 @@
 */
 // ─── Info connection index.js ────────────
 
-import config from '../config.js';
 import mongoose from 'mongoose';
-import log from '../src/utils/logger.js';
+import config from '../config.js';
+import log from '../src/lib/logger.js';
 
 class DatabaseConnection {
   constructor() {
@@ -34,8 +34,8 @@ class DatabaseConnection {
         this.attemptReconnect();
       });
       await mongoose.connect(MONGODB_URI, {
-        serverSelectionTimeoutMS: 5000,
-        socketTimeoutMS: 45000,
+        serverSelectionTimeoutMS: config.performance.serverSelectionTimeoutMS,
+        socketTimeoutMS: config.performance.socketTimeoutMS,
       });
     } catch (error) {
       this.attemptReconnect();
@@ -51,7 +51,7 @@ class DatabaseConnection {
     log(`Attempting reconnect (${this.connectionRetries}/${this.maxRetries})...`);
     setTimeout(() => {
       this.connect();
-    }, 5000 * this.connectionRetries);
+    }, config.performance.serverSelectionTimeoutMS * this.connectionRetries);
   }
   async disconnect() {
     if (this.isConnected) {
@@ -107,8 +107,8 @@ import Settings from '../src/models/Settings.js';
 import Whitelist from '../src/models/Whitelist.js';
 import StoreContact from '../src/models/StoreContact.js';
 import StoreGroupMetadata from '../src/models/StoreGroupMetadata.js';
-import DatabaseBot from '../src/models/DatabaseBot.js'
 import StoreMessages from '../src/models/StoreMessages.js';
+import DatabaseBot from '../src/models/DatabaseBot.js';
 import StoreStory from '../src/models/StoreStory.js';
 
 export {

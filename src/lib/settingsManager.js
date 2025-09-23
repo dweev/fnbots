@@ -6,11 +6,12 @@
 */
 // ─── Info settingsManager.js ─────────────
 
-import log, { pinoLogger } from '../utils/logger.js';
+import config from '../../config.js';
+import log, { pinoLogger } from './logger.js';
 import { Settings } from '../../database/index.js';
 
 let settingsCache = null;
-const POLLING_INTERVAL_MS = 1000;
+const POLLING_INTERVAL_MS = config.performance.pollingInterval;
 
 export async function initializeDbSettings() {
   try {

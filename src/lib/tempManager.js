@@ -8,16 +8,18 @@
 
 import path from 'path';
 import fs from 'fs-extra';
-import log from '../utils/logger.js'
+import log from './logger.js'
+import config from '../../config.js';
 
 class TempManager {
   constructor(baseDir = null) {
-    this.baseDir = baseDir || path.resolve(process.cwd(), 'src/sampah');
-    this.ensureDirectory();
+    this.baseDir = baseDir || path.resolve(process.cwd(), config.paths.tempDir);
   }
-  ensureDirectory() {
-    if (!fs.existsSync(this.baseDir)) {
-      fs.mkdirSync(this.baseDir, { recursive: true });
+  async ensureDirectory() {
+    try {
+      await fs.ensureDir(this.baseDir);
+    } catch (error) {
+      throw new Error(`Failed to create temp directory: ${error.message}`);
     }
   }
   getPath(filename) {
@@ -27,26 +29,36 @@ class TempManager {
     const filename = `${prefix}${Date.now()}-${Math.random().toString(36).substring(2, 11)}${extension}`;
     return this.getPath(filename);
   }
-  createTempFileWithContent(content, extension = '', prefix = 'temp-') {
+  async createTempFileWithContent(content, extension = '', prefix = 'temp-') {
     const filePath = this.createTempFile(extension, prefix);
-    fs.writeFileSync(filePath, content);
-    return filePath;
-  }
-  deleteFile(filename) {
-    const filePath = this.getPath(filename);
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
-      return true;
-    }
-    return false;
-  }
-  getAllTempFiles() {
     try {
-      return fs.readdirSync(this.baseDir)
+      await fs.writeFile(filePath, content);
+      return filePath;
+    } catch (error) {
+      throw new Error(`Failed to create temp file: ${error.message}`);
+    }
+  }
+  async deleteFile(filename) {
+    const filePath = this.getPath(filename);
+    try {
+      await fs.remove(filePath);
+      return true;
+    } catch (error) {
+      if (error.code === 'ENOENT') {
+        return false;
+      }
+      log(`Failed to delete file ${filePath}: ${error.message}`);
+      return false;
+    }
+  }
+  async getAllTempFiles() {
+    try {
+      const files = await fs.readdir(this.baseDir);
+      return files
         .map(file => this.getPath(file))
         .filter(filePath => fs.statSync(filePath).isFile());
     } catch (error) {
-      log(error, true);
+      log(`Error reading temp directory: ${error.message}`);
       return [];
     }
   }
@@ -54,18 +66,17 @@ class TempManager {
     try {
       const files = await fs.readdir(this.baseDir);
       const now = Date.now();
-      const maxAgeMs = maxAgeHours * 60 * 60 * 1000;
+      const maxAgeMs = maxAgeHours * config.performance.maxAgeHours;
       for (const file of files) {
         const filePath = this.getPath(file);
         const stats = await fs.stat(filePath);
         if (now - stats.mtimeMs > maxAgeMs) {
-          await fs.unlink(filePath);
+          await this.deleteFile(file);
           log(`Deleted old file: ${file}`);
         }
       }
     } catch (error) {
-      log(error, true);
-      throw error;
+      log(`Error in cleanup: ${error.message}`, true);
     }
   }
 }

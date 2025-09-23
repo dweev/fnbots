@@ -9,14 +9,39 @@
 import path from 'path';
 import fs from 'fs-extra';
 import axios from 'axios';
+import log from './logger.js';
 import webp from 'node-webpmux';
 import FileType from 'file-type';
-import log from '../utils/logger.js';
+import config from '../../config.js';
 import dayjs from '../utils/dayjs.js';
 import { tmpDir } from './tempManager.js';
 import ffmpeg from '@ts-ffmpeg/fluent-ffmpeg';
 import { getDbSettings } from './settingsManager.js';
+import { mongoStore } from '../../database/index.js';
 
+export async function updateContact(jid, data = {}) {
+  if (!jid || !jid.endsWith('@s.whatsapp.net')) return;
+  try {
+    await mongoStore.updateContact(jid, data);
+  } catch (error) {
+    await log(error, true);
+  }
+};
+export async function processContactUpdate(contact) {
+  const idFromEvent = contact.id;
+  const trueJid = await mongoStore.resolveJid(idFromEvent);
+  if (!trueJid) return;
+  const dataToUpdate = {};
+  const nameToUpdate = contact.notify || contact.name;
+  if (idFromEvent.endsWith('@lid')) {
+    dataToUpdate.lid = idFromEvent;
+  }
+  if (nameToUpdate) {
+    dataToUpdate.name = nameToUpdate;
+  }
+  if (Object.keys(dataToUpdate).length === 0) return;
+  await updateContact(trueJid, dataToUpdate);
+};
 export function checkDepth(currentObj, currentDepth = 0) {
   if (typeof currentObj !== 'object' || currentObj === null) return currentDepth;
   let maxDepth = currentDepth;
@@ -254,8 +279,8 @@ export async function gifToWebp(media) {
       .save(tmpFileOut)
   });
   const buff = await fs.readFile(tmpFileOut);
-  tmpDir.deleteFile(tmpFileOut);
-  tmpDir.deleteFile(tmpFileIn);
+  await tmpDir.deleteFile(tmpFileOut);
+  await tmpDir.deleteFile(tmpFileIn);
   return buff;
 };
 export async function imageToWebp(media) {
@@ -275,8 +300,8 @@ export async function imageToWebp(media) {
       .save(tmpFileOut)
   });
   const buff = await fs.readFile(tmpFileOut);
-  tmpDir.deleteFile(tmpFileOut);
-  tmpDir.deleteFile(tmpFileIn);
+  await tmpDir.deleteFile(tmpFileOut);
+  await tmpDir.deleteFile(tmpFileIn);
   return buff;
 };
 export async function videoToWebp(media) {
@@ -308,8 +333,8 @@ export async function videoToWebp(media) {
       .save(tmpFileOut)
   });
   const buff = await fs.readFile(tmpFileOut);
-  tmpDir.deleteFile(tmpFileOut);
-  tmpDir.deleteFile(tmpFileIn);
+  await tmpDir.deleteFile(tmpFileOut);
+  await tmpDir.deleteFile(tmpFileIn);
   return buff;
 };
 export async function getBuffer(url, options = {}) {
@@ -324,7 +349,7 @@ export async function getBuffer(url, options = {}) {
     });
     return response.data;
   } catch (error) {
-    throw new Error(error);
+    log(`Error: ${error.message}`, true); throw error;
   }
 };
 export async function writeExif(media, data) {
@@ -369,7 +394,7 @@ export async function writeExif(media, data) {
     const exif = Buffer.concat([exifAttr, jsonBuff]);
     exif.writeUIntLE(jsonBuff.length, 14, 4);
     await img.load(tmpFileIn);
-    tmpDir.deleteFile(tmpFileIn);
+    await tmpDir.deleteFile(tmpFileIn);
     img.exif = exif;
     await img.save(tmpFileOut);
     return tmpFileOut;
@@ -377,7 +402,7 @@ export async function writeExif(media, data) {
     return tmpFileIn;
   };
 };
-export async function convertAudio(inputPath, { isNotVoice = true, ffmpegPath = '/usr/bin/ffmpeg', ffprobePath = '/usr/bin/ffprobe' } = {}) {
+export async function convertAudio(inputPath, { isNotVoice = true } = {}) {
   return new Promise((resolve, reject) => {
     const format = isNotVoice ? 'mp3' : 'ogg';
     const audioCodec = isNotVoice ? 'libmp3lame' : 'libopus';
@@ -388,8 +413,8 @@ export async function convertAudio(inputPath, { isNotVoice = true, ffmpegPath = 
       `${path.parse(inputPath).name}-converted.${format}`
     );
     ffmpeg(inputPath)
-      .setFfmpegPath(ffmpegPath)
-      .setFfprobePath(ffprobePath)
+      .setFfmpegPath(config.paths.ffmpeg)
+      .setFfprobePath(config.paths.ffprobe)
       .noVideo()
       .format(format)
       .audioCodec(audioCodec)
@@ -420,6 +445,6 @@ export async function sendAndCleanupFile(fn, toId, localPath, m, dbSettings) {
     await log(error, true);
     await fn.sendReply(toId, `Gagal mengirim file: ${error.message}`, { quoted: m });
   } finally {
-    tmpDir.deleteFile(localPath);
+    await tmpDir.deleteFile(localPath);
   }
 };

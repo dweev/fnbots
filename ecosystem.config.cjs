@@ -4,10 +4,12 @@ module.exports = {
       name: 'fnbots',
       script: './core/main.js',
       node_args: '--max-old-space-size=4096',
+      max_memory_restart: '3G',
       watch: false,
       ignore_watch: [
-        'node_modules',
         'logs',
+        'node_modules',
+        'src/plugins',
         'src/sampah'
       ],
       env: {

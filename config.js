@@ -30,6 +30,7 @@ const config = {
   ],
   localPrefix: 'local-file://',
   performance: {
+    groupCooldownMS: 5 * 60 * 1000,
     axiosTimeout: 10000,
     maxContentLength: 5 * 1024 * 1024,
     fifteenDays: 15 * 24 * 60 * 60 * 1000,

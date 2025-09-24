@@ -32,13 +32,6 @@ import { randomByte, updateContact, processContactUpdate, initializeFuse } from 
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const isPm2 = process.env.pm_id !== undefined || process.env.NODE_APP_INSTANCE !== undefined;
-const isSelfRestarted = process.env.RESTARTED_BY_SELF === '1';
-
-function logRestartInfo() {
-  log('Starting Engine...')
-  log(`Running Mode: ${isPm2 ? 'PM2' : 'Node'} | RestartedBySelf: ${isSelfRestarted}`);
-};
 
 let dbSettings;
 let debugs = false;
@@ -226,7 +219,6 @@ process.on('SIGINT', () => cleanup('SIGINT'));
 process.on('SIGTERM', () => cleanup('SIGTERM'));
 process.on('SIGUSR2', () => cleanup('SIGUSR2'));
 
-logRestartInfo();
 try {
   await starts();
 } catch (error) {

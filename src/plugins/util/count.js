@@ -8,7 +8,7 @@
 
 export const command = {
   name: 'count',
-  category: 'info',
+  category: 'util',
   description: 'Menampilkan jumlah penggunaan bot oleh user',
   aliases: ['myhit', 'hitstats', 'hitcount'],
   execute: async ({ sReply, serial, user }) => {

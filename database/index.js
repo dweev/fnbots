@@ -101,6 +101,7 @@ const database = new DatabaseConnection();
 
 import mongoStore from './StoreDB.js';
 import User from '../src/models/User.js';
+import Media from '../src/models/Media.js';
 import Group from '../src/models/Group.js';
 import Command from '../src/models/Command.js';
 import Settings from '../src/models/Settings.js';
@@ -116,6 +117,7 @@ export {
   database,
   User,
   Group,
+  Media,
   Command,
   Settings,
   Whitelist,

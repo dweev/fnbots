@@ -12,6 +12,7 @@ import { delay } from 'baileys';
 import config from '../config.js';
 import { spawn } from 'child_process';
 import log from '../src/lib/logger.js';
+import dayjs from '../src/utils/dayjs.js';
 import { exec as cp_exec } from 'child_process';
 import { pluginCache } from '../src/lib/plugins.js';
 import { User, Group, Whitelist, Settings, Command, StoreGroupMetadata, OTPSession } from '../database/index.js';
@@ -19,17 +20,26 @@ import { color, msgs, mycmd, safeStringify, sendAndCleanupFile, waktu, shutdown,
 
 const exec = util.promisify(cp_exec);
 const isPm2 = process.env.pm_id !== undefined || process.env.NODE_APP_INSTANCE !== undefined;
+const isSelfRestarted = process.env.RESTARTED_BY_SELF === '1';
 const MAX_RECONNECT_ATTEMPTS = config.performance.maxReconnectAttemps;
 const RECONNECT_DELAY_MS = config.performance.reconnectDelay;
 const localFilePrefix = config.localPrefix;
 
-let recentcmd         = new Set();
-let fspamm            = new Set();
-let sban              = new Set();
-let mygroup           = [];
-let chainingCommands  = [];
-let counter           = 0;
-let suggested         = false;
+function logRestartInfo() {
+  log('Starting Engine...')
+  log(`Running Mode: ${isPm2 ? 'PM2' : 'Node'} | RestartedBySelf: ${isSelfRestarted}`);
+};
+logRestartInfo();
+
+let groupAfkCooldowns   = new Map();
+let recentcmd           = new Set();
+let fspamm              = new Set();
+let sban                = new Set();
+let mygroup             = [];
+let chainingCommands    = [];
+let counter             = 0;
+let suggested           = false;
+let groupData           = null;
 
 export const updateMyGroup = (newGroupList) => {
   mygroup = newGroupList;
@@ -209,10 +219,33 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
   if (selfMode === 'false' && fromBot) return;
 
   if (m.isGroup) {
-    const groupData = await Group.ensureGroup(toId);
+    groupData = await Group.ensureGroup(toId);
     await groupData.incrementMessageCount();
     await groupData.incrementCommandCount();
     if (!groupData.isActive) return;
+    const userAfkGroups = await Group.findUserAfkStatus(serial);
+    if (userAfkGroups.length > 0) {
+      const currentTime = new Date();
+      for (const afkGroup of userAfkGroups) {
+        const handleResult = await Group.findOneAndUpdate(
+          { groupId: afkGroup.groupId },
+          {},
+          { new: true }
+        );
+        if (handleResult) {
+          const returnResult = await handleResult.handleUserReturn(serial, currentTime);
+          if (returnResult.success) {
+            let durationMessage = '';
+            if (returnResult.duration) {
+              const seconds = Math.floor(returnResult.duration / 1000);
+              const timeAgo = waktu(seconds);
+              durationMessage = `setelah *${returnResult.afkData.reason}* selama *${timeAgo}*`;
+            }
+            await sPesan(`*${pushname}* telah kembali ${durationMessage}!`);
+          }
+        }
+      }
+    }
   }
   if (!m.isGroup) {
     const otpSession = await OTPSession.getSession(serial);
@@ -247,29 +280,82 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
     }
   }
   try {
-    if (m.isGroup && !isCmd) {
+    if (m.isGroup && !isCmd && groupData) {
       const isPrivileged = isBotGroupAdmins && [isSadmin, isMaster, isVIP, isPremium].some(Boolean);
-      const groupSettings = await Group.findOne({ groupId: toId }).lean();
-      if (groupSettings) {
-        if (groupSettings.antiHidetag) {
-          if (m.mentionedJid?.length === m.metadata.participants.length && !isPrivileged) {
-            await fn.sendMessage(toId, { delete: { remoteJid: toId, fromMe: false, id: id, participant: serial } });
+      const currentTime = Date.now();
+      const lastResponseTimeInGroup = groupAfkCooldowns.get(toId);
+      if (groupData.antiHidetag) {
+        if (m.mentionedJid?.length === m.metadata.participants.length && !isPrivileged) {
+          await fn.sendMessage(toId, { delete: { remoteJid: toId, fromMe: false, id: id, participant: serial } });
+        }
+      }
+      if (groupData.antiTagStory) {
+        if (m.type === 'groupStatusMentionMessage' || m.message?.groupStatusMentionMessage || m.message?.protocolMessage?.type === 25 || (Object.keys(m.message).length === 1 && Object.keys(m.message)[0] === 'messageContextInfo')) {
+          if (!isPrivileged && !fromBot) {
+            try {
+              await fn.sendMessage(toId, { delete: { remoteJid: toId, fromMe: false, id: id, participant: serial } });
+              await fn.removeParticipant(toId, serial);
+            } catch (error) { await log(error, true); }
           }
         }
-        if (groupSettings.antiTagStory) {
-          if (m.type === 'groupStatusMentionMessage' || m.message?.groupStatusMentionMessage || m.message?.protocolMessage?.type === 25 || (Object.keys(m.message).length === 1 && Object.keys(m.message)[0] === 'messageContextInfo')) {
-            if (!isPrivileged && !fromBot) {
-              try {
-                await fn.sendMessage(toId, { delete: { remoteJid: toId, fromMe: false, id: id, participant: serial } });
-                await fn.removeParticipant(toId, serial);
-              } catch (error) { await log(error, true); }
+      }
+      if (groupData.antilink) {
+        if (body?.includes('chat.whatsapp.com') && !isPrivileged) {
+          await fn.sendMessage(toId, { delete: { remoteJid: toId, fromMe: false, id: id, participant: serial } });
+          await fn.removeParticipant(toId, serial);
+        }
+      }
+      if (!lastResponseTimeInGroup || (currentTime - lastResponseTimeInGroup >= config.performance.groupCooldownMS)) {
+        const afkUsersToSend = [];
+        const uniqueMentionedJidList = [...new Set(mentionedJidList)];
+        for (const ment of uniqueMentionedJidList) {
+          if (groupData.checkAfkUser(ment)) {
+            const afkData = groupData.getAfkData(ment);
+            if (afkData) {
+              const userTag = await fn.getName(ment) || ment.split('@')[0];
+              const waktuAfk = dayjs(afkData.time).tz('Asia/Jakarta').format('DD/MM/YYYY HH:mm:ss');
+              afkUsersToSend.push({
+                userTag,
+                waktu: waktuAfk,
+                reason: afkData.reason || 'Tidak ada alasan',
+                jid: ment
+              });
             }
           }
         }
-        if (groupSettings.antilink) {
-          if (body?.includes('chat.whatsapp.com') && !isPrivileged) {
-            await fn.sendMessage(toId, { delete: { remoteJid: toId, fromMe: false, id: id, participant: serial } });
-            await fn.removeParticipant(toId, serial);
+        if (afkUsersToSend.length > 0) {
+          groupAfkCooldowns.set(toId, Date.now());
+          let groupMessage = '┌ ❏ *PENGGUNA SEDANG AFK*\n│\n';
+          afkUsersToSend.forEach(user => {
+            groupMessage += `│ • Pengguna: ${user.userTag}\n`;
+            groupMessage += `│   └ Sejak: ${user.waktu}\n`;
+            groupMessage += `│   └ Alasan: ${user.reason}\n│\n`;
+          });
+          groupMessage += '└─ Mohon untuk tidak mengganggu.';
+          await sReply(groupMessage);
+          for (const user of afkUsersToSend) {
+            try {
+              const groupName = fn.getName(toId) || 'sebuah grup';
+              const currentTime = dayjs().tz('Asia/Jakarta').format('DD/MM/YYYY HH:mm:ss');
+              const notificationMsg = `*Notifikasi AFK*\n\n` +
+                `Seseorang men-tag kamu di grup *${groupName}*:\n` +
+                `• Pengirim: @${serial.split('@')[0]}\n` +
+                `• Waktu: ${currentTime}\n` +
+                `• Pesan: "${m.body}"\n\n` +
+                `_Kamu sedang AFK dengan alasan: ${user.reason}_\n` +
+                `AFK sejak: ${user.waktu}`;
+              await fn.sendMessage(
+                user.jid,
+                {
+                  text: notificationMsg,
+                  contextInfo: {
+                    mentionedJid: [serial, user.jid]
+                  }
+                }
+              );
+            } catch (error) {
+              await log(`Gagal mengirim notifikasi ke ${user.jid}: ${error}`);
+            }
           }
         }
       }

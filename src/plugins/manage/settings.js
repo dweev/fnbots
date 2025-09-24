@@ -10,7 +10,7 @@ import { Group } from '../../../database/index.js';
 
 export const command = {
   name: 'settings',
-  category: 'owner',
+  category: 'manage',
   description: 'Menampilkan pengaturan global bot dan pengaturan grup (jika dijalankan di grup).',
   aliases: ['set'],
   execute: async ({ m, toId, sReply, dbSettings }) => {
@@ -24,6 +24,7 @@ export const command = {
       { label: 'Auto Read Story',   value: dbSettings.autoreadsw    },
       { label: 'Auto Read Message', value: dbSettings.autoread      },
       { label: 'Auto Resend',       value: dbSettings.antideleted   },
+      { label: "Auto Reject Call",  value: dbSettings.anticall      },
     ];
     for (const { label, value } of globalFlags) {
       const icon = value ? '⚙' : '⚔';

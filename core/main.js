@@ -163,6 +163,10 @@ async function starts() {
       mongoStore.updatePresences(id, update);
       StoreMessages.updatePresences(id, update).catch(err => log(err, true));
     });
+    fn.ev.on("call", (call) => {
+      const { id, status, from } = call[0];
+      if (status === "offer" && dbSettings.anticall) return fn.rejectCall(id, from);
+    });
     const aliveInterval = setInterval(async () => {
       try {
         await fn.query({

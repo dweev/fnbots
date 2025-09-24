@@ -10,6 +10,7 @@ import util from 'util';
 import path from 'path';
 import { delay } from 'baileys';
 import config from '../config.js';
+import { LRUCache } from 'lru-cache';
 import { spawn } from 'child_process';
 import log from '../src/lib/logger.js';
 import dayjs from '../src/utils/dayjs.js';
@@ -31,7 +32,12 @@ function logRestartInfo() {
 };
 logRestartInfo();
 
-let groupAfkCooldowns   = new Map();
+const groupAfkCooldowns = new LRUCache({
+  max: 1000,
+  ttl: config.performance.groupCooldownMS,
+  updateAgeOnGet: false
+});
+
 let recentcmd           = new Set();
 let fspamm              = new Set();
 let sban                = new Set();

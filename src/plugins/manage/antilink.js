@@ -10,7 +10,7 @@ import { Group } from '../../../database/index.js';
 
 export const command = {
   name: 'antilink',
-  category: 'owner',
+  category: 'manage',
   description: 'Mengaktifkan atau menonaktifkan mode antilink.',
   aliases: ['antilinkgroup'],
   execute: async ({ m, toId, dbSettings, ar, reactDone, sReply }) => {

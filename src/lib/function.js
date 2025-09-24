@@ -6,20 +6,178 @@
 */
 // ─── Info function.js ────────────────────
 
+import util from 'util';
 import path from 'path';
 import fs from 'fs-extra';
 import axios from 'axios';
+import Fuse from 'fuse.js';
 import log from './logger.js';
 import webp from 'node-webpmux';
 import FileType from 'file-type';
 import config from '../../config.js';
 import dayjs from '../utils/dayjs.js';
 import { tmpDir } from './tempManager.js';
+import { pluginCache } from './plugins.js';
 import ffmpeg from '@ts-ffmpeg/fluent-ffmpeg';
+import { exec as cp_exec } from 'child_process';
 import { createCanvas, loadImage } from 'canvas';
 import { getDbSettings } from './settingsManager.js';
 import { mongoStore } from '../../database/index.js';
+import { StoreMessages, User } from '../../database/index.js';
 
+const exec = util.promisify(cp_exec);
+let fuse;
+let allCmds           = [];
+let _checkVIP         = false;
+let _checkPremium     = false;
+
+const fuseOptions = { includeScore: true, threshold: 0.25, minMatchCharLength: 2, distance: 25 };
+
+export async function initializeFuse() {
+  allCmds = Array.from(pluginCache.commands.keys());
+  fuse = new Fuse(allCmds, fuseOptions);
+};
+export async function textMatch1(fn, m, lt, toId) {
+  const suggestions = [];
+  const seenTypo = new Set();
+  for (const typo of lt) {
+    const firstWord = typo.trim().split(/\s+/)[0].toLowerCase();
+    if (allCmds.includes(firstWord) || seenTypo.has(firstWord)) continue;
+    seenTypo.add(firstWord);
+    const results = fuse.search(firstWord);
+    if (results.length > 0) {
+      const bestMatch = results[0].item;
+      if (bestMatch !== firstWord) {
+        suggestions.push({ from: firstWord, to: bestMatch });
+      }
+    }
+  }
+  if (suggestions.length > 0) {
+    const suggestionText = [
+      "*Mungkinkah yang kamu maksud:*",
+      ...suggestions.map(s => `• ${s.from} → ${s.to}`)
+    ].join("\n");
+    await fn.sendPesan(toId, suggestionText, m);
+  }
+};
+export async function textMatch2(lt) {
+  if (Array.isArray(lt)) {
+    lt = lt.join(' ; ');
+  }
+  const commands = lt.split(';').map(cmd => cmd.trim()).filter(cmd => cmd.length > 0);
+  const correctedCommands = [];
+  let hasCorrections = false;
+  for (const command of commands) {
+    const parts = command.trim().split(/\s+/);
+    const commandName = parts[0].toLowerCase();
+    const args = parts.slice(1).join(' ');
+    const results = fuse.search(commandName);
+    if (results.length > 0 && results[0].score <= fuseOptions.threshold) {
+      const bestMatch = results[0].item;
+      let correctedCommand = bestMatch;
+      if (args) {
+        correctedCommand += ' ' + args;
+      }
+      correctedCommands.push(correctedCommand);
+      if (commandName !== bestMatch) {
+        hasCorrections = true;
+      }
+    } else {
+      correctedCommands.push(command);
+    }
+  }
+  return hasCorrections ? correctedCommands : null;
+};
+export async function shutdown(isPm2) {
+  if (isPm2) {
+    try {
+      await exec(`pm2 stop ${process.env.pm_id}`);
+    } catch {
+      process.exit(1);
+    }
+  } else {
+    process.exit(0);
+  }
+};
+export async function checkCommandAccess(command, userData, user, maintenance) {
+  const {
+    isSadmin,
+    isMaster,
+    isVIP,
+    isPremium,
+    isGroupAdmins,
+    isWhiteList,
+    hakIstimewa,
+    isMuted
+  } = userData;
+  let hasAccess = false;
+  const isGameLimited = await user.isGameLimit();
+  const isLimited = await user.isLimit();
+  const hasBasicAccess = !(isGameLimited && isLimited) && ((maintenance && (isWhiteList || hakIstimewa)) || (!maintenance && (hakIstimewa || !isMuted)));
+  if (!hasBasicAccess) return false;
+  if (isSadmin) return true;
+  const accessLevels = {
+    'master':     ['sadmin'],
+    'owner':      ['sadmin', 'master'],
+    'bot':        ['sadmin', 'master'],
+    'vip':        ['sadmin', 'master', 'vip'],
+    'premium':    ['sadmin', 'master', 'vip', 'premium'],
+    'manage':     ['sadmin', 'master', 'vip', 'premium', 'groupAdmin'],
+    'media':      ['all'],
+    'convert':    ['all'],
+    'audio':      ['all'],
+    'text':       ['all'],
+    'image':      ['all'],
+    'ai':         ['all'],
+    'anime':      ['all'],
+    'fun':        ['all'],
+    'ngaji':      ['all'],
+    'game':       ['all'],
+    'stateless':  ['all'],
+    'statefull':  ['all'],
+    'pvpgame':    ['all'],
+    'math':       ['all'],
+    'util':       ['all'],
+    'list':       ['all'],
+  };
+  const requiredLevels = accessLevels[command.category] || [];
+  if (requiredLevels.includes('all')) {
+    hasAccess = true;
+  } else if (requiredLevels.includes('sadmin') && isSadmin) {
+    hasAccess = true;
+  } else if (requiredLevels.includes('master') && isMaster) {
+    hasAccess = true;
+  } else if (requiredLevels.includes('vip') && isVIP) {
+    hasAccess = true;
+  } else if (requiredLevels.includes('premium') && isPremium) {
+    hasAccess = true;
+  } else if (requiredLevels.includes('groupAdmin') && isGroupAdmins) {
+    hasAccess = true;
+  }
+  return hasAccess;
+};
+export async function isUserVerified(m, dbSettings, StoreGroupMetadata, fn, sReply, hakIstimewa) {
+  if (m.fromMe || hakIstimewa) return true;
+  if (m.isGroup) return true;
+  try {
+    const metadata = await StoreGroupMetadata.findOne({ groupId: dbSettings.groupIdentity }).lean();
+    if (!metadata) return true;
+    const isParticipant = metadata.participants.some(p => p.id === m.sender);
+    if (isParticipant) return true;
+    const botParticipant = metadata.participants.find(p => p.id === m.botnumber);
+    if (botParticipant && botParticipant.admin) {
+      const inviteCode = await fn.groupInviteCode(dbSettings.groupIdentity);
+      await sReply(`Untuk menggunakan bot, Anda harus bergabung ke grup kami:\n\nhttps://chat.whatsapp.com/${inviteCode}`);
+    } else {
+      await sReply(`Untuk menggunakan bot, Anda harus bergabung ke grup kami:\n\n${dbSettings.linkIdentity}`);
+    }
+    return false;
+  } catch (error) {
+    log(error, true);
+    await sReply('Terjadi kesalahan saat memverifikasi status Anda.');
+    return false;
+  }
+};
 export async function updateContact(jid, data = {}) {
   if (!jid || !jid.endsWith('@s.whatsapp.net')) return;
   try {
@@ -508,4 +666,55 @@ export async function groupImage(username, groupname, welcometext, profileImageP
   ctx.fillText(trimTextToWidth('#' + groupname, maxWidth), textX, darkAreasY[1] + 40);
   ctx.fillText(trimTextToWidth('@' + username, maxWidth), textX, darkAreasY[2] + 40);
   return canvas.toBuffer('image/png');
+};
+
+export async function expiredCheck(fn, ownerNumber) {
+  if (_checkPremium) return;
+  _checkPremium = true;
+  const premiumCheckInterval = setInterval(async () => {
+    const expiredUsers = await User.getExpiredPremiumUsers();
+    for (const user of expiredUsers) {
+      const latestMessageFromOwner = await StoreMessages.getLatestMessage(ownerNumber[0]);
+      const notificationText = `Premium expired: @${user.userId.split('@')[0]}`;
+      if (latestMessageFromOwner) {
+        await fn.sendPesan(ownerNumber[0], notificationText, { quoted: latestMessageFromOwner });
+      } else {
+        await fn.sendPesan(ownerNumber[0], notificationText);
+      }
+      await User.removePremium(user.userId);
+    }
+  }, config.performance.defaultInterval);
+  global.activeIntervals.push(premiumCheckInterval);
+};
+export async function expiredVIPcheck(fn, ownerNumber) {
+  if (_checkVIP) return;
+  _checkVIP = true;
+  const vipCheckInterval = setInterval(async () => {
+    const expiredUsers = await User.getExpiredVIPUsers();
+    for (const user of expiredUsers) {
+      const latestMessageFromOwner = await StoreMessages.getLatestMessage(ownerNumber[0]);
+      const notificationText = `VIP expired: @${user.userId.split('@')[0]}`;
+      if (latestMessageFromOwner) {
+        await fn.sendPesan(ownerNumber[0], notificationText, { quoted: latestMessageFromOwner });
+      } else {
+        await fn.sendPesan(ownerNumber[0], notificationText);
+      }
+      await User.removeVIP(user.userId);
+    }
+  }, config.performance.defaultInterval);
+  global.activeIntervals.push(vipCheckInterval);
+};
+export async function getSerial(m) {
+  if (m?.key?.fromMe) return;
+  const sender = m.sender;
+  return sender;
+};
+export async function getTxt(txt, dbSettings) {
+  if (txt.startsWith(dbSettings.rname)) {
+    txt = txt.replace(dbSettings.rname, "");
+  } else if (txt.startsWith(dbSettings.sname)) {
+    txt = txt.replace(dbSettings.sname, "");
+  }
+  txt = txt.trim();
+  return txt;
 };

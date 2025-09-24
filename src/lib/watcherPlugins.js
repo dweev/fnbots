@@ -12,7 +12,7 @@ import { dirname } from 'path';
 import chokidar from 'chokidar';
 import { fileURLToPath } from 'url';
 import { loadPlugins } from './plugins.js';
-import { initializeFuse } from '../../core/handler.js';
+import { initializeFuse } from './function.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

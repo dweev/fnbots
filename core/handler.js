@@ -8,15 +8,14 @@
 
 import util from 'util';
 import path from 'path';
-import Fuse from 'fuse.js';
 import { delay } from 'baileys';
 import config from '../config.js';
 import { spawn } from 'child_process';
 import log from '../src/lib/logger.js';
 import { exec as cp_exec } from 'child_process';
 import { pluginCache } from '../src/lib/plugins.js';
-import { color, msgs, mycmd, safeStringify, sendAndCleanupFile, waktu } from '../src/lib/function.js';
-import { User, Group, Whitelist, Settings, Command, StoreMessages, OTPSession } from '../database/index.js';
+import { User, Group, Whitelist, Settings, Command, StoreGroupMetadata, OTPSession } from '../database/index.js';
+import { color, msgs, mycmd, safeStringify, sendAndCleanupFile, waktu, shutdown, checkCommandAccess, isUserVerified, textMatch1, textMatch2, expiredVIPcheck, expiredCheck, getSerial, getTxt } from '../src/lib/function.js';
 
 const exec = util.promisify(cp_exec);
 const isPm2 = process.env.pm_id !== undefined || process.env.NODE_APP_INSTANCE !== undefined;
@@ -24,196 +23,16 @@ const MAX_RECONNECT_ATTEMPTS = config.performance.maxReconnectAttemps;
 const RECONNECT_DELAY_MS = config.performance.reconnectDelay;
 const localFilePrefix = config.localPrefix;
 
-let fuse;
 let recentcmd         = new Set();
 let fspamm            = new Set();
 let sban              = new Set();
-let allCmds           = [];
 let mygroup           = [];
 let chainingCommands  = [];
 let counter           = 0;
 let suggested         = false;
-let _checkVIP         = false;
-let _checkPremium     = false;
-
-const fuseOptions = { includeScore: true, threshold: 0.25, minMatchCharLength: 2, distance: 25 };
-
-async function textMatch1(fn, m, lt, toId) {
-  const suggestions = [];
-  const seenTypo = new Set();
-  for (const typo of lt) {
-    const firstWord = typo.trim().split(/\s+/)[0].toLowerCase();
-    if (allCmds.includes(firstWord) || seenTypo.has(firstWord)) continue;
-    seenTypo.add(firstWord);
-    const results = fuse.search(firstWord);
-    if (results.length > 0) {
-      const bestMatch = results[0].item;
-      if (bestMatch !== firstWord) {
-        suggestions.push({ from: firstWord, to: bestMatch });
-      }
-    }
-  }
-  if (suggestions.length > 0) {
-    const suggestionText = [
-      "*Mungkinkah yang kamu maksud:*",
-      ...suggestions.map(s => `• ${s.from} → ${s.to}`)
-    ].join("\n");
-    await fn.sendPesan(toId, suggestionText, m);
-  }
-};
-async function textMatch2(lt) {
-  if (Array.isArray(lt)) {
-    lt = lt.join(' ; ');
-  }
-  const commands = lt.split(';').map(cmd => cmd.trim()).filter(cmd => cmd.length > 0);
-  const correctedCommands = [];
-  let hasCorrections = false;
-  for (const command of commands) {
-    const parts = command.trim().split(/\s+/);
-    const commandName = parts[0].toLowerCase();
-    const args = parts.slice(1).join(' ');
-    const results = fuse.search(commandName);
-    if (results.length > 0 && results[0].score <= fuseOptions.threshold) {
-      const bestMatch = results[0].item;
-      let correctedCommand = bestMatch;
-      if (args) {
-        correctedCommand += ' ' + args;
-      }
-      correctedCommands.push(correctedCommand);
-      if (commandName !== bestMatch) {
-        hasCorrections = true;
-      }
-    } else {
-      correctedCommands.push(command);
-    }
-  }
-  return hasCorrections ? correctedCommands : null;
-};
-async function expiredCheck(fn, ownerNumber) {
-  if (_checkPremium) return;
-  _checkPremium = true;
-  const premiumCheckInterval = setInterval(async () => {
-    const expiredUsers = await User.getExpiredPremiumUsers();
-    for (const user of expiredUsers) {
-      const latestMessageFromOwner = await StoreMessages.getLatestMessage(ownerNumber[0]);
-      const notificationText = `Premium expired: @${user.userId.split('@')[0]}`;
-      if (latestMessageFromOwner) {
-        await fn.sendPesan(ownerNumber[0], notificationText, { quoted: latestMessageFromOwner });
-      } else {
-        await fn.sendPesan(ownerNumber[0], notificationText);
-      }
-      await User.removePremium(user.userId);
-    }
-  }, config.performance.defaultInterval);
-  global.activeIntervals.push(premiumCheckInterval);
-};
-async function expiredVIPcheck(fn, ownerNumber) {
-  if (_checkVIP) return;
-  _checkVIP = true;
-  const vipCheckInterval = setInterval(async () => {
-    const expiredUsers = await User.getExpiredVIPUsers();
-    for (const user of expiredUsers) {
-      const latestMessageFromOwner = await StoreMessages.getLatestMessage(ownerNumber[0]);
-      const notificationText = `VIP expired: @${user.userId.split('@')[0]}`;
-      if (latestMessageFromOwner) {
-        await fn.sendPesan(ownerNumber[0], notificationText, { quoted: latestMessageFromOwner });
-      } else {
-        await fn.sendPesan(ownerNumber[0], notificationText);
-      }
-      await User.removeVIP(user.userId);
-    }
-  }, config.performance.defaultInterval);
-  global.activeIntervals.push(vipCheckInterval);
-};
-async function getSerial(m) {
-  if (m?.key?.fromMe) return;
-  const sender = m.sender;
-  return sender;
-};
-async function getTxt(txt, dbSettings) {
-  if (txt.startsWith(dbSettings.rname)) {
-    txt = txt.replace(dbSettings.rname, "");
-  } else if (txt.startsWith(dbSettings.sname)) {
-    txt = txt.replace(dbSettings.sname, "");
-  }
-  txt = txt.trim();
-  return txt;
-};
-async function shutdown() {
-  if (isPm2) {
-    try {
-      await exec(`pm2 stop ${process.env.pm_id}`);
-    } catch {
-      process.exit(1);
-    }
-  } else {
-    process.exit(0);
-  }
-};
-async function checkCommandAccess(command, userData, user, maintenance) {
-  const {
-    isSadmin,
-    isMaster,
-    isVIP,
-    isPremium,
-    isGroupAdmins,
-    isWhiteList,
-    hakIstimewa,
-    isMuted
-  } = userData;
-  let hasAccess = false;
-  const isGameLimited = await user.isGameLimit();
-  const isLimited = await user.isLimit();
-  const hasBasicAccess = !(isGameLimited && isLimited) && ((maintenance && (isWhiteList || hakIstimewa)) || (!maintenance && (hakIstimewa || !isMuted)));
-  if (!hasBasicAccess) return false;
-  if (isSadmin) return true;
-  const accessLevels = {
-    'master':     ['sadmin'],
-    'owner':      ['sadmin', 'master'],
-    'bot':        ['sadmin', 'master'],
-    'vip':        ['sadmin', 'master', 'vip'],
-    'premium':    ['sadmin', 'master', 'vip', 'premium'],
-    'manage':     ['sadmin', 'master', 'vip', 'premium', 'groupAdmin'],
-    'media':      ['all'],
-    'convert':    ['all'],
-    'audio':      ['all'],
-    'text':       ['all'],
-    'image':      ['all'],
-    'ai':         ['all'],
-    'anime':      ['all'],
-    'fun':        ['all'],
-    'ngaji':      ['all'],
-    'game':       ['all'],
-    'stateless':  ['all'],
-    'statefull':  ['all'],
-    'pvpgame':    ['all'],
-    'math':       ['all'],
-    'util':       ['all'],
-    'list':       ['all'],
-  };
-  const requiredLevels = accessLevels[command.category] || [];
-  if (requiredLevels.includes('all')) {
-    hasAccess = true;
-  } else if (requiredLevels.includes('sadmin') && isSadmin) {
-    hasAccess = true;
-  } else if (requiredLevels.includes('master') && isMaster) {
-    hasAccess = true;
-  } else if (requiredLevels.includes('vip') && isVIP) {
-    hasAccess = true;
-  } else if (requiredLevels.includes('premium') && isPremium) {
-    hasAccess = true;
-  } else if (requiredLevels.includes('groupAdmin') && isGroupAdmins) {
-    hasAccess = true;
-  }
-  return hasAccess;
-};
 
 export const updateMyGroup = (newGroupList) => {
   mygroup = newGroupList;
-};
-export async function initializeFuse() {
-  allCmds = Array.from(pluginCache.commands.keys());
-  fuse = new Fuse(allCmds, fuseOptions);
 };
 export async function handleRestart(reason) {
   const currentRestarts = config.restartAttempts;
@@ -351,7 +170,7 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
     await Promise.all([Settings.updateSettings(dbSettings), reactDone(), handleRestart("Restarting...")]);
   } else if (body?.toLowerCase().trim() == "shutdown") {
     if (!isSadmin && !isMaster) return;
-    await Promise.all([reactDone(), shutdown()]);
+    await Promise.all([reactDone(), shutdown(isPm2)]);
   } else if (body?.toLowerCase().trim().startsWith("mode")) {
     if (!isSadmin && !isMaster) return;
     const args = body.toLowerCase().trim().split(/\s+/);
@@ -456,6 +275,10 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
       }
     }
     if (isCmd) {
+      if (dbSettings.verify === true) {
+        const isVerified = await isUserVerified(m, dbSettings, StoreGroupMetadata, fn, sReply, hakIstimewa);
+        if (!isVerified) return;
+      }
       let commandText = await getTxt(txt, dbSettings);
       const remoteCommandMatch = commandText.match(/^r:(\d+)\s+(.*)/s);
       if (remoteCommandMatch && (isSadmin || isMaster)) {

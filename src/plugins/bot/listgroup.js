@@ -11,7 +11,7 @@ import { StoreGroupMetadata } from '../../../database/index.js';
 
 export const command = {
   name: 'listgroup',
-  category: 'owner',
+  category: 'bot',
   description: 'Menampilkan daftar semua grup dan memperbarui cache untuk remote command.',
   aliases: ['lg', 'grouplist', 'mygroup'],
   execute: async ({ sReply }) => {

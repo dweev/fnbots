@@ -1,0 +1,20 @@
+// ─── Info ────────────────────────────────
+/*
+* Created with ❤️ and 💦 By FN
+* Follow https://github.com/Terror-Machine
+* Feel Free To Use
+*/
+// ─── Info ────────────────────────────────
+
+export const command = {
+  name: 'changegrouplink',
+  category: 'manage',
+  description: 'Mengganti link group.',
+  aliases: ['setgrouplink'],
+  execute: async ({ fn, m, isBotGroupAdmins, toId, sReply }) => {
+    if (!m.isGroup || !isBotGroupAdmins) return await sReply(`Perintah ini hanya bisa digunakan jika bot menjadi admin grup.`);
+    await fn.groupRevokeInvite(toId)
+    let response = await fn.groupInviteCode(toId)
+    await sReply(`https://chat.whatsapp.com/${response}`);
+  }
+};

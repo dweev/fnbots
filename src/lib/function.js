@@ -8,6 +8,7 @@
 
 import util from 'util';
 import path from 'path';
+import sharp from 'sharp';
 import fs from 'fs-extra';
 import axios from 'axios';
 import Fuse from 'fuse.js';
@@ -676,4 +677,23 @@ export function imageToWebp(media) {
 }
 export function videoToWebp(media) {
   return runStickerConversion(media, 'video');
+};
+export async function saveFile(imageInput, prefix, toFile = "png") {
+  let imageBuffer;
+  if (typeof imageInput === 'string' && imageInput.startsWith('data:image')) {
+    const base64Data = imageInput.split(';base64,').pop();
+    imageBuffer = Buffer.from(base64Data, 'base64');
+  } else if (Buffer.isBuffer(imageInput)) {
+    imageBuffer = imageInput;
+  } else {
+    throw new Error('Input tidak valid. Harap berikan Buffer atau string Base64.');
+  }
+  const ext = toFile.toLowerCase() === "jpg" ? "jpg" : "png";
+  const tmpPath = path.join(global.tmpDir, `${prefix}-${Date.now()}.${ext}`);
+  if (ext === "jpg") {
+    await sharp(imageBuffer).jpeg({ quality: 90, progressive: true, mozjpeg: true }).toFile(tmpPath);
+  } else {
+    await sharp(imageBuffer).png().toFile(tmpPath);
+  }
+  return tmpPath;
 };

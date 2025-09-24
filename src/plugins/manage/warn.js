@@ -22,9 +22,9 @@ export const command = {
     const subCommand = ar[0]?.toLowerCase();
     if (subCommand === 'set') {
       const action = ar[1]?.toLowerCase();
-      const limit = parseInt(ar[2], 10) || 5;
+      const limit = parseInt(ar[2], 10) || 100;
       if (action !== 'on' && action !== 'off') return await sReply(`Gunakan: ${dbSettings.rname}warn set on [jumlah] atau ${dbSettings.rname}warn set off`);
-      if (limit < 1 || limit > 10) return await sReply('Batas peringatan harus antara 1-10!');
+      if (limit < 1 || limit > 100) return await sReply('Batas peringatan harus antara 1-100!');
       await group.setWarningState(action === 'on');
       await group.setWarningLimit(limit);
       await sReply(`Fitur auto-kick setelah ${limit} kali warning telah diatur ke: ${action.toUpperCase()}`);

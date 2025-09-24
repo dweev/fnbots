@@ -99,7 +99,7 @@ const groupSchema = new mongoose.Schema({
     type: new Schema({
       users: { type: Map, of: Number, default: {} },
       state: { type: Boolean, default: true },
-      count: { type: Number, default: 5 }
+      count: { type: Number, default: 100 }
     }, { _id: false }),
     default: {}
   },

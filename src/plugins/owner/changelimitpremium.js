@@ -9,14 +9,16 @@
 import { Settings } from '../../../database/index.js';
 
 export const command = {
-  name: 'autoreject',
+  name: 'changelimitpremium',
   category: 'owner',
-  description: 'Mengaktifkan atau menonaktifkan mode anti call.',
+  description: 'mengatur limit member premium',
   execute: async ({ dbSettings, reactDone, args, sReply }) => {
-    const mode = (args[0] || '').toLowerCase();
-    if (!['on', 'off'].includes(mode)) return await sReply(`gunakan perintah dengan benar, contoh: ${dbSettings.rname}autoreject on/off`);
-    dbSettings.anticall = mode === 'on';
-    await Settings.updateSettings(dbSettings);
-    await reactDone();
+    if (args) {
+      const limit = parseInt(args[0]);
+      if (!limit || limit < 1) return await sReply(`gunakan perintah dengan benar, contoh: ${dbSettings.rname}changelimitpremium 100`);
+      dbSettings.limitCountPrem = limit;
+      await Settings.updateSettings(dbSettings);
+      await reactDone();
+    }
   }
 };

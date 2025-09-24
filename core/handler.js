@@ -41,6 +41,8 @@ const groupAfkCooldowns = new LRUCache({
 let recentcmd           = new Set();
 let fspamm              = new Set();
 let sban                = new Set();
+let stp                 = new Set();
+let stickerspam         = new Set();
 let mygroup             = [];
 let chainingCommands    = [];
 let counter             = 0;
@@ -99,7 +101,9 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
   const isWhiteList = await Whitelist.isWhitelisted(toId, 'group');
   const hakIstimewa = [isSadmin, isMaster, isVIP, isPremium].some(Boolean);
   const isBotGroupAdmins = m.isBotAdmin || false;
+  const isGroupAdmins = m.isAdmin || false;
   const body = m?.body;
+  const type = m?.type;
   const userData = {
     isSadmin: isSadmin,
     isMaster: isMaster,
@@ -287,7 +291,7 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
   }
   try {
     if (m.isGroup && !isCmd && groupData) {
-      const isPrivileged = isBotGroupAdmins && [isSadmin, isMaster, isVIP, isPremium].some(Boolean);
+      const isPrivileged = isBotGroupAdmins && [isSadmin, isMaster, isVIP, isPremium, isGroupAdmins, fromBot].some(Boolean);
       const currentTime = Date.now();
       const lastResponseTimeInGroup = groupAfkCooldowns.get(toId);
       if (groupData.antiHidetag) {
@@ -310,6 +314,58 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
           await fn.sendMessage(toId, { delete: { remoteJid: toId, fromMe: false, id: id, participant: serial } });
           await fn.removeParticipant(toId, serial);
         }
+      }
+      if (groupData.filter) {
+        if (isBotGroupAdmins && body && groupData.filterWords && groupData.filterWords.length > 0) {
+          if (!isPrivileged) {
+            const filteredWord = groupData.filterWords.find(word => {
+              const regex = new RegExp(`\\b${word}\\b`, 'i');
+              return regex.test(body);
+            });
+            if (filteredWord) {
+              await fn.sendMessage(toId, { delete: { remoteJid: toId, fromMe: false, id: id, participant: serial } });
+              const warningMessage = `Pesan mengandung kata terlarang: *${filteredWord}*`;
+              const isAutoKickActive = groupData.isWarningEnabled();
+              const kickThreshold = groupData.getWarningLimit();
+              await groupData.addWarning(serial);
+              const newCount = groupData.getWarnings(serial);
+              await sReply(warningMessage);
+              if (isAutoKickActive && newCount >= kickThreshold) {
+                await sReply(`Peringatan Terakhir!\n\n@${serial.split('@')[0]} telah mencapai batas ${kickThreshold} peringatan dan akan dikeluarkan.`, [serial]);
+                await fn.removeParticipant(toId, serial);
+                await groupData.resetWarnings(serial);
+              }
+            }
+          }
+        }
+        const mediaTypes = new Set(['stickerMessage', 'imageMessage', 'videoMessage', 'audioMessage']);
+        if (mediaTypes.has(type)) {
+          if (stickerspam.has(serial) && !stp.has(serial) && m.isGroup && isBotGroupAdmins) {
+            stp.add(serial);
+            const mention = '@' + serial.split('@')[0];
+            if (isSadmin) {
+              await fn.sendPesan(toId, `creatorku yang ganteng ${mention}\ngaboleh spam ya...`, m);
+            } else if (isMaster) {
+              await fn.sendPesan(toId, `wah ini nih! ${mention}\nHei Owner, jangan ngajarin membernya buat spam! 🤦‍♂️🤦‍♂️😤🧐`, m);
+            } else if (isVIP) {
+              await fn.sendPesan(toId, `hmmmmm gitu ya ${mention}\nvip bebas spam. 😒🙃😏`, m);
+            } else if (isPremium) {
+              await fn.sendPesan(toId, `wadooooh si ${mention}\nasik nih premium bisa spam. 😒🙃😏`, m);
+            } else if (isGroupAdmins) {
+              await fn.sendPesan(toId, `yaela ${mention}\njangan mentang-mentang jadi admin spam terus terusan ya!`, m);
+            } else {
+              await fn.sendPesan(toId, `member bangsat ya ${mention}\nspam anjeng! 😡😡😡😡`, m);
+              setTimeout(async () => {
+                fn.removeParticipant(toId, serial);
+              }, 1000);
+            }
+          }
+        }
+        stickerspam.add(serial);
+        setTimeout(() => {
+          stickerspam.delete(serial);
+          stp.delete(serial);
+        }, 1000);
       }
       if (!lastResponseTimeInGroup || (currentTime - lastResponseTimeInGroup >= config.performance.groupCooldownMS)) {
         const afkUsersToSend = [];
@@ -341,7 +397,7 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
           await sReply(groupMessage);
           for (const user of afkUsersToSend) {
             try {
-              const groupName = fn.getName(toId) || 'sebuah grup';
+              const groupName = await fn.getName(toId) || 'sebuah grup';
               const currentTime = dayjs().tz('Asia/Jakarta').format('DD/MM/YYYY HH:mm:ss');
               const notificationMsg = `*Notifikasi AFK*\n\n` +
                 `Seseorang men-tag kamu di grup *${groupName}*:\n` +
@@ -404,6 +460,7 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
                   sPesan, sReply, reactDone, reactFail, toId,
                   quotedMsg, quotedParticipant, mentionedJidList,
                   body, args, arg: fullArgs, ar: args, serial, user,
+                  groupData,
                 };
                 await command.execute(commandArgs);
                 commandFound = true;

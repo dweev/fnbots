@@ -12,10 +12,13 @@ import fs from 'fs-extra';
 import axios from 'axios';
 import Fuse from 'fuse.js';
 import log from './logger.js';
+import { dirname } from 'path';
 import webp from 'node-webpmux';
 import FileType from 'file-type';
+import { fileURLToPath } from 'url';
 import config from '../../config.js';
 import dayjs from '../utils/dayjs.js';
+import { Worker } from 'worker_threads';
 import { tmpDir } from './tempManager.js';
 import { pluginCache } from './plugins.js';
 import ffmpeg from '@ts-ffmpeg/fluent-ffmpeg';
@@ -31,7 +34,31 @@ let allCmds           = [];
 let _checkVIP         = false;
 let _checkPremium     = false;
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 const fuseOptions = { includeScore: true, threshold: 0.25, minMatchCharLength: 2, distance: 25 };
+
+function runStickerConversion(media, type) {
+  return new Promise((resolve, reject) => {
+    const worker = new Worker(path.resolve(__dirname, '..', 'worker', 'sticker_worker.js'));
+    worker.postMessage({ mediaBuffer: media, type: type });
+    worker.on('message', (result) => {
+      if (result.status === 'done') {
+        resolve(Buffer.from(result.buffer));
+      } else {
+        reject(new Error(result.error));
+      }
+      worker.terminate();
+    });
+    worker.on('error', (err) => {
+      reject(err);
+      worker.terminate();
+    });
+    worker.on('exit', (code) => {
+      if (code !== 0) reject(new Error(`Worker berhenti dengan error code ${code}`));
+    });
+  });
+};
 
 export async function initializeFuse() {
   allCmds = Array.from(pluginCache.commands.keys());
@@ -420,82 +447,6 @@ export async function mycmd(input) {
   }
   return input.split(';').map(cmd => cmd.trim()).filter(cmd => cmd.length > 0);
 };
-export async function gifToWebp(media) {
-  const tmpFileIn = tmpDir.createTempFile('gif');
-  const tmpFileOut = tmpDir.createTempFile('webp');
-  await fs.writeFile(tmpFileIn, media);
-  await new Promise((resolve, reject) => {
-    ffmpeg(tmpFileIn)
-      .on('error', reject)
-      .on('end', () => resolve(true))
-      .addOutputOptions([
-        '-vf', 'scale=512:512:force_original_aspect_ratio=decrease',
-        '-loop', '0',
-        '-preset', 'default',
-        '-an', '-vsync', '0'
-      ])
-      .toFormat('webp')
-      .save(tmpFileOut)
-  });
-  const buff = await fs.readFile(tmpFileOut);
-  await tmpDir.deleteFile(tmpFileOut);
-  await tmpDir.deleteFile(tmpFileIn);
-  return buff;
-};
-export async function imageToWebp(media) {
-  const tmpFileOut = tmpDir.createTempFile('webp');
-  const tmpFileIn = tmpDir.createTempFile('png');
-  await fs.writeFile(tmpFileIn, media);
-  await new Promise((resolve, reject) => {
-    ffmpeg(tmpFileIn)
-      .on('error', reject)
-      .on('end', () => resolve(true))
-      .addOutputOptions([
-        '-vcodec', 'libwebp', '-vf',
-        'scale=500:500:force_original_aspect_ratio=decrease,setsar=1, pad=500:500:-1:-1:color=white@0.0, split [a][b]; [a] palettegen=reserve_transparent=on:transparency_color=ffffff [p]; [b][p] paletteuse',
-        '-loop', '0', '-preset', 'default'
-      ])
-      .toFormat('webp')
-      .save(tmpFileOut)
-  });
-  const buff = await fs.readFile(tmpFileOut);
-  await tmpDir.deleteFile(tmpFileOut);
-  await tmpDir.deleteFile(tmpFileIn);
-  return buff;
-};
-export async function videoToWebp(media) {
-  const tmpFileOut = tmpDir.createTempFile('webp');
-  const tmpFileIn = tmpDir.createTempFile('mp4');
-  await fs.writeFile(tmpFileIn, media);
-  await new Promise((resolve, reject) => {
-    ffmpeg(tmpFileIn)
-      .on('error', reject)
-      .on('end', () => resolve(true))
-      .addOutputOptions([
-        '-vcodec',
-        'libwebp',
-        '-vf',
-        "scale='min(320,iw)':min'(320,ih)':force_original_aspect_ratio=decrease,fps=15, pad=320:320:-1:-1:color=white@0.0, split [a][b]; [a] palettegen=reserve_transparent=on:transparency_color=ffffff [p]; [b][p] paletteuse",
-        '-loop',
-        '0',
-        '-ss',
-        '00:00:00',
-        '-t',
-        '00:00:05',
-        '-preset',
-        'default',
-        '-an',
-        '-vsync',
-        '0'
-      ])
-      .toFormat('webp')
-      .save(tmpFileOut)
-  });
-  const buff = await fs.readFile(tmpFileOut);
-  await tmpDir.deleteFile(tmpFileOut);
-  await tmpDir.deleteFile(tmpFileIn);
-  return buff;
-};
 export async function getBuffer(url, options = {}) {
   try {
     const response = await axios.get(url, {
@@ -667,7 +618,6 @@ export async function groupImage(username, groupname, welcometext, profileImageP
   ctx.fillText(trimTextToWidth('@' + username, maxWidth), textX, darkAreasY[2] + 40);
   return canvas.toBuffer('image/png');
 };
-
 export async function expiredCheck(fn, ownerNumber) {
   if (_checkPremium) return;
   _checkPremium = true;
@@ -717,4 +667,13 @@ export async function getTxt(txt, dbSettings) {
   }
   txt = txt.trim();
   return txt;
+};
+export function gifToWebp(media) {
+  return runStickerConversion(media, 'video');
+};
+export function imageToWebp(media) {
+  return runStickerConversion(media, 'image');
+}
+export function videoToWebp(media) {
+  return runStickerConversion(media, 'video');
 };

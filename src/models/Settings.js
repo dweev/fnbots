@@ -188,7 +188,6 @@ settingsSchema.statics.setSelfMode = async function (mode) {
   if (!validModes.includes(mode)) {
     throw new Error('Mode self harus: true, false, atau auto');
   }
-  
   const settings = await this.getSettings();
   settings.self = mode;
   return settings.save();

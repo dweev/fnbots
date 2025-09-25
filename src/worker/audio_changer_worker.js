@@ -23,8 +23,8 @@ function runFFMPEG(inputPath, outputPath, filter) {
   });
 }
 parentPort.on('message', async (mediaBuffer) => {
-  const inputFile = tmpDir.createTempFile('.mp3', 'in-');
-  const outputFile = tmpDir.createTempFile('.mp3', 'out-');
+  const inputFile = tmpDir.createTempFile('mp3', 'in-');
+  const outputFile = tmpDir.createTempFile('mp3', 'out-');
   try {
     await fs.writeFile(inputFile, mediaBuffer);
     const ffmpegFilters = [

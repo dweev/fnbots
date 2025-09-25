@@ -7,7 +7,6 @@
 // ─── Info Group.js ───────────────────────
 
 import mongoose from 'mongoose';
-import MutedMember from './MutedMember.js';
 
 const { Schema } = mongoose;
 
@@ -103,14 +102,6 @@ const groupSchema = new mongoose.Schema({
     }, { _id: false }),
     default: {}
   },
-  muteDuration: {
-    type: Number,
-    default: 3600
-  },
-  bannedMembers: {
-    type: [String],
-    default: []
-  },
   afkUsers: [{
     userId: {
       type: String,
@@ -153,13 +144,9 @@ const groupSchema = new mongoose.Schema({
     default: false,
     index: true
   },
-  mutedAt: {
-    type: Date,
-    default: null
-  },
-  mutedBy: {
-    type: String,
-    default: null
+  bannedMembers: {
+    type: [String],
+    default: []
   },
   filter: {
     type: Boolean,
@@ -182,10 +169,6 @@ groupSchema.virtual('activeMemberCount').get(function () {
 });
 groupSchema.virtual('afkCount').get(function () {
   return this.afkUsers.length;
-});
-groupSchema.virtual('mutechatDuration').get(function () {
-  if (!this.isMuted || !this.mutedAt) return null;
-  return Date.now() - this.mutedAt.getTime();
 });
 groupSchema.methods.addWarning = function (userId) {
   if (!this.warnings) {
@@ -263,23 +246,6 @@ groupSchema.methods.checkWarningLimit = function (userId) {
   const userWarnings = this.getWarnings(userId);
   const limit = this.getWarningLimit();
   return userWarnings >= limit;
-};
-groupSchema.methods.muteMember = async function (userId, durationMs = this.muteDuration * 1000) {
-  const expiryDate = new Date(Date.now() + durationMs);
-  await MutedMember.findOneAndUpdate(
-    { groupId: this.groupId, userId: userId },
-    { $set: { expireAt: expiryDate } },
-    { upsert: true, new: true }
-  );
-  return this.save();
-};
-groupSchema.methods.unmuteMember = async function (userId) {
-  await MutedMember.deleteOne({ groupId: this.groupId, userId: userId });
-  return this.save();
-};
-groupSchema.methods.isMemberMuted = async function (userId) {
-  const isMuted = await MutedMember.exists({ groupId: this.groupId, userId: userId });
-  return !!isMuted;
 };
 groupSchema.methods.banMember = function (userId) {
   if (!this.bannedMembers.includes(userId)) {
@@ -379,27 +345,16 @@ groupSchema.methods.updateMessages = function (welcomeMsg = null, leaveMsg = nul
   if (demoteMsg !== null) this.demoteMessage = demoteMsg;
   return this.save();
 };
-groupSchema.methods.muteChat = function (mutedBy = 'system') {
+groupSchema.methods.muteChat = function () {
   this.isMuted = true;
-  this.mutedAt = new Date();
-  this.mutedBy = mutedBy;
   return this.save();
 };
 groupSchema.methods.unmuteChat = function () {
   this.isMuted = false;
-  this.mutedAt = null;
-  this.mutedBy = null;
   return this.save();
 };
-groupSchema.methods.toggleMuteChat = function (mutedBy = 'system') {
+groupSchema.methods.toggleMuteChat = function () {
   this.isMuted = !this.isMuted;
-  if (this.isMuted) {
-    this.mutedAt = new Date();
-    this.mutedBy = mutedBy;
-  } else {
-    this.mutedAt = null;
-    this.mutedBy = null;
-  }
   return this.save();
 };
 groupSchema.methods.toggleFilter = function () {
@@ -536,7 +491,6 @@ groupSchema.statics.findGroupsWithWarningsDisabled = function () {
 groupSchema.index({ lastActivity: -1 });
 groupSchema.index({ memberCount: -1 });
 groupSchema.index({ isActive: 1, lastActivity: -1 });
-groupSchema.index({ isMuted: 1, mutedAt: -1 });
 groupSchema.index({ filter: 1 });
 groupSchema.index({ filterWords: 1 });
 groupSchema.index({ 'afkUsers.userId': 1 });

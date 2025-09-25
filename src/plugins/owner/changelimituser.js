@@ -9,14 +9,14 @@
 import { Settings } from '../../../database/index.js';
 
 export const command = {
-  name: 'changelmituser',
+  name: 'changelimituser',
   category: 'owner',
   description: 'mengatur limit member',
   isCommandWithoutPayment: true,
   execute: async ({ dbSettings, reactDone, args, sReply }) => {
     if (args) {
       const limit = parseInt(args[0]);
-      if (!limit || limit < 1) return await sReply(`gunakan perintah dengan benar, contoh: ${dbSettings.rname}changelmituser 100`);
+      if (!limit || limit < 1) return await sReply(`gunakan perintah dengan benar, contoh: ${dbSettings.rname}changelimituser 100`);
       dbSettings.limitCount = limit;
       await Settings.updateSettings(dbSettings);
       await reactDone();

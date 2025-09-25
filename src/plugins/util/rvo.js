@@ -22,11 +22,11 @@ export const command = {
         if (quotedMsg?.imageMessage || quotedMsg?.videoMessage || quotedMsg?.audioMessage) {
           let extension;
           if (quotedMsg.imageMessage) {
-            extension = '.png';
+            extension = 'png';
           } else if (quotedMsg.videoMessage) {
-            extension = '.mp4';
+            extension = 'mp4';
           } else if (quotedMsg.audioMessage) {
-            extension = '.mp3';
+            extension = 'mp3';
           }
           const buffer = await fn.getMediaBuffer(quotedMsg);
           const tempPath = tmpDir.createTempFile(extension);

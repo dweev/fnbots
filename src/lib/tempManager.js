@@ -17,7 +17,8 @@ class TempManager {
   }
   async ensureDirectory() {
     try {
-      await fs.ensureDir(this.baseDir);
+      await fs.ensureDir(this.baseDir, { mode: 0o755 });
+      log(`Temp directory ensured: ${this.baseDir}`);
     } catch (error) {
       throw new Error(`Failed to create temp directory: ${error.message}`);
     }
@@ -26,7 +27,8 @@ class TempManager {
     return path.resolve(this.baseDir, filename);
   }
   createTempFile(extension = '', prefix = 'temp-') {
-    const filename = `${prefix}${Date.now()}-${Math.random().toString(36).substring(2, 11)}${extension}`;
+    const safeExtension = extension.startsWith('.') ? extension : (extension ? `.${extension}` : '');
+    const filename = `${prefix}${Date.now()}-${Math.random().toString(36).substring(2, 11)}${safeExtension}`;
     return this.getPath(filename);
   }
   async createTempFileWithContent(content, extension = '', prefix = 'temp-') {
@@ -39,24 +41,36 @@ class TempManager {
     }
   }
   async deleteFile(filename) {
+    if (!filename) {
+      log('Attempted to delete file with empty filename');
+      return false;
+    }
     const filePath = this.getPath(filename);
     try {
+      if (!await fs.pathExists(filePath)) {
+        log(`File not found: ${filePath}`);
+        return false;
+      }
       await fs.remove(filePath);
       return true;
     } catch (error) {
-      if (error.code === 'ENOENT') {
-        return false;
-      }
       log(`Failed to delete file ${filePath}: ${error.message}`);
       return false;
     }
   }
   async getAllTempFiles() {
     try {
+      await fs.ensureDir(this.baseDir);
       const files = await fs.readdir(this.baseDir);
-      return files
-        .map(file => this.getPath(file))
-        .filter(filePath => fs.statSync(filePath).isFile());
+      const tempFiles = [];
+      for (const file of files) {
+        const filePath = this.getPath(file);
+        const stats = await fs.stat(filePath);
+        if (stats.isFile()) {
+          tempFiles.push(filePath);
+        }
+      }
+      return tempFiles;
     } catch (error) {
       log(`Error reading temp directory: ${error.message}`);
       return [];

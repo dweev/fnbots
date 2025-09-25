@@ -495,7 +495,7 @@ export async function convertAudio(inputPath, { isNotVoice = true } = {}) {
     const audioCodec = isNotVoice ? 'libmp3lame' : 'libopus';
     const audioBitrate = isNotVoice ? '128k' : '48k';
     const audioChannels = isNotVoice ? 2 : 1;
-    const outputPath = tmpDir.createTempFile('.mp3');
+    const outputPath = tmpDir.createTempFile('mp3');
     ffmpeg(inputPath)
       .setFfmpegPath(config.paths.ffmpeg)
       .setFfprobePath(config.paths.ffprobe)

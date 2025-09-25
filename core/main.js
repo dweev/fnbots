@@ -68,6 +68,7 @@ function setupDailyReset(config, dbSettings) {
         processed += users.length;
       }
       await log(`✅ Reset harian selesai. Total user: ${processed}`);
+      await tmpDir.cleanupOldFiles();
     } catch (error) {
       console.error('Gagal melakukan reset harian:', error);
     }

@@ -117,12 +117,6 @@ const userSchema = new mongoose.Schema({
       required: true
     }
   }],
-  blockedUsers: [{
-    userId: {
-      type: String,
-      required: true
-    }
-  }],
 }, {
   timestamps: true,
   toJSON: {
@@ -149,9 +143,6 @@ userSchema.pre('save', function (next) {
 
 userSchema.virtual('mutedUsersCount').get(function () {
   return this.mutedUsers.length;
-});
-userSchema.virtual('blockedUsersCount').get(function () {
-  return this.blockedUsers.length;
 });
 userSchema.virtual('isVIPActive').get(function () {
   return !!(this.isVIP && this.vipExpired && this.vipExpired > new Date());
@@ -220,6 +211,28 @@ userSchema.methods.resetLimits = function () {
     return this.save();
   }
   return this;
+};
+userSchema.statics.resetAllUserLimits = async function () {
+  const dbSettings = getDbSettings();
+  const now = new Date();
+  const result = await this.updateMany(
+    {},
+    {
+      $set: {
+        'limit.current': function () {
+          return this.isPremium ? dbSettings.limitCountPrem : dbSettings.limitCount;
+        },
+        'limitgame.current': function () {
+          return this.isPremium ? dbSettings.limitCountPrem : dbSettings.limitGame;
+        },
+        'limit.lastReset': now,
+        'limitgame.lastReset': now,
+        'limit.warned': false,
+        'limitgame.warned': false
+      }
+    }
+  );
+  return result;
 };
 userSchema.methods.addBalance = async function (amount) {
   const amountBigInt = BigInt(amount);
@@ -320,34 +333,9 @@ userSchema.methods.unmuteUser = function (userId) {
 userSchema.methods.isUserMuted = function (userId) {
   return this.mutedUsers.some(user => user.userId === userId);
 };
-userSchema.methods.blockUser = function (userId) {
-  this.blockedUsers = this.blockedUsers.filter(user => user.userId !== userId);
-  this.blockedUsers.push({
-    userId: userId
-  });
-  return this.save();
-};
-userSchema.methods.unblockUser = function (userId) {
-  const initialLength = this.blockedUsers.length;
-  this.blockedUsers = this.blockedUsers.filter(user => user.userId !== userId);
-  if (this.blockedUsers.length !== initialLength) {
-    return this.save();
-  }
-  return this;
-};
-userSchema.methods.isUserBlocked = function (userId) {
-  return this.blockedUsers.some(user => user.userId === userId);
-};
 userSchema.methods.clearAllMutedUsers = function () {
   if (this.mutedUsers.length > 0) {
     this.mutedUsers = [];
-    return this.save();
-  }
-  return this;
-};
-userSchema.methods.clearAllBlockedUsers = function () {
-  if (this.blockedUsers.length > 0) {
-    this.blockedUsers = [];
     return this.save();
   }
   return this;
@@ -543,24 +531,7 @@ userSchema.statics.getActiveUserCount = function (days = 30) {
     ]
   });
 };
-userSchema.statics.isUserMuted = async function (userId) {
-  const settings = await this.getSettings();
-  return settings.mutedUsers.some(user => user.userId === userId);
-};
-userSchema.statics.isUserBlocked = async function (userId) {
-  const settings = await this.getSettings();
-  return settings.blockedUsers.some(user => user.userId === userId);
-};
-userSchema.statics.getMutedUsers = async function () {
-  const settings = await this.getSettings();
-  return settings.mutedUsers;
-};
-userSchema.statics.getBlockedUsers = async function () {
-  const settings = await this.getSettings();
-  return settings.blockedUsers;
-};
 
 userSchema.index({ 'mutedUsers.userId': 1 });
-userSchema.index({ 'blockedUsers.userId': 1 });
 
 export default mongoose.model('User', userSchema);

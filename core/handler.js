@@ -91,6 +91,7 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
   const fromBot = m.fromMe;
   let toId = m.from;
   let user = await User.ensureUser(serial);
+  if (user.isUserMuted(serial)) return;
 
   const quotedMsg = m.quoted ? m.quoted : false;
   const quotedParticipant = m.quoted?.sender || '';
@@ -114,7 +115,7 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
     isGroupAdmins: m.isGroup ? m.isAdmin : false,
     isWhiteList: isWhiteList,
     hakIstimewa: hakIstimewa,
-    isMuted: false
+    isMuted: groupData ? groupData.isMuted : false
   };
 
   const reactDone = async () => { await delay(1000); await fn.sendMessage(toId, { react: { text: '✅', key: m.key } }) };
@@ -146,7 +147,6 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
       } else {
         outputText = util.format(evaled);
       }
-
       if (outputText === 'undefined') {
         // do nothing
       } else {
@@ -240,6 +240,7 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
     await groupData.incrementMessageCount();
     await groupData.incrementCommandCount();
     if (!groupData.isActive) return;
+    if (groupData.isMemberBanned(serial)) return;
     const userAfkGroups = await Group.findUserAfkStatus(serial);
     if (userAfkGroups.length > 0) {
       const currentTime = new Date();

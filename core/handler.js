@@ -13,8 +13,10 @@ import config from '../config.js';
 import { LRUCache } from 'lru-cache';
 import { spawn } from 'child_process';
 import log from '../src/lib/logger.js';
+import { Worker } from 'worker_threads';
 import dayjs from '../src/utils/dayjs.js';
 import { exec as cp_exec } from 'child_process';
+import { tmpDir } from '../src/lib/tempManager.js';
 import { pluginCache } from '../src/lib/plugins.js';
 import { User, Group, Whitelist, Settings, Command, StoreGroupMetadata, OTPSession } from '../database/index.js';
 import { color, msgs, mycmd, safeStringify, sendAndCleanupFile, waktu, shutdown, checkCommandAccess, isUserVerified, textMatch1, textMatch2, expiredVIPcheck, expiredCheck, getSerial, getTxt } from '../src/lib/function.js';
@@ -640,6 +642,32 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
           }
         }
       };
+      if (dbSettings.changer === true) {
+        if (selfMode === 'auto' && fromBot) return;
+        const mediaTypes = new Set(['audio/ogg; codecs=opus', 'audio/mpeg', 'audio/mp4', 'audio/m4a', 'audio/aac', 'audio/wav', 'audio/amr']);
+        if (mediaTypes.has(m.mime)) {
+          await sReply('Sedang memproses audio, mohon tunggu...');
+          try {
+            const mediaData = await fn.getMediaBuffer(m.message);
+            const worker = new Worker('./src/worker/audio_changer_worker.js');
+            worker.postMessage(mediaData);
+            worker.on('message', async (result) => {
+              if (result.status === 'done') {
+                await fn.sendFilePath(toId, '', result.outputPath, { quoted: m });
+                await tmpDir.deleteFile(result.outputPath);
+              } else {
+                throw new Error(result.error);
+              }
+            });
+            worker.on('error', (error) => {
+              throw error;
+            });
+          } catch (error) {
+            await log(error, true);
+            await sPesan('Gagal memproses audio.');
+          }
+        }
+      }
     }
   } catch (error) { await log(error, true); }
 };

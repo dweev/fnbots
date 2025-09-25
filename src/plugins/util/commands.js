@@ -17,6 +17,7 @@ export const command = {
   isCommandWithoutPayment: true,
   execute: async ({ sReply, isSadmin, isMaster, isVIP, isPremium, dbSettings, m }) => {
     let ts = `*── ${dbSettings.botName} ──*`;
+    ts += `\n\n*Keterangan:*\nⓁ = Menggunakan Limit\n🄶 = Menggunakan Limit Game`;
     const allDbCommands = await Command.find().lean();
     const commandMap = new Map(allDbCommands.map(cmd => [cmd.name, cmd]));
     const formatCommandListWithIcons = (commandNameMap) => {
@@ -25,15 +26,15 @@ export const command = {
       let listString = '';
       commandNames.forEach((name, i) => {
         const cmdData = commandMap.get(name);
-        let icon = '🪙 ';
+        let icon = 'Ⓛ';
         if (cmdData) {
           if (cmdData.isLimitGameCommand) {
-            icon = '🎮 ';
+            icon = '🄶';
           } else if (cmdData.isCommandWithoutPayment) {
-            icon = '✅ ';
+            icon = '';
           }
         }
-        listString += `\n${i + 1}. ${icon}${name}`;
+        listString += `\n${i + 1}. ${name} ${icon}`;
       });
       return listString;
     };
@@ -69,7 +70,6 @@ export const command = {
         }
       }
     }
-    ts += `\n\n*Keterangan:*\n🪙 = Menggunakan Limit\n🎮 = Menggunakan Limit Game\n✅ = Gratis`;
     ts += `\n\nRegards: *${dbSettings.botName}*`;
     await sReply(`${ts}\n\n@${m.sender.split('@')[0]}`);
   }

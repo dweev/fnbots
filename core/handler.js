@@ -18,7 +18,7 @@ import dayjs from '../src/utils/dayjs.js';
 import { exec as cp_exec } from 'child_process';
 import { tmpDir } from '../src/lib/tempManager.js';
 import { pluginCache } from '../src/lib/plugins.js';
-import { User, Group, Whitelist, Settings, Command, StoreGroupMetadata, OTPSession } from '../database/index.js';
+import { User, Group, Whitelist, Settings, Command, StoreGroupMetadata, OTPSession, Media, DatabaseBot } from '../database/index.js';
 import { color, msgs, mycmd, safeStringify, sendAndCleanupFile, waktu, shutdown, checkCommandAccess, isUserVerified, textMatch1, textMatch2, expiredVIPcheck, expiredCheck, getSerial, getTxt } from '../src/lib/function.js';
 
 const exec = util.promisify(cp_exec);
@@ -674,6 +674,29 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
               });
             }
           }
+        }
+      };
+      if (dbSettings.chatbot === true) {
+        const trigger = m.body.trim().toLowerCase();
+        const mediaResponse = await Media.findOne({ name: trigger }).lean();
+        const dbBot = await DatabaseBot.getDatabase();
+        const chatResponse = dbBot.getChat(trigger);
+        if ((body?.toLowerCase().trim() == "bct") || (body?.toLowerCase().trim() == "bacot") || (body == dbSettings.sname + "bacot") || (body == dbSettings.rname + "bacot")) {
+          const db = await DatabaseBot.getDatabase();
+          const randomText = db.getRandomBacot();
+          if (randomText) {
+            await sReply(randomText);
+          }
+        } if ((body?.toLowerCase().trim() == "bot") || (body?.toLowerCase().trim() == "hi")) {
+          await fn.sendFilePath(toId, 'hi.oga', `./src/media/hi.oga`, { quoted: m });
+          await sReply(`ada yang bisa dibantu? silakan ketik ${dbSettings.rname}commands`)
+        }
+        if (chatResponse) {
+          await sReply(chatResponse);
+        }
+        if (mediaResponse) {
+          const mediaBuffer = Buffer.from(mediaResponse.data.buffer); 
+          await fn.sendMediaByType(m.chat, mediaResponse.mime, mediaBuffer, '', m, {});
         }
       };
     }

@@ -26,8 +26,7 @@ import ffmpeg from '@ts-ffmpeg/fluent-ffmpeg';
 import { exec as cp_exec } from 'child_process';
 import { createCanvas, loadImage } from 'canvas';
 import { getDbSettings } from './settingsManager.js';
-import { mongoStore } from '../../database/index.js';
-import { StoreMessages, User } from '../../database/index.js';
+import { StoreMessages, User, StoreGroupMetadata, mongoStore } from '../../database/index.js';
 
 const exec = util.promisify(cp_exec);
 let fuse;
@@ -496,10 +495,7 @@ export async function convertAudio(inputPath, { isNotVoice = true } = {}) {
     const audioCodec = isNotVoice ? 'libmp3lame' : 'libopus';
     const audioBitrate = isNotVoice ? '128k' : '48k';
     const audioChannels = isNotVoice ? 2 : 1;
-    const outputPath = path.join(
-      path.dirname(inputPath),
-      `${path.parse(inputPath).name}-converted.${format}`
-    );
+    const outputPath = tmpDir.createTempFile('.mp3');
     ffmpeg(inputPath)
       .setFfmpegPath(config.paths.ffmpeg)
       .setFfprobePath(config.paths.ffprobe)
@@ -726,5 +722,14 @@ export function formatNumber(number, minimumFractionDigits = 0) {
       minimumFractionDigits,
       maximumFractionDigits: 2
     });
+  }
+};
+export async function getCommonGroups(userId) {
+  try {
+    const groups = await StoreGroupMetadata.find({ 'participants.id': userId }).lean();
+    return groups;
+  } catch (error) {
+    await log(`Error_CommonGroups\n${error}`, true);
+    return [];
   }
 };

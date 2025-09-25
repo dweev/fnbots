@@ -191,6 +191,10 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
   } else if (body?.toLowerCase().trim() == "shutdown") {
     if (!isSadmin && !isMaster) return;
     await Promise.all([reactDone(), shutdown(isPm2)]);
+  } else if (body?.toLowerCase().trim() == "resetcommands") {
+    if (!isSadmin && !isMaster) return;
+    const result = await Command.resetAll();
+    await sReply(`Berhasil! Sebanyak ${result.deletedCount} data perintah telah dihapus dari database. Silakan restart bot untuk menyegarkan cache menu.`);
   } else if (body?.toLowerCase().trim().startsWith("mode")) {
     if (!isSadmin && !isMaster) return;
     const args = body.toLowerCase().trim().split(/\s+/);
@@ -471,8 +475,11 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
                   }
                 };
                 if (!isSadmin && !isMaster && !isVIP) {
-                  userUpdates.$inc['limit.current'] = -1;
-                  userUpdates.$inc['limitgame.current'] = -1;
+                  if (command.isLimitGameCommand) {
+                    userUpdates.$inc['limitgame.current'] = -1;
+                  } else if (command.isLimitCommand) {
+                    userUpdates.$inc['limit.current'] = -1;
+                  }
                 }
                 await User.updateOne({ userId: user.userId }, userUpdates);
                 await Command.updateCount(command.name, 1);
@@ -587,6 +594,48 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
               if (originalMessage.body) {
                 await fn.forwardMessage(toId, originalMessage);
               }
+            }
+          }
+        }
+      };
+      if (dbSettings.autojoin === true) {
+        if (body?.match(/(chat.whatsapp.com)/gi)) {
+          const inviteCode = body.split("https://chat.whatsapp.com/")[1];
+          if (!inviteCode) {
+            await sReply("Link undangan tidak valid.");
+          } else {
+            try {
+              const { restrict, joinApprovalMode, subject, participants, id } = await fn.groupGetInviteInfo(inviteCode);
+              if (isSadmin || isMaster) {
+                if (!joinApprovalMode) {
+                  await fn.groupAcceptInvite(inviteCode);
+                  if (!restrict) {
+                    await fn.sendPesan(id, `Halo warga grup *${subject}*!\nTerima kasih sudah mengundang ${dbSettings.botname}. Ketik *.rules* untuk melihat peraturan.`, m);
+                  }
+                  await sReply("✅ Berhasil join grup.");
+                  const userUpdates = { $inc: { userCount: 1 } };
+                  await User.updateOne({ userId: user.userId }, userUpdates);
+                }
+              } else {
+                if (participants.length > dbSettings.memberLimit) {
+                  if (!joinApprovalMode) {
+                    await fn.groupAcceptInvite(inviteCode);
+                    if (!restrict) {
+                      await fn.sendPesan(id, `Halo warga grup *${subject}*!\nTerima kasih sudah mengundang ${dbSettings.botname}. Ketik *.rules* untuk melihat peraturan.`, m);
+                    }
+                    await sReply("✅ Berhasil join grup.");
+                    const userUpdates = { $inc: { userCount: 1 } };
+                    if (!isSadmin && !isMaster && !isVIP) {
+                      userUpdates.$inc['limit.current'] = -1;
+                    }
+                    await User.updateOne({ userId: user.userId }, userUpdates);
+                  }
+                } else {
+                  await sReply('Group yang ingin kamu masukkan bot tidak memiliki member melebihi ' + dbSettings.memberLimit + '\nBot tidak bisa masuk ke grup, silakan hubungi owner.');
+                }
+              }
+            } catch {
+              await sReply("Gagal join, mungkin link salah atau bot pernah di-kick.");
             }
           }
         }

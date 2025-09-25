@@ -23,6 +23,7 @@ export function membershipUser(config) {
     category: 'owner',
     description: `Mengelola hak akses ${type} untuk pengguna.`,
     aliases: aliases,
+    isCommandWithoutPayment: true,
     execute: async ({ sReply, args, arg, mentionedJidList, dbSettings }) => {
       const validateDuration = (duration) => {
         if (!duration) return sReply('Durasi tidak boleh kosong. Contoh: 7d, 30d, 1M');

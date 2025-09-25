@@ -14,6 +14,7 @@ export const command = {
   category: 'owner',
   description: 'Menampilkan waktu uptime bot.',
   aliases: ['uptime', 'rt'],
+  isCommandWithoutPayment: true,
   execute: async ({ sReply }) => {
     let tms = (Date.now() / 1000) - (timeStart);
     let cts = waktu(tms);

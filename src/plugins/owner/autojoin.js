@@ -9,17 +9,15 @@
 import { Settings } from '../../../database/index.js';
 
 export const command = {
-  name: 'changelimitgame',
+  name: 'autojoin',
   category: 'owner',
-  description: 'mengatur limit permainan',
+  description: 'Mengaktifkan atau menonaktifkan mode autojoin group saat ada link invite group.',
   isCommandWithoutPayment: true,
   execute: async ({ dbSettings, reactDone, args, sReply }) => {
-    if (args) {
-      const limit = parseInt(args[0]);
-      if (!limit || limit < 1) return await sReply(`gunakan perintah dengan benar, contoh: ${dbSettings.rname}changelimitgame 100`);
-      dbSettings.limitGame = limit;
-      await Settings.updateSettings(dbSettings);
-      await reactDone();
-    }
+    const mode = (args[0] || '').toLowerCase();
+    if (!['on', 'off'].includes(mode)) return await sReply(`gunakan perintah dengan benar, contoh: ${dbSettings.rname}autojoin on/off`);
+    dbSettings.autojoin = mode === 'on';
+    await Settings.updateSettings(dbSettings);
+    await reactDone();
   }
 };

@@ -14,6 +14,7 @@ export const command = {
   name: 'setgroupicon',
   category: 'manage',
   description: 'Mengatur foto profile group',
+  isCommandWithoutPayment: true,
   execute: async ({ fn, toId, sReply, isBotGroupAdmins, args, arg, m, quotedMsg, reactDone }) => {
     if (!arg) {
       if (!m.isGroup || !isBotGroupAdmins) return await sReply(`Perintah ini hanya bisa digunakan di grup dan bot harus menjadi admin grup.`);

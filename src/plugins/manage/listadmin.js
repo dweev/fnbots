@@ -11,6 +11,7 @@ export const command = {
   category: 'manage',
   description: 'Melihat daftar admin group.',
   aliases: ['adminlist'],
+  isCommandWithoutPayment: true,
   execute: async ({ fn, sReply, toId, m }) => {
     if (!m.isGroup) return await sReply(`Perintah ini hanya bisa digunakan di grup.`);
     const metadata = await fn.groupMetadata(toId);

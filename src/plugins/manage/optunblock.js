@@ -12,6 +12,7 @@ export const command = {
   name: 'optunblock',
   category: 'manage',
   description: 'Unblock pengguna yang terblokir karena gagal OTP di grup ini',
+  isCommandWithoutPayment: true,
   execute: async ({ m, sReply, mentionedJidList, quotedParticipant, reactDone, toId }) => {
     if (!m.isGroup) return await sReply('Perintah ini hanya bisa digunakan di grup!');
     let targetUser = null;

@@ -10,6 +10,7 @@ export const command = {
   name: 'setgroupdesc',
   category: 'manage',
   description: 'Mengatur deskripsi group',
+  isCommandWithoutPayment: true,
   execute: async ({ fn, toId, sReply, isBotGroupAdmins, serial, arg, m }) => {
     if (!m.isGroup || !isBotGroupAdmins) return await sReply(`Perintah ini hanya bisa digunakan di grup dan bot harus menjadi admin grup.`);
     const groupchat = await fn.groupMetadata(toId);

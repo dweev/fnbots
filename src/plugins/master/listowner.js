@@ -13,6 +13,7 @@ export const command = {
   category: 'master',
   description: 'Daftar list owner yang dimiliki oleh Bot',
   aliases: ['ownerlist', 'masterlist', 'listmaster'],
+  isCommandWithoutPayment: true,
   execute: async ({ sReply }) => {
     const owners = await User.getMasters();
     let list = `This is list of owner number\nTotal: ${owners.length}\n`;

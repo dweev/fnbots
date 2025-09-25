@@ -7,14 +7,13 @@
 // ─── Info ────────────────────────────────
 
 export const command = {
-  name: 'count',
+  name: 'number',
   category: 'util',
-  description: 'Menampilkan jumlah penggunaan bot oleh user',
-  aliases: ['myhit', 'hitstats', 'hitcount'],
+  description: 'Mendapatkan info number target',
   isCommandWithoutPayment: true,
-  execute: async ({ sReply, serial, user }) => {
-    await sReply(`*Statistik Penggunaan Bot*\n\n` +
-      `➸ *User*: @${serial.split('@')[0]}\n` +
-      `➸ *Total Hit*: ${user.userCount}\n`);
+  execute: async ({ quotedMsg, quotedParticipant, sReply, mentionedJidList }) => {
+    const targetId = quotedMsg ? quotedParticipant : mentionedJidList[0];
+    if (!targetId) return await sReply(`Silakan balas pesan atau sebut nomor yang ingin kamu ambil nomornya.`);
+    await sReply(targetId.split('@')[0]);
   }
-};
+}

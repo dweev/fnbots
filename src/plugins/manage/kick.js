@@ -11,6 +11,7 @@ export const command = {
   category: 'manage',
   description: 'Mengeluarkan anggota dari grup.',
   aliases: ['tendang', 'pancal', 'gajul'],
+  isCommandWithoutPayment: true,
   execute: async ({ fn, m, toId, sReply, isBotGroupAdmins, quotedMsg, mentionedJidList, ownerNumber, reactDone }) => {
     if (!m.isGroup) return await sReply(`Perintah ini hanya bisa digunakan di grup.`);
     if (!isBotGroupAdmins) return await sReply(`Bot harus menjadi admin grup untuk menjalankan perintah ini.`);

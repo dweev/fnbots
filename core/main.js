@@ -27,7 +27,7 @@ import startPluginWatcher from '../src/lib/watcherPlugins.js';
 import updateMessageUpsert from '../src/lib/updateMessageUpsert.js';
 import { initializeDbSettings } from '../src/lib/settingsManager.js';
 import groupParticipantsUpdate from '../src/lib/groupParticipantsUpdate.js';
-import { database, Settings, mongoStore, StoreMessages, StoreStory } from '../database/index.js';
+import { database, Settings, mongoStore, StoreMessages, StoreStory, User } from '../database/index.js';
 import { randomByte, updateContact, processContactUpdate, initializeFuse } from '../src/lib/function.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -38,6 +38,49 @@ let debugs = false;
 
 global.randomSuffix = randomByte(16);
 global.debugs = debugs;
+
+function setupDailyReset(config, dbSettings) {
+  cron.schedule("0 0 21 * * *", async () => {
+    const batchSize = 1000;
+    let processed = 0;
+    try {
+      while (true) {
+        const users = await User.find({}).skip(processed).limit(batchSize);
+        if (users.length === 0) break;
+        const bulkOps = users.map(user => {
+          const update = {
+            $set: {
+              'limit.current': calculateLimit(config, dbSettings, user),
+              'limit.warnedLimit': false,
+              'limitgame.current': calculateGameLimit(config, dbSettings, user),
+              'limitgame.warnedLimit': false,
+              gacha: true
+            }
+          };
+          return {
+            updateOne: {
+              filter: { _id: user._id },
+              update: update
+            }
+          };
+        });
+        await User.bulkWrite(bulkOps);
+        processed += users.length;
+      }
+      await log(`✅ Reset harian selesai. Total user: ${processed}`);
+    } catch (error) {
+      console.error('Gagal melakukan reset harian:', error);
+    }
+  });
+};
+function calculateLimit(config, dbSettings, user) {
+  const isSadmin = config.ownerNumber.includes(user);
+  return user.isVIP || user.isMaster || isSadmin ? Infinity : (user.isPremium ? dbSettings.limitCountPrem : dbSettings.limitCount);
+};
+function calculateGameLimit(config, dbSettings, user) {
+  const isSadmin = config.ownerNumber.includes(user);
+  return user.isVIP || user.isMaster || isSadmin ? Infinity : (user.isPremium ? dbSettings.limitCountPrem : dbSettings.limitGame);
+};
 
 async function initializeDatabases() {
   try {
@@ -195,6 +238,7 @@ async function starts() {
       scheduled: true,
       timezone: "Asia/Jakarta"
     });
+    setupDailyReset(config, dbSettings);
   } catch (error) {
     await log(error, true);
     await handleRestart('Gagal memuat database store');

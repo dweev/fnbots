@@ -12,6 +12,7 @@ export const command = {
   name: 'requestjoin',
   category: 'manage',
   description: 'melihat permintaan masuk group',
+  isCommandWithoutPayment: true,
   execute: async ({ fn, m, sReply, isBotGroupAdmins, dbSettings, toId }) => {
     if (m.isGroup && isBotGroupAdmins) {
       const pendingList = await fn.groupRequestParticipantsList(toId).then(a => a.map(b => b.jid));

@@ -12,6 +12,7 @@ export const command = {
   name: 'changelimitmember',
   category: 'owner',
   description: 'mengatur limit member untuk batas group yang bisa dimasuki oleh bot',
+  isCommandWithoutPayment: true,
   execute: async ({ dbSettings, reactDone, args, sReply }) => {
     if (args) {
       const limit = parseInt(args[0]);

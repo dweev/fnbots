@@ -12,6 +12,7 @@ export const command = {
   name: 'changeexif',
   category: 'owner',
   description: 'mengatur packname dan packAuthor exif untuk custom watermark sticker',
+  isCommandWithoutPayment: true,
   execute: async ({ dbSettings, reactDone, arg, sReply }) => {
     if (arg) {
       const name = arg.split('|')[0];

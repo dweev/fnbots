@@ -12,6 +12,7 @@ export const command = {
   name: 'verifyusergid',
   category: 'owner',
   description: 'mengatur id group untuk verifyuser.',
+  isCommandWithoutPayment: true,
   execute: async ({ dbSettings, arg, args, reactDone, sReply }) => {
     if (!arg) return await sReply(`gunakan perintah dengan benar, contoh: ${dbSettings.rname}verifyusergid groupId baru`);
     dbSettings.groupIdentity = args[0].trim();

@@ -14,6 +14,7 @@ export const command = {
   category: 'master',
   description: 'Mengubah level logging console Baileys (file tetap trace).',
   aliases: ['log'],
+  isCommandWithoutPayment: true,
   execute: async ({ sReply, reactDone, args, dbSettings }) => {
     const mode = (args[0] || '').toLowerCase();
     if (!['silent', 'trace', 'debug', 'info', 'warn', 'error', 'fatal'].includes(mode)) {

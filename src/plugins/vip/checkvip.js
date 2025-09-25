@@ -15,6 +15,7 @@ export const command = {
   category: 'vip',
   description: 'Memeriksa apakah user memiliki benefit vip atau tidak',
   aliases: ['cekvip'],
+  isCommandWithoutPayment: true,
   execute: async ({ mentionedJidList, serial, sReply }) => {
     let targetId = mentionedJidList[0] || serial;
     const activeVIPs = await User.findActiveVIPs();

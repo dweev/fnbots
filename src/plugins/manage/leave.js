@@ -13,6 +13,7 @@ export const command = {
   category: 'manage',
   description: 'Mengaktifkan, menonaktifkan, atau mengubah pesan leave untuk grup.',
   aliases: ['groupleave'],
+  isCommandWithoutPayment: true,
   execute: async ({ dbSettings, reactDone, ar, sReply, toId, m }) => {
     if (!m.isGroup) return await sReply(`Perintah ini hanya bisa digunakan di grup.`);
     const action = ar[0];

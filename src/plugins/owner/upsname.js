@@ -12,6 +12,7 @@ export const command = {
   name: 'upsname',
   category: 'owner',
   description: 'mengganti prefix bot',
+  isCommandWithoutPayment: true,
   execute: async ({ dbSettings, reactDone, arg, sReply }) => {
     if (arg) {
       if (!arg) return await sReply(`gunakan perintah dengan benar, contoh: ${dbSettings.sname}upsname prefixbaru`);

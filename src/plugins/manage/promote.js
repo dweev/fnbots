@@ -11,6 +11,7 @@ export const command = {
   category: 'manage',
   description: 'Menjadikan anggota grup sebagai admin.',
   aliases: ['addadmin'],
+  isCommandWithoutPayment: true,
   execute: async ({ fn, m, toId, sReply, isBotGroupAdmins, quotedMsg, quotedParticipant, mentionedJidList }) => {
     if (!m.isGroup) return await sReply(`Perintah ini hanya bisa digunakan di grup.`);
     if (!isBotGroupAdmins) return await sReply(`Bot harus menjadi admin grup untuk menjalankan perintah ini.`);

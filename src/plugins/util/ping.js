@@ -11,6 +11,7 @@ export const command = {
   category: 'util',
   description: 'Memeriksa waktu respons bot.',
   aliases: ['p', 'speed'],
+  isCommandWithoutPayment: true,
   execute: async ({ sPesan, m }) => {
     const current = new Date().getTime();
     const est = Math.floor(current - (m.timestamp * 1000));

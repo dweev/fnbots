@@ -10,9 +10,10 @@ import { Group } from '../../../database/index.js';
 
 export const command = {
   name: 'verifymember',
-  category: 'master',
+  category: 'manage',
   description: 'Mengaktifkan, menonaktifkan mode verifikasi member untuk grup.',
   aliases: ['verifmember'],
+  isCommandWithoutPayment: true,
   execute: async ({ dbSettings, reactDone, ar, sReply, toId, m }) => {
     if (!m.isGroup) return await sReply(`Perintah ini hanya bisa digunakan di grup.`);
     const command = ar[0];

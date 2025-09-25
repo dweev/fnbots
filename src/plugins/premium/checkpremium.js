@@ -15,6 +15,7 @@ export const command = {
   category: 'premium',
   description: 'Memeriksa apakah user memiliki benefit premium atau tidak',
   aliases: ['cekpremium', 'cekprem'],
+  isCommandWithoutPayment: true,
   execute: async ({ mentionedJidList, serial, sReply }) => {
     let targetId = mentionedJidList[0] || serial;
     const activePrems = await User.findActivePremiums();

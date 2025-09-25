@@ -13,6 +13,7 @@ export const command = {
   category: 'util',
   description: 'Tag semua anggota grup tanpa menyebutkan nama satu per satu.',
   aliases: ['ht'],
+  isCommandWithoutPayment: true,
   execute: async ({ fn, m, toId, arg, dbSettings, sReply }) => {
     if (!m.isGroup) return await sReply("Perintah ini hanya bisa digunakan di grup.");
     if (!arg) return await sReply(`Gunakan format: ${dbSettings.rname}hidetag <pesan>`);

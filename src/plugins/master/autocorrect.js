@@ -13,6 +13,7 @@ export const command = {
   category: 'master',
   description: 'Mengaktifkan atau menonaktifkan mode autocorrect.',
   aliases: ['suggest'],
+  isCommandWithoutPayment: true,
   execute: async ({ dbSettings, reactDone, args, sReply }) => {
     const mode = (args[0] || '').toLowerCase();
     const modes = { on: 1, auto: 2, off: 0 };

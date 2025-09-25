@@ -13,6 +13,7 @@ export const command = {
   category: 'manage',
   description: 'Mengaktifkan, menonaktifkan, atau mengubah pesan welcome untuk grup.',
   aliases: ['groupwelcome'],
+  isCommandWithoutPayment: true,
   execute: async ({ dbSettings, reactDone, ar, sReply, toId, m }) => {
     if (!m.isGroup) return await sReply(`Perintah ini hanya bisa digunakan di grup.`);
     const action = ar[0];

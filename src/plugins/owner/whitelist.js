@@ -13,6 +13,7 @@ export const command = {
   category: 'owner',
   description: 'Mengelola grup yang diizinkan menggunakan bot (whitelist).',
   aliases: ['aksesgrup', 'whitelistgroup', 'whitelistgrup'],
+  isCommandWithoutPayment: true,
   execute: async ({ fn, m, sReply, reactDone, args, dbSettings }) => {
     const subcmd = args[0];
     const target = args.slice(1).join(" ");

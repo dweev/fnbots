@@ -13,6 +13,7 @@ export const command = {
   category: 'owner',
   description: 'Mengaktifkan atau menonaktifkan mode anti delete pesan.',
   aliases: ['antidelete', 'antiunsend'],
+  isCommandWithoutPayment: true,
   execute: async ({ dbSettings, reactDone, args, sReply }) => {
     const mode = (args[0] || '').toLowerCase();
     if (!['on', 'off'].includes(mode)) return await sReply(`gunakan perintah dengan benar, contoh: ${dbSettings.rname}autoresend on/off`);

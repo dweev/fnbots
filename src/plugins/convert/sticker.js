@@ -14,6 +14,7 @@ export const command = {
   category: 'convert',
   description: 'Membuat stiker dari gambar atau video (maks 10 detik). Bisa juga dari URL gambar/video/gif.',
   aliases: ['s', 'stiker'],
+  isCommandWithoutPayment: true,
   execute: async ({ fn, m, dbSettings, arg, args, quotedMsg, toId, sReply }) => {
     const [name, author] = (arg || '').split('|').map(str => str?.trim().substring(0, 10));
     const pack = { packname: (name || dbSettings.packName || '').substring(0, 10), author: (author || dbSettings.packAuthor || '').substring(0, 10) };

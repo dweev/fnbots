@@ -11,9 +11,10 @@ import { Group } from '../../../database/index.js';
 
 export const command = {
   name: 'afk',
-  category: 'manage',
+  category: 'util',
   description: 'Mengatur status AFK (Away From Keyboard) di grup',
   aliases: ['away'],
+  isCommandWithoutPayment: true,
   execute: async ({ m, sReply, serial, args, toId }) => {
     if (!m.isGroup) return await sReply('Command ini hanya bisa digunakan di grup!');
     const groupData = await Group.ensureGroup(toId);

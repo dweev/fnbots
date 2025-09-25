@@ -10,6 +10,7 @@ export const command = {
   name: 'filterwords',
   category: 'manage',
   description: 'Mengelola daftar kata terlarang di group',
+  isCommandWithoutPayment: true,
   execute: async ({ m, args, groupData, sReply }) => {
     if (!m.isGroup) return await sReply('Perintah hanya dapat digunakan di dalam group');
     if (!args[0]) {

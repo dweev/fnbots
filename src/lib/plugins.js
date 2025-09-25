@@ -38,6 +38,11 @@ export const loadPlugins = async (pluginPath) => {
             if (plugin.command && plugin.command.name) {
               const cmd = plugin.command;
               const commandName = cmd.name.toLowerCase();
+              const flags = {
+                isLimitCommand: cmd.isLimitCommand,
+                isLimitGameCommand: cmd.isLimitGameCommand,
+                isCommandWithoutPayment: cmd.isCommandWithoutPayment,
+              };
               if (pluginCache.commands.has(commandName)) {
                 log(`Peringatan: Perintah duplikat '${commandName}' ditemukan di ${file}`, true);
                 continue;
@@ -46,7 +51,8 @@ export const loadPlugins = async (pluginPath) => {
                 commandName,
                 categoryName,
                 cmd.description || 'belum terdefinisikan...',
-                cmd.aliases || []
+                cmd.aliases || [],
+                flags
               );
               pluginCache.commands.set(commandName, { ...dbCommand.toObject(), execute: cmd.execute });
               pluginCache.helpMap.get(categoryName).set(commandName, commandName);

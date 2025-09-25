@@ -11,6 +11,7 @@ export const command = {
   category: 'manage',
   description: 'Mengganti link group.',
   aliases: ['setgrouplink'],
+  isCommandWithoutPayment: true,
   execute: async ({ fn, m, isBotGroupAdmins, toId, sReply }) => {
     if (!m.isGroup || !isBotGroupAdmins) return await sReply(`Perintah ini hanya bisa digunakan jika bot menjadi admin grup.`);
     await fn.groupRevokeInvite(toId)

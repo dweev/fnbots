@@ -12,9 +12,10 @@ import { Group } from '../../../database/index.js';
 
 export const command = {
   name: 'afklist',
-  category: 'manage',
+  category: 'util',
   description: 'Menampilkan daftar user yang sedang AFK di grup',
   aliases: ['listafk'],
+  isCommandWithoutPayment: true,
   execute: async ({ fn, m, sReply, toId }) => {
     if (!m.isGroup) return await sReply('Command ini hanya bisa digunakan di grup!');
     const groupData = await Group.ensureGroup(toId);

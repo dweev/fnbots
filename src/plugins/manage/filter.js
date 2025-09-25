@@ -10,6 +10,7 @@ export const command = {
   name: 'filter',
   category: 'manage',
   description: 'Memfilter group agar tidak spam dan kata terlarang.',
+  isCommandWithoutPayment: true,
   execute: async ({ m, args, groupData, sReply }) => {
     if (!m.isGroup) return await sReply('Perintah hanya dapat digunakan di dalam group');
     if (!args[0]) return await sReply(`Gunakan *filter on/off* untuk mengatur filter group.\n\nStatus saat ini: ${groupData.filter ? 'Aktif' : 'Nonaktif'}`);

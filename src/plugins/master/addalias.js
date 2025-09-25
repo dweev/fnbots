@@ -14,6 +14,7 @@ export const command = {
   category: 'master',
   description: 'Menambahkan alias untuk perintah yang sudah ada.',
   aliases: ['addaliases', 'upcoms'],
+  isCommandWithoutPayment: true,
   execute: async ({ sReply, args, dbSettings }) => {
     if (args.length !== 2) return await sReply(`Gunakan format: ${dbSettings.rname}addalias <perintah_utama> <alias_baru>`);
     const commandName = args[0].toLowerCase();

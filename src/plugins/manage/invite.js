@@ -11,6 +11,7 @@ export const command = {
   category: 'manage',
   description: 'Mengundang pengguna ke grup.',
   aliases: ['inv', 'undang'],
+  isCommandWithoutPayment: true,
   execute: async ({ fn, m, toId, sReply, isBotGroupAdmins, quotedMsg, mentionedJidList, args, dbSettings, serial }) => {
     if (!m.isGroup) return await sReply('Perintah ini hanya bisa digunakan di grup.');
     if (!isBotGroupAdmins) return await sReply("Saya harus menjadi admin di grup ini untuk bisa mengundang orang lain.");

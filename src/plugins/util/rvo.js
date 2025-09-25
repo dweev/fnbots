@@ -14,6 +14,7 @@ export const command = {
   category: 'util',
   description: 'Memeriksa waktu respons bot.',
   aliases: ['readviewonce'],
+  isCommandWithoutPayment: true,
   execute: async ({ fn, m, quotedMsg, dbSettings, toId,  }) => {
     if (quotedMsg) {
       const akuCrot = m.quoted[m.quoted.type] || m.quoted;

@@ -6,18 +6,16 @@
 */
 // ─── Info ────────────────────────────────
 
-import { Settings } from '../../../database/index.js';
-
 export const command = {
-  name: 'upbotname',
-  category: 'owner',
-  description: 'mengganti nama bot',
+  name: 'groupid',
+  category: 'util',
+  description: 'Mendapatkan info id group',
+  aliases: ['gid'],
   isCommandWithoutPayment: true,
-  execute: async ({ dbSettings, reactDone, arg }) => {
-    if (arg) {
-      dbSettings.botname = arg;
-      await Settings.updateSettings(dbSettings);
-      await reactDone();
-    }
+  execute: async ({ fn, m, sReply, toId }) => {
+    if (!m.isGroup) return await sReply(`Perintah ini hanya bisa digunakan di grup.`);
+    const groupchat = await fn.groupMetadata(toId);
+    const { id } = groupchat
+    await sReply(id);
   }
-};
+}

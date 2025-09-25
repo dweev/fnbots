@@ -10,6 +10,7 @@ export const command = {
   name: 'pin',
   category: 'manage',
   description: 'Menyematkan pesan.',
+  isCommandWithoutPayment: true,
   execute: async ({ fn, m, isBotGroupAdmins, toId, sReply, args, quotedMsg }) => {
     if (quotedMsg) {
       if (m.isGroup && !isBotGroupAdmins) return await sReply("Bot tidak menjadi admin grup.");

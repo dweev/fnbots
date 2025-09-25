@@ -10,6 +10,7 @@ export const command = {
   name: 'groupaddmode',
   category: 'manage',
   description: 'Memberikan informasi group.',
+  isCommandWithoutPayment: true,
   execute: async ({ fn, m, isBotGroupAdmins, toId, sReply, args, reactDone }) => {
     if (!m.isGroup || !isBotGroupAdmins) return await sReply(`Perintah ini hanya bisa digunakan di grup dan bot harus menjadi admin grup.`);
     const modeInput = (args[0] || '').toLowerCase();

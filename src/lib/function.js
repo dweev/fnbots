@@ -129,61 +129,38 @@ export async function shutdown(isPm2) {
 };
 export async function checkCommandAccess(command, userData, user, maintenance) {
   const {
-    isSadmin,
-    isMaster,
-    isVIP,
-    isPremium,
-    isGroupAdmins,
-    isWhiteList,
-    hakIstimewa,
-    isMuted
+    isSadmin, isMaster, isVIP, isPremium,
+    isGroupAdmins, isWhiteList, hakIstimewa, isMuted
   } = userData;
-  let hasAccess = false;
-  const isGameLimited = await user.isGameLimit();
-  const isLimited = await user.isLimit();
-  const hasBasicAccess = !(isGameLimited && isLimited) && ((maintenance && (isWhiteList || hakIstimewa)) || (!maintenance && (hakIstimewa || !isMuted)));
-  if (!hasBasicAccess) return false;
   if (isSadmin) return true;
-  const accessLevels = {
-    'master':     ['sadmin'],
-    'owner':      ['sadmin', 'master'],
-    'bot':        ['sadmin', 'master'],
-    'vip':        ['sadmin', 'master', 'vip'],
-    'premium':    ['sadmin', 'master', 'vip', 'premium'],
-    'manage':     ['sadmin', 'master', 'vip', 'premium', 'groupAdmin'],
-    'media':      ['all'],
-    'convert':    ['all'],
-    'audio':      ['all'],
-    'text':       ['all'],
-    'image':      ['all'],
-    'ai':         ['all'],
-    'anime':      ['all'],
-    'fun':        ['all'],
-    'ngaji':      ['all'],
-    'game':       ['all'],
-    'stateless':  ['all'],
-    'statefull':  ['all'],
-    'pvpgame':    ['all'],
-    'math':       ['all'],
-    'util':       ['all'],
-    'list':       ['all'],
+  let userLevel = 'userBiasa';
+  if (isMaster) userLevel = 'master';
+  else if (isVIP) userLevel = 'vip';
+  else if (isPremium) userLevel = 'premium';
+  else if (isGroupAdmins) userLevel = 'groupAdmin';
+  const forbiddenCategories = {
+    master:     ['master', 'owner'],
+    vip:        ['master', 'owner', 'bot'],
+    premium:    ['master', 'owner', 'bot', 'vip'],
+    groupAdmin: ['master', 'owner', 'bot', 'vip', 'premium'],
+    userBiasa:  ['master', 'owner', 'bot', 'vip', 'premium', 'manage']
   };
-  const requiredLevels = accessLevels[command.category] || [];
-  if (requiredLevels.includes('all')) {
-    hasAccess = true;
-  } else if (requiredLevels.includes('sadmin') && isSadmin) {
-    hasAccess = true;
-  } else if (requiredLevels.includes('master') && isMaster) {
-    hasAccess = true;
-  } else if (requiredLevels.includes('vip') && isVIP) {
-    hasAccess = true;
-  } else if (requiredLevels.includes('premium') && isPremium) {
-    hasAccess = true;
-  } else if (requiredLevels.includes('groupAdmin') && isGroupAdmins) {
-    hasAccess = true;
+  if (forbiddenCategories[userLevel] && forbiddenCategories[userLevel].includes(command.category)) {
+    return false;
   }
-  return hasAccess;
-};
+  const isAllowedByState = (maintenance && (isWhiteList || hakIstimewa)) || (!maintenance && (hakIstimewa || !isMuted));
+  if (!isAllowedByState) return false;
+  const isLimited = await user.isLimit();
+  const isGameLimited = await user.isGameLimit();
+  if (isLimited && isGameLimited) {
+    if (!command.isCommandWithoutPayment) return false;
+  } else if (isLimited) {
+    if (!command.isLimitGameCommand && !command.isCommandWithoutPayment) return false;
+  } else if (isGameLimited) {
+    if (!command.isLimitCommand && !command.isCommandWithoutPayment) return false;
+  }
+  return true;
+}
 export async function isUserVerified(m, dbSettings, StoreGroupMetadata, fn, sReply, hakIstimewa) {
   if (m.fromMe || hakIstimewa) return true;
   if (m.isGroup) return true;
@@ -696,4 +673,58 @@ export async function saveFile(imageInput, prefix, toFile = "png") {
     await sharp(imageBuffer).png().toFile(tmpPath);
   }
   return tmpPath;
+};
+export function parseCheatAmount(inputStr) {
+  if (!inputStr) return null;
+  let str = inputStr.toLowerCase().replace(',', '.').trim();
+  const suffix = str.slice(-1);
+  const multipliers = {
+    k: 1000n,
+    m: 1000000n,
+    b: 1000000000n,
+    t: 1000000000000n,
+    q: 1000000000000000n,
+    z: 1000000000000000000n
+  };
+  if (multipliers[suffix]) {
+    const numPart = str.slice(0, -1);
+    if (!/^\d*\.?\d*$/.test(numPart)) return null;
+    if (numPart.includes('.')) {
+      const parts = numPart.split('.');
+      const integerPart = parts[0];
+      const decimalPart = parts[1] || '';
+      const decimalLength = decimalPart.length;
+      const combined = integerPart + decimalPart;
+      if (!combined.match(/^\d+$/)) return null;
+      const base = BigInt(combined);
+      const multiplier = multipliers[suffix];
+      const divisor = 10n ** BigInt(decimalLength);
+      const result = (base * multiplier) / divisor;
+      return result > 0n ? result : null;
+    } else {
+      try {
+        const base = BigInt(numPart);
+        const result = base * multipliers[suffix];
+        return result > 0n ? result : null;
+      } catch {
+        return null;
+      }
+    }
+  }
+  try {
+    const val = BigInt(str);
+    return val > 0n ? val : null;
+  } catch {
+    return null;
+  }
+};
+export function formatNumber(number, minimumFractionDigits = 0) {
+  if (typeof number === 'bigint') {
+    return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  } else {
+    return Number.parseFloat(number).toLocaleString(undefined, {
+      minimumFractionDigits,
+      maximumFractionDigits: 2
+    });
+  }
 };

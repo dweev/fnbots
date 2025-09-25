@@ -12,6 +12,7 @@ export const command = {
   name: 'uptext',
   category: 'owner',
   description: 'mengganti text informasi bot',
+  isCommandWithoutPayment: true,
   execute: async ({ dbSettings, reactDone, arg, sReply }) => {
     if (arg) {
       if (!arg) return await sReply(`gunakan perintah dengan benar, contoh: ${dbSettings.rname}uptext teksbaru`);

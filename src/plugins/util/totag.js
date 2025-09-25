@@ -14,6 +14,7 @@ export const command = {
   category: 'util',
   description: 'Meneruskan pesan yang dikutip sambil menandai semua anggota grup.',
   aliases: ['ttg'],
+  isCommandWithoutPayment: true,
   execute: async ({ fn, m, toId, quotedMsg, reactFail }) => {
     if (!m.isGroup || !quotedMsg) {
       await reactFail();

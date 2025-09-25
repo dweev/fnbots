@@ -11,6 +11,7 @@ export const command = {
   category: 'util',
   description: 'Mengecek sisa limit penggunaan dan game Anda.',
   aliases: ['ceklimit'],
+  isCommandWithoutPayment: true,
   execute: async ({ user, sReply, isSadmin }) => {
     let replyText;
     if (isSadmin || user.isMaster || user.isVIPActive) {

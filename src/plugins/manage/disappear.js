@@ -10,6 +10,7 @@ export const command = {
   name: 'disappear',
   category: 'manage',
   description: 'Menghapus pesan secara otomatis',
+  isCommandWithoutPayment: true,
   execute: async ({ fn, toId, sReply, args, reactDone }) => {
     const _waktu = args[0]?.toLowerCase()
     if (_waktu === '90d') {

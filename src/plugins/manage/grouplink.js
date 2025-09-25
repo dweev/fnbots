@@ -11,6 +11,7 @@ export const command = {
   category: 'manage',
   aliases: ['linkgroup', 'glink'],
   description: 'Memberikan link group.',
+  isCommandWithoutPayment: true,
   execute: async ({ fn, m, isBotGroupAdmins, toId, sReply }) => {
     if (!m.isGroup || !isBotGroupAdmins) return await sReply(`Perintah ini hanya bisa digunakan jika bot menjadi admin grup.`);
     let response = await fn.groupInviteCode(toId)

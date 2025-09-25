@@ -47,6 +47,18 @@ const commandSchema = new mongoose.Schema({
     type: [String],
     default: [],
     index: true
+  },
+  isLimitCommand: {
+    type: Boolean,
+    default: true
+  },
+  isLimitGameCommand: {
+    type: Boolean,
+    default: false
+  },
+  isCommandWithoutPayment: {
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: true
@@ -97,7 +109,7 @@ commandSchema.statics.getCommandStats = function () {
     }
   ]);
 };
-commandSchema.statics.findOrCreate = async function (name, category, description = 'belum terdefinisikan...', aliases) {
+commandSchema.statics.findOrCreate = async function (name, category, description, aliases, flags = {}) {
   const normalizedName = name.toLowerCase();
   let command = await this.findOne({ name: normalizedName });
   if (!command) {
@@ -105,27 +117,14 @@ commandSchema.statics.findOrCreate = async function (name, category, description
       name: normalizedName,
       category,
       description,
-      aliases
+      aliases,
+      isLimitCommand: flags.isLimitCommand,
+      isLimitGameCommand: flags.isLimitGameCommand,
+      isCommandWithoutPayment: flags.isCommandWithoutPayment,
     });
     await command.save();
   }
   return command;
-};
-commandSchema.statics.migrateFromJSON = async function (jsonData) {
-  const commands = [];
-  for (const [name, data] of Object.entries(jsonData)) {
-    const command = await this.findOrCreate(
-      name,
-      data.category || 'util',
-      data.description || 'belum terdefinisikan...'
-    );
-    if (data.count) {
-      command.count = data.count;
-      await command.save();
-    }
-    commands.push(command);
-  }
-  return commands;
 };
 commandSchema.statics.addAlias = async function (commandName, alias) {
   const normalizedName = commandName.toLowerCase();

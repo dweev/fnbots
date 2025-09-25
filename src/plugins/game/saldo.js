@@ -6,18 +6,15 @@
 */
 // ─── Info ────────────────────────────────
 
-import { Settings } from '../../../database/index.js';
+import { formatNumber } from '../../lib/function.js';
 
 export const command = {
-  name: 'upbotname',
-  category: 'owner',
-  description: 'mengganti nama bot',
+  name: 'saldo',
+  category: 'game',
+  description: 'Cek saldo member',
   isCommandWithoutPayment: true,
-  execute: async ({ dbSettings, reactDone, arg }) => {
-    if (arg) {
-      dbSettings.botname = arg;
-      await Settings.updateSettings(dbSettings);
-      await reactDone();
-    }
+  execute: async ({ sReply, user }) => {
+    const formattedBalance = formatNumber(BigInt(user.balance));
+    await sReply(`💰 Saldo Anda: *${formattedBalance}*`);
   }
 };

@@ -13,6 +13,7 @@ export const command = {
   category: 'manage',
   description: 'Menampilkan pengaturan global bot dan pengaturan grup (jika dijalankan di grup).',
   aliases: ['set'],
+  isCommandWithoutPayment: true,
   execute: async ({ m, toId, sReply, dbSettings }) => {
     const messageParts = [];
     let globalSettingsText = '*- Bot Config -*\n';
@@ -24,6 +25,7 @@ export const command = {
       { label: 'Maintenance',       value: dbSettings.maintenance     },
       { label: "Verify Users",      value: dbSettings.verify          },
       { label: 'Auto Correct',      value: dbSettings.autocorrect     },
+      { label: "Auto Join",         value: dbSettings.autojoin        },
       { label: 'Auto Like Story',   value: dbSettings.autolikestory   },
       { label: 'Auto Read Story',   value: dbSettings.autoreadsw      },
       { label: 'Auto Read Message', value: dbSettings.autoread        },

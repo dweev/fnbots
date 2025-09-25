@@ -13,6 +13,7 @@ export const command = {
   category: 'manage',
   description: 'Memberi peringatan kepada anggota grup dan mengeluarkannya jika melewati batas.',
   aliases: ['warning'],
+  isCommandWithoutPayment: true,
   execute: async ({ fn, m, toId, sReply, ar, quotedMsg, mentionedJidList, quotedParticipant, arg, dbSettings }) => {
     if (!m.isGroup) return await sReply('Perintah ini hanya bisa digunakan di grup!');
     if (!arg) return await sReply(`Gagal. Balas atau mention pengguna untuk memberi peringatan, atau gunakan ${dbSettings.rname}warn set on/off untuk mengatur fitur.`);

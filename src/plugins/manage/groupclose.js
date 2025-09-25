@@ -11,6 +11,7 @@ export const command = {
   category: 'manage',
   description: 'Menutup grup, hanya admin yang bisa mengirim pesan.',
   aliases: ['close'],
+  isCommandWithoutPayment: true,
   execute: async ({ fn, m, sReply, isBotGroupAdmins, reactDone }) => {
     if (!m.isGroup) return await sReply('Perintah ini hanya bisa digunakan di grup.');
     if (!isBotGroupAdmins) return await sReply('Bot harus menjadi admin grup untuk menjalankan perintah ini.');

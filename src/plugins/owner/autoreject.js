@@ -12,6 +12,7 @@ export const command = {
   name: 'autoreject',
   category: 'owner',
   description: 'Mengaktifkan atau menonaktifkan mode anti call.',
+  isCommandWithoutPayment: true,
   execute: async ({ dbSettings, reactDone, args, sReply }) => {
     const mode = (args[0] || '').toLowerCase();
     if (!['on', 'off'].includes(mode)) return await sReply(`gunakan perintah dengan benar, contoh: ${dbSettings.rname}autoreject on/off`);

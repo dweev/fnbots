@@ -11,6 +11,7 @@ export const command = {
   category: 'util',
   description: 'Menyebutkan semua anggota grup.',
   aliases: ['tagall', 'tag'],
+  isCommandWithoutPayment: true,
   execute: async ({ fn, m, toId, sReply }) => {
     if (!m.isGroup) return await sReply("Perintah ini hanya bisa digunakan di grup.");
     const groupMetadata = await fn.groupMetadata(toId);

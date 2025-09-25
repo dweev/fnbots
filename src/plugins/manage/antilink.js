@@ -13,6 +13,7 @@ export const command = {
   category: 'manage',
   description: 'Mengaktifkan atau menonaktifkan mode antilink.',
   aliases: ['antilinkgroup'],
+  isCommandWithoutPayment: true,
   execute: async ({ m, toId, dbSettings, ar, reactDone, sReply }) => {
     if (!m.isGroup) return await sReply(`Perintah ini hanya bisa digunakan di grup.`);
     let command = ar[0];

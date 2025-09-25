@@ -14,6 +14,7 @@ export const command = {
   category: 'bot',
   description: 'Menampilkan daftar semua grup dan memperbarui cache untuk remote command.',
   aliases: ['lg', 'grouplist', 'mygroup'],
+  isCommandWithoutPayment: true,
   execute: async ({ sReply }) => {
     const allGroups = await StoreGroupMetadata.find({}, { groupId: 1, subject: 1, _id: 0 }).lean();
     if (!allGroups || allGroups.length === 0) return sReply('Bot tidak berada di dalam grup manapun saat ini.');

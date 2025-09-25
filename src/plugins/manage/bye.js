@@ -6,18 +6,15 @@
 */
 // ─── Info ────────────────────────────────
 
-import { Settings } from '../../../database/index.js';
-
 export const command = {
-  name: 'upbotname',
-  category: 'owner',
-  description: 'mengganti nama bot',
+  name: 'bye',
+  category: 'manage',
+  description: 'mengeluarkan bot dari group',
+  aliases: ['out'],
   isCommandWithoutPayment: true,
-  execute: async ({ dbSettings, reactDone, arg }) => {
-    if (arg) {
-      dbSettings.botname = arg;
-      await Settings.updateSettings(dbSettings);
-      await reactDone();
-    }
+  execute: async ({ fn, m, toId, reactDone, sReply }) => {
+    if (!m.isGroup) return await sReply(`Perintah ini hanya bisa digunakan di grup.`);
+    await reactDone();
+    await fn.groupLeave(toId);
   }
 };

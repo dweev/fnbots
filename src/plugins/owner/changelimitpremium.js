@@ -12,6 +12,7 @@ export const command = {
   name: 'changelimitpremium',
   category: 'owner',
   description: 'mengatur limit member premium',
+  isCommandWithoutPayment: true,
   execute: async ({ dbSettings, reactDone, args, sReply }) => {
     if (args) {
       const limit = parseInt(args[0]);

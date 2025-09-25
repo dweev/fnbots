@@ -12,6 +12,7 @@ export const command = {
   name: 'otplist',
   category: 'manage',
   description: 'Melihat semua session OTP yang aktif',
+  isCommandWithoutPayment: true,
   execute: async ({ sReply }) => {
     const sessions = await OTPSession.find({ isBlocked: false }).lean();
     if (sessions.length === 0) return await sReply('Tidak ada session OTP yang aktif saat ini.');

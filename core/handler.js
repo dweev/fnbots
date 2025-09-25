@@ -121,6 +121,7 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
   const reactFail = async () => { await delay(1000); await fn.sendMessage(toId, { react: { text: '❎', key: m.key } }) };
   const sReply = (content, options = {}) => fn.sendReply(toId, content, { quoted: m, ...options });
   const sPesan = (content) => fn.sendPesan(toId, content, m);
+  const sendRawWebpAsSticker = async (_data, options = {}) => { await fn.sendRawWebpAsSticker(toId, _data, m, { ...options }) };
   let txt = body;
   const isCmd = txt?.startsWith(dbSettings.rname) || txt?.startsWith(dbSettings.sname);
 
@@ -557,30 +558,20 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
           const originalMessage = await mongoStore.loadMessage(remoteJid, deletedMsgId);
           if (originalMessage && !originalMessage.fromMe) {
             if (originalMessage.type === 'imageMessage') {
-              try {
-                const buffer = await fn.getMediaBuffer(originalMessage.message);
-                await fn.sendMessage(toId, { image: buffer, caption: originalMessage.body });
-              } catch (error) { await log(error, true); }
+              const buffer = await fn.getMediaBuffer(originalMessage.message);
+              await fn.sendMessage(toId, { image: buffer, caption: originalMessage.body });
             } else if (originalMessage.type === 'videoMessage') {
-              try {
-                const buffer = await fn.getMediaBuffer(originalMessage.message);
-                await fn.sendMessage(toId, { video: buffer, caption: originalMessage.body });
-              } catch (error) { await log(error, true); }
+              const buffer = await fn.getMediaBuffer(originalMessage.message);
+              await fn.sendMessage(toId, { video: buffer, caption: originalMessage.body });
             } else if (originalMessage.type === 'stickerMessage') {
-              try {
-                const buffer = await fn.getMediaBuffer(originalMessage.message);
-                await fn.sendMessage(toId, { sticker: buffer });
-              } catch (error) { await log(error, true); }
+              const buffer = await fn.getMediaBuffer(originalMessage.message);
+              await fn.sendMessage(toId, { sticker: buffer });
             } else if (originalMessage.type === 'audioMessage') {
-              try {
-                const buffer = await fn.getMediaBuffer(originalMessage.message);
-                await fn.sendMessage(toId, { audio: buffer, mimetype: 'audio/mp4', ptt: originalMessage.message.ptt });
-              } catch (error) { await log(error, true); }
+              const buffer = await fn.getMediaBuffer(originalMessage.message);
+              await fn.sendMessage(toId, { audio: buffer, mimetype: 'audio/mp4', ptt: false });
             } else if (originalMessage.type === 'documentMessage') {
-              try {
-                const buffer = await fn.getMediaBuffer(originalMessage.message);
-                await fn.sendMessage(toId, { document: buffer, mimetype: originalMessage.mime, fileName: originalMessage.message.fileName });
-              } catch (error) { await log(error, true); }
+              const buffer = await fn.getMediaBuffer(originalMessage.message);
+              await fn.sendMessage(toId, { document: buffer, mimetype: originalMessage.mime, fileName: originalMessage.message.fileName });
             } else if (originalMessage.type === 'locationMessage') {
               await fn.sendMessage(toId, {
                 location: {
@@ -606,9 +597,19 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
           if (!inviteCode) {
             await sReply("Link undangan tidak valid.");
           } else {
-            try {
-              const { restrict, joinApprovalMode, subject, participants, id } = await fn.groupGetInviteInfo(inviteCode);
-              if (isSadmin || isMaster) {
+            const { restrict, joinApprovalMode, subject, participants, id } = await fn.groupGetInviteInfo(inviteCode);
+            if (isSadmin || isMaster) {
+              if (!joinApprovalMode) {
+                await fn.groupAcceptInvite(inviteCode);
+                if (!restrict) {
+                  await fn.sendPesan(id, `Halo warga grup *${subject}*!\nTerima kasih sudah mengundang ${dbSettings.botname}. Ketik *.rules* untuk melihat peraturan.`, m);
+                }
+                await sReply("✅ Berhasil join grup.");
+                const userUpdates = { $inc: { userCount: 1 } };
+                await User.updateOne({ userId: user.userId }, userUpdates);
+              }
+            } else {
+              if (participants.length > dbSettings.memberLimit) {
                 if (!joinApprovalMode) {
                   await fn.groupAcceptInvite(inviteCode);
                   if (!restrict) {
@@ -616,28 +617,14 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
                   }
                   await sReply("✅ Berhasil join grup.");
                   const userUpdates = { $inc: { userCount: 1 } };
+                  if (!isSadmin && !isMaster && !isVIP) {
+                    userUpdates.$inc['limit.current'] = -1;
+                  }
                   await User.updateOne({ userId: user.userId }, userUpdates);
                 }
               } else {
-                if (participants.length > dbSettings.memberLimit) {
-                  if (!joinApprovalMode) {
-                    await fn.groupAcceptInvite(inviteCode);
-                    if (!restrict) {
-                      await fn.sendPesan(id, `Halo warga grup *${subject}*!\nTerima kasih sudah mengundang ${dbSettings.botname}. Ketik *.rules* untuk melihat peraturan.`, m);
-                    }
-                    await sReply("✅ Berhasil join grup.");
-                    const userUpdates = { $inc: { userCount: 1 } };
-                    if (!isSadmin && !isMaster && !isVIP) {
-                      userUpdates.$inc['limit.current'] = -1;
-                    }
-                    await User.updateOne({ userId: user.userId }, userUpdates);
-                  }
-                } else {
-                  await sReply('Group yang ingin kamu masukkan bot tidak memiliki member melebihi ' + dbSettings.memberLimit + '\nBot tidak bisa masuk ke grup, silakan hubungi owner.');
-                }
+                await sReply('Group yang ingin kamu masukkan bot tidak memiliki member melebihi ' + dbSettings.memberLimit + '\nBot tidak bisa masuk ke grup, silakan hubungi owner.');
               }
-            } catch {
-              await sReply("Gagal join, mungkin link salah atau bot pernah di-kick.");
             }
           }
         }
@@ -647,27 +634,48 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
         const mediaTypes = new Set(['audio/ogg; codecs=opus', 'audio/mpeg', 'audio/mp4', 'audio/m4a', 'audio/aac', 'audio/wav', 'audio/amr']);
         if (mediaTypes.has(m.mime)) {
           await sReply('Sedang memproses audio, mohon tunggu...');
-          try {
-            const mediaData = await fn.getMediaBuffer(m.message);
-            const worker = new Worker('./src/worker/audio_changer_worker.js');
-            worker.postMessage(mediaData);
-            worker.on('message', async (result) => {
-              if (result.status === 'done') {
-                await fn.sendFilePath(toId, '', result.outputPath, { quoted: m });
-                await tmpDir.deleteFile(result.outputPath);
-              } else {
-                throw new Error(result.error);
-              }
-            });
-            worker.on('error', (error) => {
-              throw error;
-            });
-          } catch (error) {
-            await log(error, true);
-            await sPesan('Gagal memproses audio.');
+          const mediaData = await fn.getMediaBuffer(m.message);
+          const worker = new Worker('./src/worker/audio_changer_worker.js');
+          worker.postMessage(mediaData);
+          worker.on('message', async (result) => {
+            if (result.status === 'done') {
+              await fn.sendFilePath(toId, '', result.outputPath, { quoted: m });
+              await tmpDir.deleteFile(result.outputPath);
+            } else {
+              throw new Error(result.error);
+            }
+          });
+          worker.on('error', (error) => {
+            throw error;
+          });
+        }
+      };
+      if (dbSettings.autosticker === true) {
+        const mime = m.mime;
+        if ((m.message?.imageMessage?.mimetype || m.message?.videoMessage?.mimetype) && !m.body.toLowerCase().includes("sticker")) {
+          await fn.sendMessage(toId, { react: { text: '⏳', key: m.key } });
+          const buffer = await fn.getMediaBuffer(m.message);
+          if (buffer) {
+            if ((mime === "video/mp4" || mime === "image/gif" || mime === "image/png" || mime === "image/jpeg" || mime === "image/webp" || mime === "image/jpg") && (m.message?.videoMessage?.seconds || 0) < 20) {
+              const type = mime.startsWith('image/') ? 'image' : 'video';
+              const worker = new Worker('./src/worker/sticker_worker.js');
+              worker.postMessage({ mediaBuffer: buffer, type: type });
+              worker.on('message', async (result) => {
+                if (result.status === 'done') {
+                  const stickerBuffer = Buffer.from(result.buffer);
+                  await sendRawWebpAsSticker(stickerBuffer);
+                  await reactDone();
+                } else {
+                  throw new Error(result.error);
+                }
+              });
+              worker.on('error', (error) => {
+                throw error;
+              });
+            }
           }
         }
-      }
+      };
     }
   } catch (error) { await log(error, true); }
 };

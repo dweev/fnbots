@@ -32,6 +32,7 @@ export const command = {
       { label: 'Auto Read Message',   value: dbSettings.autoread        },
       { label: 'Auto Resend',         value: dbSettings.antideleted     },
       { label: "Auto Reject Call",    value: dbSettings.anticall        },
+      { label: "Auto Sticker",        value: dbSettings.autosticker     },
     ];
     for (const { label, value } of globalFlags) {
       const icon = value ? "⚙" : "⚔";

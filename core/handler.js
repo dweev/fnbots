@@ -694,7 +694,7 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
           worker.postMessage(mediaData);
           worker.on('message', async (result) => {
             if (result.status === 'done') {
-              await fn.sendFilePath(toId, '', result.outputPath, { quoted: m });
+              await fn.sendFilePath(toId, '', result.outputPath, { quoted: m, ptt: true });
               await tmpDir.deleteFile(result.outputPath);
             } else {
               throw new Error(result.error);

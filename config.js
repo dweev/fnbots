@@ -8,7 +8,6 @@
 
 import 'dotenv/config.js';
 
-
 const requiredVariables = ['MONGODB_URI', 'OWNER_NUMBER'];
 for (const variable of requiredVariables) {
   if (!process.env[variable]) {

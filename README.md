@@ -7,168 +7,246 @@
 ## Project Architecture Diagram
 
 ```mermaid
-graph TB
-    subgraph Startup
-        A[Starting Engine] --> B(Load .env & config.js)
-        B --> C(Connect Database)
-        C --> D(Initialize Settings Manager)
-        D --> E(Load Plugins)
-        E --> F(Warm Caches - StoreDB)
-        F --> G(Create WA Socket)
-        A --> BG(Start Background Processes)
+graph TD
+    subgraph "Phase 1: Startup & Initialization (`main.js`)"
+        A[Mulai Aplikasi `main.js`] --> B(1. Muat Konfigurasi `.env` & `config.js`);
+        B --> C(2. Hubungkan ke Database MongoDB);
+        C --> D{DB Connected?};
+        D -- Success --> E(3. Inisialisasi Settings Cache);
+        D -- Error --> ERR1[Exit Process];
+        E --> F(4. Muat Semua Perintah ke `pluginCache`);
+        F --> G(5. Inisialisasi Fuzzy Search `Fuse.js`);
+        G --> H(6. Bungkus Socket dgn Helpers `clientBot`);
+        H --> I(7. Buat WA Socket & Mulai Koneksi);
+        A --> BG(Inisialisasi Proses Latar Belakang);
     end
 
-    subgraph Message_Processing_Reaktif
-        H(Event: messages.upsert) --> I[updateMessageUpsert]
-        I --> J(serializeMessage)
-        J --> K{isBug?}
-        K -- Yes --> L(Block User & Delete Msg)
-        K -- No --> M{isStub?}
-        M -- Yes --> N(handleGroupStubMessages.js)
-        M -- No --> O{isStatus?}
-        O -- Yes --> P(Handle Status Logic)
-        O -- No --> AD_Check{isDeleteEvent?}
-        AD_Check -- Yes --> AD_Action(Handle Anti-Delete)
-        AD_Check -- No --> Q[handler.js - arfine]
+    subgraph "Phase 2: Connection Handling (`connection.js`)"
+        I --> J{Event: `connection.update`};
+        J -- `connecting` --> K[Tampilkan QR / Pairing Code];
+        J -- `close` --> L[Koneksi Terputus];
+        L --> M{Auto Restart?};
+        M -- Yes --> I;
+        M -- No --> ERR2[Shutdown];
+        J -- `open` --> N[Koneksi Berhasil];
+        N --> O[Sinkronisasi Grup & Bersihkan Data Usang];
+        O --> P(BOT SIAP MENERIMA PESAN);
     end
 
-    subgraph Command_Execution
-        Q --> SM_Check{Self Mode Check}
-        SM_Check -- Process --> R(Gather Context)
-        SM_Check -- Ignore --> Z(End)
-        R --> S{isCmd?}
-        S -- No --> GM_Check{isGroup?}
-        GM_Check -- Yes --> GM_Action(Group Moderation)
-        GM_Check -- No --> Z
+    subgraph "Phase 3: Message Processing (`updateMessageUpsert.js`)"
+        P --> Q(Event: `messages.upsert`);
+        Q --> R[1. Normalisasi Pesan - `serializeMessage`];
+        R --> S{2. Cek Keamanan `isBug`};
+        S -- Berbahaya --> T[Blokir & Hapus Pesan];
+        S -- Aman --> U{3. Tipe Pesan Khusus?};
+        U -- Group Event --> V[`handleGroupStubMessages`];
+        U -- Status Update --> W[Proses Logika Status];
+        U -- Pesan Dihapus --> X[Anti-Delete Handler];
+        U -- Pesan Biasa --> Y[→ Handler Utama `arfine`];
+    end
+
+    subgraph "Phase 4: Logic & Command Execution (`handler.js`)"
+        Y --> Z(4. Kumpulkan Konteks);
+        Z --> AA{5. Cek Mode Bot};
+        AA -- Ignore --> TERM((End Cycle));
+        AA -- Process --> AB{6. Command?};
         
-        S -- Yes --> RC_Check{Remote Command?}
-        RC_Check -- Yes --> CCA_Admin{Is SAdmin?}
-        CCA_Admin -- Yes --> RC_Action(Change Target Chat)
-        CCA_Admin -- No --> Z
-        RC_Check -- No --> AS_Check
-        RC_Action --> AS_Check
+        AB -- No --> AC_ROUTER{Moderasi Grup & Cek Fitur Auto};
+            AC_ROUTER -- anti-hidetag/antilink etc. --> AC_MOD[Jalankan Moderasi Grup];
+            AC_ROUTER -- Check Next --> AC1{AutoSticker?};
+            AC1 -- Yes --> AC2[Proses Gambar/Video Jadi Stiker];
+            AC1 -- No --> AC3{AutoJoin?};
+            AC3 -- Yes --> AC4[Proses Link & Join Grup];
+            AC3 -- No --> AC5{Chatbot?};
+            AC5 -- Yes --> AC6[Balas Pesan dari DB];
+            AC5 -- No --> AC7[...Fitur Auto Lainnya...];
         
-        AS_Check{Anti-Flood Check} -- Pass --> T(Find Command in PluginCache)
-        AS_Check -- Fail --> Z
-
-        T --> T_Result{Command Found?}
-        T_Result -- No --> AC_Check{Auto-Correct?}
-        AC_Check -- Suggest --> AC1(Suggest Correction)
-        AC_Check -- Auto-run --> T
-        AC_Check -- No --> Z
-        AC1 --> Z
+        AB -- Yes --> AD(7. Parse Command);
         
-        T_Result -- Yes --> CCA1(Check Limits & Access)
-        CCA1 --> CCA2{Lolos?}
-        CCA2 -- No --> Z
-        CCA2 -- Yes --> CCA3{Is SAdmin?}
-        CCA3 -- Yes --> U(Execute Command)
-        CCA3 -- No --> CCA4{Role Matches?}
-        CCA4 -- Yes --> U
-        CCA4 -- No --> Z
-
-        U --> V(Interact with StoreDB Cache)
-        V --> V_DB(Database Models)
-        V --> W(BOT Response)
-        V_DB --> W
+        AD --> AE{Remote Command?};
+        AE -- No --> AF[Lanjut Normal];
+        AE -- Yes --> AG{SAdmin?};
+        AG -- No --> TERM;
+        AG -- Yes --> AH[Process Remote];
+        AH --> AF;
+        
+        AF --> AI{8. Cooldown?};
+        AI -- Yes --> AJ[Warn User];
+        AJ --> TERM;
+        AI -- No --> AK[Set Cooldown];
+        
+        AK --> AL(9. Cari di `pluginCache`);
+        AL --> AM{Found?};
+        AM -- No --> AN[10. Fuzzy Correction];
+        AN --> AL;
+        AM -- Yes --> AO[11. Cek Akses & Limit];
+        AO --> AP{Allowed?};
+        AP -- No --> AQ[Send Error];
+        AP -- Yes --> AR[12. EXECUTE];
+        
+        AR --> AS[13. Update Stats & DB];
+        AS --> AT[14. Send Response];
     end
 
-    subgraph Background_Processes
-        BG1[Interval: Check Expired Users]
-        BG2[Cron Job: Cleanup Data]
-        BG3[Interval: Poll Settings]
-        BG4[Interval: Batch DB Writes]
-        BG5[Interval: Listen Plugin Folders]
+    subgraph "Background Processes"
+        BG --> BA[Cron Jobs];
+        BG --> BB[Cache Sync];
+        BG --> BC[Batch DB Writes];
+        BG --> BD[File Watcher];
+        
+        BA --> BA1[Reset Daily Limits];
+        BA --> BA2[Clean Expired Users];
+        BB --> BB1[Sync Settings];
+        BC --> BC1[Bulk Operations];
+        BD --> BD1[Hot-Reload Plugins];
     end
 
-    G --> H
-    GM_Action --> BG1
+    T --> P;
+    V --> P;
+    W --> P;
+    X --> P;
+    AC_MOD --> P; AC2 --> P; AC4 --> P; AC6 --> P; AC7 --> P;
+    AT --> P;
+    AQ --> P;
+    TERM --> P;
+    
+    ERR1 --> EXIT[Application Exit];
+    ERR2 --> EXIT;
 ```
 
 ```mermaid
-erDiagram
-  USER {
-    string userId PK
-    bool isPremium
-    bool isVIP
-    bigint balance
-    int xp
-    int level
-    map commandStats
-    map inventory
-  }
+classDiagram
+    direction LR
 
-  GROUP {
-    string groupId PK
-    string groupName
-    bool antilink
-    bool isMuted
-    map warnings
-    array afkUsers
-  }
+    class Settings {
+        +String botName
+        +String rname (prefix)
+        +Boolean maintenance
+        +String self (mode)
+        +Number limitCount
+        +Number limitGame
+        +Array~String~ sAdmin
+        +getSettings()
+    }
+    note for Settings "Singleton document for global bot config"
 
-  MUTED_MEMBER {
-    string groupId FK
-    string userId FK
-    date expireAt
-  }
+    class User {
+        +String userId
+        +Boolean isMaster
+        +Boolean isPremium
+        +Boolean isVIP
+        +Date premiumExpired
+        +String balance (BigInt)
+        +Number xp
+        +Number level
+        +Object limit
+        +Object limitgame
+        +Map commandStats
+        +addBalance(amount)
+        +addXp(amount)
+        +isLimit()
+    }
 
-  COMMAND {
-    string name PK
-    string category
-    int count
-    array aliases
-  }
+    class Group {
+        +String groupId
+        +String groupName
+        +Object welcome
+        +Object leave
+        +Boolean antilink
+        +Boolean antiHidetag
+        +Object warnings
+        +Array afkUsers
+        +Array bannedMembers
+        +addWarning(userId)
+        +addAfkUser(userId, reason)
+    }
 
-  SETTINGS {
-    string botName
-    bool maintenance
-    string selfMode
-  }
+    class Command {
+        +String name
+        +String category
+        +Number count
+        +Array~String~ aliases
+        +Boolean isLimitCommand
+        +findOrCreate(name, category)
+        +updateCount(commandName)
+    }
+    
+    class DatabaseBot {
+        +String docId
+        +Map~String, String~ chat
+        +Array~String~ bacot
+        +getDatabase()
+        +addChat(keyword, reply)
+    }
+    note for DatabaseBot "Singleton for chatbot & media responses"
+    
+    class Media {
+        +String name
+        +String type
+        +Buffer data
+    }
+    
+    class BaileysSession {
+        +String key
+        +Mixed value
+    }
+    note for BaileysSession "Key-value store for Baileys auth credentials"
+    
+    class StoreContact {
+        +String jid
+        +String lid
+        +String name
+        +String notify
+    }
+    
+    class StoreGroupMetadata {
+        +String groupId
+        +String subject
+        +String owner
+        +Array~Participant~ participants
+    }
+    
+    class StoreMessages {
+        +String chatId
+        +Array~Mixed~ messages
+        +Array~Conversation~ conversations
+        +addMessage(chatId, msg)
+    }
+    
+    class StoreStory {
+        +String userId
+        +Array~Mixed~ statuses
+        +addStatus(userId, status)
+    }
 
-  WHITELIST {
-    string type
-    string targetId
-  }
+    class OTPSession {
+        +String userId
+        +String groupId
+        +String otp
+        +Number attempts
+        +Date expireAt
+        +createSession(userId, groupId, otp)
+        +verifyOTP(userId, otp)
+    }
+    
+    class Whitelist {
+        +String type ('group' or 'user')
+        +String targetId
+        +isWhitelisted(targetId)
+    }
 
-  DATABASE_BOT {
-    string docId PK
-    map chat
-    array bacot
-    map sticker
-  }
-
-  STORE_CONTACT {
-    string jid PK
-    string name
-    string lid
-  }
-
-  STORE_GROUP_METADATA {
-    string groupId PK
-    string subject
-    array participants
-  }
-
-  STORE_MESSAGES {
-    string chatId PK
-    array messages
-    array conversations
-  }
-
-  STORE_STORY {
-    string userId PK
-    array statuses
-  }
-
-  USER ||--o{ STORE_STORY : "posts"
-  USER ||--o{ STORE_CONTACT : "has"
-  GROUP ||--o{ STORE_GROUP_METADATA : "has"
-  GROUP ||--o{ MUTED_MEMBER : "has"
-  GROUP ||--o{ STORE_MESSAGES : "contains"
-  WHITELIST }o--|| USER : "includes"
-  WHITELIST }o--|| GROUP : "includes"
-  USER }o--|| COMMAND : "uses"
+    Settings "1" -- "0" User : Lists SAdmins
+    User "1" -- "0" OTPSession : Can have OTP session
+    Group "1" -- "0" OTPSession : Is target for OTP
+    User "1" -- "0" StoreStory : Has status updates
+    Group "1" -- "1" StoreGroupMetadata : Has metadata
+    User "1" -- "0" Group : Implicitly related via afkUsers, bannedMembers, etc.
+    
+    StoreGroupMetadata "1" -- "0" StoreContact : Participants are contacts
+    StoreMessages ..> User : `chatId` can be a User JID
+    StoreMessages ..> Group : `chatId` can be a Group JID
+    
+    DatabaseBot "1" -- "0" Media : Can link to media responses
 ```
 
 ---

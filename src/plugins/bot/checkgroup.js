@@ -7,75 +7,95 @@
 // ─── Info ────────────────────────────────
 
 import fs from 'fs-extra';
-import { loadImage } from 'canvas';
+import FileType from 'file-type';
 
 const defaultAvatar = './src/media/apatar.png';
 export const command = {
   name: 'checkgroup',
   category: 'bot',
-  description: 'Memeriksa detail grup dari cache.',
+  description: 'Check group details from cache.',
   isCommandWithoutPayment: true,
-
   execute: async ({ fn, m, mygroup, mygroupMembers, dbSettings, sReply, toId, args }) => {
-    if (args.length < 2) return await sReply(`Penggunaan:\n• ${dbSettings.rname}checkgroup <nomor_grup> member\n• ${dbSettings.rname}checkgroup <nomor_grup> admins\n• ${dbSettings.rname}checkgroup <nomor_grup> user <nomor_hp>\n• ${dbSettings.rname}checkgroup <nomor_grup> info <nomor_member>\n\nGunakan ${dbSettings.rname}listgroup untuk melihat daftar.`);
+    if (args.length < 2) {
+      return await sReply(`Usage:\n• ${dbSettings.rname}checkgroup <group_number> member\n• ${dbSettings.rname}checkgroup <group_number> admins\n• ${dbSettings.rname}checkgroup <group_number> user <phone_number>\n• ${dbSettings.rname}checkgroup <group_number> info <member_number>\n\nUse ${dbSettings.rname}listgroup to see the list.`);
+    }
     const nomorGroup = parseInt(args[0], 10);
     const subcommand = args[1].toLowerCase();
     const subArgs = args.slice(2);
-    if (isNaN(nomorGroup) || nomorGroup < 1 || nomorGroup > mygroup.length) return await sReply(`Nomor grup tidak valid! Range: 1 - ${mygroup.length}`);
+    if (isNaN(nomorGroup) || nomorGroup < 1 || nomorGroup > mygroup.length) {
+      return await sReply(`Invalid group number! Range: 1 - ${mygroup.length}`);
+    }
     const idGroup = mygroup[nomorGroup - 1];
     const members = mygroupMembers[idGroup];
-    if (!members || members.length === 0) return await sReply('Data member untuk grup ini belum ada di cache. Jalankan .listgroup terlebih dahulu.');
+    if (!members || members.length === 0) {
+      return await sReply('Member data for this group is not available in cache. Run .listgroup first.');
+    }
     switch (subcommand) {
       case 'member': {
         const mentions = members.map(m => m.id);
         const memberList = mentions.map((jid, index) => `${index + 1}. @${jid.split('@')[0]}`).join('\n');
-        await sReply(`*DAFTAR MEMBER GROUP*\n\n${memberList}\n\nTotal: ${members.length} member`, { mentions });
+        await sReply(`*GROUP MEMBER LIST*\n\n${memberList}\n\nTotal: ${members.length} members`, { mentions });
         break;
       }
       case 'admins': {
         const admins = members.filter(m => m.admin);
-        if (admins.length === 0) return await sReply('Tidak ada admin di grup ini.');
+        if (admins.length === 0) return await sReply('No admins found in this group.');
         const mentions = admins.map(a => a.id);
         const adminList = mentions.map((jid, index) => `${index + 1}. @${jid.split('@')[0]}`).join('\n');
-        await sReply(`*DAFTAR ADMIN GROUP*\n\n${adminList}\n\nTotal: ${admins.length} admin`, { mentions });
+        await sReply(`*GROUP ADMIN LIST*\n\n${adminList}\n\nTotal: ${admins.length} admins`, { mentions });
         break;
       }
       case 'user': {
-        if (subArgs.length < 1) return await sReply(`Format salah!\nContoh: ${dbSettings.rname}checkgroup 1 user 628123`);
+        if (subArgs.length < 1) {
+          return await sReply(`Wrong format!\nExample: ${dbSettings.rname}checkgroup 1 user 628123`);
+        }
         const targetNumber = subArgs[0].replace(/[^0-9]/g, '');
         const user = members.find(member => member.id.startsWith(targetNumber));
         if (user) {
           const name = await fn.getName(user.id);
-          const userInfo = `*USER DITEMUKAN*\n\nNama: ${name}\nNomor: ${user.id.split('@')[0]}\nStatus: ${user.admin ? 'Admin' : 'Member'}`;
+          const userInfo = `*USER FOUND*\n\nName: ${name}\nNumber: ${user.id.split('@')[0]}\nStatus: ${user.admin ? 'Admin' : 'Member'}`;
           await sReply(userInfo);
         } else {
-          await sReply(`User dengan nomor *${targetNumber}* tidak ditemukan di grup ini.`);
+          await sReply(`User with number *${targetNumber}* not found in this group.`);
         }
         break;
       }
       case 'info': {
-        if (subArgs.length < 1) return await sReply(`Format salah!\nContoh: ${dbSettings.rname}checkgroup 1 info 1 3 5`);
+        if (subArgs.length < 1) {
+          return await sReply(`Wrong format!\nExample: ${dbSettings.rname}checkgroup 1 info 1 3 5`);
+        }
         for (const memberIndexStr of subArgs) {
           const nomorMember = parseInt(memberIndexStr, 10);
           if (isNaN(nomorMember) || nomorMember < 1 || nomorMember > members.length) {
-            await sReply(`Nomor member tidak valid: *${memberIndexStr}*`);
+            await sReply(`Invalid member number: *${memberIndexStr}*`);
             continue;
           }
           const user = members[nomorMember - 1];
           const name = await fn.getName(user.id);
-          let ppUrl;
+          let mediaBuffer;
+          let mime = 'image/jpeg';
           try {
-            ppUrl = await fn.profilePictureUrl(user.id, 'image');
+            const ppUrl = await fn.profilePictureUrl(user.id, 'image');
+            const response = await fetch(ppUrl);
+            mediaBuffer = Buffer.from(await response.arrayBuffer());
+            const fileType = await FileType.fromBuffer(mediaBuffer);
+            if (fileType) {
+              mime = fileType.mime;
+            }
           } catch {
-            ppUrl = await loadImage(await fs.readFile(defaultAvatar));
+            mediaBuffer = await fs.readFile(defaultAvatar);
+            const fileType = await FileType.fromFile(defaultAvatar);
+            if (fileType) {
+              mime = fileType.mime;
+            }
           }
-          const caption = `*INFO MEMBER #${nomorMember}*\n\nNama: ${name || 'Tidak diketahui'}\nNomor: ${user.id.split('@')[0]}\nStatus: ${user.admin ? 'Admin' : 'Member'}\nID: ${user.id}`;
-          await fn.sendFileUrl(toId, ppUrl, caption, m);
+          const caption = `*MEMBER INFO #${nomorMember}*\n\nName: ${name || 'Unknown'}\nNumber: ${user.id.split('@')[0]}\nStatus: ${user.admin ? 'Admin' : 'Member'}\nID: ${user.id}`;
+          await fn.sendMediaByType(toId, mime, mediaBuffer, caption, m);
         }
         break;
       }
       default:
-        await sReply('Subcommand tidak dikenal! Gunakan: member, admins, user, atau info.');
+        await sReply('Unknown subcommand! Use: member, admins, user, or info.');
         break;
     }
   }

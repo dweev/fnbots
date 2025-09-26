@@ -26,6 +26,7 @@
     "dotenv": "^16.6.1",
     "fs-extra": "^11.3.2",
     "fuse.js": "^7.1.0",
+    "generator-fake": "^2.0.4",
     "mongoose": "^8.18.1",
     "node-cron": "^4.2.1",
     "node-gtts": "^2.0.2",

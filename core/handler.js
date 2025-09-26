@@ -117,7 +117,7 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
   const mentionedJidList = Array.isArray(m.mentionedJid) ? m.mentionedJid : [];
   const isBotGroupAdmins = m.isBotAdmin || false;
   const isGroupAdmins = m.isAdmin || false;
-  const isSadmin = ownerNumber.includes(serial) || (dbSettings.self === 'true' && fromBot);
+  const isSadmin = ownerNumber.includes(serial) || (dbSettings.self === 'true' && fromBot) || (dbSettings.self === 'auto' && fromBot)
   const isMaster = user.isMaster;
   const isVIP = user.isVIPActive;
   const isPremium = user.isPremiumActive;

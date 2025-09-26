@@ -66,10 +66,8 @@ export const loadPlugins = async (pluginPath) => {
         const filePath = join(categoryPath, file);
         try {
           let moduleUrl = `file://${filePath}`;
-          if (process.env.NODE_ENV === 'development') {
-            const fileStats = await fs.stat(filePath);
-            moduleUrl += `?t=${fileStats.mtime.getTime()}`;
-          }
+          const fileStats = await fs.stat(filePath);
+          moduleUrl += `?t=${fileStats.mtime.getTime()}`;
           moduleUrlCache.add(moduleUrl);
           const plugin = await import(moduleUrl);
           if (!plugin.command) {

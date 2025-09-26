@@ -85,7 +85,7 @@ export const loadPlugins = async (pluginPath) => {
           if (pluginCache.commands.has(cmdName)) {
             const oldCommand = pluginCache.commands.get(cmdName);
             log(`Replacing duplicate command '${cmdName}' (old: ${oldCommand.category || 'unknown'}, new: ${categoryName})`, true);
-            for (const [category, commands] of pluginCache.helpMap.entries()) {
+            for (const [, commands] of pluginCache.helpMap.entries()) {
               if (commands.has(cmdName)) {
                 commands.delete(cmdName);
                 break;

@@ -10,7 +10,7 @@ import { Media } from '../../../database/index.js';
 
 export const command = {
   name: 'editvideo',
-  category: 'premium',
+  category: 'vip',
   description: 'Mengganti video di database dengan yang baru.',
   aliases: ['updatevideo'],
   isCommandWithoutPayment: true,

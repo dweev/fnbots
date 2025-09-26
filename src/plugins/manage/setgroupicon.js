@@ -8,7 +8,7 @@
 
 import { generateProfilePicture } from 'baileys';
 import { saveFile } from '../../lib/function.js';
-import { mongoStore } from '../../../database/index.js';
+import { tmpDir } from '../../lib/tempManager.js';
 
 export const command = {
   name: 'setgroupicon',
@@ -25,7 +25,7 @@ export const command = {
       if (!resBuffer) return await sReply(`Gagal mendapatkan gambar dari pesan yang dibalas.`);
       const filename = await saveFile(resBuffer, "tmp_group_icon");
       await fn.updateProfilePicture(toId, { url: filename });
-      await mongoStore.deleteFile(filename); await reactDone();
+      await tmpDir.deleteFile(filename); await reactDone();
     } else if (arg && args[0] === "full") {
       if (!m.isGroup || !isBotGroupAdmins) return await sReply(`Perintah ini hanya bisa digunakan di grup dan bot harus menjadi admin grup.`);
       const targetMsg = quotedMsg ? m.quoted || m : m.message;

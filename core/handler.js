@@ -19,7 +19,7 @@ import { exec as cp_exec } from 'child_process';
 import { tmpDir } from '../src/lib/tempManager.js';
 import { pluginCache } from '../src/lib/plugins.js';
 import { User, Group, Whitelist, Settings, Command, StoreGroupMetadata, OTPSession, Media, DatabaseBot } from '../database/index.js';
-import { color, msgs, mycmd, safeStringify, sendAndCleanupFile, waktu, shutdown, checkCommandAccess, isUserVerified, textMatch1, textMatch2, expiredVIPcheck, expiredCheck, getSerial, getTxt } from '../src/lib/function.js';
+import { color, msgs, mycmd, safeStringify, sendAndCleanupFile, waktu, shutdown, checkCommandAccess, isUserVerified, textMatch1, textMatch2, expiredVIPcheck, expiredCheck, getSerial, getTxt, initializeFuse } from '../src/lib/function.js';
 
 const exec = util.promisify(cp_exec);
 const isPm2 = process.env.pm_id !== undefined || process.env.NODE_APP_INSTANCE !== undefined;
@@ -40,19 +40,38 @@ const groupAfkCooldowns = new LRUCache({
   updateAgeOnGet: false
 });
 
+const updateQueues      = new Map();
 let recentcmd           = new Set();
 let fspamm              = new Set();
 let sban                = new Set();
 let stp                 = new Set();
 let stickerspam         = new Set();
 let mygroup             = [];
+let mygroupMembers      = {};
 let chainingCommands    = [];
 let counter             = 0;
 let suggested           = false;
 let groupData           = null;
 
-export const updateMyGroup = (newGroupList) => {
+async function queueGroupUpdate(groupId, updateFunction) {
+  if (!updateQueues.has(groupId)) {
+    updateQueues.set(groupId, Promise.resolve());
+  }
+  const currentQueue = updateQueues.get(groupId);
+  const newQueue = currentQueue.then(async () => {
+    try {
+      await updateFunction();
+    } catch (error) {
+      await log(`Group update error for ${groupId}: ${error}`, true);
+    }
+  });
+  updateQueues.set(groupId, newQueue);
+  return newQueue;
+};
+
+export const updateMyGroup = (newGroupList, newMemberlist) => {
   mygroup = newGroupList;
+  mygroupMembers = newMemberlist;
 };
 export async function handleRestart(reason) {
   const currentRestarts = config.restartAttempts;
@@ -96,6 +115,8 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
   const quotedMsg = m.quoted ? m.quoted : false;
   const quotedParticipant = m.quoted?.sender || '';
   const mentionedJidList = Array.isArray(m.mentionedJid) ? m.mentionedJid : [];
+  const isBotGroupAdmins = m.isBotAdmin || false;
+  const isGroupAdmins = m.isAdmin || false;
   const isSadmin = ownerNumber.includes(serial) || (dbSettings.self === 'true' && fromBot);
   const isMaster = user.isMaster;
   const isVIP = user.isVIPActive;
@@ -103,8 +124,7 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
   const maintenance = dbSettings.maintenance;
   const isWhiteList = await Whitelist.isWhitelisted(toId, 'group');
   const hakIstimewa = [isSadmin, isMaster, isVIP, isPremium].some(Boolean);
-  const isBotGroupAdmins = m.isBotAdmin || false;
-  const isGroupAdmins = m.isAdmin || false;
+  const isPrivileged = isBotGroupAdmins && [isSadmin, isMaster, isVIP, isPremium, isGroupAdmins, fromBot].some(Boolean);
   const body = m?.body;
   const type = m?.type;
   const userData = {
@@ -198,6 +218,29 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
     if (!isSadmin && !isMaster) return;
     const result = await Command.resetAll();
     await sReply(`Berhasil! Sebanyak ${result.deletedCount} data perintah telah dihapus dari database. Silakan restart bot untuk menyegarkan cache menu.`);
+  } else if (body?.toLowerCase().trim() == "reloadplugins") {
+    if (!isSadmin && !isMaster) return;
+    try {
+      const { loadPlugins, getPluginStats } = await import('../src/lib/plugins.js');
+      const pluginPath = path.join(process.cwd(), 'src', 'plugins');
+      await loadPlugins(pluginPath);
+      await initializeFuse();
+      const stats = getPluginStats();
+      let statsText = `Plugin Cache Reloaded Successfully!\n\n`;
+      statsText += `Statistics:\n`;
+      statsText += `• Total commands: ${stats.totalCommands}\n`;
+      statsText += `• Categories: ${stats.categories}\n\n`;
+      statsText += `Commands by Category:\n`;
+      for (const [category, count] of Object.entries(stats.commandsByCategory)) {
+        statsText += `• ${category}: ${count} commands\n`;
+      }
+      await sReply(statsText);
+      await reactDone();
+    } catch (error) {
+      await sReply(`Failed to reload plugins: ${error.message}`);
+      await reactFail();
+      log(`Plugin reload error: ${error}`, true);
+    }
   } else if (body?.toLowerCase().trim().startsWith("mode")) {
     if (!isSadmin && !isMaster) return;
     const args = body.toLowerCase().trim().split(/\s+/);
@@ -236,9 +279,20 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
   if (selfMode === 'false' && fromBot) return;
 
   if (m.isGroup) {
-    groupData = await Group.ensureGroup(toId);
-    await groupData.incrementMessageCount();
-    await groupData.incrementCommandCount();
+    await queueGroupUpdate(toId, async () => {
+      await Group.updateOne(
+        { groupId: toId },
+        {
+          $inc: {
+            messageCount: 1,
+            commandCount: isCmd ? 1 : 0
+          },
+          $setOnInsert: { groupId: toId }
+        },
+        { upsert: true }
+      );
+    });
+    groupData = await Group.findOne({ groupId: toId });
     if (!groupData.isActive) return;
     if (groupData.isMemberBanned(serial)) return;
     const userAfkGroups = await Group.findUserAfkStatus(serial);
@@ -299,7 +353,6 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
   }
   try {
     if (m.isGroup && !isCmd && groupData) {
-      const isPrivileged = isBotGroupAdmins && [isSadmin, isMaster, isVIP, isPremium, isGroupAdmins, fromBot].some(Boolean);
       const currentTime = Date.now();
       const lastResponseTimeInGroup = groupAfkCooldowns.get(toId);
       if (groupData.antiHidetag) {
@@ -468,7 +521,8 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
                   sPesan, sReply, reactDone, reactFail, toId,
                   quotedMsg, quotedParticipant, mentionedJidList,
                   body, args, arg: fullArgs, ar: args, serial, user,
-                  groupData,
+                  groupData, botNumber, mygroupMembers, mygroup,
+                  isPrivileged
                 };
                 await command.execute(commandArgs);
                 commandFound = true;

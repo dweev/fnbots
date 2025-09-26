@@ -10,11 +10,12 @@ import { User } from '../../../database/index.js';
 
 export const command = {
   name: 'listowner',
-  category: 'master',
+  category: 'list',
   description: 'Daftar list owner yang dimiliki oleh Bot',
   aliases: ['ownerlist', 'masterlist', 'listmaster'],
   isCommandWithoutPayment: true,
-  execute: async ({ sReply }) => {
+  execute: async ({ sReply, isSadmin }) => {
+    if (!isSadmin) return;
     const owners = await User.getMasters();
     let list = `This is list of owner number\nTotal: ${owners.length}\n`;
     owners.forEach((owner, i) => {

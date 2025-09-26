@@ -8,11 +8,12 @@
 
 export const command = {
   name: 'listadmin',
-  category: 'manage',
+  category: 'list',
   description: 'Melihat daftar admin group.',
   aliases: ['adminlist'],
   isCommandWithoutPayment: true,
-  execute: async ({ fn, sReply, toId, m }) => {
+  execute: async ({ fn, sReply, toId, m, isPrivileged }) => {
+    if (!isPrivileged) return;
     if (!m.isGroup) return await sReply(`Perintah ini hanya bisa digunakan di grup.`);
     const metadata = await fn.groupMetadata(toId);
     const groupAdmins = metadata?.participants?.reduce((a, b) => {

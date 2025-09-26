@@ -21,7 +21,7 @@ const config = {
   ownerNumber: JSON.parse(process.env.OWNER_NUMBER),
   botNumber: process.env.BOT_NUMBER || '',
   restartAttempts: parseInt(process.env.RESTART_ATTEMPTS, 10) || 0,
-  usePairingCode: false,
+  usePairingCode: true,
   commandCategories: [
     'master', 'owner', 'bot', 'vip', 'premium', 'manage', 'media', 
     'convert', 'audio', 'text', 'image', 'ai', 'anime', 'fun', 

@@ -6,6 +6,8 @@
 */
 // ─── Info ────────────────────────────────
 
+import { Whitelist } from '../../../database/index.js';
+
 export const command = {
   name: 'join',
   category: 'util',
@@ -23,7 +25,10 @@ export const command = {
       if (!joinApprovalMode) {
         await fn.groupAcceptInvite(inviteCode);
         if (!restrict) await fn.sendPesan(id, `Halo warga grup *${subject}*!\nTerima kasih sudah mengundang ${dbSettings.botname}. Ketik *.rules* untuk melihat peraturan.`, m);
-        await sReply("✅ Berhasil join grup.");
+        if (isSadmin || isMaster) {
+          await Whitelist.addToWhitelist(id, 'group');
+        }
+        await sReply(`*BERHASIL BERGABUNG!*\n\nNama Grup: ${subject}\nMember: ${participants.length}\nID: ${id}`);
       }
     }
   }

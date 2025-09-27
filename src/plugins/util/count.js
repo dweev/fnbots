@@ -12,7 +12,8 @@ export const command = {
   description: 'Menampilkan jumlah penggunaan bot oleh user',
   aliases: ['myhit', 'hitstats', 'hitcount'],
   isCommandWithoutPayment: true,
-  execute: async ({ sReply, serial, user }) => {
+  execute: async ({ sReply, serial, user, botNumber }) => {
+    if (botNumber === serial) return;
     await sReply(`*Statistik Penggunaan Bot*\n\n` +
       `➸ *User*: @${serial.split('@')[0]}\n` +
       `➸ *Total Hit*: ${user.userCount}\n`);

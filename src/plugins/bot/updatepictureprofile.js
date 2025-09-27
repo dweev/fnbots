@@ -11,10 +11,11 @@ import { tmpDir } from '../../lib/tempManager.js';
 
 export const command = {
   name: 'updatepictureprofile',
+  displayName: 'update-pictureprofile',
   category: 'bot',
   description: 'Mengubah foto profil bot.',
   isCommandWithoutPayment: true,
-  aliases: ['updatepp', 'updateprofilepic', 'setpp', 'setprofilepic'],
+  aliases: ['updatepp', 'updateprofilepic', 'setpp', 'setprofilepic', 'update-pictureprofile'],
   execute: async ({ fn, m, quotedMsg, sReply, reactDone, botNumber }) => {
     const targetMsg = quotedMsg ? m.quoted || m : m.message;
     const mimeType = targetMsg?.imageMessage?.mimetype;

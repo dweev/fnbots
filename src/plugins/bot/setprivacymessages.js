@@ -8,9 +8,11 @@
 
 export const command = {
   name: 'setprivacymessages',
+  displayName: 'setprivacy-messages',
   category: 'bot',
   description: 'Mengatur pengaturan privasi messages.',
   isCommandWithoutPayment: true,
+  aliases: ['setprivacy-messages'],
   execute: async ({ fn, sReply, args }) => {
     const mode = (args[0] || '').toLowerCase();
     if (!['all', 'contacts'].includes(mode)) return await sReply(`gunakan argumen seperti all, contacts`);

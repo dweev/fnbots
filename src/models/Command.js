@@ -23,6 +23,9 @@ const commandSchema = new mongoose.Schema({
       message: 'Command name must be alphanumeric'
     }
   },
+  displayName: {
+    type: String
+  },
   count: {
     type: Number,
     default: 0,
@@ -66,6 +69,9 @@ const commandSchema = new mongoose.Schema({
 
 commandSchema.pre('save', function (next) {
   this.name = this.name.toLowerCase();
+  if (!this.displayName) {
+    this.displayName = this.name;
+  }
   next();
 });
 commandSchema.methods.incrementCount = function (amount = 1) {
@@ -109,12 +115,13 @@ commandSchema.statics.getCommandStats = function () {
     }
   ]);
 };
-commandSchema.statics.findOrCreate = async function (name, category, description, aliases, flags = {}) {
+commandSchema.statics.findOrCreate = async function (name, displayName, category, description, aliases, flags = {}) {
   const normalizedName = name.toLowerCase();
   let command = await this.findOne({ name: normalizedName });
   if (!command) {
     command = new this({
       name: normalizedName,
+      displayName: displayName || normalizedName,
       category,
       description,
       aliases,

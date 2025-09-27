@@ -8,10 +8,11 @@
 
 export const command = {
   name: 'updateprofilebio',
+  displayName: 'update-profilebio',
   category: 'bot',
   description: 'Mengubah bio profil bot.',
   isCommandWithoutPayment: true,
-  aliases: ['setbio', 'upbio', 'updatebio'],
+  aliases: ['setbio', 'upbio', 'updatebio', 'update-profilebio'],
   execute: async ({ fn, reactDone, botNumber }) => {
     await fn.removeProfilePicture(botNumber);
     await reactDone();

@@ -10,9 +10,11 @@ import { Settings } from '../../../database/index.js';
 
 export const command = {
   name: 'changelimitpremium',
+  displayName: 'changelimit-premium',
   category: 'owner',
   description: 'mengatur limit member premium',
   isCommandWithoutPayment: true,
+  aliases: ['changelimit-premium'],
   execute: async ({ dbSettings, reactDone, args, sReply }) => {
     if (args) {
       const limit = parseInt(args[0]);

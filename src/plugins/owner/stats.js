@@ -22,7 +22,7 @@ export const command = {
   name: 'stats',
   category: 'owner',
   description: 'Menampilkan statistik bot dan server.',
-  aliases: ['status', 'info', 'statistik'],
+  aliases: ['status', 'statistik'],
   isCommandWithoutPayment: true,
   execute: async ({ version, sReply }) => {
     const startTime = Date.now();

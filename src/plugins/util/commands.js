@@ -26,6 +26,7 @@ export const command = {
       let listString = '';
       commandNames.forEach((name, i) => {
         const cmdData = commandMap.get(name);
+        const displayName = cmdData?.displayName || name;
         let icon = 'Ⓛ';
         if (cmdData) {
           if (cmdData.isLimitGameCommand) {
@@ -34,7 +35,7 @@ export const command = {
             icon = '';
           }
         }
-        listString += `\n${i + 1}. ${name} ${icon}`;
+        listString += `\n${i + 1}. ${displayName} ${icon}`;
       });
       return listString;
     };

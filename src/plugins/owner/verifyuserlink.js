@@ -10,9 +10,11 @@ import { Settings } from '../../../database/index.js';
 
 export const command = {
   name: 'verifyuserlink',
+  displayName: 'verifyuser-setlink',
   category: 'owner',
   description: 'mengatur link group untuk verifyuser.',
   isCommandWithoutPayment: true,
+  aliases: ['verifyuser-setlink'],
   execute: async ({ dbSettings, arg, args, reactDone, sReply }) => {
     if (!arg) return await sReply(`gunakan perintah dengan benar, contoh: ${dbSettings.rname}verifyuserlink link group baru`);
     dbSettings.linkIdentity = args[0].trim();

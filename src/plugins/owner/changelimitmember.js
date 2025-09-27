@@ -10,9 +10,11 @@ import { Settings } from '../../../database/index.js';
 
 export const command = {
   name: 'changelimitmember',
+  displayName: 'changelimit-member',
   category: 'owner',
   description: 'mengatur limit member untuk batas group yang bisa dimasuki oleh bot',
   isCommandWithoutPayment: true,
+  aliases: ['changelimit-member'],
   execute: async ({ dbSettings, reactDone, args, sReply }) => {
     if (args) {
       const limit = parseInt(args[0]);

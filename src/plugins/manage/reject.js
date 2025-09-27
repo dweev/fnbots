@@ -30,7 +30,7 @@ export const command = {
             return `${index + 1}. @${(jid).split('@')[0]}`;
           });
           const listText = (await Promise.all(listPromises)).join('\n');
-          throw new Error(`*Daftar Permintaan Bergabung:*\n${listText}\n\n*Gunakan:*\n- ${dbSettings.rname}reject all\n- ${dbSettings.rname}reject <nomor> (contoh: ${dbSettings.rname}reject 1,3)`);
+          return await sReply(`*Daftar Permintaan Bergabung:*\n${listText}\n\n*Gunakan:*\n- ${dbSettings.rname}reject all\n- ${dbSettings.rname}reject <nomor> (contoh: ${dbSettings.rname}reject 1,3)`);
         }
         let jidsToApprove = [];
         if (selector.toLowerCase() === 'all' || selector.toLowerCase() === 'semua') {

@@ -8,9 +8,11 @@
 
 export const command = {
   name: 'setprivacystatus',
+  displayName: 'setprivacy-status',
   category: 'bot',
   description: 'Mengatur pengaturan privasi bio/about profile.',
   isCommandWithoutPayment: true,
+  aliases: ['setprivacy-status'],
   execute: async ({ fn, sReply, args }) => {
     const mode = (args[0] || '').toLowerCase();
     if (!['all', 'contacts', 'contact_blacklist', 'none'].includes(mode)) return await sReply(`gunakan argumen seperti all, contacts, contact_blacklist, none`);

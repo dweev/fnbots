@@ -10,9 +10,11 @@ import { Settings } from '../../../database/index.js';
 
 export const command = {
   name: 'changelimitgame',
+  displayName: 'changelimit-game',
   category: 'owner',
   description: 'mengatur limit permainan',
   isCommandWithoutPayment: true,
+  aliases: ['changelimit-game'],
   execute: async ({ dbSettings, reactDone, args, sReply }) => {
     if (args) {
       const limit = parseInt(args[0]);

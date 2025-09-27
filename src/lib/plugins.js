@@ -136,6 +136,7 @@ export const loadPlugins = async (pluginPath) => {
           try {
             dbCommand = await Command.findOrCreate(
               cmdName,
+              cmd.displayName || cmdName,
               categoryName,
               cmd.description || 'belum terdefinisikan...',
               cmd.aliases || [],

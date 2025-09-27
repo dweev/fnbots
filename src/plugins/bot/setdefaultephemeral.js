@@ -8,10 +8,12 @@
 
 export const command = {
   name: 'setdefaultephemeral',
+  displayName: 'setdefault-ephemeral',
   category: 'bot',
   description: 'Mengatur pengaturan default ephemeral messages.',
   isCommandWithoutPayment: true,
-  execute: async ({ fn, args, reactDone }) => {
+  aliases: ['setdefault-ephemeral'],
+  execute: async ({ fn, args, reactDone, sReply }) => {
     const _waktu = args[0]
     if (_waktu === '90d') {
       await fn.updateDefaultDisappearingMode(7776000);
@@ -22,9 +24,9 @@ export const command = {
     } else if (_waktu === 'off') {
       await fn.updateDefaultDisappearingMode(0);
     } else if (args.length > 1) {
-      throw new Error('gunakan argument:\n90d, 7d, 1d, 24jam, off')
+      return await sReply('gunakan argument:\n90d, 7d, 1d, 24jam, off')
     } else {
-      throw new Error('gunakan argument:\n90d, 7d, 1d, 24jam, off')
+      return await sReply('gunakan argument:\n90d, 7d, 1d, 24jam, off')
     };
     await reactDone();
   }

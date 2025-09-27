@@ -31,14 +31,6 @@ const groupSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
-  groupDescription: {
-    type: String,
-    default: ''
-  },
-  groupCreated: {
-    type: Date,
-    default: Date.now
-  },
   welcome: {
     state: { type: Boolean, default: false, index: true },
     pesan: { type: String, default: '' },
@@ -48,14 +40,6 @@ const groupSchema = new mongoose.Schema({
     state: { type: Boolean, default: false, index: true },
     pesan: { type: String, default: '' },
     templateId: { type: String, default: null }
-  },
-  promoteMessage: {
-    type: String,
-    default: ''
-  },
-  demoteMessage: {
-    type: String,
-    default: ''
   },
   antiTagStory: {
     type: Boolean,
@@ -72,25 +56,11 @@ const groupSchema = new mongoose.Schema({
     default: false,
     index: true
   },
-  antiVirtex: {
-    type: Boolean,
-    default: false,
-    index: true
-  },
-  antiBadword: {
-    type: Boolean,
-    default: false,
-    index: true
-  },
   verifyMember: {
     type: Boolean,
     default: false
   },
   memberCount: {
-    type: Number,
-    default: 0
-  },
-  adminCount: {
     type: Number,
     default: 0
   },
@@ -338,11 +308,9 @@ groupSchema.methods.toggleSetting = function (settingName) {
   }
   return this.save();
 };
-groupSchema.methods.updateMessages = function (welcomeMsg = null, leaveMsg = null, promoteMsg = null, demoteMsg = null) {
+groupSchema.methods.updateMessages = function (welcomeMsg = null, leaveMsg = null) {
   if (welcomeMsg !== null) this.welcomeMessage = welcomeMsg;
   if (leaveMsg !== null) this.leaveMessage = leaveMsg;
-  if (promoteMsg !== null) this.promoteMessage = promoteMsg;
-  if (demoteMsg !== null) this.demoteMessage = demoteMsg;
   return this.save();
 };
 groupSchema.methods.muteChat = function () {

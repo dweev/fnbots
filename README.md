@@ -149,32 +149,63 @@ classDiagram
 
   class Settings {
     +String botName
+    +String botNumber (from pairing)
     +String rname (prefix)
-    +Boolean maintenance
+    +String sname (prefix)
+    +String packName (dataExif)
+    +String packAuthor (dataExif)
+    +String packID (dataExif)
     +String self (mode)
+    +string pinoLogger
+    +string autocommand
+    +string groupIdentity
+    +string linkIdendity
+    +string restartId
+    +Boolean restartState
+    +Boolean maintenance
+    +Boolean autojoin
+    +Boolean changer
+    +Boolean filter
+    +Boolean chatbot
+    +Boolean autosticker
+    +Boolean antideleted
+    +Boolean verify
+    +Boolean autoreadsw
+    +Boolean autolikestory
+    +Boolean autoread
+    +Boolean autodownload
+    +Boolean anticall
+    +Number autocorrect
+    +Number totalHitCOunt
     +Number limitCount
     +Number limitGame
+    +Number limitCountPrem
+    +Number memberLimit
     +Array~String~ sAdmin
-    +getSettings()
   }
+  note for Settings "Fat Model for global config"
   note for Settings "Singleton document for global bot config"
 
   class User {
     +String userId
     +Boolean isMaster
-    +Boolean isPremium
     +Boolean isVIP
+    +Boolean isPremium
+    +Boolean gacha
     +Date premiumExpired
     +String balance (BigInt)
     +Number xp
     +Number level
+    +Number userCount
     +Object limit
     +Object limitgame
+    +Map inventory
     +Map commandStats
     +addBalance(amount)
     +addXp(amount)
-    +isLimit()
+    +Array~Object~ mutedUser
   }
+  note for Settings "Fat Model for global User"
 
   class Group {
     +String groupId
@@ -183,21 +214,32 @@ classDiagram
     +Object leave
     +Boolean antilink
     +Boolean antiHidetag
+    +Boolean antiTagStory
+    +Boolean verifyMember
+    +Boolean isActive
+    +Boolean isMuted
+    +Boolean filter
+    +Date lasActivity
+    +number commandCount
+    +Number messageCount
+    +Number memberCount
+    +Map dailyStats
     +Object warnings
     +Array afkUsers
     +Array bannedMembers
-    +addWarning(userId)
-    +addAfkUser(userId, reason)
+    +Array~String~ filterWords
   }
+  note for Settings "Fat Model for global group"
 
   class Command {
     +String name
-    +String category
     +Number count
+    +String description
+    +String category
     +Array~String~ aliases
     +Boolean isLimitCommand
-    +findOrCreate(name, category)
-    +updateCount(commandName)
+    +Boolean isLimitGameCommand
+    +Boolean isCommandWithoutPayment
   }
   
   class DatabaseBot {
@@ -205,8 +247,8 @@ classDiagram
     +Map~String, String~ chat
     +Array~String~ bacot
     +getDatabase()
-    +addChat(keyword, reply)
   }
+  note for DatabaseBot "Fat Model for global database"
   note for DatabaseBot "Singleton for chatbot & media responses"
   
   class Media {
@@ -226,6 +268,7 @@ classDiagram
     +String lid
     +String name
     +String notify
+    +String verifiedName
   }
   
   class StoreGroupMetadata {
@@ -234,18 +277,18 @@ classDiagram
     +String owner
     +Array~Participant~ participants
   }
+  note for StoreGroupMetadata "object data same as Baileys"
   
   class StoreMessages {
     +String chatId
     +Array~Mixed~ messages
     +Array~Conversation~ conversations
-    +addMessage(chatId, msg)
+    +Map presences
   }
   
   class StoreStory {
     +String userId
     +Array~Mixed~ statuses
-    +addStatus(userId, status)
   }
 
   class OTPSession {
@@ -254,17 +297,15 @@ classDiagram
     +String otp
     +Number attempts
     +Date expireAt
-    +createSession(userId, groupId, otp)
-    +verifyOTP(userId, otp)
+    +Boolean isBlocked
   }
   
   class Whitelist {
     +String type ('group' or 'user')
     +String targetId
-    +isWhitelisted(targetId)
   }
 
-  Settings "1" -- "0" User : Lists SAdmins
+  Settings "1" -- "0" User : Lists memberShip
   User "1" -- "0" OTPSession : Can have OTP session
   Group "1" -- "0" OTPSession : Is target for OTP
   User "1" -- "1" StoreStory : Has status updates

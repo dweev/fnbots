@@ -79,10 +79,6 @@ const settingsSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
-  banChats: {
-    type: Boolean,
-    default: false
-  },
   autojoin: {
     type: Boolean,
     default: false
@@ -100,10 +96,6 @@ const settingsSchema = new mongoose.Schema({
     default: true
   },
   autosticker: {
-    type: Boolean,
-    default: false
-  },
-  debugs: {
     type: Boolean,
     default: false
   },

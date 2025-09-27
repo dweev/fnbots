@@ -10,7 +10,7 @@ import { Media } from '../../../database/index.js';
 
 export const command = {
   name: 'addimage',
-  category: 'premium',
+  category: 'vip',
   description: 'Menyimpan gambar ke database dengan nama kunci.',
   aliases: ['addimg'],
   isCommandWithoutPayment: true,

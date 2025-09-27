@@ -204,8 +204,8 @@ async function starts() {
           lastSeen: Date.now()
         };
       }
-      mongoStore.updatePresences(id, update);
-      StoreMessages.updatePresences(id, update).catch(err => log(err, true));
+      mongoStore.updatePresences(id, resolvedPresences);
+      StoreMessages.updatePresences(id, resolvedPresences).catch(err => log(err, true));
     });
     fn.ev.on("call", (call) => {
       const { id, status, from } = call[0];

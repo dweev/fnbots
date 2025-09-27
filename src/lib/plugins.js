@@ -9,6 +9,7 @@
 import fs from 'fs-extra';
 import { join } from 'path';
 import log from './logger.js';
+import { pathToFileURL } from 'url';
 import config from '../../config.js';
 import { Command } from '../../database/index.js';
 
@@ -20,15 +21,35 @@ export const pluginCache = {
 
 let moduleUrlCache = new Set();
 
+const clearModuleCache = (moduleUrl) => {
+  try {
+    const modulePath = new URL(moduleUrl).pathname;
+    delete require.cache[require.resolve(modulePath)];
+  } catch {
+    // do nothing
+  }
+};
+
+export const clearAllModuleCache = () => {
+  for (const moduleUrl of moduleUrlCache) {
+    clearModuleCache(moduleUrl);
+  }
+  moduleUrlCache.clear();
+  if (global.gc) {
+    global.gc();
+  }
+};
+
 export const loadPlugins = async (pluginPath) => {
   if (pluginCache.isLoading) {
     throw new Error('Plugin loading already in progress');
   }
   pluginCache.isLoading = true;
   try {
+    log('Clearing module cache...');
+    clearAllModuleCache();
     pluginCache.commands.clear();
     pluginCache.helpMap.clear();
-    moduleUrlCache.clear();
     for (const cat of config.commandCategories) {
       pluginCache.helpMap.set(cat, new Map());
     }
@@ -65,10 +86,13 @@ export const loadPlugins = async (pluginPath) => {
         if (!file.endsWith('.js')) continue;
         const filePath = join(categoryPath, file);
         try {
-          let moduleUrl = `file://${filePath}`;
           const fileStats = await fs.stat(filePath);
-          moduleUrl += `?t=${fileStats.mtime.getTime()}`;
+          const timestamp = fileStats.mtime.getTime();
+          const random = Math.random().toString(36).substring(7);
+          const moduleUrl = pathToFileURL(filePath) + `?t=${timestamp}&r=${random}`;
           moduleUrlCache.add(moduleUrl);
+          const baseUrl = pathToFileURL(filePath).toString();
+          clearModuleCache(baseUrl);
           const plugin = await import(moduleUrl);
           if (!plugin.command) {
             log(`No command export found in ${file}`, true);
@@ -84,7 +108,7 @@ export const loadPlugins = async (pluginPath) => {
           const cmdName = cmd.name.toLowerCase();
           if (pluginCache.commands.has(cmdName)) {
             const oldCommand = pluginCache.commands.get(cmdName);
-            log(`Replacing duplicate command '${cmdName}' (old: ${oldCommand.category || 'unknown'}, new: ${categoryName})`, true);
+            log(`Replacing command '${cmdName}' (old category: ${oldCommand.category || 'unknown'}, new category: ${categoryName})`);
             for (const [, commands] of pluginCache.helpMap.entries()) {
               if (commands.has(cmdName)) {
                 commands.delete(cmdName);
@@ -93,7 +117,10 @@ export const loadPlugins = async (pluginPath) => {
             }
             const oldAliases = oldCommand.aliases || [];
             for (const oldAlias of oldAliases) {
-              pluginCache.commands.delete(oldAlias.toLowerCase());
+              const oldAliasLower = oldAlias.toLowerCase();
+              if (pluginCache.commands.has(oldAliasLower)) {
+                pluginCache.commands.delete(oldAliasLower);
+              }
             }
             pluginCache.commands.delete(cmdName);
           }
@@ -119,24 +146,24 @@ export const loadPlugins = async (pluginPath) => {
             errorCount++;
             continue;
           }
-          pluginCache.commands.set(cmdName, {
+          const commandData = {
             ...dbCommand.toObject(),
             execute: cmd.execute
-          });
+          };
+          pluginCache.commands.set(cmdName, commandData);
           pluginCache.helpMap.get(categoryName).set(cmdName, cmdName);
           totalCommands++;
-          const aliases = dbCommand.aliases || [];
-          for (const alias of aliases) {
+          const currentAliases = cmd.aliases || [];
+          for (const alias of currentAliases) {
             const aliasLower = alias.toLowerCase();
             if (pluginCache.commands.has(aliasLower)) {
-              const oldAliasCommand = pluginCache.commands.get(aliasLower);
-              log(`Replacing duplicate alias '${alias}' (old command: ${oldAliasCommand.name}, new command: ${cmdName})`, true);
-              pluginCache.commands.delete(aliasLower);
+              const existingCommand = pluginCache.commands.get(aliasLower);
+              if (existingCommand.name !== cmdName) {
+                log(`Alias conflict: '${alias}' already used by command '${existingCommand.name}', skipping for '${cmdName}'`, true);
+                continue;
+              }
             }
-            pluginCache.commands.set(aliasLower, {
-              ...dbCommand.toObject(),
-              execute: cmd.execute
-            });
+            pluginCache.commands.set(aliasLower, commandData);
           }
         } catch (error) {
           log(`Error loading ${file}: ${error.message}`, true);
@@ -147,9 +174,9 @@ export const loadPlugins = async (pluginPath) => {
         }
       }
     }
-    log(`Plugin ${totalCommands} commands loaded, ${errorCount} errors`);
+    log(`Plugin loading completed: ${totalCommands} commands loaded, ${errorCount} errors`);
     if (errorCount > 0) {
-      log(`Plugin ${errorCount} errors. Check logs above for details.`, true);
+      log(`${errorCount} commands failed to load. Check logs above for details.`, true);
     }
   } catch (error) {
     log(`Critical error during plugin loading: ${error.message}`, true);
@@ -158,7 +185,6 @@ export const loadPlugins = async (pluginPath) => {
     pluginCache.isLoading = false;
   }
 };
-
 export const getCommandInfo = (commandName) => {
   return pluginCache.commands.get(commandName.toLowerCase());
 };
@@ -184,8 +210,42 @@ export const getPluginStats = () => {
   return stats;
 };
 export const cleanupPlugins = () => {
+  clearAllModuleCache();
   pluginCache.commands.clear();
   pluginCache.helpMap.clear();
-  moduleUrlCache.clear();
   pluginCache.isLoading = false;
+};
+export const reloadPlugin = async (pluginPath, categoryName, fileName) => {
+  const filePath = join(pluginPath, categoryName, fileName);
+  try {
+    const baseUrl = pathToFileURL(filePath).toString();
+    clearModuleCache(baseUrl);
+    const fileStats = await fs.stat(filePath);
+    const timestamp = fileStats.mtime.getTime();
+    const random = Math.random().toString(36).substring(7);
+    const moduleUrl = pathToFileURL(filePath) + `?t=${timestamp}&r=${random}`;
+    const plugin = await import(moduleUrl);
+    if (plugin.command && plugin.command.name) {
+      const cmdName = plugin.command.name.toLowerCase();
+      if (pluginCache.commands.has(cmdName)) {
+        const oldCommand = pluginCache.commands.get(cmdName);
+        const oldAliases = oldCommand.aliases || [];
+        for (const oldAlias of oldAliases) {
+          pluginCache.commands.delete(oldAlias.toLowerCase());
+        }
+        pluginCache.commands.delete(cmdName);
+        for (const [, commands] of pluginCache.helpMap.entries()) {
+          if (commands.has(cmdName)) {
+            commands.delete(cmdName);
+            break;
+          }
+        }
+      }
+      log(`Hot reloaded plugin: ${fileName}`);
+      await loadPlugins(pluginPath);
+    }
+  } catch (error) {
+    log(`Error hot reloading ${fileName}: ${error.message}`, true);
+    throw error;
+  }
 };

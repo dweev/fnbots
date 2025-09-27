@@ -8,7 +8,7 @@
 
 export const command = {
   name: 'mentionall',
-  category: 'util',
+  category: 'manage',
   description: 'Menyebutkan semua anggota grup.',
   aliases: ['tagall', 'tag'],
   isCommandWithoutPayment: true,

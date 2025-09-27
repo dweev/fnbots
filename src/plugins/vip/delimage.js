@@ -10,7 +10,7 @@ import { Media } from '../../../database/index.js';
 
 export const command = {
   name: 'delimage',
-  category: 'premium',
+  category: 'vip',
   description: 'Menghapus gambar dari database berdasarkan nama.',
   aliases: ['deleteimage'],
   isCommandWithoutPayment: true,

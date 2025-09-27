@@ -382,6 +382,53 @@ export function formatCommandList(commandCollection) {
   const sortedCollection = [...commandCollection].sort();
   return sortedCollection.map(([commandName], i) => `\n${i + 1}. ${commandName}`).join('');
 };
+export function formatTimeAgo(timestamp) {
+  if (!timestamp) return 'tidak diketahui';
+  const now = Date.now();
+  const seconds = Math.floor((now - timestamp) / 1000);
+  let interval = seconds / 31536000;
+  if (interval > 1) {
+    return Math.floor(interval) + " tahun yang lalu";
+  }
+  interval = seconds / 2592000;
+  if (interval > 1) {
+    return Math.floor(interval) + " bulan yang lalu";
+  }
+  interval = seconds / 604800;
+  if (interval > 1) {
+    return Math.floor(interval) + " minggu yang lalu";
+  }
+  interval = seconds / 86400;
+  if (interval > 1) {
+    return Math.floor(interval) + " hari yang lalu";
+  }
+  interval = seconds / 3600;
+  if (interval > 1) {
+    return Math.floor(interval) + " jam yang lalu";
+  }
+  interval = seconds / 60;
+  if (interval > 1) {
+    return Math.floor(interval) + " menit yang lalu";
+  }
+  return Math.floor(seconds) + " detik yang lalu";
+};
+export function firstUpperCase(text, split = ' ') {
+  return text.split(split).map(word => `${word.charAt(0).toUpperCase()}${word.slice(1)}`).join(' ');
+};
+export function list(arr, conj = 'and') {
+  const len = arr.length;
+  if (len === 0) return '';
+  if (len === 1) return arr[0];
+  return `${arr.slice(0, -1).join(', ')}${len > 1 ? `${len > 2 ? ',' : ''} ${conj} ` : ''}${arr.slice(-1)}`;
+};
+export function ulang(str, num) {
+  return (new Array(num + 1)).join(str);
+};
+export function arrayRemove(arr, value) {
+  return arr.filter(function (ele) {
+    return ele != value;
+  })
+};
 export function randomByte(length = 32) {
   const chars = '0123456789ABCDEF';
   let result = '';

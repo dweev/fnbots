@@ -17,7 +17,7 @@ import { Worker } from 'worker_threads';
 import dayjs from '../src/utils/dayjs.js';
 import { exec as cp_exec } from 'child_process';
 import { tmpDir } from '../src/lib/tempManager.js';
-import { pluginCache } from '../src/lib/plugins.js';
+import { cleanupPlugins, pluginCache } from '../src/lib/plugins.js';
 import { User, Group, Whitelist, Settings, Command, StoreGroupMetadata, OTPSession, Media, DatabaseBot } from '../database/index.js';
 import { color, msgs, mycmd, safeStringify, sendAndCleanupFile, waktu, shutdown, checkCommandAccess, isUserVerified, textMatch1, textMatch2, expiredVIPcheck, expiredCheck, getSerial, getTxt, initializeFuse } from '../src/lib/function.js';
 
@@ -223,6 +223,7 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
     try {
       const { loadPlugins, getPluginStats } = await import('../src/lib/plugins.js');
       const pluginPath = path.join(process.cwd(), 'src', 'plugins');
+      cleanupPlugins();
       await loadPlugins(pluginPath);
       await initializeFuse();
       const stats = getPluginStats();

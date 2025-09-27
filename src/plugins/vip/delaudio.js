@@ -10,7 +10,7 @@ import { Media } from '../../../database/index.js';
 
 export const command = {
   name: 'delaudio',
-  category: 'premium',
+  category: 'vip',
   description: 'Menghapus audio dari database berdasarkan nama.',
   aliases: ['deleteaudio'],
   isCommandWithoutPayment: true,

@@ -10,7 +10,7 @@ import mongoose from 'mongoose';
 import config from '../config.js';
 import { Mutex } from 'async-mutex';
 import log from '../src/lib/logger.js';
-import StoreContact from '../src/models/StoreContact.js';
+import { StoreContact } from './index.js';
 import { BufferJSON, initAuthCreds, proto } from 'baileys';
 
 const ACQUIRE_TIMEOUT = config.performance.acquireMutexInterval;

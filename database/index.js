@@ -100,18 +100,18 @@ class DatabaseConnection {
 const database = new DatabaseConnection();
 
 import mongoStore from './StoreDB.js';
-import User from '../src/models/User.js';
-import Media from '../src/models/Media.js';
-import Group from '../src/models/Group.js';
-import Command from '../src/models/Command.js';
-import Settings from '../src/models/Settings.js';
-import Whitelist from '../src/models/Whitelist.js';
-import StoreContact from '../src/models/StoreContact.js';
-import StoreGroupMetadata from '../src/models/StoreGroupMetadata.js';
-import StoreMessages from '../src/models/StoreMessages.js';
-import DatabaseBot from '../src/models/DatabaseBot.js';
-import StoreStory from '../src/models/StoreStory.js';
-import OTPSession from '../src/models/OtpSession.js';
+import User from '../src/models/User/index.js';
+import Media from '../src/models/Media/index.js';
+import Group from '../src/models/Group/index.js';
+import Command from '../src/models/Command/index.js';
+import Settings from '../src/models/Settings/index.js';
+import Whitelist from '../src/models/Whitelist/index.js';
+import StoreContact from '../src/models/StoreContact/index.js';
+import StoreGroupMetadata from '../src/models/StoreGroupMetadata/index.js';
+import StoreMessages from '../src/models/StoreMessages/index.js';
+import DatabaseBot from '../src/models/DatabaseBot/index.js';
+import StoreStory from '../src/models/StoreStory/index.js';
+import OTPSession from '../src/models/OTPSession/index.js';
 
 export {
   database,

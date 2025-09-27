@@ -9,9 +9,7 @@
 import config from '../config.js';
 import log from '../src/lib/logger.js';
 import { jidNormalizedUser } from 'baileys';
-import StoreContact from '../src/models/StoreContact.js';
-import StoreMessages from '../src/models/StoreMessages.js';
-import StoreGroupMetadata from '../src/models/StoreGroupMetadata.js';
+import { StoreContact, StoreMessages, StoreGroupMetadata } from './index.js';
 
 class DBStore {
   constructor() {

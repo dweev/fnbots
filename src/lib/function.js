@@ -6,6 +6,7 @@
 */
 // ─── Info function.js ────────────────────
 
+import os from 'os';
 import util from 'util';
 import path from 'path';
 import sharp from 'sharp';
@@ -18,6 +19,7 @@ import webp from 'node-webpmux';
 import FileType from 'file-type';
 import { fileURLToPath } from 'url';
 import config from '../../config.js';
+import speedTest from 'speedtest-net';
 import dayjs from '../utils/dayjs.js';
 import { Worker } from 'worker_threads';
 import { tmpDir } from './tempManager.js';
@@ -778,5 +780,26 @@ export async function getCommonGroups(userId) {
   } catch (error) {
     await log(`Error_CommonGroups\n${error}`, true);
     return [];
+  }
+};
+export function getServerIp() {
+  const interfaces = os.networkInterfaces();
+  for (const name of Object.keys(interfaces)) {
+    for (const iface of interfaces[name]) {
+      if (iface.family === "IPv4" && !iface.internal) {
+        return iface.address;
+      }
+    }
+  }
+  return "127.0.0.1";
+};
+export async function speedtest() {
+  try {
+    const result = await speedTest({ acceptLicense: true, acceptGdpr: true });
+    const download = (result.download.bandwidth / 125000).toFixed(2);
+    const upload = (result.upload.bandwidth / 125000).toFixed(2);
+    return { download, upload, ping: result.ping.latency.toFixed(2) };
+  } catch {
+    return { download: 'N/A', upload: 'N/A', ping: 'N/A' };
   }
 };

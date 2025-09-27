@@ -14,7 +14,7 @@ export const command = {
   description: 'Menampilkan semua daftar story dari daftar kontak bot.',
   isCommandWithoutPayment: true,
   execute: async ({ sReply, isSadmin }) => {
-    if (!isSadmin) return await sReply('Perintah ini hanya untuk SAdmin.');
+    if (!isSadmin) return;
     const usersWithStories = await StoreStory.aggregate([
       {
         $project: {

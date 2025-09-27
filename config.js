@@ -65,6 +65,7 @@ const config = {
     ffmpeg: '/usr/bin/ffmpeg',
     ffprobe: '/usr/bin/ffprobe',
     tempDir: 'src/sampah',
+    fotoBot: '/src/media/fotobot.jpeg',
     logsDir: 'logs'
   },
   security: {

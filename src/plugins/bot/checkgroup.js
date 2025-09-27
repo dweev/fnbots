@@ -8,8 +8,9 @@
 
 import fs from 'fs-extra';
 import FileType from 'file-type';
+import config from '../../../config.js';
 
-const defaultAvatar = './src/media/apatar.png';
+const defaultAvatar = config.paths.fotoBot;
 export const command = {
   name: 'checkgroup',
   category: 'bot',

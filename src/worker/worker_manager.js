@@ -22,8 +22,15 @@ export const stickerPool = new Piscina({
   idleTimeout: 60000
 });
 
-export const audioPool = new Piscina({
+export const audioChangerPool = new Piscina({
   filename: path.resolve(__dirname, 'audio_changer_worker.js'),
+  minThreads: 1,
+  maxThreads: maxThreads,
+  idleTimeout: 60000
+});
+
+export const groupImagePool = new Piscina({
+  filename: path.resolve(__dirname, 'groupimage_worker.js'),
   minThreads: 1,
   maxThreads: maxThreads,
   idleTimeout: 60000

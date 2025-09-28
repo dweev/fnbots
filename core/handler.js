@@ -16,7 +16,7 @@ import log from '../src/lib/logger.js';
 import dayjs from '../src/utils/dayjs.js';
 import { exec as cp_exec } from 'child_process';
 import { cleanupPlugins, pluginCache } from '../src/lib/plugins.js';
-import { audioPool, stickerPool } from '../src/worker/worker_manager.js';
+import { audioChangerPool, stickerPool } from '../src/worker/worker_manager.js';
 import { User, Group, Whitelist, Settings, Command, StoreGroupMetadata, OTPSession, Media, DatabaseBot } from '../database/index.js';
 import { color, msgs, mycmd, safeStringify, sendAndCleanupFile, waktu, shutdown, checkCommandAccess, isUserVerified, textMatch1, textMatch2, expiredVIPcheck, expiredCheck, getSerial, getTxt, initializeFuse } from '../src/lib/function.js';
 
@@ -689,7 +689,7 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
         const mediaTypes = new Set(['audio/ogg; codecs=opus', 'audio/mpeg', 'audio/mp4', 'audio/m4a', 'audio/aac', 'audio/wav', 'audio/amr']);
         if (mediaTypes.has(m.mime)) {
           const mediaData = await fn.getMediaBuffer(m.message);
-          const resultBuffer = await audioPool.run(mediaData);
+          const resultBuffer = await audioChangerPool.run(mediaData);
           let finalBuffer = resultBuffer;
           if (!Buffer.isBuffer(resultBuffer)) {
             if (resultBuffer && resultBuffer.type === 'Buffer' && resultBuffer.data) {

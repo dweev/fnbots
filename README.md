@@ -5,8 +5,12 @@
 ---
 
 ## Architecture & Features
+  * **FNBOTS is an independent project and is NOT AFFILIATED, ENDORSED, OR SUPPORTED by WhatsApp or Meta Platforms.**
 
-**FNBOT** is a multifunctional WhatsApp bot platform built with **Baileys**. This project is designed with robust modular architecture, with primary focus on **performance, security,** and **ease** of feature addition.
+  * FNBOTS is a WhatsApp automation project built using [Baileys](https://www.npmjs.com/package/baileys) library from the [WhiskeySockets/Baileys](https://github.com/WhiskeySockets/Baileys) GitHub repository.
+
+  * Architect:
+
 
 ```mermaid
 graph TD
@@ -369,9 +373,10 @@ The directory structure is designed to separate each concern, making the codebas
     * `groupParticipantsUpdate.js`: Specialized handler for group member events (join/leave/promote/demote).
     * `serializeMessage.js`: Critical module that normalizes various Baileys message formats into one consistent `m` object.
     * `errorManager.js`: Custom error definitions for better error handling.
+    * etc..
 
 * `src/models/`
-    * **Mongoose** schema and model definitions for each database collection (e.g., `User.js`, `Group.js`, `Settings.js`).
+    * **Mongoose** schema and model definitions for each database collection.
 
 * `src/plugins/`
     * **Modular command system.** Each subfolder here is a command category, and each `.js` file is a single command.
@@ -388,9 +393,10 @@ The directory structure is designed to separate each concern, making the codebas
     * **Async Workers.** Runs heavy CPU-intensive tasks in separate threads to keep bot responsive.
     * `sticker_worker.js`: Handles image/video to sticker conversion.
     * `audio_changer_worker.js`: Processes and modifies audio files.
+    * `groupimage_worker.js`: Handles image from welcome / leave messages.
 
 * `config.js`
-    * Main configuration file that loads environment variables (`.env`), owner numbers, and performance parameters.
+    * Main configuration file that loads environment variables (`.env`), owner numbers, performance parameters, etc.
 
 * `ecosystem.config.cjs`
     * **PM2** configuration for production deployment, managing restarts and monitoring.

@@ -14,8 +14,9 @@ import config from '../config.js';
 import log from '../src/lib/logger.js';
 import { mongoStore } from '../database/index.js';
 import { tmpDir } from '../src/lib/tempManager.js';
+import { groupImagePool } from '../src/worker/worker_manager.js';
+import { randomByte, getBuffer, getSizeMedia, writeExif, convertAudio } from '../src/lib/function.js';
 import { MediaValidationError, MediaProcessingError, MediaSizeError } from '../src/lib/errorManager.js';
-import { randomByte, getBuffer, getSizeMedia, writeExif, convertAudio, groupImage } from '../src/lib/function.js';
 import { jidNormalizedUser, generateWAMessage, generateWAMessageFromContent, downloadContentFromMessage, jidDecode, jidEncode, getBinaryNodeChildString, getBinaryNodeChildren, getBinaryNodeChild, proto } from 'baileys';
 
 import { createRequire } from 'node:module';
@@ -500,14 +501,18 @@ export async function clientBot(fn, dbSettings) {
     try {
       profilePictureUrl = await fn.profilePictureUrl(memberJid, 'image');
     } catch {
-      profilePictureUrl = './src/media/apatar.png';
+      profilePictureUrl = config.paths.avatar;
     }
-    const imageBuffer = await groupImage(memberNum, subject, eventText, profilePictureUrl);
-    const outputPath = tmpDir.createTempFile('png');
-    await fs.writeFile(outputPath, imageBuffer);
+    const imageBuffer = await groupImagePool.run({
+      username: memberNum,
+      groupname: subject,
+      welcometext: eventText,
+      profileImagePath: profilePictureUrl
+    });
+    const outputPath = await tmpDir.createTempFileWithContent(imageBuffer, 'png');
     const caption = `@${memberNum}\n\n${messageText}`;
     await fn.sendFilePath(idGroup, caption, outputPath);
-    tmpDir.deleteFile(outputPath);
+    await tmpDir.deleteFile(outputPath);
   };
   return fn;
 };

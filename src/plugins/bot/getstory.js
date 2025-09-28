@@ -8,10 +8,11 @@
 
 import fs from 'fs-extra';
 import { delay } from 'baileys';
-import { archimed, saveFile } from '../../lib/function.js';
-import { StoreStory } from '../../../database/index.js';
+import config from '../../../config.js';
 import { tmpDir } from '../../lib/tempManager.js';
 import { generateFakeStory } from 'generator-fake';
+import { StoreStory } from '../../../database/index.js';
+import { archimed, saveFile } from '../../lib/function.js';
 
 export const command = {
   name: 'getstory',
@@ -33,7 +34,7 @@ export const command = {
     const allStories = storyDocument.statuses;
     const selectedStories = archimed(ruleString, allStories);
     if (selectedStories.length === 0) return await sReply(`Tidak ada story yang cocok dengan aturan "${ruleString}".`);
-    await sReply(`✅ Ditemukan ${selectedStories.length} story. Memulai pengiriman...`);
+    await sReply(`Ditemukan ${selectedStories.length} story. Memulai pengiriman...`);
     for (const story of selectedStories) {
       if (story.type === 'extendedTextMessage') {
         const authorName = await fn.getName(story.sender) || story.pushName || 'Nama Tidak Diketahui';
@@ -43,7 +44,7 @@ export const command = {
           const profilePicUrl = await fn.profilePictureUrl(story.sender, 'image');
           profilePicBuffer = await fn.getFile(profilePicUrl);
         } catch {
-          const defaultPic = await fs.readFile('./src/media/fotobot.jpeg');
+          const defaultPic = await fs.readFile(config.paths.fotoBot);
           profilePicBuffer = { data: defaultPic };
         }
         const resBuffer = await generateFakeStory({
@@ -65,6 +66,6 @@ export const command = {
       );
       await delay(1500);
     }
-    await sReply(`✅ Selesai mengirim dan menghapus ${selectedStories.length} story dari @${targetJid.split('@')[0]}.`, { mentions: [targetJid] });
+    await sReply(`Selesai mengirim dan menghapus ${selectedStories.length} story dari @${targetJid.split('@')[0]}.`);
   }
 };

@@ -6,6 +6,7 @@
 */
 // ─── Handler chatbot.js ──────────────────
 
+import { delay } from 'baileys';
 import log from '../lib/logger.js';
 import config from '../../config.js';
 
@@ -25,14 +26,14 @@ export class ChatbotHandler {
       if (!trigger) {
         return;
       }
-      const [mediaResponse, dbBot] = await Promise.all([
-        Media.findOne({ name: trigger }).lean(),
+      const [mediaResponses, dbBot] = await Promise.all([
+        Media.find({ name: trigger }).lean(),
         DatabaseBot.getDatabase()
       ]);
       await this.handleBacotResponse(body, dbSettings, dbBot, sReply);
       await this.handleGreetingResponse(body, dbSettings, fn, toId, m, sReply);
       await this.handleChatResponse(trigger, dbBot, sReply);
-      await this.handleMediaResponse(mediaResponse, fn, toId, m);
+      await this.handleMediaResponse(mediaResponses, fn, toId, m);
     } catch (error) {
       log(`Error in chatbot handler: ${error}`, true);
     }
@@ -88,11 +89,14 @@ export class ChatbotHandler {
       log(`Error in chat response: ${error}`, true);
     }
   }
-  async handleMediaResponse(mediaResponse, fn, toId, m) {
+  async handleMediaResponse(mediaResponses, fn, toId, m) {
     try {
-      if (mediaResponse && mediaResponse.data && mediaResponse.data.buffer) {
-        const mediaBuffer = Buffer.from(mediaResponse.data.buffer);
-        await fn.sendMediaByType(toId, mediaResponse.mime, mediaBuffer, '', m, {});
+      for (const mediaResponse of mediaResponses) {
+        if (mediaResponse && mediaResponse.data && mediaResponse.data.buffer) {
+          const mediaBuffer = Buffer.from(mediaResponse.data.buffer);
+          await fn.sendMediaByType(toId, mediaResponse.mime, mediaBuffer, '', m, {});
+          await delay(1000);
+        }
       }
     } catch (error) {
       log(`Error in media response: ${error}`, true);

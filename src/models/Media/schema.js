@@ -12,7 +12,6 @@ const mediaSchema = new mongoose.Schema({
   name: {
     type: String,
     required: true,
-    unique: true,
     index: true
   },
   type: {
@@ -30,5 +29,7 @@ const mediaSchema = new mongoose.Schema({
     required: true
   }
 }, { timestamps: true });
+
+mediaSchema.index({ name: 1, type: 1 }, { unique: true });
 
 export default mediaSchema;

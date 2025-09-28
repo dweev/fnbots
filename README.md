@@ -183,7 +183,6 @@ classDiagram
     +Number memberLimit
     +Array~String~ sAdmin
   }
-  note for Settings "Fat Model for global config"
   note for Settings "Singleton document for global bot config"
 
   class User {
@@ -205,7 +204,6 @@ classDiagram
     +addXp(amount)
     +Array~Object~ mutedUser
   }
-  note for Settings "Fat Model for global User"
 
   class Group {
     +String groupId
@@ -229,7 +227,6 @@ classDiagram
     +Array bannedMembers
     +Array~String~ filterWords
   }
-  note for Settings "Fat Model for global group"
 
   class Command {
     +String name
@@ -248,7 +245,6 @@ classDiagram
     +Array~String~ bacot
     +getDatabase()
   }
-  note for DatabaseBot "Fat Model for global database"
   note for DatabaseBot "Singleton for chatbot & media responses"
   
   class Media {
@@ -372,6 +368,7 @@ The directory structure is designed to separate each concern, making the codebas
     * `watcherPlugins.js`: Monitors plugin directory for **hot-reloading** feature (reload plugins without restarting bot).
     * `groupParticipantsUpdate.js`: Specialized handler for group member events (join/leave/promote/demote).
     * `serializeMessage.js`: Critical module that normalizes various Baileys message formats into one consistent `m` object.
+    * `errorManager.js`: Custom error definitions for better error handling.
 
 * `src/models/`
     * **Mongoose** schema and model definitions for each database collection (e.g., `User.js`, `Group.js`, `Settings.js`).
@@ -385,7 +382,6 @@ The directory structure is designed to separate each concern, making the codebas
 * `src/utils/`
     * Smaller, more specific supporting utility modules.
     * `dayjs.js`: Custom configuration for date and time management.
-    * `errorManager.js`: Custom error definitions for better error handling.
     * `security.js`: Functions to detect dangerous messages or WhatsApp "bugs".
 
 * `src/worker/`
@@ -398,71 +394,6 @@ The directory structure is designed to separate each concern, making the codebas
 
 * `ecosystem.config.cjs`
     * **PM2** configuration for production deployment, managing restarts and monitoring.
-
----
-
-## Core Architecture
-
-1. **Core System** – `client.js`, `connection.js`, `handler.js`, `main.js`
-2. **Database Layer** – MongoDB with caching (`StoreDB.js`)
-3. **Authentication** – Session management (`auth.js`)
-4. **Message Processing** – Message serialization and handling
-5. **Plugin System** – Modular command structure
-6. **Security** – Bug detection and protection
-7. **User Management** – VIP, Premium, daily limits
-8. **Group Management** – Admin tools, AFK, mute, ban
-9. **Utility Functions** – Media conversion, logging, settings
-
----
-
-## Key Features
-
-### User Management
-
-* VIP & Premium tiers with expiration dates
-* Daily command limits
-* Leveling system with XP
-* Balance & inventory tracking
-* Mute/block functionality
-* Master user control
-
-### Group Management
-
-* Welcome/leave/promote/demote messages
-* Anti-link, anti-hidetag, anti-tag story
-* AFK system with reason & duration tracking
-* Per-user warning system
-* Group mute & member mute
-* Bad word filtering
-
-### Security
-
-* Detects WhatsApp bugs
-* Validates JIDs and senders
-* Auto-block suspicious users
-* Rate limiting & spam protection
-
-### Media Processing
-
-* Convert multiple formats to WebP stickers
-* Text-to-Speech and audio format conversion
-* EXIF metadata injection for stickers
-* Auto-downloads incoming media
-
-### Statistics & Monitoring
-
-* Command usage tracking
-* User activity statistics
-* Group activity monitoring
-* Leaderboards
-* Comprehensive logging
-
-### Flexible Configuration
-
-* Auto-polling settings management
-* Self/Normal/Maintenance modes
-* Remote command & auto-correction
-* Whitelist system
 
 ---
 

@@ -13,11 +13,10 @@ import config from '../config.js';
 import { LRUCache } from 'lru-cache';
 import { spawn } from 'child_process';
 import log from '../src/lib/logger.js';
-import { Worker } from 'worker_threads';
 import dayjs from '../src/utils/dayjs.js';
 import { exec as cp_exec } from 'child_process';
-import { tmpDir } from '../src/lib/tempManager.js';
 import { cleanupPlugins, pluginCache } from '../src/lib/plugins.js';
+import { audioPool, stickerPool } from '../src/worker/worker_manager.js';
 import { User, Group, Whitelist, Settings, Command, StoreGroupMetadata, OTPSession, Media, DatabaseBot } from '../database/index.js';
 import { color, msgs, mycmd, safeStringify, sendAndCleanupFile, waktu, shutdown, checkCommandAccess, isUserVerified, textMatch1, textMatch2, expiredVIPcheck, expiredCheck, getSerial, getTxt, initializeFuse } from '../src/lib/function.js';
 
@@ -689,45 +688,39 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
         if (selfMode === 'auto' && fromBot) return;
         const mediaTypes = new Set(['audio/ogg; codecs=opus', 'audio/mpeg', 'audio/mp4', 'audio/m4a', 'audio/aac', 'audio/wav', 'audio/amr']);
         if (mediaTypes.has(m.mime)) {
-          await sReply('Sedang memproses audio, mohon tunggu...');
           const mediaData = await fn.getMediaBuffer(m.message);
-          const worker = new Worker('./src/worker/audio_changer_worker.js');
-          worker.postMessage(mediaData);
-          worker.on('message', async (result) => {
-            if (result.status === 'done') {
-              await fn.sendFilePath(toId, '', result.outputPath, { quoted: m, ptt: true });
-              await tmpDir.deleteFile(result.outputPath);
+          const resultBuffer = await audioPool.run(mediaData);
+          let finalBuffer = resultBuffer;
+          if (!Buffer.isBuffer(resultBuffer)) {
+            if (resultBuffer && resultBuffer.type === 'Buffer' && resultBuffer.data) {
+              finalBuffer = Buffer.from(resultBuffer.data);
+            } else if (resultBuffer && Array.isArray(resultBuffer.data)) {
+              finalBuffer = Buffer.from(resultBuffer.data);
+            } else if (resultBuffer && resultBuffer.length && typeof resultBuffer[0] === 'number') {
+              finalBuffer = Buffer.from(resultBuffer);
             } else {
-              throw new Error(result.error);
+              await sReply(`Cannot convert result to Buffer: type=${typeof resultBuffer}, constructor=${resultBuffer?.constructor?.name}`);
             }
-          });
-          worker.on('error', (error) => {
-            throw error;
-          });
+          }
+          if (!finalBuffer || !Buffer.isBuffer(finalBuffer) || finalBuffer.length === 0) {
+            await sReply(`Invalid final buffer: ${typeof finalBuffer}, length: ${finalBuffer?.length}`);
+          }
+          await fn.sendMediaByType(toId, 'audio/mpeg', finalBuffer, '', m, { ptt: true });
         }
-      };
+      }
       if (dbSettings.autosticker === true) {
         const mime = m.mime;
-        if ((m.message?.imageMessage?.mimetype || m.message?.videoMessage?.mimetype) && !m.body.toLowerCase().includes("sticker")) {
-          await fn.sendMessage(toId, { react: { text: '⏳', key: m.key } });
-          const buffer = await fn.getMediaBuffer(m.message);
-          if (buffer) {
-            if ((mime === "video/mp4" || mime === "image/gif" || mime === "image/png" || mime === "image/jpeg" || mime === "image/webp" || mime === "image/jpg") && (m.message?.videoMessage?.seconds || 0) < 20) {
+        if ((m.message?.imageMessage || m.message?.videoMessage) && !m.body.toLowerCase().includes("sticker")) {
+          const isSupportedMime = ["video/mp4", "image/gif", "image/png", "image/jpeg", "image/webp", "image/jpg"].includes(mime);
+          const isShortVideo = (m.message?.videoMessage?.seconds || 0) < 20;
+          if (isSupportedMime && (mime.startsWith('image/') || isShortVideo)) {
+            await fn.sendMessage(toId, { react: { text: '⏳', key: m.key } });
+            const buffer = await fn.getMediaBuffer(m.message);
+            if (buffer) {
               const type = mime.startsWith('image/') ? 'image' : 'video';
-              const worker = new Worker('./src/worker/sticker_worker.js');
-              worker.postMessage({ mediaBuffer: buffer, type: type });
-              worker.on('message', async (result) => {
-                if (result.status === 'done') {
-                  const stickerBuffer = Buffer.from(result.buffer);
-                  await sendRawWebpAsSticker(stickerBuffer);
-                  await reactDone();
-                } else {
-                  throw new Error(result.error);
-                }
-              });
-              worker.on('error', (error) => {
-                throw error;
-              });
+              const stickerBuffer = await stickerPool.run({ mediaBuffer: buffer, type: type });
+              await sendRawWebpAsSticker(stickerBuffer);
+              await reactDone();
             }
           }
         }

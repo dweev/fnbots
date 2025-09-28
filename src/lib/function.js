@@ -14,20 +14,18 @@ import fs from 'fs-extra';
 import axios from 'axios';
 import Fuse from 'fuse.js';
 import log from './logger.js';
-import { dirname } from 'path';
 import webp from 'node-webpmux';
 import FileType from 'file-type';
-import { fileURLToPath } from 'url';
 import config from '../../config.js';
 import speedTest from 'speedtest-net';
 import dayjs from '../utils/dayjs.js';
-import { Worker } from 'worker_threads';
 import { tmpDir } from './tempManager.js';
 import { pluginCache } from './plugins.js';
 import ffmpeg from '@ts-ffmpeg/fluent-ffmpeg';
 import { exec as cp_exec } from 'child_process';
 import { createCanvas, loadImage } from 'canvas';
 import { getDbSettings } from './settingsManager.js';
+import { stickerPool } from '../worker/worker_manager.js';
 import { StoreMessages, User, StoreGroupMetadata, mongoStore } from '../../database/index.js';
 
 const exec = util.promisify(cp_exec);
@@ -36,32 +34,18 @@ let allCmds           = [];
 let _checkVIP         = false;
 let _checkPremium     = false;
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 const fuseOptions = { includeScore: true, threshold: 0.25, minMatchCharLength: 2, distance: 25 };
 
-function runStickerConversion(media, type) {
-  return new Promise((resolve, reject) => {
-    const worker = new Worker(path.resolve(__dirname, '..', 'worker', 'sticker_worker.js'));
-    worker.postMessage({ mediaBuffer: media, type: type });
-    worker.on('message', (result) => {
-      if (result.status === 'done') {
-        resolve(Buffer.from(result.buffer));
-      } else {
-        reject(new Error(result.error));
-      }
-      worker.terminate();
-    });
-    worker.on('error', (err) => {
-      reject(err);
-      worker.terminate();
-    });
-    worker.on('exit', (code) => {
-      if (code !== 0) reject(new Error(`Worker berhenti dengan error code ${code}`));
-    });
-  });
-};
 
+export function imageToWebp(media) {
+  return stickerPool.run({ mediaBuffer: media, type: 'image' });
+};
+export function gifToWebp(media) {
+  return stickerPool.run({ mediaBuffer: media, type: 'video' });
+};
+export function videoToWebp(media) {
+  return stickerPool.run({ mediaBuffer: media, type: 'video' });
+};
 export async function initializeFuse() {
   allCmds = Array.from(pluginCache.commands.keys());
   fuse = new Fuse(allCmds, fuseOptions);
@@ -690,15 +674,6 @@ export async function getTxt(txt, dbSettings) {
   }
   txt = txt.trim();
   return txt;
-};
-export function gifToWebp(media) {
-  return runStickerConversion(media, 'video');
-};
-export function imageToWebp(media) {
-  return runStickerConversion(media, 'image');
-}
-export function videoToWebp(media) {
-  return runStickerConversion(media, 'video');
 };
 export async function saveFile(imageInput, prefix, toFile = "png") {
   let imageBuffer;

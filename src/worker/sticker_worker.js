@@ -4,11 +4,10 @@
 * Follow https://github.com/Terror-Machine
 * Feel Free To Use
 */
-// ─── Info sticker_worker.js ──────────────
+// ─── Info ────────────────────────────────
 
 import fs from 'fs-extra';
 import config from '../../config.js';
-import { parentPort } from 'worker_threads';
 import ffmpeg from '@ts-ffmpeg/fluent-ffmpeg';
 import { tmpDir } from '../lib/tempManager.js';
 
@@ -42,15 +41,13 @@ async function runConversion(mediaBuffer, type) {
       .save(tmpFileOut);
   });
   const resultBuffer = await fs.readFile(tmpFileOut);
-  await tmpDir.deleteFile(tmpFileIn);
-  await tmpDir.deleteFile(tmpFileOut);
+  await Promise.all([tmpDir.deleteFile(tmpFileIn), tmpDir.deleteFile(tmpFileOut)]);
   return resultBuffer;
 }
-parentPort.on('message', async ({ mediaBuffer, type }) => {
-  try {
-    const resultBuffer = await runConversion(mediaBuffer, type);
-    parentPort.postMessage({ status: 'done', buffer: resultBuffer });
-  } catch (e) {
-    parentPort.postMessage({ status: 'error', error: e.message });
+
+export default async function createSticker({ mediaBuffer, type }) {
+  if (!mediaBuffer || !type) {
+    throw new Error('mediaBuffer and type are required');
   }
-});
+  return await runConversion(mediaBuffer, type);
+}

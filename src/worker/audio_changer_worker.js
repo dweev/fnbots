@@ -4,11 +4,11 @@
 * Follow https://github.com/Terror-Machine
 * Feel Free To Use
 */
-// ─── Info audio_changer_worker.js ────────
+// ─── Info ────────────────────────────────
 
 import fs from 'fs-extra';
+import log from '../lib/logger.js';
 import { exec } from 'child_process';
-import { parentPort } from 'worker_threads';
 import { tmpDir } from '../lib/tempManager.js';
 
 function runFFMPEG(inputPath, outputPath, filter) {
@@ -22,11 +22,26 @@ function runFFMPEG(inputPath, outputPath, filter) {
     });
   });
 }
-parentPort.on('message', async (mediaBuffer) => {
+
+export default async function (mediaBuffer) {
+  let finalBuffer = mediaBuffer;
+  if (!Buffer.isBuffer(mediaBuffer)) {
+    if (mediaBuffer && mediaBuffer.type === 'Buffer' && mediaBuffer.data) {
+      finalBuffer = Buffer.from(mediaBuffer.data);
+    } else if (mediaBuffer && Array.isArray(mediaBuffer.data)) {
+      finalBuffer = Buffer.from(mediaBuffer.data);
+    } else if (mediaBuffer && mediaBuffer.length && typeof mediaBuffer[0] === 'number') {
+      finalBuffer = Buffer.from(mediaBuffer);
+    } else {
+      throw new Error(`Cannot convert input to Buffer: type=${typeof mediaBuffer}, constructor=${mediaBuffer?.constructor?.name}`);
+    }
+  }
+  if (!Buffer.isBuffer(finalBuffer)) throw new Error(`Final buffer is not a Buffer: ${typeof finalBuffer}`);
+  if (finalBuffer.length === 0) throw new Error('Worker received empty buffer');
   const inputFile = tmpDir.createTempFile('mp3', 'in-');
   const outputFile = tmpDir.createTempFile('mp3', 'out-');
   try {
-    await fs.writeFile(inputFile, mediaBuffer);
+    await fs.writeFile(inputFile, finalBuffer);
     const ffmpegFilters = [
       { filter: "equalizer=f=54:width_type=o:width=2:g=20", flag: '-af' },
       { filter: "acrusher=.1:1:64:0:log", flag: '-af' },
@@ -56,10 +71,17 @@ parentPort.on('message', async (mediaBuffer) => {
     ];
     const randomFilter = ffmpegFilters[Math.floor(Math.random() * ffmpegFilters.length)];
     await runFFMPEG(inputFile, outputFile, randomFilter);
-    parentPort.postMessage({ status: 'done', outputPath: outputFile });
-  } catch (e) {
-    parentPort.postMessage({ status: 'error', error: e.message });
+    if (!await fs.pathExists(outputFile)) throw new Error('Output file does not exist after FFMPEG processing');
+    const outputStats = await fs.stat(outputFile);
+    if (outputStats.size === 0) throw new Error('Output file is empty');
+    const outputBuffer = await fs.readFile(outputFile);
+    if (!Buffer.isBuffer(outputBuffer)) throw new Error('Output is not a buffer');
+    if (outputBuffer.length === 0) throw new Error('Output buffer is empty');
+    return outputBuffer;
+  } catch (error) {
+    log(`Error: ${error.message}`, true);
+    throw error;
   } finally {
-    await tmpDir.deleteFile(inputFile);
+    await Promise.all([tmpDir.deleteFile(inputFile), tmpDir.deleteFile(outputFile)]);
   }
-});
+}

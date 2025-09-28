@@ -7,6 +7,11 @@
 // ─── Info config.js ──────────────────────
 
 import 'dotenv/config.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const requiredVariables = ['MONGODB_URI', 'OWNER_NUMBER'];
 for (const variable of requiredVariables) {
@@ -22,9 +27,9 @@ const config = {
   restartAttempts: parseInt(process.env.RESTART_ATTEMPTS, 10) || 0,
   usePairingCode: false,
   commandCategories: [
-    'master', 'owner', 'bot', 'vip', 'premium', 'manage', 'media', 
-    'convert', 'audio', 'text', 'image', 'ai', 'anime', 'fun', 
-    'ngaji', 'game', 'stateless', 'statefull', 'pvpgame', 'math', 
+    'master', 'owner', 'bot', 'vip', 'premium', 'manage', 'media',
+    'convert', 'audio', 'text', 'image', 'ai', 'anime', 'fun',
+    'ngaji', 'game', 'stateless', 'statefull', 'pvpgame', 'math',
     'util', 'list'
   ],
   localPrefix: 'local-file://',
@@ -65,8 +70,9 @@ const config = {
     ffmpeg: '/usr/bin/ffmpeg',
     ffprobe: '/usr/bin/ffprobe',
     tempDir: 'src/sampah',
-    avatar: '/src/media/apatar.jpg',
-    fotoBot: '/src/media/fotobot.jpeg',
+    avatar: path.join(__dirname, 'src', 'media', 'avatar.jpg'),
+    fotoBot: path.join(__dirname, 'src', 'media', 'fotobot.jpeg'),
+    vanya: path.join(__dirname, 'src', 'media', 'hi.oga'),
     logsDir: 'logs'
   },
   security: {

@@ -17,6 +17,7 @@ import dayjs from '../src/utils/dayjs.js';
 import { exec as cp_exec } from 'child_process';
 import { cleanupPlugins, pluginCache } from '../src/lib/plugins.js';
 import { audioChangerPool, stickerPool } from '../src/worker/worker_manager.js';
+import { handleAntiDeleted, handleAutoJoin, handleAudioChanger, handleAutoSticker, handleChatbot } from '../src/handler/index.js';
 import { User, Group, Whitelist, Settings, Command, StoreGroupMetadata, OTPSession, Media, DatabaseBot } from '../database/index.js';
 import { color, msgs, mycmd, safeStringify, sendAndCleanupFile, waktu, shutdown, checkCommandAccess, isUserVerified, textMatch1, textMatch2, expiredVIPcheck, expiredCheck, getSerial, getTxt, initializeFuse } from '../src/lib/function.js';
 
@@ -536,7 +537,11 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
                   if (command.isLimitGameCommand) {
                     userUpdates.$inc['limitgame.current'] = -1;
                   } else if (command.isLimitCommand) {
-                    userUpdates.$inc['limit.current'] = -1;
+                    if (!isPremium) {
+                      userUpdates.$inc['limit.current'] = -20;
+                    } else {
+                      userUpdates.$inc['limit.current'] = -1
+                    }
                   }
                 }
                 await User.updateOne({ userId: user.userId }, userUpdates);
@@ -607,146 +612,19 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
       }
     } else {
       if (dbSettings.antideleted === true) {
-        if (m.type === 'protocolMessage' && m.protocolMessage.type === 0) {
-          const deletedMsgId = m.protocolMessage.key.id;
-          const remoteJid = toId;
-          const originalMessage = await mongoStore.loadMessage(remoteJid, deletedMsgId);
-          if (originalMessage && !originalMessage.fromMe) {
-            if (originalMessage.type === 'imageMessage') {
-              const buffer = await fn.getMediaBuffer(originalMessage.message);
-              await fn.sendMessage(toId, { image: buffer, caption: originalMessage.body });
-            } else if (originalMessage.type === 'videoMessage') {
-              const buffer = await fn.getMediaBuffer(originalMessage.message);
-              await fn.sendMessage(toId, { video: buffer, caption: originalMessage.body });
-            } else if (originalMessage.type === 'stickerMessage') {
-              const buffer = await fn.getMediaBuffer(originalMessage.message);
-              await fn.sendMessage(toId, { sticker: buffer });
-            } else if (originalMessage.type === 'audioMessage') {
-              const buffer = await fn.getMediaBuffer(originalMessage.message);
-              await fn.sendMessage(toId, { audio: buffer, mimetype: 'audio/mp4', ptt: false });
-            } else if (originalMessage.type === 'documentMessage') {
-              const buffer = await fn.getMediaBuffer(originalMessage.message);
-              await fn.sendMessage(toId, { document: buffer, mimetype: originalMessage.mime, fileName: originalMessage.message.fileName });
-            } else if (originalMessage.type === 'locationMessage') {
-              await fn.sendMessage(toId, {
-                location: {
-                  degreesLatitude: originalMessage.message.degreesLatitude,
-                  degreesLongitude: originalMessage.message.degreesLongitude,
-                  name: originalMessage.message.name,
-                  address: originalMessage.message.address
-                }
-              });
-            } else if (originalMessage.type === 'contactMessage') {
-              await fn.sendMessage(toId, { contacts: { displayName: originalMessage.message.contactMessage.displayName, contacts: [{ vcard: originalMessage.message.contactMessage.vcard }] } });
-            } else if (originalMessage.type === 'extendedTextMessage' || originalMessage.type === 'conversation') {
-              if (originalMessage.body) {
-                await fn.forwardMessage(toId, originalMessage);
-              }
-            }
-          }
-        }
+        await handleAntiDeleted({ fn, m, toId, mongoStore });
       };
       if (dbSettings.autojoin === true) {
-        if (body?.match(/(chat.whatsapp.com)/gi)) {
-          const inviteCode = body.split("https://chat.whatsapp.com/")[1];
-          if (!inviteCode) {
-            await sReply("Link undangan tidak valid.");
-          } else {
-            const { restrict, joinApprovalMode, subject, participants, id } = await fn.groupGetInviteInfo(inviteCode);
-            if (isSadmin || isMaster) {
-              if (!joinApprovalMode) {
-                await fn.groupAcceptInvite(inviteCode);
-                if (!restrict) {
-                  await fn.sendPesan(id, `Halo warga grup *${subject}*!\nTerima kasih sudah mengundang ${dbSettings.botname}. Ketik *.rules* untuk melihat peraturan.`, m);
-                }
-                await sReply("✅ Berhasil join grup.");
-                const userUpdates = { $inc: { userCount: 1 } };
-                await User.updateOne({ userId: user.userId }, userUpdates);
-              }
-            } else {
-              if (participants.length > dbSettings.memberLimit) {
-                if (!joinApprovalMode) {
-                  await fn.groupAcceptInvite(inviteCode);
-                  if (!restrict) {
-                    await fn.sendPesan(id, `Halo warga grup *${subject}*!\nTerima kasih sudah mengundang ${dbSettings.botname}. Ketik *.rules* untuk melihat peraturan.`, m);
-                  }
-                  await sReply("✅ Berhasil join grup.");
-                  const userUpdates = { $inc: { userCount: 1 } };
-                  if (!isSadmin && !isMaster && !isVIP) {
-                    userUpdates.$inc['limit.current'] = -1;
-                  }
-                  await User.updateOne({ userId: user.userId }, userUpdates);
-                }
-              } else {
-                await sReply('Group yang ingin kamu masukkan bot tidak memiliki member melebihi ' + dbSettings.memberLimit + '\nBot tidak bisa masuk ke grup, silakan hubungi owner.');
-              }
-            }
-          }
-        }
+        await handleAutoJoin({ m, fn, dbSettings, body, isSadmin, isMaster, isVIP, user, sReply, User });
       };
       if (dbSettings.changer === true) {
-        if (selfMode === 'auto' && fromBot) return;
-        const mediaTypes = new Set(['audio/ogg; codecs=opus', 'audio/mpeg', 'audio/mp4', 'audio/m4a', 'audio/aac', 'audio/wav', 'audio/amr']);
-        if (mediaTypes.has(m.mime)) {
-          const mediaData = await fn.getMediaBuffer(m.message);
-          const resultBuffer = await audioChangerPool.run(mediaData);
-          let finalBuffer = resultBuffer;
-          if (!Buffer.isBuffer(resultBuffer)) {
-            if (resultBuffer && resultBuffer.type === 'Buffer' && resultBuffer.data) {
-              finalBuffer = Buffer.from(resultBuffer.data);
-            } else if (resultBuffer && Array.isArray(resultBuffer.data)) {
-              finalBuffer = Buffer.from(resultBuffer.data);
-            } else if (resultBuffer && resultBuffer.length && typeof resultBuffer[0] === 'number') {
-              finalBuffer = Buffer.from(resultBuffer);
-            } else {
-              await sReply(`Cannot convert result to Buffer: type=${typeof resultBuffer}, constructor=${resultBuffer?.constructor?.name}`);
-            }
-          }
-          if (!finalBuffer || !Buffer.isBuffer(finalBuffer) || finalBuffer.length === 0) {
-            await sReply(`Invalid final buffer: ${typeof finalBuffer}, length: ${finalBuffer?.length}`);
-          }
-          await fn.sendMediaByType(toId, 'audio/mpeg', finalBuffer, '', m, { ptt: true });
-        }
-      }
+        await handleAudioChanger({ m, toId, fn, selfMode, fromBot, audioChangerPool, sReply });
+      };
       if (dbSettings.autosticker === true) {
-        const mime = m.mime;
-        if ((m.message?.imageMessage || m.message?.videoMessage) && !m.body.toLowerCase().includes("sticker")) {
-          const isSupportedMime = ["video/mp4", "image/gif", "image/png", "image/jpeg", "image/webp", "image/jpg"].includes(mime);
-          const isShortVideo = (m.message?.videoMessage?.seconds || 0) < 20;
-          if (isSupportedMime && (mime.startsWith('image/') || isShortVideo)) {
-            await fn.sendMessage(toId, { react: { text: '⏳', key: m.key } });
-            const buffer = await fn.getMediaBuffer(m.message);
-            if (buffer) {
-              const type = mime.startsWith('image/') ? 'image' : 'video';
-              const stickerBuffer = await stickerPool.run({ mediaBuffer: buffer, type: type });
-              await sendRawWebpAsSticker(stickerBuffer);
-              await reactDone();
-            }
-          }
-        }
+        await handleAutoSticker({ m, toId, fn, stickerPool, sendRawWebpAsSticker, reactDone });
       };
       if (dbSettings.chatbot === true) {
-        const trigger = m.body.trim().toLowerCase();
-        const mediaResponse = await Media.findOne({ name: trigger }).lean();
-        const dbBot = await DatabaseBot.getDatabase();
-        const chatResponse = dbBot.getChat(trigger);
-        if ((body?.toLowerCase().trim() == "bct") || (body?.toLowerCase().trim() == "bacot") || (body == dbSettings.sname + "bacot") || (body == dbSettings.rname + "bacot")) {
-          const db = await DatabaseBot.getDatabase();
-          const randomText = db.getRandomBacot();
-          if (randomText) {
-            await sReply(randomText);
-          }
-        } if ((body?.toLowerCase().trim() == "bot") || (body?.toLowerCase().trim() == "hi")) {
-          await fn.sendFilePath(toId, 'hi.oga', `./src/media/hi.oga`, { quoted: m });
-          await sReply(`ada yang bisa dibantu? silakan ketik ${dbSettings.rname}commands`)
-        }
-        if (chatResponse) {
-          await sReply(chatResponse);
-        }
-        if (mediaResponse) {
-          const mediaBuffer = Buffer.from(mediaResponse.data.buffer); 
-          await fn.sendMediaByType(m.chat, mediaResponse.mime, mediaBuffer, '', m, {});
-        }
+        await handleChatbot({m, toId, fn, dbSettings, body, Media, DatabaseBot, sReply});
       };
     }
   } catch (error) { await log(error, true); }

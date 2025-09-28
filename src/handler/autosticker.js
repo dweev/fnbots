@@ -9,9 +9,9 @@
 import log from '../lib/logger.js';
 
 export class AutoStickerHandler {
-  constructor(fn, stickerPool) {
+  constructor(fn, runJob) {
     this.fn = fn;
-    this.stickerPool = stickerPool;
+    this.runJob = runJob;
     this.supportedMimeTypes = [
       "video/mp4",
       "image/gif",
@@ -23,7 +23,7 @@ export class AutoStickerHandler {
     this.maxVideoSeconds = 20;
   }
   async handle(params) {
-    const { m, toId, fn, stickerPool, sendRawWebpAsSticker, reactDone } = params;
+    const { m, toId, fn, runJob, sendRawWebpAsSticker, reactDone } = params;
     try {
       const mime = m.mime;
       if (!this.hasMediaContent(m)) {
@@ -35,7 +35,7 @@ export class AutoStickerHandler {
       if (!this.isSupportedMedia(mime, m.message)) {
         return;
       }
-      await this.convertToSticker(m, toId, fn, stickerPool, sendRawWebpAsSticker, reactDone, mime);
+      await this.convertToSticker(m, toId, fn, runJob, sendRawWebpAsSticker, reactDone, mime);
     } catch (error) {
       log(`Error in auto sticker handler: ${error}`, true);
     }
@@ -63,7 +63,7 @@ export class AutoStickerHandler {
     }
     return false;
   }
-  async convertToSticker(m, toId, fn, stickerPool, sendRawWebpAsSticker, reactDone, mime) {
+  async convertToSticker(m, toId, fn, runJob, sendRawWebpAsSticker, reactDone, mime) {
     try {
       await fn.sendMessage(toId, { react: { text: '⏳', key: m.key } });
       const buffer = await fn.getMediaBuffer(m.message);
@@ -72,7 +72,7 @@ export class AutoStickerHandler {
         return;
       }
       const type = this.getMediaType(mime);
-      const stickerBuffer = await stickerPool.run({
+      const stickerBuffer = await runJob('sticker', {
         mediaBuffer: buffer,
         type: type
       });
@@ -97,6 +97,6 @@ export class AutoStickerHandler {
 }
 
 export const handleAutoSticker = async (params) => {
-  const handler = new AutoStickerHandler(params.fn, params.stickerPool);
+  const handler = new AutoStickerHandler(params.fn, params.runJob);
   return await handler.handle(params);
 };

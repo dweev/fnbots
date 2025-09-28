@@ -13,25 +13,19 @@ import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const maxThreads = Math.max(1, os.cpus().length - 1);
+const maxThreads = Math.max(2, Math.floor(os.cpus().length / 2));
 
-export const stickerPool = new Piscina({
-  filename: path.resolve(__dirname, 'sticker_worker.js'),
+export const jobPool = new Piscina({
+  filename: path.resolve(__dirname, 'job_worker.js'),
   minThreads: 1,
-  maxThreads: maxThreads,
-  idleTimeout: 60000
+  maxThreads,
+  idleTimeout: 10000,
+  concurrentTasksPerWorker: 1
 });
 
-export const audioChangerPool = new Piscina({
-  filename: path.resolve(__dirname, 'audio_changer_worker.js'),
-  minThreads: 1,
-  maxThreads: maxThreads,
-  idleTimeout: 60000
-});
-
-export const groupImagePool = new Piscina({
-  filename: path.resolve(__dirname, 'groupimage_worker.js'),
-  minThreads: 1,
-  maxThreads: maxThreads,
-  idleTimeout: 60000
-});
+export async function runJob(type, data) {
+  if (jobPool.queueSize > jobPool.maxThreads * 5) {
+    throw new Error('Worker pool penuh, coba lagi nanti.');
+  }
+  return await jobPool.run({ type, data });
+}

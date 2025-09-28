@@ -7,8 +7,8 @@
 // ─── Info ────────────────────────────────
 
 import fs from 'fs-extra';
-import log from '../lib/logger.js';
-import config from '../../config.js';
+import log from '../../lib/logger.js';
+import config from '../../../config.js';
 import { createCanvas, loadImage } from 'canvas';
 
 async function groupImage(username, groupname, welcometext, profileImagePath) {

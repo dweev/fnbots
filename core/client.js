@@ -14,7 +14,7 @@ import config from '../config.js';
 import log from '../src/lib/logger.js';
 import { mongoStore } from '../database/index.js';
 import { tmpDir } from '../src/lib/tempManager.js';
-import { groupImagePool } from '../src/worker/worker_manager.js';
+import { runJob } from '../src/worker/worker_manager.js';
 import { MediaValidationError, MediaProcessingError, MediaSizeError } from '../src/lib/errorManager.js';
 import { randomByte, getBuffer, getSizeMedia, writeExif, convertAudio } from '../src/function/function.js';
 import { jidNormalizedUser, generateWAMessage, generateWAMessageFromContent, downloadContentFromMessage, jidDecode, jidEncode, getBinaryNodeChildString, getBinaryNodeChildren, getBinaryNodeChild, proto } from 'baileys';
@@ -503,7 +503,7 @@ export async function clientBot(fn, dbSettings) {
     } catch {
       profilePictureUrl = config.paths.avatar;
     }
-    const imageBuffer = await groupImagePool.run({
+    const imageBuffer = await runJob('groupImage', {
       username: memberNum,
       groupname: subject,
       welcometext: eventText,

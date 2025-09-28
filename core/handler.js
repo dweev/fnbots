@@ -15,8 +15,8 @@ import { spawn } from 'child_process';
 import log from '../src/lib/logger.js';
 import dayjs from '../src/utils/dayjs.js';
 import { exec as cp_exec } from 'child_process';
+import { runJob } from '../src/worker/worker_manager.js';
 import { cleanupPlugins, pluginCache } from '../src/lib/plugins.js';
-import { audioChangerPool, stickerPool } from '../src/worker/worker_manager.js';
 import { handleAntiDeleted, handleAutoJoin, handleAudioChanger, handleAutoSticker, handleChatbot } from '../src/handler/index.js';
 import { User, Group, Whitelist, Settings, Command, StoreGroupMetadata, OTPSession, Media, DatabaseBot } from '../database/index.js';
 import { color, msgs, mycmd, safeStringify, sendAndCleanupFile, waktu, shutdown, checkCommandAccess, isUserVerified, textMatch1, textMatch2, expiredVIPcheck, expiredCheck, getSerial, getTxt, initializeFuse } from '../src/function/function.js';
@@ -618,10 +618,10 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
         await handleAutoJoin({ m, fn, dbSettings, body, isSadmin, isMaster, isVIP, user, sReply, User });
       };
       if (dbSettings.changer === true) {
-        await handleAudioChanger({ m, toId, fn, selfMode, fromBot, audioChangerPool, sReply });
+        await handleAudioChanger({ m, toId, fn, selfMode, fromBot, runJob, sReply });
       };
       if (dbSettings.autosticker === true) {
-        await handleAutoSticker({ m, toId, fn, stickerPool, sendRawWebpAsSticker, reactDone });
+        await handleAutoSticker({ m, toId, fn, runJob, sendRawWebpAsSticker, reactDone });
       };
       if (dbSettings.chatbot === true) {
         await handleChatbot({m, toId, fn, dbSettings, body, Media, DatabaseBot, sReply});

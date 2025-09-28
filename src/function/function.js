@@ -23,8 +23,8 @@ import ffmpeg from '@ts-ffmpeg/fluent-ffmpeg';
 import { tmpDir } from '../lib/tempManager.js';
 import { exec as cp_exec } from 'child_process';
 import { pluginCache } from '../lib/plugins.js';
+import { runJob } from '../worker/worker_manager.js';
 import { getDbSettings } from '../lib/settingsManager.js';
-import { stickerPool } from '../worker/worker_manager.js';
 import { StoreMessages, User, StoreGroupMetadata, mongoStore } from '../../database/index.js';
 
 const exec = util.promisify(cp_exec);
@@ -36,14 +36,17 @@ let _checkPremium     = false;
 const fuseOptions = { includeScore: true, threshold: 0.25, minMatchCharLength: 2, distance: 25 };
 
 
-export function imageToWebp(media) {
-  return stickerPool.run({ mediaBuffer: media, type: 'image' });
+export async function imageToWebp(media) {
+  const stickerBuffer = await runJob('sticker', { mediaBuffer: media, type: 'image' });
+  return stickerBuffer;
 };
-export function gifToWebp(media) {
-  return stickerPool.run({ mediaBuffer: media, type: 'video' });
+export async function gifToWebp(media) {
+  const stickerBuffer = await runJob('sticker', { mediaBuffer: media, type: 'video' });
+  return stickerBuffer;
 };
-export function videoToWebp(media) {
-  return stickerPool.run({ mediaBuffer: media, type: 'video' });
+export async function videoToWebp(media) {
+  const stickerBuffer = await runJob('sticker', { mediaBuffer: media, type: 'video' });
+  return stickerBuffer;
 };
 export async function initializeFuse() {
   allCmds = Array.from(pluginCache.commands.keys());

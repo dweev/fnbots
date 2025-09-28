@@ -7,9 +7,9 @@
 // ─── Info ────────────────────────────────
 
 import fs from 'fs-extra';
-import config from '../../config.js';
+import config from '../../../config.js';
 import ffmpeg from '@ts-ffmpeg/fluent-ffmpeg';
-import { tmpDir } from '../lib/tempManager.js';
+import { tmpDir } from '../../lib/tempManager.js';
 
 async function runConversion(mediaBuffer, type) {
   const tmpFileIn = await tmpDir.createTempFileWithContent(mediaBuffer, '');

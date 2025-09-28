@@ -9,9 +9,9 @@
 import log from '../lib/logger.js';
 
 export class AudioChangerHandler {
-  constructor(fn, audioChangerPool) {
+  constructor(fn, runJob) {
     this.fn = fn;
-    this.audioChangerPool = audioChangerPool;
+    this.runJob = runJob;
     this.supportedMediaTypes = new Set([
       'audio/ogg; codecs=opus',
       'audio/mpeg',
@@ -23,7 +23,7 @@ export class AudioChangerHandler {
     ]);
   }
   async handle(params) {
-    const { m, toId, fn, selfMode, fromBot, audioChangerPool, sReply } = params;
+    const { m, toId, fn, selfMode, fromBot, runJob, sReply } = params;
     try {
       if (selfMode === 'auto' && fromBot) {
         return;
@@ -31,7 +31,7 @@ export class AudioChangerHandler {
       if (!this.isSupportedAudioType(m.mime)) {
         return;
       }
-      await this.processAudioMessage(m, toId, fn, audioChangerPool, sReply);
+      await this.processAudioMessage(m, toId, fn, runJob, sReply);
     } catch (error) {
       log(`Error in audio changer handler: ${error}`, true);
       await sReply('Terjadi kesalahan saat memproses audio.');
@@ -40,14 +40,14 @@ export class AudioChangerHandler {
   isSupportedAudioType(mimeType) {
     return this.supportedMediaTypes.has(mimeType);
   }
-  async processAudioMessage(m, toId, fn, audioChangerPool, sReply) {
+  async processAudioMessage(m, toId, fn, runJob, sReply) {
     try {
       const mediaData = await fn.getMediaBuffer(m.message);
       if (!mediaData) {
         await sReply('Gagal mengambil data audio.');
         return;
       }
-      const resultBuffer = await audioChangerPool.run(mediaData);
+      const resultBuffer = await runJob('audioChanger', { mediaBuffer: mediaData });
       if (!resultBuffer) {
         await sReply('Gagal memproses audio melalui voice changer.');
         return;
@@ -104,6 +104,6 @@ export class AudioChangerHandler {
 }
 
 export const handleAudioChanger = async (params) => {
-  const handler = new AudioChangerHandler(params.fn, params.audioChangerPool);
+  const handler = new AudioChangerHandler(params.fn, params.runJob);
   return await handler.handle(params);
 };

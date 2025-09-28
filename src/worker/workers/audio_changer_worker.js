@@ -7,9 +7,9 @@
 // ─── Info ────────────────────────────────
 
 import fs from 'fs-extra';
-import log from '../lib/logger.js';
 import { exec } from 'child_process';
-import { tmpDir } from '../lib/tempManager.js';
+import log from '../../lib/logger.js';
+import { tmpDir } from '../../lib/tempManager.js';
 
 function runFFMPEG(inputPath, outputPath, filter) {
   return new Promise((resolve, reject) => {

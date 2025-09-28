@@ -6,7 +6,7 @@
 */
 // ─── Info ────────────────────────────────
 
-import { randomByte } from '../../lib/function.js';
+import { randomByte } from '../../function/function.js';
 
 export const command = {
   name: 'hidetag',

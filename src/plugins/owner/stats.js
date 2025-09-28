@@ -12,7 +12,7 @@ import fs from 'fs-extra';
 import axios from 'axios';
 import config from '../../../config.js';
 import { exec as cp_exec } from 'child_process';
-import { waktu, bytesToSize } from '../../lib/function.js';
+import { waktu, bytesToSize } from '../../function/function.js';
 import { Command, Settings, User } from '../../../database/index.js';
 
 const exec = util.promisify(cp_exec);

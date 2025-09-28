@@ -6,38 +6,50 @@
 */
 // ─── Info ────────────────────────────────
 
+import log from '../../../lib/logger.js';
+
 export const statics = {
   async isWhitelisted(targetId, type = null) {
+    if (!targetId) return false;
     if (!type) {
       type = targetId.endsWith('@g.us') ? 'group' : 'user';
     }
-    const result = await this.exists({ type, targetId: targetId.toLowerCase() });
-    return !!result;
+    try {
+      const result = await this.exists({ type, targetId: targetId.toLowerCase() });
+      return !!result;
+    } catch (error) {
+      log(`Error in isWhitelisted: ${error}`, true);
+      return false;
+    }
   },
-
   async addToWhitelist(targetId, type = null) {
+    if (!targetId) return null;
     if (!type) {
       type = targetId.endsWith('@g.us') ? 'group' : 'user';
     }
-    const whitelistEntry = new this({ type, targetId });
-    return await whitelistEntry.save();
+    const filter = { type, targetId: targetId.toLowerCase() };
+    const update = { $setOnInsert: { type, targetId: targetId.toLowerCase() } };
+    const options = { upsert: true, new: true };
+    try {
+      return await this.findOneAndUpdate(filter, update, options);
+    } catch (error) {
+      log(`Error in addToWhitelist: ${error}`, true);
+      return null;
+    }
   },
-
-  async removeFromWhitelist(targetId, type = null) {
+  removeFromWhitelist(targetId, type = null) {
+    if (!targetId) return null;
     if (!type) {
       type = targetId.endsWith('@g.us') ? 'group' : 'user';
     }
-    return await this.deleteOne({ type, targetId: targetId.toLowerCase() });
+    return this.deleteOne({ type, targetId: targetId.toLowerCase() });
   },
-
   getWhitelistedGroups() {
     return this.find({ type: 'group' });
   },
-
   getWhitelistedUsers() {
     return this.find({ type: 'user' });
   },
-
   clearAll(type = null) {
     const filter = type ? { type } : {};
     return this.deleteMany(filter);

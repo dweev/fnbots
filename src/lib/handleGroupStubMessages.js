@@ -7,7 +7,7 @@
 // ─── Info handleGroupStubMessages.js ─────
 
 import log from './logger.js';
-import { updateContact } from './function.js';
+import { updateContact } from '../function/function.js';
 import { jidNormalizedUser, WAMessageStubType } from 'baileys';
 import { mongoStore, Group, OTPSession } from '../../database/index.js';
 

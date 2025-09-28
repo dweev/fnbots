@@ -7,7 +7,7 @@
 // ─── Info ────────────────────────────────
 
 import { StoreMessages } from '../../../database/index.js';
-import { formatTimeAgo } from '../../lib/function.js';
+import { formatTimeAgo } from '../../function/function.js';
 
 export const command = {
   name: 'checklastseen',

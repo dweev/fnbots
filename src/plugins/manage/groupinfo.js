@@ -6,7 +6,7 @@
 */
 // ─── Info ────────────────────────────────
 
-import { waktu } from '../../lib/function.js';
+import { waktu } from '../../function/function.js';
 
 export const command = {
   name: 'groupinfo',

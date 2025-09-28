@@ -7,7 +7,7 @@
 // ─── Info ────────────────────────────────
 
 import dayjs from '../../utils/dayjs.js';
-import { waktu } from '../../lib/function.js';
+import { waktu } from '../../function/function.js';
 import { Group } from '../../../database/index.js';
 
 export const command = {

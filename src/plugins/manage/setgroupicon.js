@@ -7,8 +7,8 @@
 // ─── Info ────────────────────────────────
 
 import { generateProfilePicture } from 'baileys';
-import { saveFile } from '../../lib/function.js';
 import { tmpDir } from '../../lib/tempManager.js';
+import { saveFile } from '../../function/function.js';
 
 export const command = {
   name: 'setgroupicon',

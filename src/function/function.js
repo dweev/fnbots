@@ -4,7 +4,7 @@
 * Follow https://github.com/Terror-Machine
 * Feel Free To Use
 */
-// ─── Info function.js ────────────────────
+// ─── info src/lib/function/function.js ────
 
 import os from 'os';
 import util from 'util';
@@ -13,17 +13,17 @@ import sharp from 'sharp';
 import fs from 'fs-extra';
 import axios from 'axios';
 import Fuse from 'fuse.js';
-import log from './logger.js';
 import webp from 'node-webpmux';
 import FileType from 'file-type';
+import log from '../lib/logger.js';
 import config from '../../config.js';
 import speedTest from 'speedtest-net';
 import dayjs from '../utils/dayjs.js';
-import { tmpDir } from './tempManager.js';
-import { pluginCache } from './plugins.js';
 import ffmpeg from '@ts-ffmpeg/fluent-ffmpeg';
+import { tmpDir } from '../lib/tempManager.js';
 import { exec as cp_exec } from 'child_process';
-import { getDbSettings } from './settingsManager.js';
+import { pluginCache } from '../lib/plugins.js';
+import { getDbSettings } from '../lib/settingsManager.js';
 import { stickerPool } from '../worker/worker_manager.js';
 import { StoreMessages, User, StoreGroupMetadata, mongoStore } from '../../database/index.js';
 
@@ -144,7 +144,7 @@ export async function checkCommandAccess(command, userData, user, maintenance) {
     if (!command.isLimitCommand && !command.isCommandWithoutPayment) return false;
   }
   return true;
-}
+};
 export async function isUserVerified(m, dbSettings, StoreGroupMetadata, fn, sReply, hakIstimewa) {
   if (m.fromMe || hakIstimewa) return true;
   if (m.isGroup) return true;
@@ -625,7 +625,7 @@ export async function saveFile(imageInput, prefix, toFile = "png") {
     throw new Error('Input tidak valid. Harap berikan Buffer atau string Base64.');
   }
   const ext = toFile.toLowerCase() === "jpg" ? "jpg" : "png";
-  const tmpPath = path.join(global.tmpDir, `${prefix}-${Date.now()}.${ext}`);
+  const tmpPath = path.join(config.paths.tempDir, `${prefix}-${Date.now()}.${ext}`);
   if (ext === "jpg") {
     await sharp(imageBuffer).jpeg({ quality: 90, progressive: true, mozjpeg: true }).toFile(tmpPath);
   } else {

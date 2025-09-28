@@ -12,7 +12,7 @@ import config from '../../../config.js';
 import { tmpDir } from '../../lib/tempManager.js';
 import { generateFakeStory } from 'generator-fake';
 import { StoreStory } from '../../../database/index.js';
-import { archimed, saveFile } from '../../lib/function.js';
+import { archimed, saveFile } from '../../function/function.js';
 
 export const command = {
   name: 'getstory',

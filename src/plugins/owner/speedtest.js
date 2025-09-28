@@ -6,7 +6,7 @@
 */
 // ─── Info ────────────────────────────────
 
-import { speedtest } from '../../lib/function.js';
+import { speedtest } from '../../function/function.js';
 
 export const command = {
   name: 'speedtest',

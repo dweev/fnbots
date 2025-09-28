@@ -7,8 +7,8 @@
 // ─── Info serializeMessage.js ─────────────
 
 import log from './logger.js';
-import { updateContact } from './function.js';
 import { mongoStore } from '../../database/index.js';
+import { updateContact } from '../function/function.js';
 import { jidNormalizedUser, extractMessageContent, getDevice, areJidsSameUser } from 'baileys';
 
 function normalizeMentionsInBody(body, originalMentionedJids, resolvedMentionedJids) {

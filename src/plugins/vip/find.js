@@ -6,7 +6,7 @@
 */
 // ─── Info ────────────────────────────────
 
-import { getCommonGroups } from '../../lib/function.js';
+import { getCommonGroups } from '../../function/function.js';
 
 export const command = {
   name: 'find',

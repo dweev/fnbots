@@ -8,7 +8,7 @@
 
 import dayjs from '../../utils/dayjs.js';
 import { User } from '../../../database/index.js';
-import { formatDurationMessage } from '../../lib/function.js';
+import { formatDurationMessage } from '../../function/function.js';
 
 export const command = {
   name: 'checkvip',

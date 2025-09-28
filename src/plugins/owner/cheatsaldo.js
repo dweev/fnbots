@@ -6,7 +6,7 @@
 */
 // ─── Info ────────────────────────────────
 
-import { parseCheatAmount, formatNumber } from '../../lib/function.js';
+import { parseCheatAmount, formatNumber } from '../../function/function.js';
 
 export const command = {
   name: 'cheatsaldo',

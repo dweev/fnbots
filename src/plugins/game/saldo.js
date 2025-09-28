@@ -6,7 +6,7 @@
 */
 // ─── Info ────────────────────────────────
 
-import { formatNumber } from '../../lib/function.js';
+import { formatNumber } from '../../function/function.js';
 
 export const command = {
   name: 'saldo',

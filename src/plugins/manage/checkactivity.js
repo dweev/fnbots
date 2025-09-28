@@ -6,8 +6,8 @@
 */
 // ─── Info ────────────────────────────────
 
+import { formatTimeAgo } from '../../function/function.js';
 import { StoreMessages, mongoStore } from '../../../database/index.js';
-import { formatTimeAgo } from '../../lib/function.js';
 
 export const command = {
   name: 'checkactivity',

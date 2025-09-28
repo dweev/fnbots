@@ -8,7 +8,7 @@
 
 import dayjs from '../utils/dayjs.js';
 import { User } from '../../database/index.js';
-import { formatDuration, formatDurationMessage } from './function.js';
+import { formatDuration, formatDurationMessage } from '../function/function.js';
 
 export function membershipUser(config) {
   const { type, aliases } = config;

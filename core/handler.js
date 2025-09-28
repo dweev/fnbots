@@ -19,7 +19,7 @@ import { cleanupPlugins, pluginCache } from '../src/lib/plugins.js';
 import { audioChangerPool, stickerPool } from '../src/worker/worker_manager.js';
 import { handleAntiDeleted, handleAutoJoin, handleAudioChanger, handleAutoSticker, handleChatbot } from '../src/handler/index.js';
 import { User, Group, Whitelist, Settings, Command, StoreGroupMetadata, OTPSession, Media, DatabaseBot } from '../database/index.js';
-import { color, msgs, mycmd, safeStringify, sendAndCleanupFile, waktu, shutdown, checkCommandAccess, isUserVerified, textMatch1, textMatch2, expiredVIPcheck, expiredCheck, getSerial, getTxt, initializeFuse } from '../src/lib/function.js';
+import { color, msgs, mycmd, safeStringify, sendAndCleanupFile, waktu, shutdown, checkCommandAccess, isUserVerified, textMatch1, textMatch2, expiredVIPcheck, expiredCheck, getSerial, getTxt, initializeFuse } from '../src/function/function.js';
 
 const exec = util.promisify(cp_exec);
 const isPm2 = process.env.pm_id !== undefined || process.env.NODE_APP_INSTANCE !== undefined;
@@ -523,7 +523,7 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
                   quotedMsg, quotedParticipant, mentionedJidList,
                   body, args, arg: fullArgs, ar: args, serial, user,
                   groupData, botNumber, mygroupMembers, mygroup,
-                  isPrivileged
+                  isPrivileged, pushname
                 };
                 await command.execute(commandArgs);
                 commandFound = true;

@@ -17,8 +17,9 @@ import dayjs from '../src/utils/dayjs.js';
 import { exec as cp_exec } from 'child_process';
 import { runJob } from '../src/worker/worker_manager.js';
 import { cleanupPlugins, pluginCache } from '../src/lib/plugins.js';
+import { performanceManager } from '../src/lib/performanceManager.js';
+import { User, Group, Settings, Command, StoreGroupMetadata, OTPSession, Media, DatabaseBot } from '../database/index.js';
 import { handleAntiDeleted, handleAutoJoin, handleAudioChanger, handleAutoSticker, handleChatbot } from '../src/handler/index.js';
-import { User, Group, Whitelist, Settings, Command, StoreGroupMetadata, OTPSession, Media, DatabaseBot } from '../database/index.js';
 import { color, msgs, mycmd, safeStringify, sendAndCleanupFile, waktu, shutdown, checkCommandAccess, isUserVerified, textMatch1, textMatch2, expiredVIPcheck, expiredCheck, getSerial, getTxt, initializeFuse } from '../src/function/function.js';
 
 const exec = util.promisify(cp_exec);
@@ -40,7 +41,6 @@ const groupAfkCooldowns = new LRUCache({
   updateAgeOnGet: false
 });
 
-const updateQueues      = new Map();
 let recentcmd           = new Set();
 let fspamm              = new Set();
 let sban                = new Set();
@@ -53,22 +53,6 @@ let counter             = 0;
 let suggested           = false;
 let groupData           = null;
 
-async function queueGroupUpdate(groupId, updateFunction) {
-  if (!updateQueues.has(groupId)) {
-    updateQueues.set(groupId, Promise.resolve());
-  }
-  const currentQueue = updateQueues.get(groupId);
-  const newQueue = currentQueue.then(async () => {
-    try {
-      await updateFunction();
-    } catch (error) {
-      await log(`Group update error for ${groupId}: ${error}`, true);
-    }
-  });
-  updateQueues.set(groupId, newQueue);
-  return newQueue;
-};
-
 export const updateMyGroup = (newGroupList, newMemberlist) => {
   mygroup = newGroupList;
   mygroupMembers = newMemberlist;
@@ -78,10 +62,12 @@ export async function handleRestart(reason) {
   const nextAttempt = currentRestarts + 1;
   if (currentRestarts >= MAX_RECONNECT_ATTEMPTS) {
     await log(`Gagal total setelah ${MAX_RECONNECT_ATTEMPTS} percobaan. Alasan: ${reason}`);
+    await performanceManager.cache.forceSync();
     process.exit(1);
   }
   await log(`Terjadi error: ${reason}`);
   await log(`Mencoba restart otomatis #${nextAttempt} dalam ${RECONNECT_DELAY_MS / 1000}s...`);
+  await performanceManager.cache.forceSync();
   await delay(RECONNECT_DELAY_MS);
   if (isPm2) {
     process.exit(1);
@@ -122,7 +108,7 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
   const isVIP = user.isVIPActive;
   const isPremium = user.isPremiumActive;
   const maintenance = dbSettings.maintenance;
-  const isWhiteList = await Whitelist.isWhitelisted(toId, 'group');
+  const isWhiteList = await performanceManager.cache.warmWhitelistCache(toId);
   const hakIstimewa = [isSadmin, isMaster, isVIP, isPremium].some(Boolean);
   const isPrivileged = isBotGroupAdmins && [isSadmin, isMaster, isVIP, isPremium, isGroupAdmins, fromBot].some(Boolean);
   const body = m?.body;
@@ -242,6 +228,53 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
       await reactFail();
       log(`Plugin reload error: ${error}`, true);
     }
+  } else if (body?.toLowerCase().trim() == "cachestats") {
+    if (!isSadmin && !isMaster) return;
+    try {
+      const stats = performanceManager.getFullStatus();
+      let statsText = `*Performance Statistics*\n\n`;
+
+      statsText += `*Cache Statistics:*\n`;
+      statsText += `• User Stats: ${stats.cache.userStats.size} pending\n`;
+      statsText += `• Group Stats: ${stats.cache.groupStats.size} pending\n`;
+      statsText += `• Command Stats: ${stats.cache.commandStats.size} pending\n`;
+      statsText += `• Global Hits: ${stats.cache.globalStats.pendingHits} pending\n`;
+      statsText += `• Whitelist Cache: ${stats.cache.whitelist.size} entries\n`;
+      statsText += `• Group Data Cache: ${stats.cache.groupData.size} entries\n\n`;
+
+      statsText += `*Performance:*\n`;
+      statsText += `• Last Sync: ${stats.cache.performance.lastSync}\n`;
+      statsText += `• Sync In Progress: ${stats.cache.performance.syncInProgress ? 'Yes' : 'No'}\n`;
+      statsText += `• Uptime: ${Math.floor(stats.performance.uptime / 3600)}h ${Math.floor((stats.performance.uptime % 3600) / 60)}m\n\n`;
+
+      statsText += `*Job Scheduler:*\n`;
+      statsText += `• Active Intervals: ${stats.scheduler.intervals.join(', ')}\n`;
+      statsText += `• Cron Jobs: ${stats.scheduler.cronJobs.join(', ')}\n`;
+
+      await sReply(statsText);
+    } catch (error) {
+      await sReply(`Error getting cache stats: ${error.message}`);
+    }
+  } else if (body?.toLowerCase().trim() == "synccache") {
+    if (!isSadmin && !isMaster) return;
+    try {
+      await performanceManager.cache.forceSync();
+      await sReply("Cache sync completed successfully!");
+      await reactDone();
+    } catch (error) {
+      await sReply(`Cache sync failed: ${error.message}`);
+      await reactFail();
+    }
+  } else if (body?.toLowerCase().trim() == "clearcache") {
+    if (!isSadmin && !isMaster) return;
+    try {
+      await performanceManager.cache.clearAllCaches();
+      await sReply("All caches cleared successfully!");
+      await reactDone();
+    } catch (error) {
+      await sReply(`Cache clear failed: ${error.message}`);
+      await reactFail();
+    }
   } else if (body?.toLowerCase().trim().startsWith("mode")) {
     if (!isSadmin && !isMaster) return;
     const args = body.toLowerCase().trim().split(/\s+/);
@@ -280,21 +313,14 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
   if (selfMode === 'false' && fromBot) return;
 
   if (m.isGroup) {
-    await queueGroupUpdate(toId, async () => {
-      await Group.updateOne(
-        { groupId: toId },
-        {
-          $inc: {
-            messageCount: 1,
-            commandCount: isCmd ? 1 : 0
-          },
-          $setOnInsert: { groupId: toId }
-        },
-        { upsert: true }
-      );
+    performanceManager.cache.updateGroupStats(toId, {
+      $inc: {
+        messageCount: 1,
+        commandCount: isCmd ? 1 : 0
+      }
     });
-    groupData = await Group.findOne({ groupId: toId });
-    if (!groupData.isActive) return;
+    groupData = await performanceManager.cache.warmGroupDataCache(toId);
+    if (!groupData || !groupData.isActive) return;
     if (groupData.isMemberBanned(serial)) return;
     const userAfkGroups = await Group.findUserAfkStatus(serial);
     if (userAfkGroups.length > 0) {
@@ -540,13 +566,13 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
                     if (!isPremium) {
                       userUpdates.$inc['limit.current'] = -20;
                     } else {
-                      userUpdates.$inc['limit.current'] = -1
+                      userUpdates.$inc['limit.current'] = -1;
                     }
                   }
                 }
-                await User.updateOne({ userId: user.userId }, userUpdates);
-                await Command.updateCount(command.name, 1);
-                await Settings.incrementTotalHitCount();
+                performanceManager.cache.updateUserStats(user.userId, userUpdates);
+                performanceManager.cache.updateCommandStats(command.name, 1);
+                performanceManager.cache.incrementGlobalStats();
               }
             } catch (error) {
               await sReply(`Terjadi kesalahan saat menjalankan perintah "${command.name}": ${error.message}`);
@@ -624,8 +650,12 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
         await handleAutoSticker({ m, toId, fn, runJob, sendRawWebpAsSticker, reactDone });
       };
       if (dbSettings.chatbot === true) {
-        await handleChatbot({m, toId, fn, dbSettings, body, Media, DatabaseBot, sReply});
+        await handleChatbot({ m, toId, fn, dbSettings, body, Media, DatabaseBot, sReply });
       };
     }
   } catch (error) { await log(error, true); }
+};
+
+export {
+  performanceManager
 };

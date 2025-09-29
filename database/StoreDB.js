@@ -58,8 +58,7 @@ class DBStore {
     this.clearGroupsCache();
   }
   startBatchProcessor() {
-    const batchIntervalId = setInterval(() => this.processBatchUpdates(), this.batchInterval);
-    global.activeIntervals.push(batchIntervalId);
+    setInterval(() => this.processBatchUpdates(), this.batchInterval);
   }
   async processBatchUpdates() {
     if (!this.isConnected) return;
@@ -200,7 +199,7 @@ class DBStore {
     this.pendingUpdates.groups.set(groupId, updatedMetadata);
   }
   startStatsLogger() {
-    const statsIntervalId = setInterval(() => {
+    setInterval(() => {
       const stats = this.getCacheStats();
       const totalAccess = stats.contacts.hits + stats.contacts.misses;
       if (totalAccess > 0) {
@@ -216,7 +215,6 @@ class DBStore {
         */
       }
     }, 30000);
-    global.activeIntervals.push(statsIntervalId);
   }
   getCacheStats() {
     const totalAccess = this.cacheStats.hits + this.cacheStats.misses;
@@ -345,10 +343,9 @@ class DBStore {
     }
   }
   startCacheCleanup() {
-    const cleanupIntervalId = setInterval(() => {
+    setInterval(() => {
       this.cleanupExpiredGroupsCache();
     }, this.cacheCleanupInterval);
-    global.activeIntervals.push(cleanupIntervalId);
   }
   applyLRUCleanup(type, cache) {
     const maxSize = this.maxCacheSize[type];

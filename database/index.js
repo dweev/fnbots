@@ -10,54 +10,65 @@ import mongoose from 'mongoose';
 import config from '../config.js';
 import log from '../src/lib/logger.js';
 
+mongoose.set('strictQuery', false);
+
 class DatabaseConnection {
   constructor() {
     this.isConnected = false;
     this.connectionRetries = 0;
     this.maxRetries = 5;
+    this.isReconnecting = false;
   }
   async connect() {
+    const MONGODB_URI = config.mongodbUri;
     try {
-      const MONGODB_URI = config.mongodbUri;
       mongoose.connection.on('connected', () => {
         this.isConnected = true;
+        this.isReconnecting = false;
         this.connectionRetries = 0;
         log('MongoDB connected successfully');
       });
       mongoose.connection.on('error', (error) => {
         this.isConnected = false;
-        log(error, true);
+        log(`MongoDB error: ${error.message}`, true);
       });
       mongoose.connection.on('disconnected', () => {
         this.isConnected = false;
         log('MongoDB disconnected');
         this.attemptReconnect();
       });
+      const start = Date.now();
       await mongoose.connect(MONGODB_URI, {
+        maxPoolSize: 50,
+        minPoolSize: 10,
         serverSelectionTimeoutMS: config.performance.serverSelectionTimeoutMS,
         socketTimeoutMS: config.performance.socketTimeoutMS,
       });
+      log(`MongoDB connection established in ${Date.now() - start}ms`);
     } catch (error) {
+      log(`MongoDB connection error: ${error.message}`, true);
       this.attemptReconnect();
-      throw error;
     }
   }
   async attemptReconnect() {
+    if (this.isConnected || this.isReconnecting) return;
     if (this.connectionRetries >= this.maxRetries) {
       log('Max reconnection attempts reached', true);
       return;
     }
+    this.isReconnecting = true;
     this.connectionRetries++;
-    log(`Attempting reconnect (${this.connectionRetries}/${this.maxRetries})...`);
-    setTimeout(() => {
-      this.connect();
-    }, config.performance.serverSelectionTimeoutMS * this.connectionRetries);
+    const delay = config.performance.serverSelectionTimeoutMS * this.connectionRetries;
+    log(`Attempting reconnect (${this.connectionRetries}/${this.maxRetries}) after ${delay}ms...`);
+    await new Promise(resolve => setTimeout(resolve, delay));
+    await this.connect();
   }
+
   async disconnect() {
     if (this.isConnected) {
       await mongoose.disconnect();
       this.isConnected = false;
-      log('MongoDB disconnected');
+      log('MongoDB disconnected manually');
     }
   }
   async healthCheck() {
@@ -69,14 +80,14 @@ class DatabaseConnection {
       return {
         status: 'healthy',
         connected: true,
-        retries: this.connectionRetries
+        retries: this.connectionRetries,
       };
     } catch (error) {
       return {
         status: 'unhealthy',
         connected: false,
         error: error.message,
-        retries: this.connectionRetries
+        retries: this.connectionRetries,
       };
     }
   }

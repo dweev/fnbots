@@ -570,7 +570,7 @@ export async function sendAndCleanupFile(fn, toId, localPath, m, dbSettings) {
 export async function expiredCheck(fn, ownerNumber) {
   if (_checkPremium) return;
   _checkPremium = true;
-  const premiumCheckInterval = setInterval(async () => {
+  setInterval(async () => {
     const expiredUsers = await User.getExpiredPremiumUsers();
     for (const user of expiredUsers) {
       const latestMessageFromOwner = await StoreMessages.getLatestMessage(ownerNumber[0]);
@@ -583,12 +583,11 @@ export async function expiredCheck(fn, ownerNumber) {
       await User.removePremium(user.userId);
     }
   }, config.performance.defaultInterval);
-  global.activeIntervals.push(premiumCheckInterval);
 };
 export async function expiredVIPcheck(fn, ownerNumber) {
   if (_checkVIP) return;
   _checkVIP = true;
-  const vipCheckInterval = setInterval(async () => {
+  setInterval(async () => {
     const expiredUsers = await User.getExpiredVIPUsers();
     for (const user of expiredUsers) {
       const latestMessageFromOwner = await StoreMessages.getLatestMessage(ownerNumber[0]);
@@ -601,7 +600,6 @@ export async function expiredVIPcheck(fn, ownerNumber) {
       await User.removeVIP(user.userId);
     }
   }, config.performance.defaultInterval);
-  global.activeIntervals.push(vipCheckInterval);
 };
 export async function getSerial(m) {
   if (m?.key?.fromMe) return;

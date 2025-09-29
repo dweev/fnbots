@@ -175,7 +175,7 @@ export const loadPlugins = async (pluginPath) => {
         }
       }
     }
-    log(`Plugin loading completed: ${totalCommands} commands loaded, ${errorCount} errors`);
+    log(`Plugin completed: ${totalCommands} commands loaded, ${errorCount} errors`);
     if (errorCount > 0) {
       log(`${errorCount} commands failed to load. Check logs above for details.`, true);
     }

@@ -6,19 +6,13 @@
 */
 // ─── Info main.js ────────────────────────
 
-// console.clear(); // only effect if you use screen / tmux (pm2 didnt work)
-global.activeIntervals = [];
-import util from 'util';
-import path from 'path';
-import cron from 'node-cron';
 import process from 'process';
-import { dirname } from 'path';
-import config from '../config.js';
 import { fileURLToPath } from 'url';
-const exec = util.promisify(cp_exec);
+import path, { dirname } from 'path';
 import { jidNormalizedUser } from 'baileys';
+
+import config from '../config.js';
 import { handleRestart } from './handler.js';
-import { exec as cp_exec } from 'child_process';
 import { createWASocket } from './connection.js';
 import { tmpDir } from '../src/lib/tempManager.js';
 import { loadPlugins } from '../src/lib/plugins.js';
@@ -27,61 +21,17 @@ import startPluginWatcher from '../src/lib/watcherPlugins.js';
 import updateMessageUpsert from '../src/lib/updateMessageUpsert.js';
 import { initializeDbSettings } from '../src/lib/settingsManager.js';
 import groupParticipantsUpdate from '../src/lib/groupParticipantsUpdate.js';
-import { database, Settings, mongoStore, StoreMessages, StoreStory, User } from '../database/index.js';
+import { database, Settings, mongoStore, StoreMessages } from '../database/index.js';
 import { randomByte, updateContact, processContactUpdate, initializeFuse } from '../src/function/function.js';
+import { performanceManager } from '../src/lib/performanceManager.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 let dbSettings;
-let debugs = false;
-
+let fn;
 global.randomSuffix = randomByte(16);
-global.debugs = debugs;
-
-function setupDailyReset(config, dbSettings) {
-  cron.schedule("0 0 21 * * *", async () => {
-    const batchSize = 1000;
-    let processed = 0;
-    try {
-      while (true) {
-        const users = await User.find({}).skip(processed).limit(batchSize);
-        if (users.length === 0) break;
-        const bulkOps = users.map(user => {
-          const update = {
-            $set: {
-              'limit.current': calculateLimit(config, dbSettings, user),
-              'limit.warnedLimit': false,
-              'limitgame.current': calculateGameLimit(config, dbSettings, user),
-              'limitgame.warnedLimit': false,
-              gacha: true
-            }
-          };
-          return {
-            updateOne: {
-              filter: { _id: user._id },
-              update: update
-            }
-          };
-        });
-        await User.bulkWrite(bulkOps);
-        processed += users.length;
-      }
-      await log(`✅ Reset harian selesai. Total user: ${processed}`);
-      await tmpDir.cleanupOldFiles();
-    } catch (error) {
-      console.error('Gagal melakukan reset harian:', error);
-    }
-  });
-};
-function calculateLimit(config, dbSettings, user) {
-  const isSadmin = config.ownerNumber.includes(user);
-  return user.isVIP || user.isMaster || isSadmin ? Infinity : (user.isPremium ? dbSettings.limitCountPrem : dbSettings.limitCount);
-};
-function calculateGameLimit(config, dbSettings, user) {
-  const isSadmin = config.ownerNumber.includes(user);
-  return user.isVIP || user.isMaster || isSadmin ? Infinity : (user.isPremium ? dbSettings.limitCountPrem : dbSettings.limitGame);
-};
+global.debugs = false;
 
 async function initializeDatabases() {
   try {
@@ -89,11 +39,113 @@ async function initializeDatabases() {
     await mongoStore.connect();
     dbSettings = await initializeDbSettings();
     pinoLogger.level = dbSettings.pinoLogger || 'silent';
+    await log('Database & MongoStore berhasil diinisialisasi.');
   } catch (error) {
+    await log(`Database initialization error: ${error}`);
     await log(error, true);
     throw error;
   }
 };
+
+function setupWhatsAppEventHandlers(fn) {
+  fn.ev.on('messaging-history.set', async (event) => {
+    for (const contact of event.contacts) {
+      await processContactUpdate(contact);
+    }
+  });
+  fn.ev.on('contacts.upsert', async (contacts) => {
+    for (const contact of contacts) {
+      await processContactUpdate(contact);
+    }
+  });
+  fn.ev.on('contacts.update', async (updates) => {
+    for (const contact of updates) {
+      await processContactUpdate(contact);
+    }
+  });
+  fn.ev.on('messages.upsert', async (message) => {
+    await updateMessageUpsert(fn, message, dbSettings);
+  });
+  fn.ev.on('group-participants.update', async (update) => {
+    await groupParticipantsUpdate(update, fn);
+  });
+  fn.ev.on('groups.upsert', async (newMetas) => {
+    for (const daget of newMetas) {
+      const id = jidNormalizedUser(daget.id);
+      await mongoStore.updateGroupMetadata(id, daget);
+      if (daget.participants?.length) {
+        const participantJids = daget.participants.map(p => jidNormalizedUser(p.id));
+        const contacts = await mongoStore.getArrayContacts(participantJids);
+        if (contacts) {
+          const contactMap = new Map(contacts.map(c => [c.jid, c]));
+          for (const participant of daget.participants) {
+            const contactJid = jidNormalizedUser(participant.id);
+            const contact = contactMap.get(contactJid);
+            const contactName = contact?.name || contact?.notify || 'Unknown';
+            await updateContact(contactJid, { lid: participant.lid, name: contactName });
+          }
+        }
+      }
+    }
+  });
+  fn.ev.on('chats.update', async (updates) => {
+    for (const chatUpdate of updates) {
+      const lastMessage = chatUpdate.messages?.[0];
+      if (!lastMessage || !lastMessage.key) continue;
+      const key = lastMessage.key;
+      const isGroup = key.remoteJid.endsWith('@g.us');
+      if (isGroup) {
+        delete key.remoteJidAlt;
+      } else {
+        delete key.participant;
+        delete key.participantAlt;
+      }
+      let jid, lid;
+      if (isGroup) {
+        const participant = jidNormalizedUser(key.participant);
+        const participantAlt = jidNormalizedUser(key.participantAlt);
+        jid = participant?.endsWith('@s.whatsapp.net') ? participant : (participantAlt?.endsWith('@s.whatsapp.net') ? participantAlt : null);
+        lid = participant?.endsWith('@lid') ? participant : (participantAlt?.endsWith('@lid') ? participantAlt : null);
+      } else {
+        const remoteJid = jidNormalizedUser(key.remoteJid);
+        const remoteJidAlt = jidNormalizedUser(key.remoteJidAlt);
+        jid = remoteJid?.endsWith('@s.whatsapp.net') ? remoteJid : (remoteJidAlt?.endsWith('@s.whatsapp.net') ? remoteJidAlt : null);
+        lid = remoteJid?.endsWith('@lid') ? remoteJid : (remoteJidAlt?.endsWith('@lid') ? remoteJidAlt : null);
+      }
+      if (jid && lid) {
+        const eName = lastMessage.pushName || await fn.getName(jid);
+        await updateContact(jid, { lid: lid, name: eName });
+      }
+    }
+  });
+  fn.ev.on('presence.update', async ({ id, presences: update }) => {
+    if (!id.endsWith('@g.us')) return;
+    const resolvedPresences = {};
+    for (const participantId in update) {
+      let resolvedJid;
+      if (participantId.endsWith('@lid')) {
+        resolvedJid = await mongoStore.findJidByLid(participantId);
+      } else {
+        resolvedJid = jidNormalizedUser(participantId);
+      }
+      if (!resolvedJid) continue;
+      resolvedPresences[resolvedJid] = {
+        ...update[participantId],
+        lastSeen: Date.now()
+      };
+    }
+    mongoStore.updatePresences(id, resolvedPresences);
+    StoreMessages.updatePresences(id, resolvedPresences).catch(err => log(err, true));
+  });
+  fn.ev.on("call", (call) => {
+    const { id, status, from } = call[0];
+    if (status === "offer" && dbSettings.anticall) {
+      return fn.rejectCall(id, from);
+    }
+  });
+  log('WhatsApp event handlers setup completed');
+}
+
 async function starts() {
   try {
     await tmpDir.ensureDirectory();
@@ -102,153 +154,19 @@ async function starts() {
     await initializeFuse();
     startPluginWatcher();
     mongoStore.init();
-    const fn = await createWASocket(dbSettings);
-    fn.ev.on('messaging-history.set', async (event) => {
-      for (const contact of event.contacts) {
-        await processContactUpdate(contact);
-      }
-    });
-    fn.ev.on('contacts.upsert', async (contacts) => {
-      for (const contact of contacts) {
-        await processContactUpdate(contact);
-      }
-    });
-    fn.ev.on('contacts.update', async (updates) => {
-      for (const contact of updates) {
-        await processContactUpdate(contact);
-      }
-    });
-    fn.ev.on('messages.upsert', async (message) => {
-      await updateMessageUpsert(fn, message, dbSettings);
-    });
-    fn.ev.on('group-participants.update', async (update) => {
-      await groupParticipantsUpdate(update, fn);
-    });
-    fn.ev.on('groups.upsert', async (newMetas) => {
-      for (const daget of newMetas) {
-        const id = jidNormalizedUser(daget.id);
-        await mongoStore.updateGroupMetadata(id, daget);
-        if (daget.participants && daget.participants.length > 0) {
-          const participantJids = daget.participants.map(p => jidNormalizedUser(p.id));
-          const contacts = await mongoStore.getArrayContacts(participantJids);
-          if (contacts) {
-            const contactMap = new Map(contacts.map(c => [c.jid, c]));
-            for (const participant of daget.participants) {
-              const contactJid = jidNormalizedUser(participant.id);
-              const contact = contactMap.get(contactJid);
-              const contactName = contact?.name || contact?.notify || 'Unknown';
-              await updateContact(contactJid, { lid: participant.lid, name: contactName });
-            }
-          }
-        }
-      }
-    });
-    fn.ev.on('groups.upsert', async (newMetas) => {
-      for (const daget of newMetas) {
-        const id = jidNormalizedUser(daget.id);
-        await mongoStore.updateGroupMetadata(id, daget);
-        if (daget.participants) {
-          for (const participant of daget.participants) {
-            const contactJid = jidNormalizedUser(participant.id);
-            const contactName = await fn.getName(contactJid);
-            await updateContact(contactJid, { lid: participant.lid, name: contactName });
-          }
-        }
-      }
-    });
-    fn.ev.on('chats.update', async (updates) => {
-      for (const chatUpdate of updates) {
-        const lastMessage = chatUpdate.messages?.[0];
-        if (!lastMessage || !lastMessage.key) continue;
-        const key = lastMessage.key;
-        const isGroup = key.remoteJid.endsWith('@g.us');
-        if (isGroup) {
-          delete key.remoteJidAlt;
-        } else {
-          delete key.participant;
-          delete key.participantAlt;
-        }
-        let jid, lid;
-        if (isGroup) {
-          const participant = jidNormalizedUser(key.participant);
-          const participantAlt = jidNormalizedUser(key.participantAlt);
-          jid = participant?.endsWith('@s.whatsapp.net') ? participant : (participantAlt?.endsWith('@s.whatsapp.net') ? participantAlt : null);
-          lid = participant?.endsWith('@lid') ? participant : (participantAlt?.endsWith('@lid') ? participantAlt : null);
-        } else {
-          const remoteJid = jidNormalizedUser(key.remoteJid);
-          const remoteJidAlt = jidNormalizedUser(key.remoteJidAlt);
-          jid = remoteJid?.endsWith('@s.whatsapp.net') ? remoteJid : (remoteJidAlt?.endsWith('@s.whatsapp.net') ? remoteJidAlt : null);
-          lid = remoteJid?.endsWith('@lid') ? remoteJid : (remoteJidAlt?.endsWith('@lid') ? remoteJidAlt : null);
-        }
-        if (jid && lid) {
-          const eName = lastMessage.pushName || await fn.getName(jid);
-          await updateContact(jid, { lid: lid, name: eName });
-        }
-      }
-    });
-    fn.ev.on('presence.update', async ({ id, presences: update }) => {
-      if (!id.endsWith('@g.us')) return;
-      const resolvedPresences = {};
-      for (const participantId in update) {
-        let resolvedJid;
-        if (participantId.endsWith('@lid')) {
-          resolvedJid = await mongoStore.findJidByLid(participantId);
-        } else {
-          resolvedJid = jidNormalizedUser(participantId);
-        }
-        if (!resolvedJid) {
-          continue;
-        }
-        resolvedPresences[resolvedJid] = {
-          ...update[participantId],
-          lastSeen: Date.now()
-        };
-      }
-      mongoStore.updatePresences(id, resolvedPresences);
-      StoreMessages.updatePresences(id, resolvedPresences).catch(err => log(err, true));
-    });
-    fn.ev.on("call", (call) => {
-      const { id, status, from } = call[0];
-      if (status === "offer" && dbSettings.anticall) return fn.rejectCall(id, from);
-    });
-    const aliveInterval = setInterval(async () => {
-      try {
-        await fn.query({
-          tag: "iq",
-          attrs: { to: "s.whatsapp.net", type: "get", xmlns: "w:p" },
-        });
-      } catch {
-        await starts();
-      }
-    }, config.performance.aliveInterval);
-    global.activeIntervals.push(aliveInterval);
-    const memoryUsageInterval = setInterval(() => {
-      const memUsage = process.memoryUsage();
-      log(`Memory usage: ${Math.round(memUsage.heapUsed / 1024 / 1024)}MB`);
-    }, config.performance.checkMemoryUsageInterval);
-    global.activeIntervals.push(memoryUsageInterval);
-    cron.schedule('0 21 * * 2', async () => {
-      log('Menjalankan tugas pembersihan data lama...');
-      try {
-        const chatResult = await StoreMessages.cleanupOldData();
-        const storyResult = await StoreStory.cleanupOldData();
-        await exec('rm -rf ../logs/*');
-        log(`Pembersihan selesai. Messages terhapus: ${chatResult.deletedCount}. Story terhapus: ${storyResult.deletedCount}. Log dihapus.`);
-      } catch (error) { await log(error, true); }
-    }, {
-      scheduled: true,
-      timezone: "Asia/Jakarta"
-    });
-    setupDailyReset(config, dbSettings);
+    fn = await createWASocket(dbSettings);
+    setupWhatsAppEventHandlers(fn);
+    await performanceManager.initialize(fn, config, dbSettings);
   } catch (error) {
+    log(error, true)
+    await log(`Startup error: ${error}`, true);
     await log(error, true);
     await handleRestart('Gagal memuat database store');
   }
 };
+
 async function cleanup(signal) {
-  await log(`[${signal}] Menyimpan data dan membersihkan interval yang aktif sebelum keluar...`);
-  global.activeIntervals.forEach(intervalId => clearInterval(intervalId));
-  global.activeIntervals = [];
+  await log(`[${signal}] Enhanced cleanup initiated...`);
   try {
     if (dbSettings) {
       await Settings.updateSettings(dbSettings);
@@ -256,21 +174,36 @@ async function cleanup(signal) {
     if (mongoStore) {
       await mongoStore.disconnect();
     }
-    if (database && database.isConnected) {
+    if (database?.isConnected) {
       await database.disconnect();
     }
-    await log(`[OK] Semua data berhasil disimpan dan koneksi ditutup.`);
-  } catch (error) { await log(error, true); }
-  process.exit(0);
+    await log(`Enhanced cleanup completed successfully.`);
+  } catch (error) {
+    await log(`Cleanup error: ${error}`);
+    await log(error, true);
+  } finally {
+    process.exit(0);
+  }
 }
 
 process.on('SIGINT', () => cleanup('SIGINT'));
 process.on('SIGTERM', () => cleanup('SIGTERM'));
 process.on('SIGUSR2', () => cleanup('SIGUSR2'));
 
+process.on('unhandledRejection', async (reason, promise) => {
+  await log(`Unhandled Rejection at: ${promise}, reason: ${reason}`);
+});
+process.on('uncaughtException', async (error) => {
+  await log(`Uncaught Exception: ${error}`);
+  await log(error, true);
+  await performanceManager.cache.forceSync();
+  process.exit(1);
+});
+
 try {
   await starts();
 } catch (error) {
+  await log(`Fatal startup error: ${error}`);
   await log(error, true);
   process.exit(1);
 }

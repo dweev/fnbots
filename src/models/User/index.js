@@ -33,11 +33,14 @@ Object.assign(
   statsStatics
 );
 
-userSchema.statics.ensureUser = function (userId) {
+userSchema.statics.ensureUser = async function(userId) {
+  if (!userId || typeof userId !== 'string' || !userId.includes('@')) {
+    return new this({ userId: 'invalid@s.whatsapp.net' }); 
+  }
   return this.findOneAndUpdate(
     { userId },
     { $setOnInsert: { userId } },
-    { upsert: true, new: true }
+    { upsert: true, new: true, runValidators: true }
   );
 };
 

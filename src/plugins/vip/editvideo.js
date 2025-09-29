@@ -6,7 +6,9 @@
 */
 // ─── Info ────────────────────────────────
 
-import { Media } from '../../../database/index.js';
+import log from '../../lib/logger.js';
+import { tmpDir } from '../../lib/tempManager.js';
+import { Media, saveMediaStream, deleteMedia } from '../../../database/index.js';
 
 export const command = {
   name: 'editvideo',
@@ -16,21 +18,37 @@ export const command = {
   isCommandWithoutPayment: true,
   execute: async ({ fn, m, sReply, arg, quotedMsg }) => {
     const name = arg.trim().toLowerCase();
-    if (!name || /chat\.whatsapp\.com|instagram\.com|youtube\.com|youtu\.be|tiktok\.com/i.test(name)) return await sReply(`Nama video tidak valid.\n\nGunakan nama unik untuk video.\nContoh: .editvideo fnbots`);
+    if (!name || /chat\.whatsapp\.com|instagram\.com|youtube\.com|youtu\.be|tiktok\.com/i.test(name)) {
+      return await sReply(`Nama video tidak valid.\n\nGunakan nama unik untuk video.\nContoh: .editvideo fnbots`);
+    }
+    const existingVideo = await Media.findOne({ name: name, type: 'video' });
+    if (!existingVideo) {
+      return await sReply(`Video dengan nama '${name}' tidak ditemukan.\nMungkin Anda ingin membuatnya dengan .addvideo?`);
+    }
     const targetMsg = quotedMsg ? m.quoted || m : m.message;
     const mime = targetMsg?.videoMessage?.mimetype;
-    const video = await Media.findOne({ name: name, type: 'video' });
-    if (video) return await sReply(`Gagal! Nama video '${name}' sudah digunakan.`);
+    if (!mime) {
+      return await sReply(`Harap reply atau kirim video yang ingin disimpan.`);
+    }
     const buffer = await fn.getMediaBuffer(targetMsg);
-    const result = await Media.findOneAndUpdate(
-      { name: name, type: 'video' },
-      { data: buffer, mime: mime },
-      { new: true }
-    );
-    if (result) {
-      await sReply(`✅ video '${name}' berhasil diperbarui.`);
-    } else {
-      await sReply(`video dengan nama '${name}' tidak ditemukan. Mungkin Anda ingin membuatnya dengan .addvideo?`);
+    if (!buffer) {
+      return await sReply(`Gagal mengambil video dari pesan.`);
+    }
+    const tempPath = await tmpDir.createTempFileWithContent(buffer);
+    try {
+      await deleteMedia({ name, type: 'video' });
+      const saved = await saveMediaStream(name, 'video', mime, tempPath);
+      await sReply(
+        `Storage: ${saved.storageType.toUpperCase()}\n` +
+        `Size: ${(saved.size / 1024 / 1024).toFixed(2)} MB\n` +
+        `Mime: ${saved.mime}\n\n` +
+        `Video '${name}' berhasil diperbarui!`
+      );
+    } catch (err) {
+      log(err, true);
+      await sReply(`Gagal memperbarui video: ${err.message}`);
+    } finally {
+      await tmpDir.deleteFile(tempPath);
     }
   },
 };

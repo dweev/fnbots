@@ -70,6 +70,7 @@ const config = {
     ffmpeg: '/usr/bin/ffmpeg',
     ffprobe: '/usr/bin/ffprobe',
     tempDir: 'src/sampah',
+    databaseMedia: path.join(__dirname, 'media'),
     avatar: path.join(__dirname, 'src', 'media', 'avatar.jpg'),
     fotoBot: path.join(__dirname, 'src', 'media', 'fotobot.jpeg'),
     vanya: path.join(__dirname, 'src', 'media', 'hi.oga'),

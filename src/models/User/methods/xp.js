@@ -47,7 +47,6 @@ export const statics = {
     if (type !== 'xp' && type !== 'level') return null;
     const user = await this.findOne({ userId }).lean();
     if (!user) return null;
-
     const filter = {};
     if (type === 'xp') {
       filter.xp = { $gt: user.xp };

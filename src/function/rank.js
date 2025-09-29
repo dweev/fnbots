@@ -175,19 +175,16 @@ async function createRankCard({ username, discriminator, avatarUrl, level, curre
 
 export async function getMyLevel(user, username, avatarUrl) {
   try {
-    // 2. Mengambil rank pengguna secara efisien dari database
     const rank = await User.getUserRank(user.userId, 'xp');
-
-    // 3. Semua data diambil langsung dari dokumen 'user' dan virtuals-nya
     const rankCardBuffer = await createRankCard({
       username: username,
       discriminator: `#${String(user.userId.split('@')[0])}`,
       avatarUrl: avatarUrl,
       level: user.level,
       currentXP: user.xp,
-      requiredXP: user.maxXp, // Menggunakan virtual
+      requiredXP: user.maxXp,
       rank: rank,
-      pangkat: user.levelName // Menggunakan virtual
+      pangkat: user.levelName
     });
     return rankCardBuffer;
   } catch (error) {
@@ -210,14 +207,10 @@ export async function getMyBalance(user, username, avatarUrl) {
   }
 };
 export async function getLeaderboardText(dbSettings) {
-  // 5. Menggunakan metode getLeaderboard yang efisien dari model User
   const topUsers = await User.getLeaderboard('xp', 20);
-
   if (!topUsers || topUsers.length === 0) return "Belum ada seorang pun di leaderboard.";
-
   let ranks = `*✨ ${dbSettings.botname} LEADERBOARD ✨*\n\n`;
   ranks += `────────────────────────\n`;
-
   const mentions = [];
   topUsers.forEach((user, index) => {
     const id = user.userId.split('@')[0];
@@ -228,9 +221,7 @@ export async function getLeaderboardText(dbSettings) {
     ranks += `   💰 *Balance:* ${formatNumber(user.balance)}\n`;
     ranks += `────────────────────────\n`;
   });
-
   const totalPlayers = await User.countDocuments();
   ranks += `*Total Pemain:* ${totalPlayers}`;
-
   return { text: ranks, mentions };
 };

@@ -9,6 +9,7 @@
 import { delay } from 'baileys';
 import log from '../lib/logger.js';
 import config from '../../config.js';
+import { getMediaStream } from '../../database/index.js';
 
 export class ChatbotHandler {
   constructor(fn, Media, DatabaseBot) {
@@ -90,16 +91,50 @@ export class ChatbotHandler {
     }
   }
   async handleMediaResponse(mediaResponses, fn, toId, m) {
+    if (!mediaResponses || mediaResponses.length === 0) {
+      return false;
+    }
     try {
-      for (const mediaResponse of mediaResponses) {
-        if (mediaResponse && mediaResponse.data && mediaResponse.data.buffer) {
-          const mediaBuffer = Buffer.from(mediaResponse.data.buffer);
-          await fn.sendMediaByType(toId, mediaResponse.mime, mediaBuffer, '', m, {});
-          await delay(1000);
+      for (const mediaDoc of mediaResponses) {
+        let mediaBuffer;
+        if (mediaDoc.data && mediaDoc.data.buffer) {
+          mediaBuffer = Buffer.from(mediaDoc.data.buffer);
+        } else if (Buffer.isBuffer(mediaDoc.data)) {
+          mediaBuffer = mediaDoc.data;
+        } else if (typeof mediaDoc.data === 'string') {
+          mediaBuffer = Buffer.from(mediaDoc.data, 'base64');
+        } else {
+          const { stream } = await getMediaStream(mediaDoc._id);
+          mediaBuffer = stream;
         }
+        const mediaType = mediaDoc.type || mediaDoc.mime.split('/')[0];
+        const typeMapping = {
+          'image': 'image',
+          'video': 'video',
+          'audio': 'audio',
+          'sticker': 'sticker'
+        };
+        const messageType = typeMapping[mediaType] || 'document';
+        if (['image', 'video', 'audio', 'sticker'].includes(messageType)) {
+          await fn.sendMessage(toId, {
+            [messageType]: mediaBuffer,
+            mimetype: mediaDoc.mime,
+            ptt: messageType === 'audio' ? true : undefined,
+          }, { quoted: m });
+        } else {
+          await fn.sendMessage(toId, {
+            document: mediaBuffer,
+            mimetype: mediaDoc.mime,
+            fileName: mediaDoc.name || 'file'
+          }, { quoted: m });
+        }
+        await delay(1000);
       }
+      return true;
     } catch (error) {
-      log(`Error in media response: ${error}`, true);
+      log(`Error in media response: ${error.message}`);
+      log(error, true);
+      return false;
     }
   }
 }

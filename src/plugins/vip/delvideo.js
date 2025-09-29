@@ -6,7 +6,7 @@
 */
 // ─── Info ────────────────────────────────
 
-import { Media } from '../../../database/index.js';
+import { deleteMedia } from '../../../database/index.js';
 
 export const command = {
   name: 'delvideo',
@@ -16,12 +16,36 @@ export const command = {
   isCommandWithoutPayment: true,
   execute: async ({ sReply, arg }) => {
     const name = arg.trim().toLowerCase();
-    if (!name) return sReply('Gagal! Berikan nama video yang ingin dihapus.\nContoh: .delvideo fnbots');
-    const result = await Media.deleteOne({ name: name, type: 'video' });
-    if (result.deletedCount > 0) {
-      await sReply(`✅ video '${name}' berhasil dihapus dari database.`);
-    } else {
-      await sReply(`video dengan nama '${name}' tidak ditemukan.`);
+    if (!name) {
+      return await sReply(
+        'Gagal! Berikan nama video yang ingin dihapus.\n\n' +
+        'Contoh: `.delvideo fnbots`'
+      );
+    }
+    try {
+      const deletedInfo = await deleteMedia({ name, type: 'video' });
+      if (deletedInfo) {
+        let storageLabel = '';
+        if (deletedInfo.storageType === 'buffer') {
+          storageLabel = 'MongoDB (In-Document)';
+        } else if (deletedInfo.storageType === 'gridfs') {
+          storageLabel = 'GridFS (MongoDB)';
+        } else if (deletedInfo.storageType === 'local') {
+          storageLabel = 'Local Filesystem';
+        }
+        await sReply(
+          `Name: ${deletedInfo.name}\n` +
+          `Storage: ${storageLabel}\n\n` +
+          `Video berhasil dihapus!`
+        );
+      } else {
+        return await sReply(
+          `Video dengan nama '${name}' tidak ditemukan.\n\n` +
+          `Gunakan .listvideo untuk melihat video yang tersedia.`
+        );
+      }
+    } catch (err) {
+      await sReply(`Gagal menghapus video: ${err.message}`);
     }
   },
 };

@@ -119,6 +119,7 @@ import Settings from '../src/models/Settings/index.js';
 import Whitelist from '../src/models/Whitelist/index.js';
 import StoreContact from '../src/models/StoreContact/index.js';
 import StoreGroupMetadata from '../src/models/StoreGroupMetadata/index.js';
+import { saveMediaStream, getMediaStream, deleteMedia, findMedia } from './hybrid.js';
 import StoreMessages from '../src/models/StoreMessages/index.js';
 import DatabaseBot from '../src/models/DatabaseBot/index.js';
 import StoreStory from '../src/models/StoreStory/index.js';
@@ -138,5 +139,9 @@ export {
   StoreGroupMetadata,
   StoreMessages,
   StoreStory,
-  OTPSession
+  OTPSession,
+  saveMediaStream,
+  getMediaStream,
+  deleteMedia,
+  findMedia
 };

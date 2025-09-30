@@ -67,6 +67,7 @@ const config = {
     }
   },
   paths: {
+    dice: 'src/games/images/dice',
     ffmpeg: '/usr/bin/ffmpeg',
     ffprobe: '/usr/bin/ffprobe',
     tempDir: 'src/sampah',

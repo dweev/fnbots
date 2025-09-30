@@ -11,29 +11,19 @@ import path from 'path';
 import { delay } from 'baileys';
 import config from '../config.js';
 import { LRUCache } from 'lru-cache';
-import { spawn } from 'child_process';
 import log from '../src/lib/logger.js';
 import dayjs from '../src/utils/dayjs.js';
 import { exec as cp_exec } from 'child_process';
 import { runJob } from '../src/worker/worker_manager.js';
+import { restartManager } from '../src/lib/restartManager.js';
 import { cleanupPlugins, pluginCache } from '../src/lib/plugins.js';
 import { performanceManager } from '../src/lib/performanceManager.js';
 import { User, Group, Settings, Command, StoreGroupMetadata, OTPSession, Media, DatabaseBot } from '../database/index.js';
 import { handleAntiDeleted, handleAutoJoin, handleAudioChanger, handleAutoSticker, handleChatbot } from '../src/handler/index.js';
-import { color, msgs, mycmd, safeStringify, sendAndCleanupFile, waktu, shutdown, checkCommandAccess, isUserVerified, textMatch1, textMatch2, expiredVIPcheck, expiredCheck, getSerial, getTxt, initializeFuse } from '../src/function/function.js';
+import { color, msgs, mycmd, safeStringify, sendAndCleanupFile, waktu, checkCommandAccess, isUserVerified, textMatch1, textMatch2, expiredVIPcheck, expiredCheck, getSerial, getTxt, initializeFuse } from '../src/function/function.js';
 
 const exec = util.promisify(cp_exec);
-const isPm2 = process.env.pm_id !== undefined || process.env.NODE_APP_INSTANCE !== undefined;
-const isSelfRestarted = process.env.RESTARTED_BY_SELF === '1';
-const MAX_RECONNECT_ATTEMPTS = config.performance.maxReconnectAttemps;
-const RECONNECT_DELAY_MS = config.performance.reconnectDelay;
 const localFilePrefix = config.localPrefix;
-
-function logRestartInfo() {
-  log('Starting Engine...')
-  log(`Running Mode: ${isPm2 ? 'PM2' : 'Node'} | RestartedBySelf: ${isSelfRestarted}`);
-};
-logRestartInfo();
 
 const groupAfkCooldowns = new LRUCache({
   max: 1000,
@@ -56,33 +46,6 @@ let groupData           = null;
 export const updateMyGroup = (newGroupList, newMemberlist) => {
   mygroup = newGroupList;
   mygroupMembers = newMemberlist;
-};
-export async function handleRestart(reason) {
-  const currentRestarts = config.restartAttempts;
-  const nextAttempt = currentRestarts + 1;
-  if (currentRestarts >= MAX_RECONNECT_ATTEMPTS) {
-    await log(`Gagal total setelah ${MAX_RECONNECT_ATTEMPTS} percobaan. Alasan: ${reason}`);
-    await performanceManager.cache.forceSync();
-    process.exit(1);
-  }
-  await log(`Terjadi error: ${reason}`);
-  await log(`Mencoba restart otomatis #${nextAttempt} dalam ${RECONNECT_DELAY_MS / 1000}s...`);
-  await performanceManager.cache.forceSync();
-  await delay(RECONNECT_DELAY_MS);
-  if (isPm2) {
-    process.exit(1);
-  } else {
-    spawn(process.argv[0], process.argv.slice(1), {
-      detached: true,
-      stdio: 'inherit',
-      env: {
-        ...process.env,
-        RESTART_ATTEMPTS: nextAttempt.toString(),
-        RESTARTED_BY_SELF: '1'
-      }
-    });
-    process.exit(0);
-  }
 };
 export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, version, isSuggestion = false }) {
   suggested = isSuggestion;
@@ -196,10 +159,13 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
     dbSettings.restartState = true;
     dbSettings.restartId = m.from;
     dbSettings.dataM = m;
-    await Promise.all([Settings.updateSettings(dbSettings), reactDone(), handleRestart("Restarting...")]);
+    await Settings.updateSettings(dbSettings);
+    await reactDone();
+    await restartManager.restart("Manual restart", performanceManager);
   } else if (body?.toLowerCase().trim() == "shutdown") {
     if (!isSadmin && !isMaster) return;
-    await Promise.all([reactDone(), shutdown(isPm2)]);
+    await reactDone();
+    await restartManager.shutdown(performanceManager);
   } else if (body?.toLowerCase().trim() == "resetcommands") {
     if (!isSadmin && !isMaster) return;
     const result = await Command.resetAll();
@@ -393,7 +359,10 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
             try {
               await fn.sendMessage(toId, { delete: { remoteJid: toId, fromMe: false, id: id, participant: serial } });
               await fn.removeParticipant(toId, serial);
-            } catch (error) { await log(error, true); }
+            } catch (error) {
+              await log(`Gagal mengeluarkan ${serial} karena anti tag story: ${error}`, true);
+              await log(error, true);
+            }
           }
         }
       }
@@ -575,7 +544,7 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
                 performanceManager.cache.incrementGlobalStats();
               }
             } catch (error) {
-              await sReply(`Terjadi kesalahan saat menjalankan perintah "${command.name}": ${error.message}`);
+              await sReply(`Terjadi kesalahan saat menjalankan perintah "${command.name}": \n${error.message}`);
               log(error, true);
               failedCommands.push(currentCommand);
             }
@@ -653,7 +622,10 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
         await handleChatbot({ m, toId, fn, dbSettings, body, Media, DatabaseBot, sReply });
       };
     }
-  } catch (error) { await log(error, true); }
+  } catch (error) {
+    await log(`Error in main handler: ${error}`, true);
+    await log(error, true);
+  }
 };
 
 export {

@@ -24,7 +24,7 @@ async function runConversion(mediaBuffer, type) {
   } else if (type === 'video') {
     ffmpegCommand.addOutputOptions([
       '-vcodec', 'libwebp', '-vf',
-      "scale='min(512,iw)':min'(512,ih)':force_original_aspect_ratio=decrease,fps=15, pad=512:512:-1:-1:color=white@0.0, split [a][b]; [a] palettegen=reserve_transparent=on:transparency_color=ffffff [p]; [b][p] paletteuse",
+      "scale='min(512,iw)':'min(512,ih)':force_original_aspect_ratio=decrease,fps=15, pad=512:512:-1:-1:color=white@0.0, split [a][b]; [a] palettegen=reserve_transparent=on:transparency_color=ffffff [p]; [b][p] paletteuse",
       '-loop', '0',
       '-ss', '00:00:00',
       '-t', '00:00:10',

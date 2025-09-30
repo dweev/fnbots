@@ -9,6 +9,7 @@
 import cron from 'node-cron';
 import process from 'process';
 import { LRUCache } from 'lru-cache';
+import { restartManager } from './restartManager.js';
 
 const PERFORMANCE_CONFIG = {
   CACHE_SYNC_INTERVAL: 5000,
@@ -350,7 +351,9 @@ class UnifiedJobScheduler {
       if (stats.rssMB > PERFORMANCE_CONFIG.HIGH_MEMORY_LIMIT && !this.restarting) {
         console.log(`High RSS memory usage (${stats.rssMB}MB) detected, restarting...`);
         this.restarting = true;
-        this.handleRestart('Memory overload — auto restart');
+        restartManager.restart('Memory overload', {
+          cache: this.cacheManager
+        }).catch(console.error);
       }
     }, PERFORMANCE_CONFIG.MEMORY_CHECK_INTERVAL);
     this.addInterval('aliveCheck', async () => {
@@ -363,7 +366,9 @@ class UnifiedJobScheduler {
         if (!this.restarting) {
           console.log('Socket disconnected, attempting restart...');
           this.restarting = true;
-          await this.handleRestart('Socket disconnected — auto restart');
+          await restartManager.restart('Socket disconnected', {
+            cache: this.cacheManager
+          });
         }
       }
     }, PERFORMANCE_CONFIG.ALIVE_CHECK_INTERVAL);
@@ -436,17 +441,6 @@ class UnifiedJobScheduler {
   calculateGameLimit(config, dbSettings, user) {
     const isSadmin = config.ownerNumber.includes(user.userId);
     return user.isVIP || user.isMaster || isSadmin ? Infinity :  user.isPremium ? dbSettings.limitCountPrem : dbSettings.limitGame;
-  }
-  async handleRestart(reason) {
-    console.log(`Restart triggered: ${reason}`);
-    await this.cacheManager.forceSync();
-    try {
-      const { handleRestart } = await import('../../core/handler.js');
-      await handleRestart(reason);
-    } catch (error) {
-      console.error('Restart failed:', error);
-      process.exit(1);
-    }
   }
   async shutdown() {
     console.log('Job scheduler shutting down...');

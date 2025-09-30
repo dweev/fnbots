@@ -4,7 +4,7 @@
 * Follow https://github.com/Terror-Machine
 * Feel Free To Use
 */
-// ─── Info Security.js ────────────────────
+// ─── Info src/utils/security.js ──────────
 
 import { getContentType } from 'baileys';
 

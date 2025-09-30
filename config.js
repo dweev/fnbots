@@ -24,7 +24,6 @@ const config = {
   mongodbUri: process.env.MONGODB_URI,
   ownerNumber: JSON.parse(process.env.OWNER_NUMBER),
   botNumber: process.env.BOT_NUMBER || '',
-  restartAttempts: parseInt(process.env.RESTART_ATTEMPTS, 10) || 0,
   usePairingCode: false,
   commandCategories: [
     'master', 'owner', 'bot', 'vip', 'premium', 'manage', 'media',

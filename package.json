@@ -21,6 +21,7 @@
   "dependencies": {
     "awesome-phonenumber": "^7.5.0",
     "baileys": "github:Terror-Machine/Baileys",
+    "cheerio": "^1.1.2",
     "chokidar": "^4.0.3",
     "custom-translate": "^2.2.8",
     "dayjs": "^1.11.13",
@@ -49,7 +50,7 @@
     "@hapi/boom": "^10.0.0",
     "@ts-ffmpeg/fluent-ffmpeg": "^2.2.6",
     "async-mutex": "^0.5.0",
-    "axios": "^1.12.1",
+    "axios": "^1.12.2",
     "canvas": "^3.2.0",
     "eslint": "^9.32.0",
     "file-type": "^16.5.4",

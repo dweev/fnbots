@@ -26,6 +26,7 @@ async function debouncedReload() {
       await loadPlugins(pluginPath);
       await initializeFuse();
     } catch (error) {
+      log(`Error reloading plugins: ${error}`, true);
       log(error, true);
     }
   }, 1500);

@@ -4,7 +4,7 @@
 * Follow https://github.com/Terror-Machine
 * Feel Free To Use
 */
-// ─── Info ────────────────────────────────
+// ─── Info src/utils/dayjs.js ─────────────
 
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';

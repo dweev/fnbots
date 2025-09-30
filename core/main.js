@@ -12,11 +12,11 @@ import path, { dirname } from 'path';
 import { jidNormalizedUser } from 'baileys';
 
 import config from '../config.js';
-import { handleRestart } from './handler.js';
 import { createWASocket } from './connection.js';
 import { tmpDir } from '../src/lib/tempManager.js';
 import { loadPlugins } from '../src/lib/plugins.js';
 import log, { pinoLogger } from '../src/lib/logger.js';
+import { restartManager } from '../src/lib/restartManager.js';
 import startPluginWatcher from '../src/lib/watcherPlugins.js';
 import updateMessageUpsert from '../src/lib/updateMessageUpsert.js';
 import { initializeDbSettings } from '../src/lib/settingsManager.js';
@@ -158,10 +158,9 @@ async function starts() {
     setupWhatsAppEventHandlers(fn);
     await performanceManager.initialize(fn, config, dbSettings);
   } catch (error) {
-    log(error, true)
     await log(`Startup error: ${error}`, true);
     await log(error, true);
-    await handleRestart('Gagal memuat database store');
+    await restartManager.restart("Gagal memuat database store", performanceManager);
   }
 };
 
@@ -197,7 +196,7 @@ process.on('uncaughtException', async (error) => {
   await log(`Uncaught Exception: ${error}`);
   await log(error, true);
   await performanceManager.cache.forceSync();
-  process.exit(1);
+  await restartManager.shutdown(performanceManager);
 });
 
 try {

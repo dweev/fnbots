@@ -14,9 +14,9 @@ import config from '../config.js';
 import { Boom } from '@hapi/boom';
 import qrcode from 'qrcode-terminal';
 import { clientBot } from './client.js';
-import { handleRestart } from './handler.js';
 import { parsePhoneNumber } from 'awesome-phonenumber';
 import log, { pinoLogger } from '../src/lib/logger.js';
+import { restartManager } from '../src/lib/restartManager.js';
 import { AuthStore, BaileysSession } from '../database/auth.js';
 import { Settings, mongoStore, StoreGroupMetadata, OTPSession } from '../database/index.js';
 import { default as makeWASocket, jidNormalizedUser, Browsers, makeCacheableSignalKeyStore, isJidBroadcast, fetchLatestBaileysVersion } from 'baileys';
@@ -122,6 +122,7 @@ export async function createWASocket(dbSettings) {
         }, 3000);
       }
       if (connection === 'open') {
+        restartManager.reset();
         if (dbSettings.restartState) {
           dbSettings.restartState = false;
           await fn.sendPesan(dbSettings.restartId, `✅ Restart sukses..`, dbSettings.dataM);
@@ -152,14 +153,12 @@ export async function createWASocket(dbSettings) {
             await log('Sinkronisasi selesai...');
           }
         } catch (error) {
+          await log(`Error during group sync: ${error}`, true);
           await log(error, true);
         }
         await log(`WA Version: ${global.version.join('.')}`);
         await log(`BOT Number: ${jidNormalizedUser(fn.user.id).split('@')[0]}`);
         await log(`${dbSettings.botName} Berhasil tersambung ke whatsapp...`);
-        if (config.restartAttempts > 0) {
-          config.restartAttempts = 0;
-        }
         setInterval(cleanupExpiredOTPSessions, config.performance.defaultInterval);
       }
       if (connection === 'close') {
@@ -169,9 +168,9 @@ export async function createWASocket(dbSettings) {
           dbSettings.botNumber = null;
           await BaileysSession.deleteMany({});
           await Settings.updateSettings(dbSettings);
-          process.exit(1);
+          restartManager.forceExit(1);
         } else {
-          await handleRestart(`Koneksi terputus dengan kode ${statusCode}`);
+          await restartManager.restart(`Connection closed: ${statusCode}`, (await import('../src/lib/performanceManager.js')).performanceManager);
         }
       }
       if (isNewLogin) await log(`New device detected, session restarted!`);
@@ -185,6 +184,7 @@ export async function createWASocket(dbSettings) {
         }
       }
     } catch (error) {
+      await log(`Connection update error: ${error}`, true);
       await log(error, true);
     }
   });

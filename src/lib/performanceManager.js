@@ -341,6 +341,10 @@ class UnifiedJobScheduler {
     return false;
   }
   setupStandardJobs(fn, config, dbSettings) {
+    this.addInterval('gameCleanup', async () => {
+      const { gameStateManager } = await import('./gameManager.js');
+      gameStateManager.cleanupStaleGames();
+    }, PERFORMANCE_CONFIG.COOLDOWN_RESET);
     this.addInterval('memoryMonitor', () => {
       const stats = this.cacheManager.checkMemoryUsage();
       if (stats.rssMB > PERFORMANCE_CONFIG.HIGH_MEMORY_LIMIT && !this.restarting) {

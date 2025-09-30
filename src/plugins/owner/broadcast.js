@@ -62,7 +62,7 @@ export const command = {
       try {
         if (whitelistIdSet.has(idGroup)) {
           const caption = `*${dbSettings.botName} Broadcast*\n\n${messageContent}`;
-          await fn.sendFilePath(idGroup, caption, config.paths.fotoBot);
+          await fn.sendFilePath(idGroup, caption, config.paths.avatar);
         } else {
           await fn.sendPesan(idGroup, messageContent);
         }

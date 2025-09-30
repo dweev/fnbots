@@ -44,7 +44,7 @@ export const command = {
           const profilePicUrl = await fn.profilePictureUrl(story.sender, 'image');
           profilePicBuffer = await fn.getFile(profilePicUrl);
         } catch {
-          const defaultPic = await fs.readFile(config.paths.fotoBot);
+          const defaultPic = await fs.readFile(config.paths.avatar);
           profilePicBuffer = { data: defaultPic };
         }
         const resBuffer = await generateFakeStory({

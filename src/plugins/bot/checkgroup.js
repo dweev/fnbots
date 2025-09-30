@@ -10,7 +10,7 @@ import fs from 'fs-extra';
 import FileType from 'file-type';
 import config from '../../../config.js';
 
-const defaultAvatar = config.paths.fotoBot;
+const defaultAvatar = config.paths.avatar;
 export const command = {
   name: 'checkgroup',
   category: 'bot',

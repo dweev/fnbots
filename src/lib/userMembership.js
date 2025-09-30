@@ -8,125 +8,133 @@
 
 import dayjs from '../utils/dayjs.js';
 import { User } from '../../database/index.js';
-import { formatDuration, formatDurationMessage } from '../function/function.js';
+import { formatDuration, formatDurationMessage, archimed } from '../function/function.js';
 
 export function membershipUser(config) {
   const { type, aliases } = config;
   const capitalizedType = type.toUpperCase();
   const userModelMethods = {
-    add: `add${type}`,
-    remove: `remove${type}`,
-    findActive: `findActive${type}s`
+    add: (userId, durationMs) => User.addPremium(userId, durationMs),
+    remove: (userId) => User.removePremium(userId),
+    findActive: () => User.find({ isPremium: true, premiumExpired: { $gt: new Date() } })
   };
+  if (type.toLowerCase() === 'vip') {
+    userModelMethods.add = (userId, durationMs) => User.addVIP(userId, durationMs);
+    userModelMethods.remove = (userId) => User.removeVIP(userId);
+    userModelMethods.findActive = () => User.find({ isVIP: true, vipExpired: { $gt: new Date() } });
+  }
   return {
     name: type.toLowerCase(),
     category: 'owner',
     description: `Mengelola hak akses ${type} untuk pengguna.`,
     aliases: aliases,
     isCommandWithoutPayment: true,
-    execute: async ({ sReply, args, arg, mentionedJidList, dbSettings }) => {
-      const validateDuration = (duration) => {
-        if (!duration) return sReply('Durasi tidak boleh kosong. Contoh: 7d, 30d, 1M');
-        const durationRegex = /^\d+[smhdwyM]$/i;
-        if (!durationRegex.test(duration)) return sReply('Format durasi tidak valid. Gunakan: angka + s/m/h/d/w/M/y');
-        return true;
-      };
+    execute: async ({ sReply, args, mentionedJidList, quotedMsg, dbSettings }) => {
       const formatUserId = (input) => {
-        if (input.includes('@s.whatsapp.net')) return input;
-        if (input.includes('@')) return input;
-        return input + '@s.whatsapp.net';
+        if (!input) return null;
+        const cleaned = input.replace(/[^0-9]/g, '');
+        return cleaned ? `${cleaned}@s.whatsapp.net` : null;
       };
-      const handleAddUser = async (userId, duration) => {
-        validateDuration(duration);
-        const durationParsed = formatDuration(duration);
-        const msToAdd = durationParsed.asMilliseconds();
+      const handleAddUser = async (userId, durationStr) => {
+        if (!durationStr || !/^\d+[smhdwyM]$/i.test(durationStr)) {
+          return await sReply('Format durasi tidak valid. Contoh: 30d');
+        }
+        const duration = formatDuration(durationStr);
+        const msToAdd = duration.asMilliseconds();
         if (msToAdd <= 0) return await sReply('Durasi harus lebih dari 0');
-        await User[userModelMethods.add](userId, msToAdd);
-        const durationMessage = formatDurationMessage(durationParsed);
-        await sReply(`*「 ${capitalizedType} 」*\n\n*ID*: @${userId.split('@')[0]}\n${durationMessage}`);
-      };
-      const handleDeleteUser = async (input) => {
-        let deleted = 0;
-        const processDelete = async (uid) => {
-          const result = await User[userModelMethods.remove](uid);
-          if (result.modifiedCount > 0) deleted++;
-        };
-        if (mentionedJidList.length > 0) {
-          for (const userId of mentionedJidList) await processDelete(userId);
-        } else {
-          const targets = input.split(",").map(s => s.trim()).filter(Boolean);
-          if (targets.length === 0) return await sReply('Input tidak valid');
-          for (const target of targets) {
-            if (target.includes('@') || !/^\d+$/.test(target)) {
-              await processDelete(formatUserId(target));
-            } else {
-              const index = parseInt(target, 10);
-              if (isNaN(index) || index < 1) return await sReply(`Index '${target}' tidak valid.`);
-              const userToFind = await User.find({ [userModelMethods.findActive.replace('findActive', 'is').slice(0, -1)]: true })
-                .sort({ createdAt: 1 })
-                .skip(index - 1)
-                .limit(1)
-                .lean();
-              if (userToFind && userToFind.length > 0) {
-                await processDelete(userToFind[0].userId);
-              } else {
-                const totalUsers = await User.countDocuments({ [userModelMethods.findActive.replace('findActive', 'is').slice(0, -1)]: true });
-                return await sReply(`Index ${index} tidak valid. Range: 1-${totalUsers}`);
-              }
-            }
-          }
-        }
-        if (deleted > 0) {
-          await sReply(`*「 ${capitalizedType} 」*\n\n*Berhasil menghapus*: ${deleted} user`);
-        } else {
-          await sReply(`*「 ${capitalizedType} 」*\n\nTidak ada user yang dihapus. Periksa input Anda.`);
-        }
+        await userModelMethods.add(userId, msToAdd);
+        const durationMessage = formatDurationMessage(duration);
+        await sReply(
+          `*「 PENAMBAHAN ${capitalizedType} 」*\n\n` +
+          `*ID*: @${userId.split('@')[0]}\n` +
+          `${durationMessage}`,
+          { mentions: [userId] }
+        );
       };
       const handleListUsers = async () => {
-        const users = await User[userModelMethods.findActive]();
-        if (users.length === 0) return sReply(`*「 ${capitalizedType} 」*\n\nTidak ada user ${type} aktif saat ini.`);
-        let ts = `*## ${dbSettings.botName} ${type} ##*\n`;
-        const sortedUsers = users.sort((a, b) => b[`${type.toLowerCase()}Expired`] - a[`${type.toLowerCase()}Expired`]);
-        sortedUsers.forEach((user, index) => {
+        const users = await userModelMethods.findActive();
+        if (users.length === 0) {
+          return await sReply(`Tidak ada pengguna ${type} aktif saat ini.`);
+        }
+        let listText = `*Daftar Pengguna ${capitalizedType}*\n\nTotal: *${users.length}*\n\n`;
+        const mentions = [];
+        users.sort((a, b) => b[`${type.toLowerCase()}Expired`] - a[`${type.toLowerCase()}Expired`]);
+        users.forEach((user, index) => {
           const expiredDate = dayjs(user[`${type.toLowerCase()}Expired`]);
           const durationLeft = dayjs.duration(expiredDate.diff(dayjs()));
           const durationMessage = formatDurationMessage(durationLeft);
-          ts += `\n${index + 1}. @${user.userId.split('@')[0]}\n ${durationMessage}\n`;
+          mentions.push(user.userId);
+          listText += `${index + 1}. @${user.userId.split('@')[0]}\n   ┗ Sisa Waktu: *${durationMessage.replace('*Expired*: ', '')}*\n`;
         });
-        ts += `\nRegards: *${dbSettings.botName}*`;
-        await sReply(ts);
+        await sReply(listText, { mentions });
       };
-      try {
-        if (!arg) {
-          const guideMessage = `*❏ PANDUAN PERINTAH ${capitalizedType} ❏*\n\n*1. Menambah:*\n\`\`\`${dbSettings.rname}${type.toLowerCase()} add <@user/nomor> <durasi>\`\`\`\n\n*2. Menghapus:*\n\`\`\`${dbSettings.rname}${type.toLowerCase()} del <@user/nomor/index>\`\`\`\n\n*3. Melihat Daftar:*\n\`\`\`${dbSettings.rname}${type.toLowerCase()} list\`\`\``;
-          return sReply(guideMessage);
+      const handleDeleteUser = async (input) => {
+        const jidsToDelete = new Set();
+        if (quotedMsg) {
+          jidsToDelete.add(quotedMsg.sender);
         }
-        const subCmd = args[0].toLowerCase();
-        const input = arg.split(' ').slice(1).join(' ').trim();
-        switch (subCmd) {
-          case 'add': {
-            const duration = args[2];
-            if (!duration) return await sReply(`Durasi tidak boleh kosong. Contoh: ${dbSettings.rname}${type.toLowerCase()} add @user 30d`);
-            if (mentionedJidList.length > 0) {
-              for (const jid of mentionedJidList) await handleAddUser(jid, duration);
-            } else {
-              if (!args[1]) return await sReply('User ID tidak boleh kosong');
-              await handleAddUser(formatUserId(args[1]), duration);
-            }
-            break;
+        if (mentionedJidList.length > 0) {
+          mentionedJidList.forEach(jid => jidsToDelete.add(jid));
+        }
+        if (input) {
+          const activeUsers = await userModelMethods.findActive();
+          const selectedByArchimed = archimed(input, activeUsers);
+          if (selectedByArchimed.length > 0) {
+            selectedByArchimed.forEach(user => jidsToDelete.add(user.userId));
+          } else {
+            const targets = input.split(',').map(num => formatUserId(num.trim())).filter(Boolean);
+            targets.forEach(jid => jidsToDelete.add(jid));
           }
-          case 'del':
-            if (!input) return await sReply(`User tidak boleh kosong. Contoh: ${dbSettings.rname}${type.toLowerCase()} del @user`);
-            await handleDeleteUser(input);
-            break;
-          case 'list':
-            await handleListUsers();
-            break;
-          default:
-            return await sReply(`Sub-perintah '${subCmd}' tidak valid. Gunakan 'add', 'del', atau 'list'.`);
         }
-      } catch (error) {
-        await sReply(`*「 ${capitalizedType} 」*\n\n*Error*: ${error.message}`);
+        if (jidsToDelete.size === 0) {
+          return await sReply('Tidak ada target yang valid. Gunakan @mention, reply pesan, atau aturan nomor (misal: 1-5).');
+        }
+        let successCount = 0;
+        const finalJids = Array.from(jidsToDelete);
+        const deletedMentions = [];
+        for (const jid of finalJids) {
+          const result = await userModelMethods.remove(jid);
+          if (result.modifiedCount > 0) {
+            successCount++;
+            deletedMentions.push(jid);
+          }
+        }
+        if (successCount > 0) {
+          let replyText = `Berhasil menghapus akses *${capitalizedType}* dari *${successCount}* pengguna:\n\n`;
+          replyText += deletedMentions.map((jid, i) => `${i + 1}. @${jid.split('@')[0]}`).join('\n');
+          await sReply(replyText, { mentions: deletedMentions });
+        } else {
+          return await sReply('Tidak ada pengguna yang dihapus. Periksa kembali target Anda.');
+        }
+      };
+      const subCmd = args[0]?.toLowerCase();
+      if (!subCmd) {
+        const guideMessage = `*❏ PANDUAN PERINTAH ${capitalizedType} ❏*\n\n` +
+          `*1. Menambah:*\n\`\`\`${dbSettings.rname}${type.toLowerCase()} add <@user/nomor> <durasi>\`\`\`\n\n` +
+          `*2. Menghapus:*\n\`\`\`${dbSettings.rname}${type.toLowerCase()} del <@user/nomor>\`\`\`\n\n` +
+          `*3. Melihat Daftar:*\n\`\`\`${dbSettings.rname}${type.toLowerCase()} list\`\`\``;
+        return sReply(guideMessage);
+      }
+      switch (subCmd) {
+        case 'add': {
+          const targetStr = mentionedJidList[0] || args[1];
+          const durationStr = args[2];
+          const targetJid = formatUserId(targetStr);
+          if (!targetJid) return await sReply('User tidak valid. Gunakan @mention atau nomor telepon.');
+          await handleAddUser(targetJid, durationStr);
+          break;
+        }
+        case 'del': {
+          const input = args.slice(1).join(' ').trim();
+          await handleDeleteUser(input);
+          break;
+        }
+        case 'list': {
+          await handleListUsers();
+          break;
+        }
+        default:
+          return await sReply(`Sub-perintah '${subCmd}' tidak valid. Gunakan 'add', 'del', atau 'list'.`);
       }
     }
   };

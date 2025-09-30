@@ -71,8 +71,8 @@ const config = {
     ffprobe: '/usr/bin/ffprobe',
     tempDir: 'src/sampah',
     databaseMedia: path.join(__dirname, 'media'),
-    avatar: path.join(__dirname, 'src', 'media', 'avatar.jpg'),
-    fotoBot: path.join(__dirname, 'src', 'media', 'fotobot.jpeg'),
+    rank: path.join(__dirname, 'src', 'media', 'rank.png'),
+    avatar: path.join(__dirname, 'src', 'media', 'avatar.png'),
     vanya: path.join(__dirname, 'src', 'media', 'hi.oga'),
     logsDir: 'logs'
   },

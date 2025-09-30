@@ -105,14 +105,14 @@ async function createRankCard({ username, discriminator, avatarUrl, level, curre
   const height = 250;
   const canvas = createCanvas(width, height);
   const ctx = canvas.getContext('2d');
-  const bg = await loadImage('./src/image/rank.png');
+  const bg = await loadImage(config.paths.rank);
   ctx.drawImage(bg, 0, 0, width, height);
   const avatarSize = 180;
   let avatar;
   try {
     avatar = await loadImage(avatarUrl);
   } catch {
-    avatar = await loadImage(await fs.readFile('./src/media/apatar.png'));
+    avatar = await loadImage(await fs.readFile(config.paths.avatar));
   }
   ctx.save();
   ctx.beginPath();

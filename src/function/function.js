@@ -1,10 +1,10 @@
-// ─── Info ────────────────────────────────
+// ─── Info ──────────────────────────────────────────
 /*
 * Created with ❤️ and 💦 By FN
 * Follow https://github.com/Terror-Machine
 * Feel Free To Use
 */
-// ─── info src/lib/function/function.js ────
+// ─── info src/lib/function/function.js ─────────────
 
 import os from 'os';
 import util from 'util';

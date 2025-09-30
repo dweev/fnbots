@@ -1,10 +1,10 @@
-// ─── Info ────────────────────────────────
+// ─── Info ────────────────────────────────────────
 /*
 * Created with ❤️ and 💦 By FN
 * Follow https://github.com/Terror-Machine
 * Feel Free To Use
 */
-// ─── Info errorManager.js ────────────────
+// ─── Info src/lib/errorManager.js ────────────────
 
 export class MediaValidationError extends Error {
   constructor(message, details = {}) {

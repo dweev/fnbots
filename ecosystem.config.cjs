@@ -1,3 +1,15 @@
+// ─── Info ─────────────────────────────────────
+/*
+* Created with ❤️ and 💦 By FN
+* Follow https://github.com/Terror-Machine
+* Feel Free To Use
+*/
+// ─── Info ecosystem.config.cjs ────────────────
+
+const isDevelopment = process.argv.includes('--env') && process.argv[process.argv.indexOf('--env') + 1] === 'development';
+const isWatchFlagPresent = process.argv.includes('--watch');
+const watchMode = isDevelopment || isWatchFlagPresent;
+
 module.exports = {
   apps: [
     {
@@ -5,18 +17,20 @@ module.exports = {
       script: './core/main.js',
       node_args: '--max-old-space-size=4096',
       max_memory_restart: '3G',
-      watch: false,
+      watch: watchMode,
       ignore_watch: [
+        '.git',
+        '.github',
         'logs',
         'node_modules',
-        'src/plugins',
         'src/sampah'
       ],
-      env: {
-        NODE_ENV: 'production'
+      watch_options: {
+        usePolling: true,
+        interval: 1000
       },
-      env_development: {
-        NODE_ENV: 'development'
+      env: {
+        NODE_ENV: watchMode ? 'development' : 'production'
       }
     }
   ]

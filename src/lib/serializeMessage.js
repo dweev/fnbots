@@ -1,10 +1,10 @@
-// ─── Info ────────────────────────────────
+// ─── Info ─────────────────────────────────────────
 /*
 * Created with ❤️ and 💦 By FN
 * Follow https://github.com/Terror-Machine
 * Feel Free To Use
 */
-// ─── Info serializeMessage.js ─────────────
+// ─── Info src/lib/serializeMessage.js ─────────────
 
 import log from './logger.js';
 import { mongoStore } from '../../database/index.js';

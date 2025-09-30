@@ -1,10 +1,10 @@
-// ─── Info ────────────────────────────────
+// ─── Info ─────────────────────────────────────────
 /*
 * Created with ❤️ and 💦 By FN
 * Follow https://github.com/Terror-Machine
 * Feel Free To Use
 */
-// ─── Info updateMessageUpsert.js ──────────
+// ─── Info src/lib/updateMessageUpsert.js ──────────
 
 import util from 'util';
 import log from './logger.js';

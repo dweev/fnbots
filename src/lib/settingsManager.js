@@ -1,10 +1,10 @@
-// ─── Info ────────────────────────────────
+// ─── Info ────────────────────────────────────────
 /*
 * Created with ❤️ and 💦 By FN
 * Follow https://github.com/Terror-Machine
 * Feel Free To Use
 */
-// ─── Info settingsManager.js ─────────────
+// ─── Info src/lib/settingsManager.js ─────────────
 
 import config from '../../config.js';
 import log, { pinoLogger } from './logger.js';

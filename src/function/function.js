@@ -33,8 +33,12 @@ let allCmds           = [];
 let _checkVIP         = false;
 let _checkPremium     = false;
 
-const fuseOptions = { includeScore: true, threshold: 0.25, minMatchCharLength: 2, distance: 25 };
-
+const fuseOptions = {
+  includeScore: true,
+  threshold: 0.25,
+  minMatchCharLength: 2,
+  distance: 25
+};
 
 export async function imageToWebp(media) {
   const stickerBuffer = await runJob('sticker', { mediaBuffer: media, type: 'image' });

@@ -10,7 +10,6 @@ import createImage from '../workers/groupimage_worker.js';
 
 export default async function groupImageJob(data) {
   const { username, groupname, welcometext, profileImagePath } = data;
-  if (!username || !groupname || !welcometext || !profileImagePath)
-    throw new Error('Invalid group image job data');
+  if (!username || !groupname || !welcometext || !profileImagePath) throw new Error('Invalid group image job data');
   return await createImage({ username, groupname, welcometext, profileImagePath });
 }

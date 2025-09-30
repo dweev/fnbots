@@ -47,7 +47,7 @@ export class AudioChangerHandler {
         await sReply('Gagal mengambil data audio.');
         return;
       }
-      const resultBuffer = await runJob('audioChanger', { mediaBuffer: mediaData });
+      const resultBuffer = await runJob('audioChanger', { mediaBuffer: mediaData, filterName: null });
       if (!resultBuffer) {
         await sReply('Gagal memproses audio melalui voice changer.');
         return;

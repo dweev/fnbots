@@ -72,7 +72,7 @@ const config = {
     tempDir: 'src/sampah',
     databaseMedia: path.join(__dirname, 'media'),
     rank: path.join(__dirname, 'src', 'media', 'rank.png'),
-    avatar: path.join(__dirname, 'src', 'media', 'avatar.png'),
+    avatar: path.join(__dirname, 'src', 'media', 'apatar.png'),
     vanya: path.join(__dirname, 'src', 'media', 'hi.oga'),
     logsDir: 'logs'
   },

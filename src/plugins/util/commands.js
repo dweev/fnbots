@@ -57,7 +57,7 @@ async function showCategories(sReply, dbSettings, m, sections) {
   sections.forEach((section, i) => {
     const commandCount = pluginCache.helpMap.get(section.key)?.size || 0;
     ts += `${i + 1}. *${section.title}* (${commandCount})\n`;
-    ts += `    commands category ${section.key}\n\n`;
+    ts += `    commands ${section.key}\n\n`;
   });
   ts += `\n*Tips:*`;
   ts += `\n• *commands all* - Lihat semua perintah`;
@@ -84,11 +84,8 @@ async function showAllCommands(sReply, dbSettings, m, sections) {
 };
 
 async function showCategoryCommands(sReply, dbSettings, m, category, sections) {
-  const section = sections.find(s => 
-    s.key === category || 
-    s.title.toLowerCase().includes(category) ||
-    category === s.key.toLowerCase()
-  );
+  const section = sections.find(s => s.key === category) || sections.find(s => s.title.toLowerCase().includes(category));
+
   if (!section) {
     let ts = `*Kategori tidak ditemukan!*\n\n`;
     ts += `Kategori tersedia:\n`;

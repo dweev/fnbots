@@ -267,6 +267,26 @@ export function archimed(s, list) {
   }
   return [...ls].map(i => list[i]);
 };
+function isJID(str) {
+  return str.includes('@') && (str.endsWith('@s.whatsapp.net') || str.endsWith('@lid'));
+}
+export function parseSelector(selector, list) {
+  if (!selector || !list || list.length === 0) return [];
+  const normalized = selector.trim();
+  if (normalized.toLowerCase() === 'all' || normalized.toLowerCase() === 'semua') {
+    return list;
+  }
+  if (isJID(normalized)) {
+    return list.includes(normalized) ? [normalized] : [];
+  }
+  if (/^\d+$/.test(normalized)) {
+    const jidWithSuffix = `${normalized}@s.whatsapp.net`;
+    const jidWithLid = `${normalized}@lid`;
+    const found = list.find(item => item === jidWithSuffix || item === jidWithLid);
+    return found ? [found] : [];
+  }
+  return archimed(normalized, list);
+};
 export function bytesToSize(bytes, decimals = 2) {
   if (bytes === 0) return '0 Bytes';
   const k = 1024;

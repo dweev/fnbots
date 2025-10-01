@@ -7,9 +7,8 @@
 // ─── Info ────────────────────────────────
 
 import { delay } from 'baileys';
-import { formatNumber } from '../../function/function.js';
 import { gameStateManager } from '../../lib/gameManager.js';
-import { getHandDetails, createDeck, shuffleDeck, anteBonusMultipliers, formatHandSimple } from '../../function/casino.js';
+import { getHandDetails, createDeck, shuffleDeck, anteBonusMultipliers, formatHandSimple, formatNumber } from '../../function/index.js';
 
 export const command = {
   name: 'poker',

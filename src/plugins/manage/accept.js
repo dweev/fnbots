@@ -6,8 +6,8 @@
 */
 // ─── Info ────────────────────────────────
 
-import { parseSelector } from '../../function/function.js';
 import { mongoStore } from '../../../database/index.js';
+import { parseSelector } from '../../function/index.js';
 
 export const command = {
   name: 'accept',

@@ -6,7 +6,7 @@
 */
 // ─── Info ────────────────────────────────
 
-import { formatNumber } from '../../function/function.js';
+import { formatNumber } from '../../function/index.js';
 
 export const command = {
   name: 'buylimit',

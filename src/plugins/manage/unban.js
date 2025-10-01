@@ -6,7 +6,7 @@
 */
 // ─── Info ────────────────────────────────
 
-import { archimed } from '../../function/function.js';
+import { archimed } from '../../function/index.js';
 
 export const command = {
   name: 'unban',

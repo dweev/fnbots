@@ -7,7 +7,7 @@
 // ─── Info ────────────────────────────────
 
 import { User } from '../../../database/index.js';
-import { formatNumber, formatDuration } from '../../function/function.js';
+import { formatNumber, formatDuration } from '../../function/index.js';
 
 export const command = {
   name: 'buyvip',

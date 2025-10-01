@@ -8,7 +8,7 @@
 
 import util from 'util';
 import { exec as cp_exec } from 'child_process';
-import { getServerIp } from '../../function/function.js';
+import { getServerIp } from '../../function/index.js';
 
 const exec = util.promisify(cp_exec);
 export const command = {

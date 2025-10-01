@@ -16,7 +16,7 @@ import { mongoStore } from '../database/index.js';
 import { tmpDir } from '../src/lib/tempManager.js';
 import { runJob } from '../src/worker/worker_manager.js';
 import { MediaValidationError, MediaProcessingError, MediaSizeError } from '../src/lib/errorManager.js';
-import { randomByte, getBuffer, getSizeMedia, writeExif, convertAudio } from '../src/function/function.js';
+import { randomByte, getBuffer, getSizeMedia, writeExif, convertAudio } from '../src/function/index.js';
 import { jidNormalizedUser, generateWAMessage, generateWAMessageFromContent, downloadContentFromMessage, jidDecode, jidEncode, getBinaryNodeChildString, getBinaryNodeChildren, getBinaryNodeChild, proto } from 'baileys';
 
 import { createRequire } from 'node:module';

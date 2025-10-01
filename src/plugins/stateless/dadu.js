@@ -9,7 +9,7 @@
 import path from 'path';
 import fs from 'fs-extra';
 import config from '../../../config.js';
-import { formatNumber } from '../../function/function.js';
+import { formatNumber } from '../../function/index.js';
 import { gameStateManager } from '../../lib/gameManager.js';
 
 export const command = {

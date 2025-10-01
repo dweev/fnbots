@@ -8,7 +8,7 @@
 
 import log from './logger.js';
 import { mongoStore } from '../../database/index.js';
-import { updateContact } from '../function/function.js';
+import { updateContact } from '../function/index.js';
 import { jidNormalizedUser, extractMessageContent, getDevice, areJidsSameUser } from 'baileys';
 
 function normalizeMentionsInBody(body, originalMentionedJids, resolvedMentionedJids) {

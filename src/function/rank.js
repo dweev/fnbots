@@ -9,7 +9,7 @@
 import fs from 'fs-extra';
 import log from '../lib/logger.js';
 import config from '../../config.js';
-import { formatNumber } from './function.js';
+import { formatNumber } from './index.js';
 import { User } from '../../database/index.js';
 import { createCanvas, loadImage } from 'canvas';
 

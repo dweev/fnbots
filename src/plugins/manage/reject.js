@@ -6,7 +6,7 @@
 */
 // ─── Info ────────────────────────────────
 
-import { parseSelector } from '../../function/function.js';
+import { parseSelector } from '../../function/index.js';
 import { mongoStore } from '../../../database/index.js';
 
 export const command = {

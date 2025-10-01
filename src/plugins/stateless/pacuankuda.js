@@ -7,7 +7,7 @@
 // ─── Info ────────────────────────────────
 
 import { delay } from 'baileys';
-import { formatNumber } from '../../function/function.js';
+import { formatNumber } from '../../function/index.js';
 import { gameStateManager } from '../../lib/gameManager.js';
 
 const horseData = [

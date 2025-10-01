@@ -20,10 +20,10 @@ import { restartManager } from '../src/lib/restartManager.js';
 import startPluginWatcher from '../src/lib/watcherPlugins.js';
 import updateMessageUpsert from '../src/lib/updateMessageUpsert.js';
 import { initializeDbSettings } from '../src/lib/settingsManager.js';
+import { performanceManager } from '../src/lib/performanceManager.js';
 import groupParticipantsUpdate from '../src/lib/groupParticipantsUpdate.js';
 import { database, Settings, mongoStore, StoreMessages } from '../database/index.js';
-import { randomByte, updateContact, processContactUpdate, initializeFuse } from '../src/function/function.js';
-import { performanceManager } from '../src/lib/performanceManager.js';
+import { randomByte, updateContact, processContactUpdate, initializeFuse } from '../src/function/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

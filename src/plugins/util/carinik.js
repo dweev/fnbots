@@ -6,7 +6,7 @@
 */
 // ─── Info ────────────────────────────────
 
-import { parseNIK } from '../../function/function.js';
+import { parseNIK } from '../../function/index.js';
 
 export const command = {
   name: 'carinik',

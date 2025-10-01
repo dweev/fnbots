@@ -13,9 +13,9 @@ import mediaProcessorJob from './jobs/media_processor.js';
 
 const jobMap = {
   sticker: stickerJob,
-  audioChanger: audioChangerJob,
   groupImage: groupImageJob,
-  mediaProcessor: mediaProcessorJob
+  audioChanger: audioChangerJob,
+  mediaProcessor: mediaProcessorJob,
 };
 
 export default async function(job) {

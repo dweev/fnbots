@@ -8,7 +8,7 @@
 
 import dayjs from '../../utils/dayjs.js';
 import { User } from '../../../database/index.js';
-import { formatDurationMessage } from '../../function/function.js';
+import { formatDurationMessage } from '../../function/index.js';
 
 export const command = {
   name: 'checkpremium',

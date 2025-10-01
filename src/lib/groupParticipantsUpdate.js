@@ -8,7 +8,7 @@
 
 import log from './logger.js';
 import { jidNormalizedUser } from 'baileys';
-import { updateContact } from '../function/function.js';
+import { updateContact } from '../function/index.js';
 import { mongoStore, StoreGroupMetadata, Group } from '../../database/index.js';
 
 export default async function groupParticipantsUpdate({ id, participants, action }, fn) {

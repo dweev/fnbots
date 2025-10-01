@@ -7,9 +7,8 @@
 // ─── Info ────────────────────────────────
 
 import fs from 'fs-extra';
-import { getMyBalance } from '../../function/rank.js';
-import { saveFile } from '../../function/function.js';
 import config from '../../../config.js';
+import { saveFile, getMyBalance } from '../../function/index.js';
 
 export const command = {
   name: 'gameshop',

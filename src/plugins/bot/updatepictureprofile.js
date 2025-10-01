@@ -7,7 +7,7 @@
 // ─── Info ────────────────────────────────
 
 import { tmpDir } from '../../lib/tempManager.js';
-import { saveFile } from '../../function/function.js';
+import { saveFile } from '../../function/index.js';
 
 export const command = {
   name: 'updatepictureprofile',

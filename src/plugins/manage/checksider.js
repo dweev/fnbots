@@ -6,7 +6,7 @@
 */
 // ─── Info ────────────────────────────────
 
-import { formatTimeAgo } from '../../function/function.js';
+import { formatTimeAgo } from '../../function/index.js';
 import { StoreMessages, mongoStore } from '../../../database/index.js';
 
 export const command = {

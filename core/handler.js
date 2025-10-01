@@ -20,7 +20,7 @@ import { cleanupPlugins, pluginCache } from '../src/lib/plugins.js';
 import { performanceManager } from '../src/lib/performanceManager.js';
 import { User, Group, Settings, Command, StoreGroupMetadata, OTPSession, Media, DatabaseBot } from '../database/index.js';
 import { handleAntiDeleted, handleAutoJoin, handleAudioChanger, handleAutoSticker, handleChatbot } from '../src/handler/index.js';
-import { color, msgs, mycmd, safeStringify, sendAndCleanupFile, waktu, checkCommandAccess, isUserVerified, textMatch1, textMatch2, expiredVIPcheck, expiredCheck, getSerial, getTxt, initializeFuse } from '../src/function/function.js';
+import { color, msgs, mycmd, safeStringify, sendAndCleanupFile, waktu, checkCommandAccess, isUserVerified, textMatch1, textMatch2, expiredVIPcheck, expiredCheck, getSerial, getTxt, initializeFuse } from '../src/function/index.js';
 
 const exec = util.promisify(cp_exec);
 const localFilePrefix = config.localPrefix;

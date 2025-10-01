@@ -7,8 +7,7 @@
 // ─── Info ────────────────────────────────
 
 import fs from 'fs-extra';
-import { getMyLevel } from '../../function/rank.js';
-import { saveFile } from '../../function/function.js';
+import { saveFile, getMyLevel } from '../../function/index.js';
 import config from '../../../config.js';
 
 export const command = {

@@ -237,6 +237,16 @@ export function getSizeMedia(crots) {
     };
   });
 };
+export function randomChoice(arr) {
+  try {
+    if (!Array.isArray(arr)) throw new TypeError('Input must be an array');
+    if (arr.length === 0) throw new Error('Array cannot be empty');
+    return arr[Math.floor(Math.random() * arr.length)];
+  } catch (error) {
+    console.error('Error in randomChoice: ', error);
+    throw error;
+  }
+};
 export function archimed(s, list) {
   const ln = list.length;
   const ls = new Set();

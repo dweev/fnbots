@@ -7,7 +7,7 @@
 // ─── Info ────────────────────────────────
 
 import { User } from '../../../database/index.js';
-import { formatNumber } from '../../function/function.js';
+import { formatNumber } from '../../function/index.js';
 
 export const command = {
   name: 'leaderboard',

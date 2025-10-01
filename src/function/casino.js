@@ -25,7 +25,7 @@ export const getHandDetails = (hand) => {
 export const anteBonusMultipliers = {
   6: 52n, 5: 10n, 4: 5n, 3: 2n, 2: 1n
 };
-export const specialHandRules = [
+const specialHandRules = [
   { name: "Empat As dengan Kartu Kecil", check: isFourAcesWithLow },
   { name: "Empat As", check: isFourAces },
   { name: "Pure Samgong", check: isPureSamgong },
@@ -63,24 +63,6 @@ export function calculateScore(hand) {
   }
   return Object.keys(scoresBySuit).length > 0 ? Math.max(...Object.values(scoresBySuit)) : 0;
 };
-export function isFourAces(hand) {
-  const aceCount = hand.filter(card => card.rank === 'A').length;
-  return aceCount >= 4;
-};
-export function isLowCardsOnly(hand) {
-  return hand.every(card => ['2', '3', '4'].includes(card.rank));
-};
-export function isFourAcesWithLow(hand) {
-  const aceCount = hand.filter(card => card.rank === 'A').length;
-  const otherCards = hand.filter(card => card.rank !== 'A');
-  return aceCount >= 4 && otherCards.every(card => ['2', '3', '4'].includes(card.rank));
-};
-export function isSevenCardLow(hand) {
-  return hand.length === 7 && isLowCardsOnly(hand);
-};
-export function isPureSamgong(hand) {
-  return hand.every(card => ['K', 'Q', 'J'].includes(card.rank));
-};
 export function calculateSamgongValue(hand) {
   let totalValue = 0;
   for (const card of hand) {
@@ -99,4 +81,23 @@ export function getSpecialHandName(hand) {
     if (rule.check(hand)) return rule.name;
   }
   return null;
+};
+
+function isFourAces(hand) {
+  const aceCount = hand.filter(card => card.rank === 'A').length;
+  return aceCount >= 4;
+};
+function isLowCardsOnly(hand) {
+  return hand.every(card => ['2', '3', '4'].includes(card.rank));
+};
+function isFourAcesWithLow(hand) {
+  const aceCount = hand.filter(card => card.rank === 'A').length;
+  const otherCards = hand.filter(card => card.rank !== 'A');
+  return aceCount >= 4 && otherCards.every(card => ['2', '3', '4'].includes(card.rank));
+};
+function isSevenCardLow(hand) {
+  return hand.length === 7 && isLowCardsOnly(hand);
+};
+function isPureSamgong(hand) {
+  return hand.every(card => ['K', 'Q', 'J'].includes(card.rank));
 };

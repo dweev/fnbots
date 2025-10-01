@@ -7,7 +7,6 @@
 // ─── info src/function/function.js ─────────────
 
 import os from 'os';
-import util from 'util';
 import path from 'path';
 import sharp from 'sharp';
 import fs from 'fs-extra';
@@ -21,13 +20,11 @@ import speedTest from 'speedtest-net';
 import dayjs from '../utils/dayjs.js';
 import ffmpeg from '@ts-ffmpeg/fluent-ffmpeg';
 import { tmpDir } from '../lib/tempManager.js';
-import { exec as cp_exec } from 'child_process';
 import { pluginCache } from '../lib/plugins.js';
 import { runJob } from '../worker/worker_manager.js';
 import { getDbSettings } from '../lib/settingsManager.js';
 import { StoreMessages, User, StoreGroupMetadata, mongoStore } from '../../database/index.js';
 
-const exec = util.promisify(cp_exec);
 let fuse;
 let allCmds           = [];
 let _checkVIP         = false;
@@ -38,6 +35,10 @@ const fuseOptions = {
   threshold: 0.25,
   minMatchCharLength: 2,
   distance: 25
+};
+
+function isJID(str) {
+  return str.includes('@') && (str.endsWith('@s.whatsapp.net') || str.endsWith('@lid'));
 };
 
 export async function imageToWebp(media) {
@@ -106,17 +107,6 @@ export async function textMatch2(lt) {
     }
   }
   return hasCorrections ? correctedCommands : null;
-};
-export async function shutdown(isPm2) {
-  if (isPm2) {
-    try {
-      await exec(`pm2 stop ${process.env.pm_id}`);
-    } catch {
-      process.exit(1);
-    }
-  } else {
-    process.exit(0);
-  }
 };
 export async function checkCommandAccess(command, userData, user, maintenance) {
   const {
@@ -267,9 +257,6 @@ export function archimed(s, list) {
   }
   return [...ls].map(i => list[i]);
 };
-function isJID(str) {
-  return str.includes('@') && (str.endsWith('@s.whatsapp.net') || str.endsWith('@lid'));
-}
 export function parseSelector(selector, list) {
   if (!selector || !list || list.length === 0) return [];
   const normalized = selector.trim();
@@ -712,15 +699,6 @@ export function formatNumber(number, minimumFractionDigits = 0) {
     });
   }
 };
-export async function getCommonGroups(userId) {
-  try {
-    const groups = await StoreGroupMetadata.find({ 'participants.id': userId }).lean();
-    return groups;
-  } catch (error) {
-    await log(`Error_CommonGroups\n${error}`, true);
-    return [];
-  }
-};
 export function getServerIp() {
   const interfaces = os.networkInterfaces();
   for (const name of Object.keys(interfaces)) {
@@ -732,6 +710,15 @@ export function getServerIp() {
   }
   return "127.0.0.1";
 };
+export async function getCommonGroups(userId) {
+  try {
+    const groups = await StoreGroupMetadata.find({ 'participants.id': userId }).lean();
+    return groups;
+  } catch (error) {
+    await log(`Error_CommonGroups\n${error}`, true);
+    return [];
+  }
+};
 export async function speedtest() {
   try {
     const result = await speedTest({ acceptLicense: true, acceptGdpr: true });
@@ -740,5 +727,129 @@ export async function speedtest() {
     return { download, upload, ping: result.ping.latency.toFixed(2) };
   } catch {
     return { download: 'N/A', upload: 'N/A', ping: 'N/A' };
+  }
+};
+export async function parseNIK(nik) {
+  try {
+    const nikString = nik.toString();
+    if (nikString.length !== 16) throw new Error('NIK tidak valid: Panjang NIK harus 16 digit.');
+    const KODE_PROVINSI = nikString.slice(0, 2);
+    const KODE_KABKOT = nikString.slice(0, 4);
+    const KODE_KECAMATAN = nikString.slice(0, 6);
+    const provincesRes = await axios.get('https://raw.githubusercontent.com/Terror-Machine/random/master/data/provinsi.json');
+    const provinces = Object.fromEntries(provincesRes.data.map(p => [p.code, p.name.toUpperCase()]));
+    if (!provinces[KODE_PROVINSI]) throw new Error('NIK tidak valid: Kode Provinsi tidak ditemukan.');
+    const regenciesRes = await axios.get(`https://raw.githubusercontent.com/Terror-Machine/random/master/data/kabupaten.json`);
+    const regencies = Object.fromEntries(regenciesRes.data.map(r => [r.full_code, r.name.toUpperCase()]));
+    if (!regencies[KODE_KABKOT]) throw new Error('NIK tidak valid: Kode Kabupaten/Kota tidak ditemukan.');
+    const districtsRes = await axios.get(`https://raw.githubusercontent.com/Terror-Machine/random/master/data/kecamatan.json`);
+    const districts = Object.fromEntries(districtsRes.data.map(d => [d.full_code, d.name.toUpperCase()]));
+    if (!districts[KODE_KECAMATAN]) throw new Error('NIK tidak valid: Kode Kecamatan tidak ditemukan.');
+    const villagesRes = await axios.get(`https://raw.githubusercontent.com/Terror-Machine/random/master/data/kelurahan.json`);
+    const daftarKelurahan = villagesRes.data
+      .filter(village => village.full_code.startsWith(KODE_KECAMATAN))
+      .map(village => ({
+        nama: village.name.toUpperCase(),
+        kodePos: village.pos_code
+      }));
+    let kelurahanTerpilih = null;
+    if (daftarKelurahan.length > 0) {
+      const randomIndex = Math.floor(Math.random() * daftarKelurahan.length);
+      kelurahanTerpilih = daftarKelurahan[randomIndex];
+    }
+    let tanggalLahir = parseInt(nikString.slice(6, 8));
+    const bulanLahirString = nikString.slice(8, 10);
+    const bulanLahir = parseInt(bulanLahirString, 10);
+    if (isNaN(bulanLahir) || bulanLahir < 1 || bulanLahir > 12) throw new Error(`NIK tidak valid`);
+    const tahunLahirKode = nikString.slice(10, 12);
+    const gender = tanggalLahir > 40 ? 'PEREMPUAN' : 'LAKI-LAKI';
+    if (gender === 'PEREMPUAN') {
+      tanggalLahir -= 40;
+    }
+    const abadSekarang = Math.floor(new Date().getFullYear() / 100);
+    const tahunLahir = (parseInt(tahunLahirKode) > new Date().getFullYear() % 100) ? (abadSekarang - 1).toString() + tahunLahirKode : abadSekarang.toString() + tahunLahirKode;
+    const tglLahirObj = new Date(tahunLahir, bulanLahir - 1, tanggalLahir);
+    if (isNaN(tglLahirObj.getTime()) || tglLahirObj.getDate() !== tanggalLahir) throw new Error('NIK tidak valid: Tanggal lahir tidak valid.');
+    const today = new Date();
+    let usiaTahun = today.getFullYear() - tglLahirObj.getFullYear();
+    let usiaBulan = today.getMonth() - tglLahirObj.getMonth();
+    let usiaHari = today.getDate() - tglLahirObj.getDate();
+    if (usiaHari < 0) {
+      usiaBulan--;
+      usiaHari += new Date(today.getFullYear(), today.getMonth(), 0).getDate();
+    }
+    if (usiaBulan < 0) {
+      usiaTahun--;
+      usiaBulan += 12;
+    }
+    let hitungMundurTeks = '';
+    const ultahBerikutnya = new Date(today.getFullYear(), bulanLahir - 1, tanggalLahir);
+    if (ultahBerikutnya < today) {
+      ultahBerikutnya.setFullYear(today.getFullYear() + 1);
+    }
+    if (ultahBerikutnya.toDateString() === today.toDateString()) {
+      hitungMundurTeks = 'Selamat Ulang Tahun!';
+    } else {
+      const diff = ultahBerikutnya - today;
+      const sisaHariTotal = Math.ceil(diff / (1000 * 60 * 60 * 24));
+      const sisaBulan = Math.floor(sisaHariTotal / 30.44);
+      const sisaHari = Math.floor(sisaHariTotal % 30.44);
+      hitungMundurTeks = `${sisaBulan > 0 ? `${sisaBulan} Bulan ` : ''}${sisaHari > 0 ? `${sisaHari} Hari ` : ''}Lagi`.trim();
+      if (!hitungMundurTeks) hitungMundurTeks = 'Besok!';
+    }
+    const pasaranNames = ['Pon', 'Wage', 'Kliwon', 'Legi', 'Pahing'];
+    const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+    const diffDays = Math.floor((tglLahirObj - new Date('1900-01-01')) / (1000 * 60 * 60 * 24));
+    const hariPasaran = pasaranNames[diffDays % 5];
+    const hariLahir = dayNames[tglLahirObj.getDay()];
+    const getZodiac = (day, month) => {
+      const zodiacs = [
+        { sign: 'Capricorn', start: [12, 22], end: [1, 19] }, { sign: 'Aquarius', start: [1, 20], end: [2, 18] },
+        { sign: 'Pisces', start: [2, 19], end: [3, 20] }, { sign: 'Aries', start: [3, 21], end: [4, 19] },
+        { sign: 'Taurus', start: [4, 20], end: [5, 20] }, { sign: 'Gemini', start: [5, 21], end: [6, 21] },
+        { sign: 'Cancer', start: [6, 22], end: [7, 22] }, { sign: 'Leo', start: [7, 23], end: [8, 22] },
+        { sign: 'Virgo', start: [8, 23], end: [9, 22] }, { sign: 'Libra', start: [9, 23], end: [10, 23] },
+        { sign: 'Scorpio', start: [10, 24], end: [11, 22] }, { sign: 'Sagittarius', start: [11, 23], end: [12, 21] }
+      ];
+      for (const z of zodiacs) {
+        if ((month === z.start[0] && day >= z.start[1]) || (month === z.end[0] && day <= z.end[1])) return z.sign;
+      }
+    };
+    const getGeneration = (year) => {
+      if (year >= 2013) return 'Gen Alpha';
+      if (year >= 1997) return 'Gen Z';
+      if (year >= 1981) return 'Milenial';
+      if (year >= 1965) return 'Gen X';
+      if (year >= 1946) return 'Baby Boomer';
+      return 'Generasi Terdahulu';
+    };
+    return {
+      status: true,
+      nik: nikString,
+      jenisKelamin: gender,
+      kelahiran: {
+        tanggal: `${tanggalLahir.toString().padStart(2, '0')}-${bulanLahir.toString().padStart(2, '0')}-${tahunLahir}`,
+        hari: `${hariLahir}, ${hariPasaran}`,
+        zodiak: getZodiac(tanggalLahir, bulanLahir),
+      },
+      usia: {
+        teks: `${usiaTahun} Tahun, ${usiaBulan} Bulan, ${usiaHari} Hari`,
+        tahun: usiaTahun,
+        kategori: usiaTahun < 17 ? 'Anak-anak/Remaja' : (usiaTahun < 65 ? 'Dewasa' : 'Lansia'),
+        generasi: getGeneration(parseInt(tahunLahir)),
+        ultah: hitungMundurTeks
+      },
+      lokasi: {
+        provinsi: provinces[KODE_PROVINSI],
+        kabupatenKota: regencies[KODE_KABKOT],
+        kecamatan: districts[KODE_KECAMATAN],
+        kelurahan: kelurahanTerpilih?.nama || 'Data Tidak Ditemukan',
+        kodePos: kelurahanTerpilih?.kodePos || 'Tidak Ditemukan',
+        kodeWilayah: `${KODE_PROVINSI}.${KODE_KABKOT.slice(2)}.${KODE_KECAMATAN.slice(4)}`
+      },
+    };
+  } catch (error) {
+    await log(`Error pada parseNIK:\n${error}`, true);
+    return { status: false, nik: nik, error: error.message };
   }
 };

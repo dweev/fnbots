@@ -545,22 +545,23 @@ export async function writeExif(media, data) {
     return tmpFileIn;
   };
 };
-export async function convertAudio(inputPath, { isNotVoice = true } = {}) {
+export async function convertAudio(inputPath) {
   return new Promise((resolve, reject) => {
-    const format = isNotVoice ? 'mp3' : 'ogg';
-    const audioCodec = isNotVoice ? 'libmp3lame' : 'libopus';
-    const audioBitrate = isNotVoice ? '128k' : '48k';
-    const audioChannels = isNotVoice ? 2 : 1;
-    const outputPath = tmpDir.createTempFile('mp3');
+    const outputPath = tmpDir.createTempFile('ogg');
     ffmpeg(inputPath)
       .setFfmpegPath(config.paths.ffmpeg)
       .setFfprobePath(config.paths.ffprobe)
-      .noVideo()
-      .format(format)
-      .audioCodec(audioCodec)
-      .audioBitrate(audioBitrate)
-      .audioChannels(audioChannels)
-      .addOption('-avoid_negative_ts', 'make_zero')
+      .inputOptions(['-f', 'mp3'])
+      .outputOptions([
+        '-f', 'ogg',
+        '-c:a', 'libopus',
+        '-ac', '1',
+        '-ar', '16000',
+        '-b:a', '48k',
+        '-vn',
+        '-map', '0:a',
+        '-avoid_negative_ts', 'make_zero'
+      ])
       .on('error', reject)
       .on('end', () => resolve(outputPath))
       .save(outputPath);

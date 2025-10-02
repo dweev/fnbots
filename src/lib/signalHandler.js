@@ -54,9 +54,9 @@ class SignalHandler {
             setTimeout(() => reject(new Error('Timeout')), 10000)
           )
         ]);
-        console.log(`✓ ${name} completed`);
+        console.log(`${name} completed`);
       } catch (error) {
-        console.error(`✗ ${name} failed:`, error.message);
+        console.error(`${name} failed:`, error.message);
       }
     }
     console.log(`Graceful shutdown completed`);

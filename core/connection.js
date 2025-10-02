@@ -60,7 +60,8 @@ async function getBaileysVersion() {
 
 export async function createWASocket(dbSettings) {
   global.version = await getBaileysVersion();
-  const { state, saveCreds } = await AuthStore();
+  const authStore = await AuthStore();
+  const { state, saveCreds } = authStore;
   const fn = makeWASocket({
     qrTimeout: config.performance.qrTimeout,
     connectTimeoutMs: config.performance.connectTimeoutMs,
@@ -84,6 +85,27 @@ export async function createWASocket(dbSettings) {
     enableAutoSessionRecreation: true,
     enableRecentMessageCache: true
   });
+
+  fn.validateAndMigrateSession = authStore.validateAndMigrateSession;
+  fn.clearSession = authStore.clearSession;
+  fn.getSessionStats = authStore.getSessionStats;
+  fn.storeLIDMapping = authStore.storeLIDMapping;
+  fn.getPNForLID = authStore.getPNForLID;
+  fn.getLIDForPN = authStore.getLIDForPN;
+  fn.getLidMappings = authStore.getLidMappings;
+  
+  fn.ev.on('lid-mapping.update', async ({ lid, pn }) => {
+    try {
+      await log(`LID mapping update received: ${pn} <-> ${lid}`);
+      const success = await fn.storeLIDMapping(lid, pn, true);
+      if (success) {
+        await log(`LID mapping stored and session migrated successfully`);
+      }
+    } catch (error) {
+      await log(`Failed to handle LID mapping update: ${error.message}`, true);
+    }
+  });
+
   if (pairingCode && !phoneNumber && !fn.authState.creds.registered) {
     let numberToValidate = config.botNumber ? config.botNumber : dbSettings.botNumber;
     let isValid = false;

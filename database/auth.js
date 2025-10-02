@@ -28,14 +28,54 @@ const BaileysSessionSchema = new mongoose.Schema({
   timestamps: true
 });
 
+BaileysSessionSchema.index({ updatedAt: -1 });
+
 export const BaileysSession = mongoose.models.BaileysSession || mongoose.model('BaileysSession', BaileysSessionSchema);
+
+const validateKey = (key) => {
+  if (typeof key !== 'string' || !key.trim()) {
+    throw new Error('Invalid key: must be non-empty string');
+  }
+  if (key.length > 500) {
+    throw new Error('Key too long');
+  }
+  return key.trim();
+};
+
+const validateJID = (jid) => {
+  if (typeof jid !== 'string') {
+    throw new Error('JID must be a string');
+  }
+  const cleanJid = jid.split('@')[0];
+  if (!/^\d+$/.test(cleanJid)) {
+    throw new Error('Invalid JID format');
+  }
+  return jid;
+};
+
+const safeJSONParse = (value, fallback = null) => {
+  try {
+    return JSON.parse(value, BufferJSON.reviver);
+  } catch {
+    return fallback;
+  }
+};
 
 export async function AuthStore(instanceId = 'default') {
   const writeData = async (key, data) => {
     try {
-      const fullKey = `sessions:${instanceId}:${key}`;
-      const value = JSON.stringify(data, BufferJSON.replacer);
-      await BaileysSession.findOneAndUpdate({ key: fullKey }, { value }, { upsert: true });
+      const validKey = validateKey(key);
+      let stringified;
+      try {
+        stringified = JSON.stringify(data, BufferJSON.replacer);
+      } catch {
+        throw new Error('Cannot stringify circular reference');
+      }
+      if (stringified.length > 16 * 1024 * 1024) {
+        throw new Error('Data too large');
+      }
+      const fullKey = `sessions:${instanceId}:${validKey}`;
+      await BaileysSession.findOneAndUpdate({ key: fullKey }, { value: stringified }, { upsert: true });
       return true;
     } catch (error) {
       await log(`Failed to write data for key ${key}: ${error.message}`, true);
@@ -44,11 +84,12 @@ export async function AuthStore(instanceId = 'default') {
   };
   const readData = async (key) => {
     try {
-      const fullKey = `sessions:${instanceId}:${key}`;
+      const validKey = validateKey(key);
+      const fullKey = `sessions:${instanceId}:${validKey}`;
       const session = await BaileysSession.findOne({ key: fullKey }).lean();
       if (!session) return null;
       if (!session.value) return null;
-      return JSON.parse(session.value, BufferJSON.reviver);
+      return safeJSONParse(session.value);
     } catch (error) {
       await log(`Failed to read data for key ${key}: ${error.message}`, true);
       return null;
@@ -121,7 +162,8 @@ export async function AuthStore(instanceId = 'default') {
     }
   };
   const credsMutex = new Mutex();
-  let release, creds;
+  let credsCache;
+  let release = null;
   try {
     release = await Promise.race([
       credsMutex.acquire(),
@@ -129,45 +171,165 @@ export async function AuthStore(instanceId = 'default') {
         setTimeout(() => reject(new Error('Mutex timeout')), ACQUIRE_TIMEOUT)
       )
     ]);
-    creds = (await readData('creds')) || initAuthCreds();
+    credsCache = (await readData('creds')) || initAuthCreds();
   } catch (error) {
     await log(`Failed to acquire credentials: ${error.message}`, true);
-    creds = initAuthCreds();
+    credsCache = initAuthCreds();
   } finally {
-    if (release) release();
+    if (release && typeof release === 'function') {
+      try {
+        release();
+      } catch (releaseError) {
+        await log(`Mutex release error: ${releaseError.message}`, true);
+      }
+    }
   }
+  const identifyKeyType = (key) => {
+    const cleaned = key.replace(`sessions:${instanceId}:`, '');
+    if (cleaned === 'creds') return 'credentials';
+    if (cleaned.startsWith('app-state-sync-key-')) return 'app-state';
+    if (cleaned.startsWith('app-state-sync-version-')) return 'app-state-version';
+    if (cleaned.startsWith('pre-key-')) return 'pre-key';
+    if (cleaned.startsWith('sender-key-')) return 'sender-key';
+    if (cleaned.startsWith('sender-key-memory-')) return 'sender-key-memory';
+    if (cleaned.startsWith('session-')) return 'signal-session';
+    if (cleaned.startsWith('lid-mapping-')) return 'lid-mapping';
+    return 'unknown';
+  };
+  const validateAndMigrateSession = async (fromJid, toJid) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+      validateJID(fromJid);
+      validateJID(toJid);
+      const normalizedFrom = fromJid.includes('@') ? fromJid.split('@')[0] : fromJid;
+      const normalizedTo = toJid.includes('@') ? toJid.split('@')[0] : toJid;
+      const patterns = [
+        new RegExp(`^sessions:${instanceId}:session-${normalizedFrom}$`),
+        new RegExp(`^sessions:${instanceId}:session-${normalizedFrom}[:-_]`)
+      ];
+      const oldSessions = await BaileysSession.find({
+        $or: patterns.map(pattern => ({ key: { $regex: pattern } }))
+      }).session(session).lean();
+      if (oldSessions.length === 0) {
+        await session.abortTransaction();
+        await log(`No sessions found for ${fromJid} to migrate`);
+        return false;
+      }
+      const bulkOps = oldSessions.map(oldSession => {
+        const suffix = oldSession.key.replace(`sessions:${instanceId}:session-${normalizedFrom}`, '');
+        const newSessionKey = `sessions:${instanceId}:session-${normalizedTo}${suffix}`;
+        return {
+          updateOne: {
+            filter: { key: newSessionKey },
+            update: { $set: { value: oldSession.value } },
+            upsert: true
+          }
+        };
+      });
+      await BaileysSession.bulkWrite(bulkOps, { session });
+      await session.commitTransaction();
+      await log(`Migrated ${oldSessions.length} session(s) from ${fromJid} to ${toJid}`);
+      return true;
+    } catch (error) {
+      await session.abortTransaction();
+      await log(`Failed to migrate session from ${fromJid} to ${toJid}: ${error.message}`, true);
+      return false;
+    } finally {
+      session.endSession();
+    }
+  };
+  const storeLIDMapping = async (lid, phoneNumber, autoMigrate = true) => {
+    try {
+      const normalizedLid = lid.includes('@') ? lid : lid + '@lid';
+      const normalizedPN = phoneNumber.includes('@') ? phoneNumber : phoneNumber + '@s.whatsapp.net';
+      await StoreContact.findOneAndUpdate(
+        { $or: [{ jid: normalizedPN }, { lid: normalizedLid }] },
+        {
+          $set: {
+            jid: normalizedPN,
+            lid: normalizedLid,
+            lastUpdated: new Date()
+          }
+        },
+        { upsert: true }
+      );
+      await log(`LID Mapping stored: ${normalizedPN} <-> ${normalizedLid}`);
+      if (autoMigrate) {
+        await validateAndMigrateSession(normalizedPN, normalizedLid);
+      }
+      return true;
+    } catch (error) {
+      await log(`Failed to store LID mapping: ${error.message}`, true);
+      return false;
+    }
+  };
+  const keyLocks = new Map();
+  const acquireKeyLock = async (key) => {
+    if (!keyLocks.has(key)) {
+      keyLocks.set(key, new Mutex());
+    }
+    return await keyLocks.get(key).acquire();
+  };
   return {
     state: {
-      creds,
+      get creds() {
+        return credsCache;
+      },
+      set creds(newCreds) {
+        credsCache = newCreds;
+      },
       keys: {
         get: async (type, ids) => {
           try {
             if (type === 'lid-mapping') {
               const data = {};
+              const phoneNumbers = [];
+              const lids = [];
+              const idMapping = {};
               for (const id of ids) {
-                const key = `sessions:${instanceId}:${type}-${id}`;
-                const session = await BaileysSession.findOne({ key }).lean();
-                if (session?.value) {
-                  const value = JSON.parse(session.value, BufferJSON.reviver);
+                const isReverse = id.endsWith('_reverse');
+                if (isReverse) {
+                  const lidNumber = id.replace('_reverse', '');
+                  const lid = lidNumber.includes('@') ? lidNumber : lidNumber + '@lid';
+                  lids.push(lid);
+                  idMapping[lid] = id;
+                } else {
+                  const phoneNumber = id.includes('@') ? id : id + '@s.whatsapp.net';
+                  phoneNumbers.push(phoneNumber);
+                  idMapping[phoneNumber] = id;
+                }
+              }
+              const keys = ids.map(id => `sessions:${instanceId}:${type}-${id}`);
+              const sessions = await BaileysSession.find({ key: { $in: keys } }).lean();
+              for (const session of sessions) {
+                if (session.value) {
+                  const keyParts = session.key.split(':');
+                  const originalKey = keyParts.slice(2).join(':');
+                  const id = originalKey.replace(`${type}-`, '');
+                  const value = safeJSONParse(session.value);
                   data[id] = value;
                 }
               }
-              if (Object.keys(data).length === 0) {
-                for (const id of ids) {
-                  const isReverse = id.endsWith('_reverse');
-                  if (isReverse) {
-                    const lidNumber = id.replace('_reverse', '');
-                    const lid = lidNumber.includes('@') ? lidNumber : lidNumber + '@lid';
-                    const contact = await StoreContact.findOne({ lid }).lean();
-                    if (contact?.jid) {
-                      data[id] = contact.jid.replace('@s.whatsapp.net', '');
-                    }
-                  } else {
-                    const phoneNumber = id.includes('@') ? id : id + '@s.whatsapp.net';
-                    const contact = await StoreContact.findOne({ jid: phoneNumber }).lean();
-                    if (contact?.lid) {
-                      data[id] = contact.lid.replace('@lid', '');
-                    }
+              if (Object.keys(data).length === 0 && (phoneNumbers.length > 0 || lids.length > 0)) {
+                const query = {};
+                if (phoneNumbers.length > 0 && lids.length > 0) {
+                  query.$or = [
+                    { jid: { $in: phoneNumbers } },
+                    { lid: { $in: lids } }
+                  ];
+                } else if (phoneNumbers.length > 0) {
+                  query.jid = { $in: phoneNumbers };
+                } else {
+                  query.lid = { $in: lids };
+                }
+                const contacts = await StoreContact.find(query, { jid: 1, lid: 1, _id: 0 }).lean();
+                for (const contact of contacts) {
+                  if (contact.jid && idMapping[contact.jid] && contact.lid) {
+                    data[idMapping[contact.jid]] = contact.lid.replace('@lid', '');
+                  }
+                  if (contact.lid && idMapping[contact.lid] && contact.jid) {
+                    data[idMapping[contact.lid]] = contact.jid.replace('@s.whatsapp.net', '');
                   }
                 }
               }
@@ -181,7 +343,7 @@ export async function AuthStore(instanceId = 'default') {
               const keyParts = session.key.split(':');
               const originalKey = keyParts.slice(2).join(':');
               const id = originalKey.replace(`${type}-`, '');
-              let value = JSON.parse(session.value, BufferJSON.reviver);
+              let value = safeJSONParse(session.value);
               if (type === 'app-state-sync-key' && value) {
                 value = proto.Message.AppStateSyncKeyData.create(value);
               }
@@ -194,9 +356,17 @@ export async function AuthStore(instanceId = 'default') {
           }
         },
         set: async (data) => {
+          const locks = new Map();
+          const writeItems = {};
+          const removeKeys = [];
           try {
-            const writeItems = {};
-            const removeKeys = [];
+            for (const category in data) {
+              for (const id in data[category]) {
+                const key = `${category}-${id}`;
+                const lockRelease = await acquireKeyLock(key);
+                locks.set(key, lockRelease);
+              }
+            }
             for (const category in data) {
               for (const id in data[category]) {
                 const value = data[category][id];
@@ -222,20 +392,36 @@ export async function AuthStore(instanceId = 'default') {
           } catch (error) {
             await log(`Failed to set keys: ${error.message}`, true);
             throw error;
+          } finally {
+            for (const [key, release] of locks) {
+              try {
+                if (release && typeof release === 'function') {
+                  release();
+                }
+              } catch {
+                await log(`Failed to release lock for ${key}`, true);
+              }
+            }
           }
         },
       },
     },
     saveCreds: async () => {
+      const release = await credsMutex.acquire();
       try {
-        const success = await writeData('creds', creds);
+        const success = await writeData('creds', credsCache);
         if (!success) {
           throw new Error('Failed to save credentials');
         }
         return success;
-      } catch (error) {
-        await log(`Failed to save credentials: ${error.message}`, true);
-        throw error;
+      } finally {
+        if (release && typeof release === 'function') {
+          try {
+            release();
+          } catch (releaseError) {
+            await log(`Mutex release error in saveCreds: ${releaseError.message}`, true);
+          }
+        }
       }
     },
     clearSession: async () => {
@@ -315,6 +501,9 @@ export async function AuthStore(instanceId = 'default') {
         await log(`Failed to get session stats for instance ${instanceId}: ${error.message}`, true);
         return [];
       }
-    }
+    },
+    validateAndMigrateSession,
+    storeLIDMapping,
+    identifyKeyType
   };
 };

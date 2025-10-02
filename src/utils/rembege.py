@@ -1,4 +1,11 @@
 #!/usr/bin/env python3
+
+# ─── Info ───────────────────────────────────────
+# Created with ❤️ and 💦 By FN
+# Follow https://github.com/Terror-Machine
+# Feel Free To Use
+# ─── Info src/utils/rembege.py ──────────────────
+
 import sys
 from rembg import remove
 from typing import Tuple, Optional

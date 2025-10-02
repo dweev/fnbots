@@ -66,6 +66,7 @@ const config = {
     }
   },
   paths: {
+    ytDlpPath: 'venv/bin/yt-dlp',
     dice: 'src/games/images/dice',
     ffmpeg: '/usr/bin/ffmpeg',
     ffprobe: '/usr/bin/ffprobe',

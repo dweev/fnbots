@@ -39,6 +39,7 @@ let stickerspam         = new Set();
 let mygroup             = [];
 let mygroupMembers      = {};
 let chainingCommands    = [];
+let yts                 = [];
 let counter             = 0;
 let suggested           = false;
 let groupData           = null;
@@ -518,7 +519,7 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
                   quotedMsg, quotedParticipant, mentionedJidList,
                   body, args, arg: fullArgs, ar: args, serial, user,
                   groupData, botNumber, mygroupMembers, mygroup,
-                  isPrivileged, pushname
+                  isPrivileged, pushname, yts
                 };
                 await command.execute(commandArgs);
                 commandFound = true;

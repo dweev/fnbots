@@ -26,6 +26,7 @@ export const command = {
       { label: "Verify Users",        value: dbSettings.verify          },
       { label: 'Auto Correct',        value: dbSettings.autocorrect     },
       { label: "Auto Changer Voice",  value: dbSettings.changer         },
+      { label: "Auto Download",       value: dbSettings.autodownload    },
       { label: "Auto Join",           value: dbSettings.autojoin        },
       { label: 'Auto Like Story',     value: dbSettings.autolikestory   },
       { label: 'Auto Read Story',     value: dbSettings.autoreadsw      },

@@ -19,7 +19,7 @@ import { restartManager } from '../src/lib/restartManager.js';
 import { cleanupPlugins, pluginCache } from '../src/lib/plugins.js';
 import { performanceManager } from '../src/lib/performanceManager.js';
 import { User, Group, Settings, Command, StoreGroupMetadata, OTPSession, Media, DatabaseBot } from '../database/index.js';
-import { handleAntiDeleted, handleAutoJoin, handleAudioChanger, handleAutoSticker, handleChatbot } from '../src/handler/index.js';
+import { handleAntiDeleted, handleAutoJoin, handleAudioChanger, handleAutoSticker, handleChatbot, handleAutoDownload } from '../src/handler/index.js';
 import { color, msgs, mycmd, safeStringify, sendAndCleanupFile, waktu, checkCommandAccess, isUserVerified, textMatch1, textMatch2, expiredVIPcheck, expiredCheck, getSerial, getTxt, initializeFuse } from '../src/function/index.js';
 
 const exec = util.promisify(cp_exec);
@@ -621,6 +621,9 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
       };
       if (dbSettings.chatbot === true) {
         await handleChatbot({ m, toId, fn, dbSettings, body, Media, DatabaseBot, sReply });
+      };
+      if (dbSettings.autodownload === true) {
+        await handleAutoDownload({ body, fn, toId, m, dbSettings, user, sReply });
       };
     }
   } catch (error) {

@@ -9,6 +9,7 @@
 import cron from 'node-cron';
 import process from 'process';
 import { LRUCache } from 'lru-cache';
+import { signalHandler } from './signalHandler.js';
 import { restartManager } from './restartManager.js';
 
 const PERFORMANCE_CONFIG = {
@@ -35,9 +36,9 @@ class UnifiedCacheManager {
     this.userStatsCache = new Map();
     this.groupStatsCache = new Map();
     this.commandStatsCache = new Map();
-    this.globalStatsCache = { 
+    this.globalStatsCache = {
       totalHits: 0,
-      lastSync: Date.now() 
+      lastSync: Date.now()
     };
     this.lastSyncTime = Date.now();
     this.syncInProgress = false;
@@ -440,7 +441,7 @@ class UnifiedJobScheduler {
   }
   calculateGameLimit(config, dbSettings, user) {
     const isSadmin = config.ownerNumber.includes(user.userId);
-    return user.isVIP || user.isMaster || isSadmin ? Infinity :  user.isPremium ? dbSettings.limitCountPrem : dbSettings.limitGame;
+    return user.isVIP || user.isMaster || isSadmin ? Infinity : user.isPremium ? dbSettings.limitCountPrem : dbSettings.limitGame;
   }
   async shutdown() {
     console.log('Job scheduler shutting down...');
@@ -478,21 +479,11 @@ class UnifiedPerformanceManager {
     this.initialized = true;
   }
   setupGracefulShutdown() {
-    const shutdown = async (signal) => {
-      console.log(`[${signal}] Unified shutdown initiated...`);
-      try {
-        await this.jobScheduler.shutdown();
-        await this.cacheManager.shutdown();
-        console.log('Unified shutdown completed');
-      } catch (error) {
-        console.error('Shutdown error:', error);
-      } finally {
-        process.exit(0);
-      }
-    };
-    process.on('SIGINT', () => shutdown('SIGINT'));
-    process.on('SIGTERM', () => shutdown('SIGTERM'));
-    process.on('SIGUSR2', () => shutdown('SIGUSR2'));
+    signalHandler.register('performance-manager', async (signal) => {
+      console.log(`${signal}: Performance manager cleanup...`);
+      await this.jobScheduler.shutdown();
+      await this.cacheManager.shutdown();
+    }, 60);
   }
   get cache() {
     return this.cacheManager;

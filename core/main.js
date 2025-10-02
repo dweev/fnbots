@@ -16,6 +16,7 @@ import { createWASocket } from './connection.js';
 import { tmpDir } from '../src/lib/tempManager.js';
 import { loadPlugins } from '../src/lib/plugins.js';
 import log, { pinoLogger } from '../src/lib/logger.js';
+import { signalHandler } from '../src/lib/signalHandler.js';
 import { restartManager } from '../src/lib/restartManager.js';
 import startPluginWatcher from '../src/lib/watcherPlugins.js';
 import updateMessageUpsert from '../src/lib/updateMessageUpsert.js';
@@ -164,8 +165,8 @@ async function starts() {
   }
 };
 
-async function cleanup(signal) {
-  await log(`[${signal}] Enhanced cleanup initiated...`);
+signalHandler.register('database', async (signal) => {
+  await log(`${signal}: Database cleanup initiated...`);
   try {
     if (dbSettings) {
       await Settings.updateSettings(dbSettings);
@@ -176,18 +177,12 @@ async function cleanup(signal) {
     if (database?.isConnected) {
       await database.disconnect();
     }
-    await log(`Enhanced cleanup completed successfully.`);
+    await log(`Database cleanup completed.`);
   } catch (error) {
     await log(`Cleanup error: ${error}`);
     await log(error, true);
-  } finally {
-    process.exit(0);
   }
-}
-
-process.on('SIGINT', () => cleanup('SIGINT'));
-process.on('SIGTERM', () => cleanup('SIGTERM'));
-process.on('SIGUSR2', () => cleanup('SIGUSR2'));
+}, 100);
 
 process.on('unhandledRejection', async (reason, promise) => {
   await log(`Unhandled Rejection at: ${promise}, reason: ${reason}`);

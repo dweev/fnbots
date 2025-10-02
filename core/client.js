@@ -213,9 +213,6 @@ export async function clientBot(fn, dbSettings) {
     if (!mime) {
       return await fn.sendMessage(jid, { document: dataBuffer, mimetype: 'application/octet-stream', fileName: 'file', caption, ...options }, createQuotedOptions(quoted, options));
     }
-    if (mime === 'image/webp') {
-      return await fn.sendRawWebpAsSticker(jid, dataBuffer, quoted, options);
-    }
     const messageContent = createMediaMessage(mime, dataBuffer, caption, options);
     return await fn.sendMessage(jid, messageContent, createQuotedOptions(quoted, options));
   };

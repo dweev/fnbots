@@ -75,7 +75,11 @@ export async function AuthStore(instanceId = 'default') {
         throw new Error('Data too large');
       }
       const fullKey = `sessions:${instanceId}:${validKey}`;
-      await BaileysSession.findOneAndUpdate({ key: fullKey }, { value: stringified }, { upsert: true });
+      await BaileysSession.findOneAndUpdate(
+        { key: fullKey },
+        { value: stringified },
+        { upsert: true }
+      );
       return true;
     } catch (error) {
       await log(`Failed to write data for key ${key}: ${error.message}`, true);
@@ -126,38 +130,35 @@ export async function AuthStore(instanceId = 'default') {
       return false;
     }
   };
-  const handleLidMapping = async (key, value) => {
+  const backupLIDMapping = async (id, value) => {
     try {
-      if (key.startsWith('lid-mapping-')) {
-        const mappingKey = key.replace('lid-mapping-', '');
-        let phoneNumber, lid;
-        if (mappingKey.endsWith('_reverse')) {
-          const lidNumber = mappingKey.replace('_reverse', '');
-          lid = lidNumber.includes('@') ? lidNumber : lidNumber + '@lid';
-          phoneNumber = value ? (String(value).includes('@') ? String(value) : String(value) + '@s.whatsapp.net') : null;
-        } else {
-          phoneNumber = mappingKey.includes('@') ? mappingKey : mappingKey + '@s.whatsapp.net';
-          lid = value ? (String(value).includes('@') ? String(value) : String(value) + '@lid') : null;
-        }
-        if (phoneNumber && lid) {
-          await StoreContact.findOneAndUpdate(
-            { $or: [{ jid: phoneNumber }, { lid: lid }] },
-            {
-              $set: {
-                jid: phoneNumber,
-                lid: lid,
-                lastUpdated: new Date()
-              }
-            },
-            { upsert: true }
-          );
-          await log(`LID Mapping stored: ${phoneNumber} <-> ${lid}`);
-        }
+      let phoneNumber, lid;
+      if (id.endsWith('_reverse')) {
+        const lidNumber = id.replace('_reverse', '');
+        lid = lidNumber.includes('@') ? lidNumber : lidNumber + '@lid';
+        phoneNumber = value ? (value.includes('@') ? value : value + '@s.whatsapp.net') : null;
+      } else {
+        phoneNumber = id.includes('@') ? id : id + '@s.whatsapp.net';
+        lid = value ? (value.includes('@') ? value : value + '@lid') : null;
+      }
+      if (phoneNumber && lid) {
+        await StoreContact.findOneAndUpdate(
+          { $or: [{ jid: phoneNumber }, { lid: lid }] },
+          {
+            $set: {
+              jid: phoneNumber,
+              lid: lid,
+              lastUpdated: new Date()
+            }
+          },
+          { upsert: true }
+        );
+        await log(`LID Mapping backed up to StoreContact: ${phoneNumber} <-> ${lid}`);
         return true;
       }
       return false;
     } catch (error) {
-      await log(`Failed to handle LID mapping for key ${key}: ${error.message}`, true);
+      await log(`Failed to backup LID mapping: ${error.message}`, true);
       return false;
     }
   };
@@ -184,17 +185,12 @@ export async function AuthStore(instanceId = 'default') {
       }
     }
   }
-  const identifyKeyType = (key) => {
-    const cleaned = key.replace(`sessions:${instanceId}:`, '');
-    if (cleaned === 'creds') return 'credentials';
-    if (cleaned.startsWith('app-state-sync-key-')) return 'app-state';
-    if (cleaned.startsWith('app-state-sync-version-')) return 'app-state-version';
-    if (cleaned.startsWith('pre-key-')) return 'pre-key';
-    if (cleaned.startsWith('sender-key-')) return 'sender-key';
-    if (cleaned.startsWith('sender-key-memory-')) return 'sender-key-memory';
-    if (cleaned.startsWith('session-')) return 'signal-session';
-    if (cleaned.startsWith('lid-mapping-')) return 'lid-mapping';
-    return 'unknown';
+  const keyLocks = new Map();
+  const acquireKeyLock = async (key) => {
+    if (!keyLocks.has(key)) {
+      keyLocks.set(key, new Mutex());
+    }
+    return await keyLocks.get(key).acquire();
   };
   const validateAndMigrateSession = async (fromJid, toJid) => {
     const session = await mongoose.startSession();
@@ -254,7 +250,7 @@ export async function AuthStore(instanceId = 'default') {
         },
         { upsert: true }
       );
-      await log(`LID Mapping stored: ${normalizedPN} <-> ${normalizedLid}`);
+      await log(`LID Mapping stored manually: ${normalizedPN} <-> ${normalizedLid}`);
       if (autoMigrate) {
         await validateAndMigrateSession(normalizedPN, normalizedLid);
       }
@@ -263,13 +259,6 @@ export async function AuthStore(instanceId = 'default') {
       await log(`Failed to store LID mapping: ${error.message}`, true);
       return false;
     }
-  };
-  const keyLocks = new Map();
-  const acquireKeyLock = async (key) => {
-    if (!keyLocks.has(key)) {
-      keyLocks.set(key, new Mutex());
-    }
-    return await keyLocks.get(key).acquire();
   };
   return {
     state: {
@@ -283,35 +272,35 @@ export async function AuthStore(instanceId = 'default') {
         get: async (type, ids) => {
           try {
             if (type === 'lid-mapping') {
-              const data = {};
-              const phoneNumbers = [];
-              const lids = [];
-              const idMapping = {};
-              for (const id of ids) {
-                const isReverse = id.endsWith('_reverse');
-                if (isReverse) {
-                  const lidNumber = id.replace('_reverse', '');
-                  const lid = lidNumber.includes('@') ? lidNumber : lidNumber + '@lid';
-                  lids.push(lid);
-                  idMapping[lid] = id;
-                } else {
-                  const phoneNumber = id.includes('@') ? id : id + '@s.whatsapp.net';
-                  phoneNumbers.push(phoneNumber);
-                  idMapping[phoneNumber] = id;
-                }
-              }
               const keys = ids.map(id => `sessions:${instanceId}:${type}-${id}`);
               const sessions = await BaileysSession.find({ key: { $in: keys } }).lean();
+              const data = {};
               for (const session of sessions) {
                 if (session.value) {
                   const keyParts = session.key.split(':');
                   const originalKey = keyParts.slice(2).join(':');
                   const id = originalKey.replace(`${type}-`, '');
                   const value = safeJSONParse(session.value);
-                  data[id] = value;
+                  data[id] = typeof value === 'string' ? value : null;
                 }
               }
-              if (Object.keys(data).length === 0 && (phoneNumbers.length > 0 || lids.length > 0)) {
+              if (Object.keys(data).length === 0 && ids.length > 0) {
+                const phoneNumbers = [];
+                const lids = [];
+                const idMapping = {};
+                for (const id of ids) {
+                  const isReverse = id.endsWith('_reverse');
+                  if (isReverse) {
+                    const lidNumber = id.replace('_reverse', '');
+                    const lid = lidNumber.includes('@') ? lidNumber : lidNumber + '@lid';
+                    lids.push(lid);
+                    idMapping[lid] = id;
+                  } else {
+                    const phoneNumber = id.includes('@') ? id : id + '@s.whatsapp.net';
+                    phoneNumbers.push(phoneNumber);
+                    idMapping[phoneNumber] = id;
+                  }
+                }
                 const query = {};
                 if (phoneNumbers.length > 0 && lids.length > 0) {
                   query.$or = [
@@ -320,16 +309,22 @@ export async function AuthStore(instanceId = 'default') {
                   ];
                 } else if (phoneNumbers.length > 0) {
                   query.jid = { $in: phoneNumbers };
-                } else {
+                } else if (lids.length > 0) {
                   query.lid = { $in: lids };
                 }
-                const contacts = await StoreContact.find(query, { jid: 1, lid: 1, _id: 0 }).lean();
-                for (const contact of contacts) {
-                  if (contact.jid && idMapping[contact.jid] && contact.lid) {
-                    data[idMapping[contact.jid]] = contact.lid.replace('@lid', '');
-                  }
-                  if (contact.lid && idMapping[contact.lid] && contact.jid) {
-                    data[idMapping[contact.lid]] = contact.jid.replace('@s.whatsapp.net', '');
+                if (Object.keys(query).length > 0) {
+                  const contacts = await StoreContact.find(query, { jid: 1, lid: 1, _id: 0 }).lean();
+                  for (const contact of contacts) {
+                    if (contact.jid && idMapping[contact.jid] && contact.lid) {
+                      const lidValue = contact.lid.replace('@lid', '');
+                      data[idMapping[contact.jid]] = lidValue;
+                      await log(`Fallback from StoreContact: ${contact.jid} -> ${lidValue}`);
+                    }
+                    if (contact.lid && idMapping[contact.lid] && contact.jid) {
+                      const pnValue = contact.jid.replace('@s.whatsapp.net', '');
+                      data[idMapping[contact.lid]] = pnValue;
+                      await log(`Fallback from StoreContact: ${contact.lid} -> ${pnValue}`);
+                    }
                   }
                 }
               }
@@ -371,9 +366,16 @@ export async function AuthStore(instanceId = 'default') {
               for (const id in data[category]) {
                 const value = data[category][id];
                 const key = `${category}-${id}`;
-                if (value) {
-                  if (category === 'lid-mapping' || key.startsWith('lid-mapping-')) {
-                    await handleLidMapping(key, value);
+                if (value !== null && value !== undefined) {
+                  if (category === 'lid-mapping') {
+                    if (typeof value !== 'string') {
+                      await log(`Invalid lid-mapping value for ${id}, expected string got ${typeof value}`, true);
+                      continue;
+                    }
+                    await log(`LID Mapping update: ${id} -> ${value}`);
+                    backupLIDMapping(id, value).catch(err =>
+                      log(`Backup LID mapping failed for ${id}: ${err.message}`, true)
+                    );
                   }
                   writeItems[key] = value;
                 } else {
@@ -382,8 +384,12 @@ export async function AuthStore(instanceId = 'default') {
               }
             }
             const promises = [];
-            if (Object.keys(writeItems).length > 0) promises.push(writeBatch(writeItems));
-            if (removeKeys.length > 0) promises.push(removeBatch(removeKeys));
+            if (Object.keys(writeItems).length > 0) {
+              promises.push(writeBatch(writeItems));
+            }
+            if (removeKeys.length > 0) {
+              promises.push(removeBatch(removeKeys));
+            }
             const results = await Promise.all(promises);
             const success = results.every(result => result === true);
             if (!success) {
@@ -438,39 +444,62 @@ export async function AuthStore(instanceId = 'default') {
     },
     getLidMappings: async () => {
       try {
-        return await StoreContact.find({}, { jid: 1, lid: 1, lastUpdated: 1 }).lean();
+        return await StoreContact.find({}, { jid: 1, lid: 1, lastUpdated: 1, _id: 0 }).lean();
       } catch (error) {
         await log(`Failed to get LID mappings: ${error.message}`, true);
         return [];
       }
     },
-    getPNForLID: async (lid) => {
-      try {
-        const normalizedLid = lid.includes('@') ? lid : lid + '@lid';
-        const contact = await StoreContact.findOne({ lid: normalizedLid }).lean();
-        if (contact?.jid) {
-          await log(`LID ${lid} mapped to ${contact.jid}`);
-          return contact.jid;
-        }
-        await log(`No mapping found for LID: ${lid}`, true);
-        return null;
-      } catch (error) {
-        await log(`Failed to get PN for LID ${lid}: ${error.message}`, true);
-        return null;
-      }
-    },
     getLIDForPN: async (phoneNumber) => {
       try {
         const normalizedPN = phoneNumber.includes('@') ? phoneNumber : phoneNumber + '@s.whatsapp.net';
-        const contact = await StoreContact.findOne({ jid: normalizedPN }).lean();
+        const contact = await StoreContact.findOne({ jid: normalizedPN }, { lid: 1, _id: 0 }).lean();
         if (contact?.lid) {
-          await log(`Phone ${phoneNumber} mapped to ${contact.lid}`);
+          await log(`Phone ${phoneNumber} mapped to LID ${contact.lid} (from StoreContact)`);
           return contact.lid;
+        }
+        const pnNumber = normalizedPN.split('@')[0];
+        const key = `sessions:${instanceId}:lid-mapping-${pnNumber}`;
+        const session = await BaileysSession.findOne({ key }).lean();
+        if (session?.value) {
+          const lid = safeJSONParse(session.value);
+          if (typeof lid === 'string') {
+            const fullLid = lid.includes('@') ? lid : lid + '@lid';
+            await log(`Phone ${phoneNumber} mapped to LID ${fullLid} (from Baileys session)`);
+            return fullLid;
+          }
         }
         await log(`No LID found for phone: ${phoneNumber}`, true);
         return null;
       } catch (error) {
         await log(`Failed to get LID for PN ${phoneNumber}: ${error.message}`, true);
+        return null;
+      }
+    },
+    getPNForLID: async (lid) => {
+      try {
+        const normalizedLid = lid.includes('@') ? lid : lid + '@lid';
+        const contact = await StoreContact.findOne({ lid: normalizedLid }, { jid: 1, _id: 0 }).lean();
+        if (contact?.jid) {
+          await log(`LID ${lid} mapped to phone ${contact.jid} (from StoreContact)`);
+          return contact.jid;
+        }
+        const lidNumber = normalizedLid.split('@')[0];
+        const reverseKey = `${lidNumber}_reverse`;
+        const key = `sessions:${instanceId}:lid-mapping-${reverseKey}`;
+        const session = await BaileysSession.findOne({ key }).lean();
+        if (session?.value) {
+          const pn = safeJSONParse(session.value);
+          if (typeof pn === 'string') {
+            const fullPN = pn.includes('@') ? pn : pn + '@s.whatsapp.net';
+            await log(`LID ${lid} mapped to phone ${fullPN} (from Baileys session)`);
+            return fullPN;
+          }
+        }
+        await log(`No mapping found for LID: ${lid}`, true);
+        return null;
+      } catch (error) {
+        await log(`Failed to get PN for LID ${lid}: ${error.message}`, true);
         return null;
       }
     },
@@ -504,6 +533,5 @@ export async function AuthStore(instanceId = 'default') {
     },
     validateAndMigrateSession,
     storeLIDMapping,
-    identifyKeyType
   };
 };

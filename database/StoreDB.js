@@ -18,6 +18,7 @@ class DBStore {
     this.cacheHits = new Map();
     this.cacheTimestamps = new Map();
     this.lidToJidCache = new Map();
+    this.jidToLidCache = new Map();
     this.maxCacheSize = config.performance.maxCacheSize;
     this.cacheTTL = {
       groups: config.performance.cacheTTL
@@ -39,6 +40,11 @@ class DBStore {
     this.conversations = {};
     this.presences = {};
     this.status = {};
+    this.authStore = null;
+  }
+  setAuthStore(authStore) {
+    this.authStore = authStore;
+    log('AuthStore injected into DBStore');
   }
   init() {
     this.startBatchProcessor();
@@ -83,11 +89,19 @@ class DBStore {
   }
   async warmCaches() {
     try {
-      const activeGroups = await StoreGroupMetadata.find().sort({ lastUpdated: -1 }).limit(50).lean();
+      const activeGroups = await StoreGroupMetadata.find()
+        .sort({ lastUpdated: -1 })
+        .limit(50)
+        .lean();
       activeGroups.forEach(group => this.addGroupToCache(group.groupId, group));
       const allContacts = await StoreContact.find({}).lean();
-      allContacts.forEach(contact => this.addContactToCache(contact.jid, contact));
-      log(`Cache warmed: ${this.contactsCache.size} contacts, ${this.groupMetadataCache.size} groups`);
+      allContacts.forEach(contact => {
+        this.addContactToCache(contact.jid, contact);
+        if (contact.lid) {
+          this.addLidToJidCache(contact.lid, contact.jid);
+        }
+      });
+      log(`Cache warmed: ${this.contactsCache.size} contacts, ${this.groupMetadataCache.size} groups, ${this.lidToJidCache.size} LID mappings`);
     } catch (error) {
       log(error, true);
     }
@@ -95,10 +109,14 @@ class DBStore {
   addLidToJidCache(lid, jid) {
     if (lid && jid) {
       this.lidToJidCache.set(lid, jid);
+      this.jidToLidCache.set(jid, lid);
     }
   }
   getJidFromLidCache(lid) {
     return this.lidToJidCache.get(lid) || null;
+  }
+  getLidFromJidCache(jid) {
+    return this.jidToLidCache.get(jid) || null;
   }
   addContactToCache(jid, data) {
     const safeMerge = (existing, newData) => {
@@ -128,6 +146,7 @@ class DBStore {
         this.contactsCache.delete(oldestJid);
         if (contactToDelete && contactToDelete.lid) {
           this.lidToJidCache.delete(contactToDelete.lid);
+          this.jidToLidCache.delete(oldestJid);
         }
         this.cacheStats.evictions++;
       }
@@ -205,12 +224,13 @@ class DBStore {
       if (totalAccess > 0) {
         /*
         log('Cache Stats:', {
-        hitRate: `${(stats.contacts.hitRate * 100).toFixed(1)}%`,
-        contacts: stats.contacts.size,
-        groups: `${stats.groups.size}/${this.maxCacheSize.groups}`,
-        pendingUpdates: stats.pendingUpdates,
-        ttlExpirations: stats.ttlExpirations,
-        evictions: stats.evictions
+          hitRate: `${(stats.contacts.hitRate * 100).toFixed(1)}%`,
+          contacts: stats.contacts.size,
+          groups: `${stats.groups.size}/${this.maxCacheSize.groups}`,
+          lidMappings: stats.lidMappings,
+          pendingUpdates: stats.pendingUpdates,
+          ttlExpirations: stats.ttlExpirations,
+          evictions: stats.evictions
         });
         */
       }
@@ -229,6 +249,7 @@ class DBStore {
         size: this.groupMetadataCache.size,
         evictions: this.cacheStats.evictions
       },
+      lidMappings: this.lidToJidCache.size,
       pendingUpdates: {
         contacts: this.pendingUpdates.contacts.size,
         groups: this.pendingUpdates.groups.size
@@ -291,6 +312,7 @@ class DBStore {
   }
   clearCache() {
     this.lidToJidCache.clear();
+    this.jidToLidCache.clear();
     this.contactsCache.clear();
     this.groupMetadataCache.clear();
     this.cacheHits.clear();
@@ -380,10 +402,10 @@ class DBStore {
     if (id.endsWith('@s.whatsapp.net')) {
       return jidNormalizedUser(id);
     }
-    if (id.endsWith('@lid')) {
-      return this.findJidByLid(id);
+    if (!id.endsWith('@lid')) {
+      return id;
     }
-    return id;
+    return await this.findJidByLid(id);
   }
   async findJidByLid(lid) {
     if (!lid) return null;
@@ -391,15 +413,57 @@ class DBStore {
     if (cachedJid) {
       return cachedJid;
     }
+    if (this.authStore) {
+      try {
+        const jidFromAuth = await this.authStore.getPNForLID(lid);
+        if (jidFromAuth) {
+          this.addLidToJidCache(lid, jidFromAuth);
+          return jidFromAuth;
+        }
+      } catch (error) {
+        await log(`AuthStore lookup failed for LID ${lid}: ${error.message}`, true);
+      }
+    }
     try {
       const contact = await StoreContact.findOne({ lid }).lean();
       const jid = contact?.jid || null;
       if (jid) {
         this.addLidToJidCache(lid, jid);
+        await log(`LID ${lid} resolved from database fallback: ${jid}`);
       }
       return jid;
     } catch (error) {
-      log(error, true);
+      await log(`Database lookup failed for LID ${lid}: ${error.message}`, true);
+      return null;
+    }
+  }
+  async getLidForJid(jid) {
+    if (!jid) return null;
+    const cachedLid = this.getLidFromJidCache(jid);
+    if (cachedLid) {
+      return cachedLid;
+    }
+    if (this.authStore) {
+      try {
+        const lidFromAuth = await this.authStore.getLIDForPN(jid);
+        if (lidFromAuth) {
+          this.addLidToJidCache(lidFromAuth, jid);
+          return lidFromAuth;
+        }
+      } catch (error) {
+        await log(`AuthStore reverse lookup failed for JID ${jid}: ${error.message}`, true);
+      }
+    }
+    try {
+      const contact = await StoreContact.findOne({ jid }).lean();
+      const lid = contact?.lid || null;
+      if (lid) {
+        this.addLidToJidCache(lid, jid);
+        await log(`JID ${jid} reverse resolved from database: ${lid}`);
+      }
+      return lid;
+    } catch (error) {
+      await log(`Database reverse lookup failed for JID ${jid}: ${error.message}`, true);
       return null;
     }
   }

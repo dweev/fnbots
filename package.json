@@ -9,7 +9,8 @@
     "dev": "nodemon core/main.js --ignore node_modules --ignore logs --ignore src/sampah",
     "pair": "node core/main.js --pairing-code",
     "lint": "eslint .",
-    "test": "NODE_OPTIONS=--experimental-vm-modules jest"
+    "lint:fix": "eslint . --fix",
+    "test": "NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest --runInBand"
   },
   "keywords": [
     "whatsapp",

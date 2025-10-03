@@ -16,10 +16,11 @@ export default defineConfig([
     files: ["**/*.{js,mjs,cjs}"],
     ignores: [
       "node_modules/**",
-      "venv/**"
+      "venv/**",
+      "eslint.config.{js,mjs}"
     ],
-    plugins: { js, import: pluginImport },
-    extends: ["js/recommended"],
+    plugins: { import: pluginImport },
+    extends: [js.configs.recommended],
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "module",
@@ -31,9 +32,7 @@ export default defineConfig([
     rules: {
       "no-unused-vars": ["warn", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
       "no-undef": "error",
-      "no-magic-numbers": "off",
       "no-empty-function": "warn",
-      "valid-jsdoc": "off",
       "no-console": "off",
       "prefer-const": "warn",
       "no-const-assign": "error",

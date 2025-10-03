@@ -31,9 +31,9 @@ export const command = {
       const sourceDir = '.';
       const exclusions = [
         `"${path.basename(backupFilePath)}"`,
-        '"venv/*"',
-        '"har_and_cookies/*"',
+        '"logs/*"',
         '"node_modules/*"',
+        '"venv/*"',
         '".git/*"',
         '".*"'
       ];

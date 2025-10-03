@@ -1,3 +1,11 @@
+// ─── Info ──────────────────────────────────
+/*
+* Created with ❤️ and 💦 By FN
+* Follow https://github.com/Terror-Machine
+* Feel Free To Use
+*/
+// ─── Info eslint.config.mjs ────────────────
+
 import js from "@eslint/js";
 import globals from "globals";
 import pluginImport from "eslint-plugin-import";

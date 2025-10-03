@@ -18,7 +18,7 @@ export const command = {
   execute: async ({ fn, m, quotedMsg, toId, sReply }) => {
     if (!quotedMsg) return await sReply(`Mohon balas pesan audio yang ingin diubah.`);
     const mimeType = quotedMsg?.audioMessage?.mimetype;
-    if (!mimeType || !mimeType.startsWith('audio/')) throw new Error(`Kirim atau balas pesan audio untuk diubah.`);
+    if (!mimeType || !mimeType.startsWith('audio/')) return await sReply(`Kirim atau balas pesan audio untuk diubah.`);
     const mediaBuffer = await fn.getMediaBuffer(quotedMsg);
     if (!mediaBuffer) return await sReply(`Gagal mengunduh media.`);
     const resultBuffer = await runJob('audioChanger', {

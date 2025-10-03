@@ -17,16 +17,16 @@ export const command = {
   description: 'Menambahkan efek pada audio menggunakan ffmpeg.',
   aliases: ['to-tts'],
   isCommandWithoutPayment: true,
-  execute: async ({ fn, m, quotedMsg, toId, args }) => {
+  execute: async ({ fn, m, quotedMsg, toId, args, sReply }) => {
     let inputText;
     if ((quotedMsg && quotedMsg?.type === "extendedTextMessage") || (quotedMsg && quotedMsg?.type === "conversation")) {
       inputText = quotedMsg?.body;
     } else if (args.length > 0) {
       inputText = args.join(' ');
     } else {
-      throw new Error("Silakan berikan teks atau balas pesan yang ingin diubah menjadi suara.");
+      return await sReply("Silakan berikan teks atau balas pesan yang ingin diubah menjadi suara.");
     }
-    if (inputText.length >= 500) throw new Error('Teks terlalu panjang! Maksimal 500 karakter untuk menghindari spam.');
+    if (inputText.length >= 500) return await sReply('Teks terlalu panjang! Maksimal 500 karakter untuk menghindari spam.');
     const tempFilePath = tmpDir.createTempFile('mp3');
     const saveTtsAsync = util.promisify(ttsId.save);
     await saveTtsAsync(tempFilePath, inputText);

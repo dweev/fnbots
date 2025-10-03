@@ -16,7 +16,7 @@ export const command = {
   isCommandWithoutPayment: true,
   aliases: ['hasil-luaslimassegitiga'],
   execute: async ({ arg, args, dbSettings, sReply }) => {
-    if (!arg) throw new Error(`Masukkan panjang sisi segitiga, contoh: ${dbSettings.sname}hasil-luaslimassegitiga 5`);
+    if (!arg) return await sReply(`Masukkan panjang sisi segitiga, contoh: ${dbSettings.sname}hasil-luaslimassegitiga 5`);
     const res = args[0];
     const ret = args[1];
     const rets = args[2];

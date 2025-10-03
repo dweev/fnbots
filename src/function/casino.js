@@ -6,6 +6,8 @@
 */
 // ─── info src/function/casino.js ─────────────
 
+import { delay } from 'baileys';
+
 export const formatHandSimple = (hand) => hand.map(c => `[${c.rank}${c.suit}]`).join(' ');
 export const getHandDetails = (hand) => {
   const rankToValue = { '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10, 'J': 11, 'Q': 12, 'K': 13, 'A': 14 };
@@ -63,26 +65,6 @@ export function calculateScore(hand) {
   }
   return Object.keys(scoresBySuit).length > 0 ? Math.max(...Object.values(scoresBySuit)) : 0;
 };
-export function calculateSamgongValue(hand) {
-  let totalValue = 0;
-  for (const card of hand) {
-    if (['K', 'Q', 'J'].includes(card.rank)) {
-      totalValue += 10;
-    } else if (card.rank === 'A') {
-      totalValue += 1;
-    } else {
-      totalValue += card.value;
-    }
-  }
-  return totalValue;
-};
-export function getSpecialHandName(hand) {
-  for (const rule of specialHandRules) {
-    if (rule.check(hand)) return rule.name;
-  }
-  return null;
-};
-
 function isFourAces(hand) {
   const aceCount = hand.filter(card => card.rank === 'A').length;
   return aceCount >= 4;
@@ -100,4 +82,137 @@ function isSevenCardLow(hand) {
 };
 function isPureSamgong(hand) {
   return hand.every(card => ['K', 'Q', 'J'].includes(card.rank));
+};
+export function calculateSamgongValue(hand) {
+  let totalValue = 0;
+  for (const card of hand) {
+    if (['K', 'Q', 'J'].includes(card.rank)) {
+      totalValue += 10;
+    } else if (card.rank === 'A') {
+      totalValue += 1;
+    } else {
+      totalValue += card.value;
+    }
+  }
+  return totalValue;
+};
+function getSpecialHandName(hand) {
+  for (const rule of specialHandRules) {
+    if (rule.check(hand)) return rule.name;
+  }
+  return null;
+};
+export async function runBotTurn41(toId, m, fn, game41Sessions) {
+  const gameState = game41Sessions[toId];
+  if (!gameState) return;
+  const personality = gameState.personality;
+  let takenCard;
+  const topDiscard = gameState.discardPile[gameState.discardPile.length - 1];
+  if (personality === 'logis') {
+    const suitCounts = gameState.botHand.reduce((acc, card) => ({ ...acc, [card.suit]: (acc[card.suit] || 0) + 1 }), {});
+    const bestSuit = Object.keys(suitCounts).reduce((a, b) => suitCounts[a] > suitCounts[b] ? a : b, null);
+    if (topDiscard && bestSuit && topDiscard.suit === bestSuit) takenCard = gameState.discardPile.pop();
+    else takenCard = gameState.deck.shift();
+  } else {
+    const currentScore = calculateScore(gameState.botHand);
+    const potentialScore = calculateScore([...gameState.botHand, topDiscard]);
+    if (topDiscard && potentialScore > currentScore) takenCard = gameState.discardPile.pop();
+    else takenCard = gameState.deck.shift() || gameState.discardPile.pop();
+  }
+  gameState.botHand.push(takenCard);
+  const suitCounts = gameState.botHand.reduce((acc, card) => ({ ...acc, [card.suit]: (acc[card.suit] || 0) + 1 }), {});
+  const mainSuit = Object.keys(suitCounts).reduce((a, b) => suitCounts[a] > suitCounts[b] ? a : b);
+  let cardToDiscardIndex = -1;
+  let lowestValue = Infinity;
+  gameState.botHand.forEach((card, index) => {
+    if (card.suit !== mainSuit) {
+      if (card.value < lowestValue) { lowestValue = card.value; cardToDiscardIndex = index; }
+    }
+  });
+  if (cardToDiscardIndex === -1) {
+    lowestValue = Infinity;
+    gameState.botHand.forEach((card, index) => {
+      if (card.value < lowestValue) { lowestValue = card.value; cardToDiscardIndex = index; }
+    });
+  }
+  const discardedCard = gameState.botHand.splice(cardToDiscardIndex, 1)[0];
+  gameState.discardPile.push(discardedCard);
+  const botFinalScore = calculateScore(gameState.botHand);
+  let knockThreshold = 42;
+  if (personality === 'logis') knockThreshold = 38;
+  if (personality === 'pintar') knockThreshold = 36;
+  if (personality === 'licik') knockThreshold = Math.floor(Math.random() * 6) + 33;
+  if (personality === 'pintar_licik') knockThreshold = Math.floor(Math.random() * 5) + 34;
+  if (botFinalScore >= knockThreshold) {
+    const playerScore = calculateScore(gameState.playerHand);
+    let resultText = `🤖 *Bot memutuskan untuk mengetuk!* 🤖\n\n` +
+      `Tangan Bot (Skor: *${botFinalScore}*):\n${formatKartu(gameState.botHand)}\n\n` +
+      `Tangan Kamu (Skor: *${playerScore}*):\n${formatKartu(gameState.playerHand)}\n\n`;
+    if (botFinalScore > playerScore) resultText += `🤖 Bot menang!`;
+    else if (playerScore > botFinalScore) resultText += `🎉 Selamat, kamu menang!`;
+    else resultText += `🤝 Hasilnya seri!`;
+    await fn.sendPesan(toId, resultText, m);
+    delete game41Sessions[toId];
+    return;
+  }
+  gameState.turn = 'player';
+  const groupMessage = `Bot telah bergerak dan membuang kartu [ ${discardedCard.display} ].\n\n` +
+    `Giliranmu, @${gameState.playerJid.split('@')[0]}! Cek DM untuk melihat kartumu.`;
+  await fn.sendPesan(toId, groupMessage, m);
+  const privateMessage = `Bot membuang [ ${discardedCard.display} ].\n\n` +
+    `Kartu Kamu saat ini:\n${formatKartu(gameState.playerHand)}\n\n` +
+    `Pilih aksimu di grup: *ambil dek* atau *ambil buangan*.`;
+  await fn.sendPesan(gameState.playerJid, privateMessage, m);
+};
+export async function runBotSamgongTurn(toId, m, fn, samgongSessions) {
+  const gameState = samgongSessions[toId];
+  if (!gameState) return;
+  let botTurnText = `Kartu awal Bandar adalah [ ${gameState.botHand.map(c => c.display).join(' | ')} ], ` +
+    `Total nilai: *${calculateSamgongValue(gameState.botHand)}*.`;
+  await fn.sendReply(toId, botTurnText, m);
+  await delay(2000);
+  while (calculateSamgongValue(gameState.botHand) <= 25) {
+    const newCard = gameState.deck.shift();
+    if (!newCard) break;
+    gameState.botHand.push(newCard);
+    botTurnText = `Bandar mengambil kartu... [ ${newCard.display} ].\n` +
+      `Total nilai sekarang: *${calculateSamgongValue(gameState.botHand)}*`;
+    await fn.sendReply(toId, botTurnText, m);
+    await delay(2000);
+  }
+  const botScore = calculateSamgongValue(gameState.botHand);
+  const playerScore = calculateSamgongValue(gameState.playerHand);
+  const botSpecial = getSpecialHandName(gameState.botHand);
+  const playerSpecial = getSpecialHandName(gameState.playerHand);
+  let resultText = `*--- HASIL AKHIR ---*\n\n` +
+    `Tangan Kamu (${playerSpecial ? playerSpecial : "Nilai: *" + playerScore + "*"})\n` +
+    `Tangan Bandar (${botSpecial ? botSpecial : "Nilai: *" + botScore + "*"})\n\n`;
+  if (botSpecial || playerSpecial) {
+    const rank = specialHandRules.map(r => r.name);
+    if (botSpecial && playerSpecial) {
+      const botRank = rank.indexOf(botSpecial);
+      const playerRank = rank.indexOf(playerSpecial);
+      if (playerRank < botRank) {
+        resultText += `⭐️ Kamu menang dengan *${playerSpecial}*!`;
+      } else if (botRank < playerRank) {
+        resultText += `🤖 Bot menang dengan *${botSpecial}*!`;
+      } else {
+        resultText += `🤝 Hasilnya seri, keduanya punya *${playerSpecial}*! (Bandar menang!)`;
+      }
+    } else if (playerSpecial) {
+      resultText += `⭐️ Kamu menang dengan *${playerSpecial}*!`;
+    } else {
+      resultText += `🤖 Bot menang dengan *${botSpecial}*!`;
+    }
+  } else if (botScore > 30) {
+    resultText += `💥 Bandar HANGUS! Kamu menang!`;
+  } else if (playerScore > botScore) {
+    resultText += `🎉 Selamat, Kamu menang!`;
+  } else if (botScore > playerScore) {
+    resultText += `🤖 Bot menang!`;
+  } else {
+    resultText += `🤝 Hasilnya seri (Bandar menang)!`;
+  }
+  await fn.sendPesan(toId, resultText, m);
+  delete samgongSessions[toId];
 };

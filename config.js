@@ -7,11 +7,6 @@
 // ─── Info config.js ──────────────────────
 
 import 'dotenv/config.js';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 const requiredVariables = ['MONGODB_URI', 'OWNER_NUMBER'];
 for (const variable of requiredVariables) {
@@ -21,6 +16,7 @@ for (const variable of requiredVariables) {
 }
 
 const config = {
+  geminiApikey: process.env.GEMINI_API_KEY,
   mongodbUri: process.env.MONGODB_URI,
   ownerNumber: JSON.parse(process.env.OWNER_NUMBER),
   botNumber: process.env.BOT_NUMBER || '',
@@ -66,16 +62,27 @@ const config = {
     }
   },
   paths: {
-    ytDlpPath: 'venv/bin/yt-dlp',
-    dice: 'src/games/images/dice',
     ffmpeg: '/usr/bin/ffmpeg',
     ffprobe: '/usr/bin/ffprobe',
+    basePath: 'src/games/images/map/',
+    pionImagesPath: 'src/games/images/',
+    dice: 'src/games/images/dice',
     tempDir: 'src/sampah',
-    databaseMedia: path.join(__dirname, 'media'),
-    rank: path.join(__dirname, 'src', 'media', 'rank.png'),
-    avatar: path.join(__dirname, 'src', 'media', 'apatar.png'),
-    vanya: path.join(__dirname, 'src', 'media', 'hi.oga'),
-    logsDir: 'logs'
+    rank: 'src/media/rank.png',
+    avatar: 'src/media/apatar.png',
+    vanya: 'src/media/hi.oga',
+    pyScript: 'src/utils/chat_bot.py',
+    pythonPath: 'venv/bin/python3',
+    ytDlpPath: 'venv/bin/yt-dlp',
+    databaseMedia: 'media',
+    logsDir: 'logs',
+    board: 'src/games/ludo/ludo_board.jpg',
+    pawns: {
+      RED: 'src/games/ludo/pion_merah.png',
+      GREEN: 'src/games/ludo/pion_hijau.png',
+      YELLOW: 'src/games/ludo/pion_kuning.png',
+      BLUE: 'src/games/ludo/pion_biru.png'
+    },
   },
   security: {
     networkFamily: 4,

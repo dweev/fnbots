@@ -226,11 +226,11 @@ export function getSizeMedia(crots) {
   return new Promise((resolve, reject) => {
     if (typeof crots === 'string' && /http/.test(crots)) {
       axios.get(crots).then((res) => {
-        let length = parseInt(res.headers['content-length']);
+        const length = parseInt(res.headers['content-length']);
         if (!isNaN(length)) resolve(bytesToSize(length, 3));
       }).catch(reject);
     } else if (Buffer.isBuffer(crots)) {
-      let length = Buffer.byteLength(crots);
+      const length = Buffer.byteLength(crots);
       if (!isNaN(length)) resolve(bytesToSize(length, 3));
     } else {
       reject(0);
@@ -250,7 +250,7 @@ export function randomChoice(arr) {
 export function archimed(s, list) {
   const ln = list.length;
   const ls = new Set();
-  for (let logic of s.split(',')) {
+  for (const logic of s.split(',')) {
     if (logic.includes('>')) {
       const si = parseInt(logic.slice(1)) - 1;
       for (let i = si + 1; i < ln; i++) ls.add(i);
@@ -258,7 +258,7 @@ export function archimed(s, list) {
       const si = parseInt(logic.slice(1)) - 1;
       for (let i = 0; i <= si && i < ln; i++) ls.add(i);
     } else if (logic.includes('-')) {
-      let [start, end] = logic.split('-').map(n => parseInt(n) - 1);
+      const [start, end] = logic.split('-').map(n => parseInt(n) - 1);
       for (let i = start; i <= end && i < ln; i++) ls.add(i);
     } else {
       const idx = parseInt(logic) - 1;
@@ -331,13 +331,13 @@ export function waktu(seconds) {
   var h = Math.floor(seconds % (60 * 60 * 24) / (60 * 60));
   var m = Math.floor(seconds % (60 * 60) / 60);
   var s = Math.floor(seconds % 60);
-  var yDisplay = y > 0 ? y + (y == 1 ? " year, " : " years, ") : "";
-  var bDisplay = b > 0 ? b + (b == 1 ? " month, " : " months, ") : "";
-  var wDisplay = w > 0 ? w + (w == 1 ? " week, " : " weeks, ") : "";
-  var dDisplay = d > 0 ? d + (d == 1 ? " day, " : " days, ") : "";
-  var hDisplay = h > 0 ? h + (h == 1 ? " hour, " : " hours, ") : "";
-  var mDisplay = m > 0 ? m + (m == 1 ? " minute, " : " minutes, ") : "";
-  var sDisplay = s > 0 ? s + (s == 1 ? " second" : " seconds") : "";
+  var yDisplay = y > 0 ? y + (y === 1 ? " year, " : " years, ") : "";
+  var bDisplay = b > 0 ? b + (b === 1 ? " month, " : " months, ") : "";
+  var wDisplay = w > 0 ? w + (w === 1 ? " week, " : " weeks, ") : "";
+  var dDisplay = d > 0 ? d + (d === 1 ? " day, " : " days, ") : "";
+  var hDisplay = h > 0 ? h + (h === 1 ? " hour, " : " hours, ") : "";
+  var mDisplay = m > 0 ? m + (m === 1 ? " minute, " : " minutes, ") : "";
+  var sDisplay = s > 0 ? s + (s === 1 ? " second" : " seconds") : "";
   return yDisplay + bDisplay + wDisplay + dDisplay + hDisplay + mDisplay + sDisplay;
 };
 export function formatDuration(durationStr) {
@@ -371,12 +371,12 @@ export function formatDuration(durationStr) {
   });
 };
 export function formatDurationMessage(duration) {
-  let years = duration.years();
-  let months = duration.months();
-  let days = duration.days();
-  let hours = duration.hours();
-  let minutes = duration.minutes();
-  let seconds = duration.seconds();
+  const years = duration.years();
+  const months = duration.months();
+  const days = duration.days();
+  const hours = duration.hours();
+  const minutes = duration.minutes();
+  const seconds = duration.seconds();
   let durationMessage = `*Expired*: `;
   if (years > 0) durationMessage += `${years} year(s) `;
   if (months > 0) durationMessage += `${months} month(s) `;
@@ -435,8 +435,8 @@ export function ulang(str, num) {
 };
 export function arrayRemove(arr, value) {
   return arr.filter(function (ele) {
-    return ele != value;
-  })
+    return ele !== value;
+  });
 };
 export function randomByte(length = 32) {
   const chars = '0123456789ABCDEF';
@@ -648,7 +648,7 @@ export async function saveFile(imageInput, prefix, toFile = "png") {
     throw new Error('Input tidak valid. Harap berikan Buffer atau string Base64.');
   }
   const ext = toFile.toLowerCase() === "jpg" ? "jpg" : "png";
-  const tmpPath = path.join(config.paths.tempDir, `${prefix}-${Date.now()}.${ext}`);
+  const tmpPath = tmpDir.createTempFile(ext);
   if (ext === "jpg") {
     await sharp(imageBuffer).jpeg({ quality: 90, progressive: true, mozjpeg: true }).toFile(tmpPath);
   } else {
@@ -658,7 +658,7 @@ export async function saveFile(imageInput, prefix, toFile = "png") {
 };
 export function parseCheatAmount(inputStr) {
   if (!inputStr) return null;
-  let str = inputStr.toLowerCase().replace(',', '.').trim();
+  const str = inputStr.toLowerCase().replace(',', '.').trim();
   const suffix = str.slice(-1);
   const multipliers = {
     k: 1000n,

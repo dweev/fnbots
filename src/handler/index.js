@@ -13,6 +13,7 @@ import { handleAntiDeleted } from './antidelete.js';
 import { handleAutoSticker } from './autosticker.js';
 import { handleAudioChanger } from './autochanger.js';
 import { handleAutoDownload } from './autodownload.js';
+import { handleGameBotResponse } from './gameBot.js';
 
 export {
   handleAntiDeleted,
@@ -20,5 +21,6 @@ export {
   handleAudioChanger,
   handleAutoSticker,
   handleChatbot,
-  handleAutoDownload
+  handleAutoDownload,
+  handleGameBotResponse
 };

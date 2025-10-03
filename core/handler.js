@@ -14,35 +14,64 @@ import { LRUCache } from 'lru-cache';
 import log from '../src/lib/logger.js';
 import dayjs from '../src/utils/dayjs.js';
 import { exec as cp_exec } from 'child_process';
+import { tmpDir } from '../src/lib/tempManager.js';
 import { runJob } from '../src/worker/worker_manager.js';
 import { restartManager } from '../src/lib/restartManager.js';
 import { cleanupPlugins, pluginCache } from '../src/lib/plugins.js';
 import { performanceManager } from '../src/lib/performanceManager.js';
 import { User, Group, Settings, Command, StoreGroupMetadata, OTPSession, Media, DatabaseBot } from '../database/index.js';
-import { handleAntiDeleted, handleAutoJoin, handleAudioChanger, handleAutoSticker, handleChatbot, handleAutoDownload } from '../src/handler/index.js';
+import { handleAntiDeleted, handleAutoJoin, handleAudioChanger, handleAutoSticker, handleChatbot, handleAutoDownload, handleGameBotResponse } from '../src/handler/index.js';
 import { color, msgs, mycmd, safeStringify, sendAndCleanupFile, waktu, checkCommandAccess, isUserVerified, textMatch1, textMatch2, expiredVIPcheck, expiredCheck, getSerial, getTxt, initializeFuse } from '../src/function/index.js';
 
 const exec = util.promisify(cp_exec);
 const localFilePrefix = config.localPrefix;
-
 const groupAfkCooldowns = new LRUCache({
   max: 1000,
   ttl: config.performance.groupCooldownMS,
   updateAgeOnGet: false
 });
 
-let recentcmd           = new Set();
-let fspamm              = new Set();
-let sban                = new Set();
-let stp                 = new Set();
-let stickerspam         = new Set();
-let mygroup             = [];
-let mygroupMembers      = {};
-let chainingCommands    = [];
-let yts                 = [];
-let counter             = 0;
-let suggested           = false;
-let groupData           = null;
+const recentcmd                   = new Set();
+const fspamm                      = new Set();
+const sban                        = new Set();
+const stp                         = new Set();
+const stickerspam                 = new Set();
+let mygroup                     = [];
+let mygroupMembers              = {};
+let chainingCommands            = [];
+let yts                         = [];
+let tebaklirik                  = {};
+let tekateki                    = {};
+let tebakkata                   = {};
+let susunkata                   = {};
+let tebakkimia                  = {};
+let tebaknegara                 = {};
+let tebakgambar                 = {};
+let caklontong                  = {};
+let tebakbendera                = {};
+let sudokuGame                  = {};
+let family100                   = {};
+let hangman                     = {};
+let chatBots                    = {};
+let sessions                    = {};
+let chessGame                   = {};
+let othelloGame                 = {};
+let ludoSessions                = {};
+let game41Sessions              = {};
+let gamematematika              = {};
+let werewolfSessions            = {};
+let minesweeperSessions         = {};
+let ularTanggaSessions          = {};
+let tictactoeSessions           = {};
+let samgongSessions             = {};
+let tebakkalimat                = {};
+let siapakahaku                 = {};
+let ulartangga                  = {};
+let tebakgame                   = {};
+let counter                     = 0;
+let suggested                   = false;
+let interactiveHandled          = false;
+let groupData                   = null;
 
 export const updateMyGroup = (newGroupList, newMemberlist) => {
   mygroup = newGroupList;
@@ -59,15 +88,14 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
   const pushname = m.pushName || 'Unknown';
   const fromBot = m.fromMe;
   let toId = m.from;
-  let user = await User.ensureUser(serial);
-  if (user.isUserMuted(serial)) return;
 
   const quotedMsg = m.quoted ? m.quoted : false;
   const quotedParticipant = m.quoted?.sender || '';
   const mentionedJidList = Array.isArray(m.mentionedJid) ? m.mentionedJid : [];
   const isBotGroupAdmins = m.isBotAdmin || false;
   const isGroupAdmins = m.isAdmin || false;
-  const isSadmin = ownerNumber.includes(serial) || (dbSettings.self === 'true' && fromBot) || (dbSettings.self === 'auto' && fromBot)
+  const isSadmin = ownerNumber.includes(serial) || (dbSettings.self === 'true' && fromBot) || (dbSettings.self === 'auto' && fromBot);
+  const user = await User.ensureUser(serial);
   const isMaster = user.isMaster;
   const isVIP = user.isVIPActive;
   const isPremium = user.isPremiumActive;
@@ -77,6 +105,8 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
   const isPrivileged = isBotGroupAdmins && [isSadmin, isMaster, isVIP, isPremium, isGroupAdmins, fromBot].some(Boolean);
   const body = m?.body;
   const type = m?.type;
+  const txt = body;
+
   const userData = {
     isSadmin: isSadmin,
     isMaster: isMaster,
@@ -88,14 +118,14 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
     isMuted: groupData ? groupData.isMuted : false
   };
 
-  const reactDone = async () => { await delay(1000); await fn.sendMessage(toId, { react: { text: '✅', key: m.key } }) };
-  const reactFail = async () => { await delay(1000); await fn.sendMessage(toId, { react: { text: '❎', key: m.key } }) };
+  const reactDone = async () => { await delay(1000); await fn.sendMessage(toId, { react: { text: '✅', key: m.key } }); };
+  const reactFail = async () => { await delay(1000); await fn.sendMessage(toId, { react: { text: '❎', key: m.key } }); };
   const sReply = (content, options = {}) => fn.sendReply(toId, content, { quoted: m, ...options });
   const sPesan = (content) => fn.sendPesan(toId, content, m);
-  const sendRawWebpAsSticker = async (_data, options = {}) => { await fn.sendRawWebpAsSticker(toId, _data, m, { ...options }) };
-  let txt = body;
+  const sendRawWebpAsSticker = async (_data, options = {}) => { await fn.sendRawWebpAsSticker(toId, _data, m, { ...options }); };
   const isCmd = txt?.startsWith(dbSettings.rname) || txt?.startsWith(dbSettings.sname);
 
+  if (user.isUserMuted(serial)) return;
   if (body?.startsWith('>')) {
     if (!isSadmin && !isMaster) return;
     try {
@@ -155,7 +185,7 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
     } catch (error) {
       await sReply(util.format(error));
     }
-  } else if (body?.toLowerCase().trim() == "res") {
+  } else if (body?.toLowerCase().trim() === "res") {
     if (!isSadmin && !isMaster) return;
     dbSettings.restartState = true;
     dbSettings.restartId = m.from;
@@ -163,15 +193,15 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
     await Settings.updateSettings(dbSettings);
     await reactDone();
     await restartManager.restart("Manual restart", performanceManager);
-  } else if (body?.toLowerCase().trim() == "shutdown") {
+  } else if (body?.toLowerCase().trim() === "shutdown") {
     if (!isSadmin && !isMaster) return;
     await reactDone();
     await restartManager.shutdown(performanceManager);
-  } else if (body?.toLowerCase().trim() == "resetcommands") {
+  } else if (body?.toLowerCase().trim() === "resetcommands") {
     if (!isSadmin && !isMaster) return;
     const result = await Command.resetAll();
     await sReply(`Berhasil! Sebanyak ${result.deletedCount} data perintah telah dihapus dari database. Silakan restart bot untuk menyegarkan cache menu.`);
-  } else if (body?.toLowerCase().trim() == "reloadplugins") {
+  } else if (body?.toLowerCase().trim() === "reloadplugins") {
     if (!isSadmin && !isMaster) return;
     try {
       const { loadPlugins, getPluginStats } = await import('../src/lib/plugins.js');
@@ -195,7 +225,7 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
       await reactFail();
       log(`Plugin reload error: ${error}`, true);
     }
-  } else if (body?.toLowerCase().trim() == "cachestats") {
+  } else if (body?.toLowerCase().trim() === "cachestats") {
     if (!isSadmin && !isMaster) return;
     try {
       const stats = performanceManager.getFullStatus();
@@ -222,7 +252,7 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
     } catch (error) {
       await sReply(`Error getting cache stats: ${error.message}`);
     }
-  } else if (body?.toLowerCase().trim() == "synccache") {
+  } else if (body?.toLowerCase().trim() === "synccache") {
     if (!isSadmin && !isMaster) return;
     try {
       await performanceManager.cache.forceSync();
@@ -232,7 +262,7 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
       await sReply(`Cache sync failed: ${error.message}`);
       await reactFail();
     }
-  } else if (body?.toLowerCase().trim() == "clearcache") {
+  } else if (body?.toLowerCase().trim() === "clearcache") {
     if (!isSadmin && !isMaster) return;
     try {
       await performanceManager.cache.clearAllCaches();
@@ -485,7 +515,7 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
         const isVerified = await isUserVerified(m, dbSettings, StoreGroupMetadata, fn, sReply, hakIstimewa);
         if (!isVerified) return;
       }
-      let commandText = await getTxt(txt, dbSettings);
+      const commandText = await getTxt(txt, dbSettings);
       const remoteCommandMatch = commandText.match(/^r:(\d+)\s+(.*)/s);
       if (remoteCommandMatch && (isSadmin || isMaster)) {
         const index = parseInt(remoteCommandMatch[1]) - 1;
@@ -512,14 +542,12 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
                 const args = currentCommand.split(' ').slice(1);
                 const fullArgs = args.join(' ');
                 const commandArgs = {
-                  fn, m, dbSettings, ownerNumber, version,
-                  isSadmin, isMaster, isVIP, isPremium,
-                  isWhiteList, hakIstimewa, isBotGroupAdmins,
-                  sPesan, sReply, reactDone, reactFail, toId,
-                  quotedMsg, quotedParticipant, mentionedJidList,
-                  body, args, arg: fullArgs, ar: args, serial, user,
-                  groupData, botNumber, mygroupMembers, mygroup,
-                  isPrivileged, pushname, yts
+                  fn, m, dbSettings, ownerNumber, version, isSadmin, isMaster, isVIP, isPremium, isWhiteList, hakIstimewa, isBotGroupAdmins,
+                  sPesan, sReply, reactDone, reactFail, toId, quotedMsg, quotedParticipant, mentionedJidList, body, args, arg: fullArgs, ar: args,
+                  serial, user, groupData, botNumber, mygroupMembers, mygroup, isPrivileged, pushname, yts, tebaklirik, tekateki, tebakkata, susunkata, 
+                  tebakkimia, tebaknegara, tebakbendera, tebakgambar, caklontong, sudokuGame, family100, hangman, chatBots, sessions, chessGame, othelloGame, 
+                  ludoSessions, game41Sessions, gamematematika, werewolfSessions, minesweeperSessions, ularTanggaSessions, tictactoeSessions, samgongSessions, 
+                  tebakkalimat, siapakahaku, ulartangga, tebakgame
                 };
                 await command.execute(commandArgs);
                 commandFound = true;
@@ -626,6 +654,16 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
         await handleAutoDownload({ body, fn, toId, m, dbSettings, user, sReply });
       };
     }
+    const gameStates = {
+      hangman, family100, tebaklirik, tekateki, tebakkata, susunkata,
+      tebakkimia, tebaknegara, tebakgambar, caklontong, tebakbendera,
+      sudokuGame, chatBots, sessions, chessGame, othelloGame,
+      ludoSessions, game41Sessions, gamematematika, werewolfSessions,
+      minesweeperSessions, ularTanggaSessions, tictactoeSessions,
+      samgongSessions, tebakkalimat, siapakahaku, ulartangga, tebakgame, interactiveHandled
+    };
+    const gameHandled = await handleGameBotResponse({ m, toId, body, user, sReply, sPesan, fn, serial, isCmd, reactFail, tmpDir, dbSettings, config, gameStates });
+    if (gameHandled) return;
   } catch (error) {
     await log(`Error in main handler: ${error}`, true);
     await log(error, true);

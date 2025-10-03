@@ -71,7 +71,7 @@ async function createBalanceCard({ username, discriminator, avatarUrl, balance }
   try {
     avatar = await loadImage(avatarUrl);
   } catch {
-    avatar = await loadImage(await fs.readFile(config.paths.avatar))
+    avatar = await loadImage(await fs.readFile(config.paths.avatar));
   }
   ctx.save();
   drawRoundedImage(ctx, avatar, 50, (height - avatarSize) / 2, avatarSize, avatarSize, 15);
@@ -88,7 +88,7 @@ async function createBalanceCard({ username, discriminator, avatarUrl, balance }
   ctx.fillText(`Role: ${discriminator}`, 170, 105);
   ctx.fillStyle = '#00FF00';
   ctx.font = 'bold 16px Sans';
-  const balanceStr = balance.toString()
+  const balanceStr = balance.toString();
   const maxBalanceWidth = 257;
   const truncatedBalance = truncateText(ctx, balanceStr, maxBalanceWidth);
   ctx.fillText(`Balance: $${truncatedBalance}`, 170, 140);
@@ -126,7 +126,7 @@ async function createRankCard({ username, discriminator, avatarUrl, level, curre
   ctx.shadowBlur = 4;
   ctx.fillStyle = '#FFFFFF';
   ctx.font = 'bold 36px Sans';
-  let originalText = username.split(' ').slice(0, 4).join(' ');
+  const originalText = username.split(' ').slice(0, 4).join(' ');
   let usernameText = originalText;
   const maxWidth = 300;
   while (ctx.measureText(usernameText).width > maxWidth) {

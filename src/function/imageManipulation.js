@@ -188,7 +188,7 @@ export function wrapText(ctx, text, maxWidth) {
       if (words.length === 0) lines.push(line.trim());
     }
     return resolve(lines);
-  })
+  });
 };
 export const deepfry = (buffer) => applyEffect(buffer, (ctx, w, h) => {
   desaturate(ctx, -20, 0, 0, w, h);

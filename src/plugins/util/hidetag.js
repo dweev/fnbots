@@ -21,4 +21,4 @@ export const command = {
     const mentions = groupMetadata.participants.map(member => member.id);
     await fn.sendMessage(toId, { text: arg, mentions: mentions }, { ephemeralExpiration: m?.expiration ?? 0, messageId: randomByte(32) });
   }
-}
+};

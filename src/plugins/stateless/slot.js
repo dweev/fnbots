@@ -72,10 +72,10 @@ export const command = {
       if (!user || user.balance <= 0) return await sReply("User tidak ditemukan atau saldo 0.\nsilakan gunakan permainan mode grinding dulu seperti .chop, .mine, .fish, .hunt, .ngelonte, .work atau gunakan perintah .daily jika kamu belum daily claim hari ini.");
       const saldoAwal = user ? BigInt(user.balance) : 0n;
       if (saldoAwal < BigInt(config.cost)) return await sReply(`Saldomu tidak cukup untuk bermain mode ${mode} (butuh ${formatNumber(config.cost)}).`);
-      let { key } = await sReply('🎰 Slot Machine🎰\n⏳ Rolling...');
+      const { key } = await sReply('🎰 Slot Machine🎰\n⏳ Rolling...');
       const slotSymbols = ['💎', '❄️', '☠️', '⚡', '❤️'];
       const rollResult = [];
-      let display = `🎰 Slot Machine 🎰\n`;
+      const display = `🎰 Slot Machine 🎰\n`;
       for (let i = 0; i < config.count; i++) {
         const rand = Math.floor(Math.random() * slotSymbols.length);
         rollResult.push(slotSymbols[rand]);
@@ -85,7 +85,7 @@ export const command = {
         }
       }
       const counts = {};
-      for (let icon of rollResult) {
+      for (const icon of rollResult) {
         counts[icon] = (counts[icon] || 0) + 1;
       }
       const maxSame = Object.values(counts).length > 0 ? Math.max(...Object.values(counts)) : 0;

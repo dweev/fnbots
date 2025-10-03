@@ -17,7 +17,7 @@ export const command = {
   aliases: ['cekpremium', 'cekprem'],
   isCommandWithoutPayment: true,
   execute: async ({ mentionedJidList, serial, sReply }) => {
-    let targetId = mentionedJidList[0] || serial;
+    const targetId = mentionedJidList[0] || serial;
     const activePrems = await User.findActivePremiums();
     const premiumUser = activePrems.find(user => user.userId === targetId);
     if (!premiumUser) {
@@ -29,4 +29,4 @@ export const command = {
     const durationMessage = formatDurationMessage(durationLeft);
     await sReply(`「 *PREMIUM EXPIRE* 」\n\n*ID*: @${targetId.split('@')[0]}\n${durationMessage}`);
   }
-}
+};

@@ -21,7 +21,7 @@ export const command = {
       if (args.length > 1) return await sReply("Format tidak valid. Contoh: .poker 10k");
       if (!user || user.balance <= 0) return await sReply("User tidak ditemukan atau saldo 0.\nsilakan gunakan permainan mode grinding dulu seperti .chop, .mine, .fish, .hunt, .ngelonte, .work atau gunakan perintah .daily jika kamu belum daily claim hari ini.");
       const saldoAwal = BigInt(user.balance);
-      let bi0 = args[0] ? args[0].toLowerCase() : '';
+      const bi0 = args[0] ? args[0].toLowerCase() : '';
       if (!bi0) return await sReply("Format tidak valid. Contoh: .poker 10k");
       let bid = 0n;
       if (bi0 === 'all' || bi0 === 'allin') { bid = saldoAwal; }
@@ -46,7 +46,7 @@ export const command = {
       }
       if (bid <= 0n) return await sReply("Jumlah taruhan harus lebih dari 0.");
       if (saldoAwal < bid) return await sReply(`Saldo tidak cukup. Diperlukan: ${formatNumber(bid)}`);
-      let { key } = await sReply(`🃏 *THREE CARD POKER* 🃏\nAnda bertaruh sebesar ${formatNumber(bid)}.\n\nDealer sedang membagikan kartu...`);
+      const { key } = await sReply(`🃏 *THREE CARD POKER* 🃏\nAnda bertaruh sebesar ${formatNumber(bid)}.\n\nDealer sedang membagikan kartu...`);
       const deck = createDeck();
       shuffleDeck(deck);
       const playerHand = [deck.pop(), deck.pop(), deck.pop()];

@@ -17,4 +17,4 @@ export const command = {
     if (!isBotGroupAdmins) return await sReply('Bot harus menjadi admin grup untuk menjalankan perintah ini.');
     await Promise.all([fn.groupSettingUpdate(m.chat, 'not_announcement'), reactDone(), sReply('Grup berhasil dibuka, semua anggota dapat mengirim pesan.')]);
   }
-}
+};

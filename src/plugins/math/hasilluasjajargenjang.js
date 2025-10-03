@@ -17,10 +17,10 @@ export const command = {
   aliases: ['hasil-luasjajargenjang'],
   execute: async ({ arg, args, dbSettings, sReply }) => {
     if (!arg) return await sReply(`Masukkan alas dan tinggi jajargenjang, contoh: ${dbSettings.sname}hasil-luasjajargenjang 5 10`);
-    const res = args[0]
-    const ret = args[1]
-    const luas = bdr.datar.luas.jajarGenjang(res, ret, false)
-    const jajarGenjang = bdr.datar.luas.jajarGenjang(res, ret, true)
+    const res = args[0];
+    const ret = args[1];
+    const luas = bdr.datar.luas.jajarGenjang(res, ret, false);
+    const jajarGenjang = bdr.datar.luas.jajarGenjang(res, ret, true);
     await sReply(`*Hasil*: ${luas}\n${jajarGenjang}`);
   }
 };

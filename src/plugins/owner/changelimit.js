@@ -16,7 +16,7 @@ export const command = {
   isCommandWithoutPayment: true,
   execute: async ({ dbSettings, mentionedJidList, args, quotedParticipant, sReply }) => {
     const limitValue = parseInt(args[0]);
-    let targetId = quotedParticipant || (mentionedJidList && mentionedJidList[0]);
+    const targetId = quotedParticipant || (mentionedJidList && mentionedJidList[0]);
     if (!targetId) {
       let message = '';
       message += `Target user tidak ditemukan!\n\n`;

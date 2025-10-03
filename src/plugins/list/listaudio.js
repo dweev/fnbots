@@ -27,7 +27,7 @@ export const command = {
     const audioLines = audios.map((audio, i) => `\n*${skip + i + 1}.* \`${audio.name}\``);
     listText += audioLines.join('');
     if (page < totalPages) {
-      listText += `\n\nUntuk melihat halaman selanjutnya, ketik \`.listaudio ${page + 1}\``
+      listText += `\n\nUntuk melihat halaman selanjutnya, ketik \`.listaudio ${page + 1}\``;
     }
     await sReply(listText.trim());
   },

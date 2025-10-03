@@ -27,7 +27,7 @@ export const command = {
           fileName = sanitizedArg;
         }
       }
-      backupFilePath = tmpDir.createTempFile('zip', fileName)
+      backupFilePath = tmpDir.createTempFile('zip', fileName);
       const sourceDir = '.';
       const exclusions = [
         `"${path.basename(backupFilePath)}"`,
@@ -45,4 +45,4 @@ export const command = {
       await tmpDir.deleteFile(backupFilePath);
     }
   }
-}
+};

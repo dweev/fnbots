@@ -18,7 +18,7 @@ class DBStore {
     this.cacheHits = new Map();
     this.cacheTimestamps = new Map();
     this.lidToJidCache = new Map();
-    this.maxCacheSize = config.performance.maxCacheSize
+    this.maxCacheSize = config.performance.maxCacheSize;
     this.cacheTTL = {
       groups: config.performance.cacheTTL
     };
@@ -109,7 +109,7 @@ class DBStore {
         }
       }
       return merged;
-    }
+    };
     const existing = this.contactsCache.get(jid);
     let finalData;
     if (existing) {

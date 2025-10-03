@@ -109,4 +109,4 @@ export const command = {
     response += `• LID Mappings: ${lidMappings}\n`;
     await sReply(response);
   }
-}
+};

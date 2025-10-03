@@ -15,7 +15,7 @@ export const command = {
   isCommandWithoutPayment: true,
   execute: async ({ args, sReply, user, mentionedJidList, quotedParticipant }) => {
     if (mentionedJidList && mentionedJidList.length > 0) {
-      const usersToUnban = mentionedJidList
+      const usersToUnban = mentionedJidList;
       const unbannedUsers = [];
       for (const userId of usersToUnban) {
         if (user.isUserMuted(userId)) {

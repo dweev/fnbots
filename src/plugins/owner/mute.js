@@ -13,7 +13,7 @@ export const command = {
   isCommandWithoutPayment: true,
   execute: async ({ user, sReply, mentionedJidList, quotedParticipant }) => {
     if (mentionedJidList && mentionedJidList.length > 0) {
-      const usersToBan = mentionedJidList
+      const usersToBan = mentionedJidList;
       const bannedUsers = [];
       for (const userId of usersToBan) {
         if (!user.isUserMuted(userId)) {
@@ -29,7 +29,7 @@ export const command = {
       return;
     }
     if (quotedParticipant) {
-      const userId = quotedParticipant
+      const userId = quotedParticipant;
       if (!user.isUserMuted(userId)) {
         await user.muteUser(userId);
         await sReply(`Berhasil membanned @${userId.split('@')[0]}`);

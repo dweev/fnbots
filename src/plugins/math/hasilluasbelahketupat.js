@@ -17,10 +17,10 @@ export const command = {
   aliases: ['hasil-luasbelahketupat'],
   execute: async ({ arg, args, dbSettings, sReply }) => {
     if (!arg) return await sReply(`Masukkan panjang sisi dan diagonal belah ketupat, contoh: ${dbSettings.sname}hasil-luasbelahketupat 5 10`);
-    const q = args[0]
-    const a = args[1]
-    const luas = bdr.datar.luas.belahKetupat(q, a, false)
-    const belahKetupat = bdr.datar.luas.belahKetupat(q, a, true)
+    const q = args[0];
+    const a = args[1];
+    const luas = bdr.datar.luas.belahKetupat(q, a, false);
+    const belahKetupat = bdr.datar.luas.belahKetupat(q, a, true);
     await sReply(`*Hasil*: ${luas}\n${belahKetupat}`);
   }
 };

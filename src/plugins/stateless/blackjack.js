@@ -21,7 +21,7 @@ export const command = {
       if (args.length > 1) return await sReply("Format tidak valid. Contoh: .blackjack 10k");
       if (!user || user.balance <= 0) return await sReply("User tidak ditemukan atau saldo 0.\nsilakan gunakan permainan mode grinding dulu seperti .chop, .mine, .fish, .hunt, .ngelonte, .work atau gunakan perintah .daily jika kamu belum daily claim hari ini.");
       const saldoAwal = BigInt(user.balance);
-      let bi0 = args[0]?.toLowerCase();
+      const bi0 = args[0]?.toLowerCase();
       if (!bi0) return await sReply("Masukkan jumlah taruhan.");
       let bid = 0n;
       if (bi0 === 'all' || bi0 === 'allin') {
@@ -87,8 +87,8 @@ export const command = {
         }
         return value;
       };
-      let playerHand = [draw(), draw()];
-      let dealerHand = [draw(), draw()];
+      const playerHand = [draw(), draw()];
+      const dealerHand = [draw(), draw()];
       let log = ``;
       const playerHasBlackjack = calculateHandValue(playerHand) === 21 && playerHand.length === 2;
       const dealerHasBlackjack = calculateHandValue(dealerHand) === 21 && dealerHand.length === 2;

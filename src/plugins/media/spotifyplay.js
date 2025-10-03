@@ -35,4 +35,4 @@ export const command = {
       await tmpDir.deleteFile(result);
     }
   }
-}
+};

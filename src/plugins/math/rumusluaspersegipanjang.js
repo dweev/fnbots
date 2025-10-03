@@ -17,10 +17,10 @@ export const command = {
   aliases: ['rumus-luaspersegipanjang'],
   execute: async ({ arg, args, dbSettings, sReply }) => {
     if (!arg) return await sReply(`Masukkan panjang dan lebar persegi panjang, contoh: ${dbSettings.sname}rumus-luaspersegipanjang 5 10`);
-    const res = args[0]
-    const ret = args[1]
-    const luas = bdr.datar.luas.persegiPanjang(res, ret, false)
-    const persegiPanjang = bdr.datar.luas.persegiPanjang(res, ret, true)
+    const res = args[0];
+    const ret = args[1];
+    const luas = bdr.datar.luas.persegiPanjang(res, ret, false);
+    const persegiPanjang = bdr.datar.luas.persegiPanjang(res, ret, true);
     await sReply(`*Hasil*: ${luas}\n${persegiPanjang}`);
   }
 };

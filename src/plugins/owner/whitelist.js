@@ -71,4 +71,4 @@ export const command = {
       await sReply(guideMessage);
     }
   }
-}
+};

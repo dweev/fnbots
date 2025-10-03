@@ -17,10 +17,10 @@ export const command = {
   aliases: ['hitung-volumekerucut'],
   execute: async ({ arg, args, dbSettings, sReply }) => {
     if (!arg) return await sReply(`Masukkan jari-jari dan tinggi kerucut, contoh: ${dbSettings.sname}hitung-volumekerucut 5 10`);
-    const res = args[0]
-    const ret = args[1]
-    const ruang = bdr.ruang.kerucut('volume', res, ret, false)
-    const kerucut = bdr.ruang.kerucut('volume', res, ret, true)
+    const res = args[0];
+    const ret = args[1];
+    const ruang = bdr.ruang.kerucut('volume', res, ret, false);
+    const kerucut = bdr.ruang.kerucut('volume', res, ret, true);
     await sReply(`*Hasil*: ${ruang}\n${kerucut}`);
   }
 };

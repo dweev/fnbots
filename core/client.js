@@ -89,17 +89,17 @@ export async function clientBot(fn, dbSettings) {
       return jid;
     };
   };
-  let botNumber = fn.decodeJid(fn.user?.id);
+  const botNumber = fn.decodeJid(fn.user?.id);
   fn.getName = async (jid) => {
-    let id = jidNormalizedUser(jid);
+    const id = jidNormalizedUser(jid);
     if (id === botNumber) {
       return fn.user?.name;
     }
     if (id.endsWith("g.us")) {
-      let metadata = await mongoStore.getGroupMetadata(id);
+      const metadata = await mongoStore.getGroupMetadata(id);
       return metadata ? metadata.subject : "none";
     } else {
-      let contact = await mongoStore.getContact(id);
+      const contact = await mongoStore.getContact(id);
       return (contact?.name || contact?.verifiedName || contact?.notify || "Unknown?");
     }
   };
@@ -135,7 +135,7 @@ export async function clientBot(fn, dbSettings) {
         packname: options.packname || dbSettings.packName,
         author: options.author || dbSettings.packAuthor,
         categories: options.categories || [''],
-      })
+      });
       await tmpDir.deleteFile(filename);
       messageContent = { sticker: { url: pathFile }, ...options };
     } else {

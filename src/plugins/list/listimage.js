@@ -27,7 +27,7 @@ export const command = {
     const imageLines = images.map((image, i) => `\n*${skip + i + 1}.* \`${image.name}\``);
     listText += imageLines.join('');
     if (page < totalPages) {
-      listText += `\n\nUntuk melihat halaman selanjutnya, ketik \`.listimage ${page + 1}\``
+      listText += `\n\nUntuk melihat halaman selanjutnya, ketik \`.listimage ${page + 1}\``;
     }
     await sReply(listText.trim());
   },

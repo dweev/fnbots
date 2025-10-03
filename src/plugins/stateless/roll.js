@@ -21,7 +21,7 @@ export const command = {
       const q = args.join(' ');
       if (!user || user.balance <= 0) return await sReply("User tidak ditemukan atau saldo 0.\nsilakan gunakan permainan mode grinding dulu seperti .chop, .mine, .fish, .hunt, .ngelonte, .work atau gunakan perintah .daily jika kamu belum daily claim hari ini.");
       const saldoAwal = BigInt(user.balance);
-      let bi0 = args[0] ? args[0].toLowerCase() : '';
+      const bi0 = args[0] ? args[0].toLowerCase() : '';
       if (!bi0) return await sReply("Masukkan jumlah taruhan. Contoh: .roll 1k red");
       let bid = 0n;
       let isAllIn = false;
@@ -64,17 +64,17 @@ export const command = {
         } else if (/^\d+$/.test(cleanedItem) && parseInt(cleanedItem) >= 0 && parseInt(cleanedItem) <= 36) {
           taruhanList.push(cleanedItem);
         } else if (cleanedItem.includes('-')) {
-          let [start, end] = cleanedItem.split('-').map(n => parseInt(n.trim(), 10));
+          const [start, end] = cleanedItem.split('-').map(n => parseInt(n.trim(), 10));
           if (!isNaN(start) && !isNaN(end) && start <= end && start > 0 && end <= 36) {
             for (let i = start; i <= end; i++) taruhanList.push(i.toString());
           }
         } else if (cleanedItem.startsWith('>')) {
-          let min = parseInt(cleanedItem.slice(1), 10);
+          const min = parseInt(cleanedItem.slice(1), 10);
           if (!isNaN(min) && min < 36 && min > 0) {
             for (let i = min + 1; i <= 36; i++) taruhanList.push(i.toString());
           }
         } else if (cleanedItem.startsWith('<')) {
-          let max = parseInt(cleanedItem.slice(1), 10);
+          const max = parseInt(cleanedItem.slice(1), 10);
           if (!isNaN(max) && max > 1 && max <= 36) {
             for (let i = 1; i < max; i++) taruhanList.push(i.toString());
           }
@@ -96,7 +96,7 @@ export const command = {
         const sanitizedPercent = bi0.replace(',', '.');
         const percentValue = parseFloat(sanitizedPercent.replace('%', ''));
         if (isNaN(percentValue) || percentValue <= 0 || percentValue > 100) return await sReply("Input persen tidak valid (1-100).");
-        let totalPercent = (saldoAwal * BigInt(Math.floor(percentValue * 100))) / 10000n;
+        const totalPercent = (saldoAwal * BigInt(Math.floor(percentValue * 100))) / 10000n;
         if (totalPercent === 0n) return await sReply("Jumlah taruhan dari persentase terlalu kecil.");
         bid = totalPercent / totalTaruhan;
         if (bid === 0n) return await sReply(`Jumlah taruhan per bet terlalu kecil.`);
@@ -106,8 +106,8 @@ export const command = {
       }
       if (saldoAwal < tot) return await sReply(`Saldo tidak cukup. Kamu perlu: ${formatNumber(tot)}`);
       if (tot <= 0n) return await sReply("Jumlah total taruhan harus lebih dari 0.");
-      let betInfo = `Taruhan: ${taruhanList.join(', ')}\nBet per taruhan: ${formatNumber(bid)}\nTotal bet: ${formatNumber(tot)}\n\nRoda berputar...`;
-      let { key } = await sReply(betInfo);
+      const betInfo = `Taruhan: ${taruhanList.join(', ')}\nBet per taruhan: ${formatNumber(bid)}\nTotal bet: ${formatNumber(tot)}\n\nRoda berputar...`;
+      const { key } = await sReply(betInfo);
       const ROULETTE_POCKETS = [
         { num: 0, color: 'green' }, { num: 1, color: 'red' }, { num: 2, color: 'black' }, { num: 3, color: 'red' }, { num: 4, color: 'black' },
         { num: 5, color: 'red' }, { num: 6, color: 'black' }, { num: 7, color: 'red' }, { num: 8, color: 'black' }, { num: 9, color: 'red' },

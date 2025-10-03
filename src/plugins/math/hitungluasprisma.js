@@ -17,14 +17,14 @@ export const command = {
   aliases: ['hitung-luasprisma'],
   execute: async ({ arg, args, dbSettings, sReply }) => {
     if (!arg) return await sReply(`Masukkan panjang alas, tinggi, dan sisi prisma segitiga, contoh: ${dbSettings.sname}hitung-luasprisma 5 10 7 3 4 6`);
-    const a = args[0]
-    const b = args[1]
-    const c = args[2]
-    const d = args[3]
-    const e = args[4]
-    const f = args[5]
-    const prisma = bdr.ruang.prisma.luasPermukaan.segitiga(a, b, c, d, e, f, false)
-    const luasPermukaan = bdr.ruang.prisma.luasPermukaan.segitiga(a, b, c, d, e, f, true)
+    const a = args[0];
+    const b = args[1];
+    const c = args[2];
+    const d = args[3];
+    const e = args[4];
+    const f = args[5];
+    const prisma = bdr.ruang.prisma.luasPermukaan.segitiga(a, b, c, d, e, f, false);
+    const luasPermukaan = bdr.ruang.prisma.luasPermukaan.segitiga(a, b, c, d, e, f, true);
     await sReply(`*Hasil*: ${prisma}\n${luasPermukaan}`);
   }
 };

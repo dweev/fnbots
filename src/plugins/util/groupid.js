@@ -15,7 +15,7 @@ export const command = {
   execute: async ({ fn, m, sReply, toId }) => {
     if (!m.isGroup) return await sReply(`Perintah ini hanya bisa digunakan di grup.`);
     const groupchat = await fn.groupMetadata(toId);
-    const { id } = groupchat
+    const { id } = groupchat;
     await sReply(id);
   }
-}
+};

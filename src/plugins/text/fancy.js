@@ -16,11 +16,11 @@ export const command = {
   description: 'Mengubah teks menjadi fancy',
   isCommandWithoutPayment: true,
   execute: async ({ quotedMsg, sReply, arg }) => {
-    let e
+    let e;
     if ((quotedMsg && quotedMsg?.type === "extendedTextMessage") || (quotedMsg && quotedMsg?.type === "conversation")) {
-      e = quotedMsg?.body
+      e = quotedMsg?.body;
     } else if (arg.length > 0) {
-      e = arg
+      e = arg;
     } else {
       return await sReply(`Mohon berikan teks yang ingin diubah ke Fancy.`);
     }

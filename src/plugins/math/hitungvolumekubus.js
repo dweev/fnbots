@@ -17,9 +17,9 @@ export const command = {
   aliases: ['hitung-volumekubus'],
   execute: async ({ arg, args, dbSettings, sReply }) => {
     if (!arg) return await sReply(`Masukkan panjang sisi kubus, contoh: ${dbSettings.sname}hitung-volumekubus 5`);
-    const res = args[0]
-    const ruang = bdr.ruang.kubus('volume', res, false)
-    const kubus = bdr.ruang.kubus('volume', res, true)
+    const res = args[0];
+    const ruang = bdr.ruang.kubus('volume', res, false);
+    const kubus = bdr.ruang.kubus('volume', res, true);
     await sReply(`*Hasil*: ${ruang}\n${kubus}`);
   }
 };

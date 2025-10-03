@@ -17,7 +17,7 @@ export const command = {
   description: 'Obfuskasi kode JavaScript untuk mengamankan kode sumber Anda',
   isCommandWithoutPayment: true,
   execute: async ({ fn, m, toId, sReply, quotedMsg, dbSettings, args, arg,  }) => {
-    let obfuscator = new ObfsMgr();
+    const obfuscator = new ObfsMgr();
     let level = 'medium';
     let pass = dbSettings.botname + '-Obfuscator';
     let codeToObfuscate = '';

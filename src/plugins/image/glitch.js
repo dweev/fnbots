@@ -16,13 +16,13 @@ export const command = {
   isCommandWithoutPayment: true,
   execute: async ({ fn, m, toId, dbSettings, quotedMsg, mentionedJidList, sReply }) => {
     let bufferMedia;
-    let caption = dbSettings.autocommand;
+    const caption = dbSettings.autocommand;
     if (m.message?.imageMessage) {
-      bufferMedia = await fn.getMediaBuffer(m.message)
+      bufferMedia = await fn.getMediaBuffer(m.message);
     } else if (quotedMsg?.imageMessage) {
-      bufferMedia = await fn.getMediaBuffer(quotedMsg)
+      bufferMedia = await fn.getMediaBuffer(quotedMsg);
     } else if (mentionedJidList && mentionedJidList.length > 0) {
-      let targetJid = mentionedJidList[0];
+      const targetJid = mentionedJidList[0];
       let profilePicBuffer;
       try {
         profilePicBuffer = await fn.profilePictureUrl(targetJid, "image");

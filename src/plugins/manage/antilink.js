@@ -16,7 +16,7 @@ export const command = {
   isCommandWithoutPayment: true,
   execute: async ({ m, toId, dbSettings, ar, reactDone, sReply }) => {
     if (!m.isGroup) return await sReply(`Perintah ini hanya bisa digunakan di grup.`);
-    let command = ar[0];
+    const command = ar[0];
     if (!['on', 'off'].includes(command)) return await sReply(`Format salah. Gunakan:\n${dbSettings.rname}antilink on\n${dbSettings.rname}antilink off`);
     let group = await Group.findOne({ groupId: toId });
     if (!group) {

@@ -17,11 +17,11 @@ export const command = {
   aliases: ['hasil-luastrapesium'],
   execute: async ({ arg, args, dbSettings, sReply }) => {
     if (!arg) return await sReply(`Masukkan panjang sisi trapesium, contoh: ${dbSettings.sname}hasil-luastrapesium 5 10 7`);
-    const a = args[0]
-    const b = args[1]
-    const c = args[2]
-    const luas = bdr.datar.luas.trapesium(a, b, c, false)
-    const trapesium = bdr.datar.luas.trapesium(a, b, c, true)
+    const a = args[0];
+    const b = args[1];
+    const c = args[2];
+    const luas = bdr.datar.luas.trapesium(a, b, c, false);
+    const trapesium = bdr.datar.luas.trapesium(a, b, c, true);
     await sReply(`*Hasil*: ${luas}\n${trapesium}`);
   }
 };

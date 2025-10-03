@@ -17,11 +17,11 @@ export const command = {
   isCommandWithoutPayment: true,
   execute: async ({ fn, m, toId, dbSettings, arg, sReply }) => {
     if (!arg) return await sReply(`Mohon berikan teks yang ingin diubah ke Danger.`);
-    const text = arg
-    const base = await loadImage(await fs.readFile('./src/image/danger.png'))
-    const canvas = createCanvas(base.width, base.height)
-    const ctx = canvas.getContext('2d')
-    ctx.drawImage(base, 0, 0)
+    const text = arg;
+    const base = await loadImage(await fs.readFile('./src/image/danger.png'));
+    const canvas = createCanvas(base.width, base.height);
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(base, 0, 0);
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
     ctx.font = 'normal bold 60px Noto';
@@ -30,11 +30,11 @@ export const command = {
       fontSize--;
       ctx.font = `normal bold ${fontSize}px Noto`;
     }
-    const lines = await wrapText(ctx, text.toUpperCase(), 840)
-    const topMost = 510 - (((fontSize * lines.length) / 2) + ((20 * (lines.length - 1)) / 2))
+    const lines = await wrapText(ctx, text.toUpperCase(), 840);
+    const topMost = 510 - (((fontSize * lines.length) / 2) + ((20 * (lines.length - 1)) / 2));
     for (let i = 0; i < lines.length; i++) {
-      const height = topMost + ((fontSize + 20) * i)
-      ctx.fillText(lines[i], base.width / 2, height)
+      const height = topMost + ((fontSize + 20) * i);
+      ctx.fillText(lines[i], base.width / 2, height);
     }
     const resBuffer = canvas.toBuffer();
     const tempFilePath = await saveFile(resBuffer, "danger-in", 'jpg');

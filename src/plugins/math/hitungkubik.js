@@ -17,8 +17,8 @@ export const command = {
   aliases: ['hitung-kubik'],
   execute: async ({ arg, args, dbSettings, sReply }) => {
     if (!arg) return await sReply(`Masukkan angka yang ingin dihitung kubiknya, contoh: ${dbSettings.sname}hitung-kubik 5`);
-    const res = args[0]
-    const kubik = bdr.rdb.kubik(res)
+    const res = args[0];
+    const kubik = bdr.rdb.kubik(res);
     await sReply(`*Hasil*: ${kubik}`);
   }
 };

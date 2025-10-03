@@ -17,11 +17,11 @@ export const command = {
   aliases: ['hasil-kelilingsegitiga'],
   execute: async ({ arg, args, dbSettings, sReply }) => {
     if (!arg) return await sReply(`Masukkan panjang sisi segitiga, contoh: ${dbSettings.sname}hasil-kelilingsegitiga 5 10 7`);
-    const res = args[0]
-    const ret = args[1]
-    const rea = args[2]
-    const keliling = bdr.datar.keliling.segitiga(res, ret, rea, false)
-    const segitiga = bdr.datar.keliling.segitiga(res, ret, rea, true)
+    const res = args[0];
+    const ret = args[1];
+    const rea = args[2];
+    const keliling = bdr.datar.keliling.segitiga(res, ret, rea, false);
+    const segitiga = bdr.datar.keliling.segitiga(res, ret, rea, true);
     await sReply(`*Hasil*: ${keliling}\n${segitiga}`);
   }
 };

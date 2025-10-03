@@ -17,10 +17,10 @@ export const command = {
   aliases: ['hasil-kelilinglayanglayang'],
   execute: async ({ arg, args, dbSettings, sReply }) => {
     if (!arg) return await sReply(`Masukkan panjang diagonal 1 dan diagonal 2 layang-layang, contoh: ${dbSettings.sname}hasil-kelilinglayanglayang 5 10`);
-    const res = args[0]
-    const ret = args[1]
-    const keliling = bdr.datar.keliling.layang(res, ret, false)
-    const layang = bdr.datar.keliling.layang(res, ret, true)
+    const res = args[0];
+    const ret = args[1];
+    const keliling = bdr.datar.keliling.layang(res, ret, false);
+    const layang = bdr.datar.keliling.layang(res, ret, true);
     await sReply(`*Hasil*: ${keliling}\n${layang}`);
   }
 };

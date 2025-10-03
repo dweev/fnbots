@@ -26,4 +26,4 @@ export const command = {
     const creatorNumber = creatorId.split('@')[0];
     await fn.sendContact(toId, "Group Creator", subject, creatorNumber, m);
   }
-}
+};

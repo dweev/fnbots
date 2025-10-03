@@ -17,10 +17,10 @@ export const command = {
   aliases: ['hitung-luaslimassegiempat'],
   execute: async ({ arg, args, dbSettings, sReply }) => {
     if (!arg) return await sReply(`Masukkan panjang sisi dan tinggi limas segi empat, contoh: ${dbSettings.sname}hitung-luaslimassegiempat 5 10`);
-    const res = args[0]
-    const ret = args[1]
-    const limas = bdr.ruang.limas.segiempat('lp', res, ret, false)
-    const segiempat = bdr.ruang.limas.segiempat('lp', res, ret, true)
+    const res = args[0];
+    const ret = args[1];
+    const limas = bdr.ruang.limas.segiempat('lp', res, ret, false);
+    const segiempat = bdr.ruang.limas.segiempat('lp', res, ret, true);
     await sReply(`*Hasil*: ${limas}\n${segiempat}`);
   }
 };

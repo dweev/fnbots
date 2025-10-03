@@ -16,11 +16,11 @@ export const command = {
   description: 'Mengubah teks menjadi superscript',
   isCommandWithoutPayment: true,
   execute: async ({ quotedMsg, sReply, arg }) => {
-    let f
+    let f;
     if ((quotedMsg && quotedMsg?.type === "extendedTextMessage") || (quotedMsg && quotedMsg?.type === "conversation")) {
-      f = quotedMsg?.body
+      f = quotedMsg?.body;
     } else if (arg.length > 0) {
-      f = arg
+      f = arg;
     } else {
       return await sReply(`Mohon berikan teks yang ingin diubah ke Superscript.`);
     }

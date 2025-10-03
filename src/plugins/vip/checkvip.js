@@ -17,7 +17,7 @@ export const command = {
   aliases: ['cekvip'],
   isCommandWithoutPayment: true,
   execute: async ({ mentionedJidList, serial, sReply }) => {
-    let targetId = mentionedJidList[0] || serial;
+    const targetId = mentionedJidList[0] || serial;
     const activeVIPs = await User.findActiveVIPs();
     const vipUser = activeVIPs.find(user => user.userId === targetId);
     if (!vipUser) {
@@ -29,4 +29,4 @@ export const command = {
     const durationMessage = formatDurationMessage(durationLeft);
     await sReply(`「 *VIP EXPIRE* 」\n\n*ID*: @${targetId.split('@')[0]}\n${durationMessage}`);
   }
-}
+};

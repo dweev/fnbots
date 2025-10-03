@@ -27,4 +27,4 @@ export const command = {
     message += `• Pengumuman: ${groupInfo.announce ? 'Dibatasi' : 'Terbuka'}`;
     await sReply(message);
   }
-}
+};

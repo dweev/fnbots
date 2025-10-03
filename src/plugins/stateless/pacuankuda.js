@@ -34,7 +34,7 @@ export const command = {
       const chosenHorse = horseData.find(h => h.name.toLowerCase() === playerBetOnName);
       if (!user || user.balance <= 0) return await sReply("User tidak ditemukan atau saldo 0.\nsilakan gunakan permainan mode grinding dulu seperti .chop, .mine, .fish, .hunt, .ngelonte, .work atau gunakan perintah .daily jika kamu belum daily claim hari ini.");
       const saldoAwal = BigInt(user.balance);
-      let bi0 = args[0] ? args[0].toLowerCase() : '';
+      const bi0 = args[0] ? args[0].toLowerCase() : '';
       if (!bi0) return await sReply(`Format salah!\nContoh: .pacuankuda 10k Yanto`);
       let bid = 0n;
       if (bi0 === 'all' || bi0 === 'allin') { bid = saldoAwal; }
@@ -60,7 +60,7 @@ export const command = {
       if (bid <= 0n) return await sReply("Jumlah taruhan harus lebih dari 0.");
       if (saldoAwal < bid) return await sReply(`Saldo tidak cukup. Diperlukan: ${formatNumber(bid)}`);
       const trackLength = 13;
-      let horses = JSON.parse(JSON.stringify(horseData));
+      const horses = JSON.parse(JSON.stringify(horseData));
       horses.forEach(h => h.progress = 0);
       const generateTrackDisplay = (horseList) => {
         let display = '🏇 *PACUAN KUDA DIMULAI* 🏇\n\n';
@@ -71,11 +71,11 @@ export const command = {
         });
         return display;
       };
-      let { key } = await sReply(`Taruhan ${formatNumber(bid)} pada *${chosenHorse.name}* diterima.\n\n${generateTrackDisplay(horses)}`);
+      const { key } = await sReply(`Taruhan ${formatNumber(bid)} pada *${chosenHorse.name}* diterima.\n\n${generateTrackDisplay(horses)}`);
       await delay(2000);
       let winner = null;
       while (!winner) {
-        for (let horse of horses) {
+        for (const horse of horses) {
           if (winner) continue;
           const move = Math.floor(Math.random() * 3) + 1;
           horse.progress += move;

@@ -18,10 +18,10 @@ export const command = {
   execute: async ({ fn, toId, user, args, serial, sReply }) => {
     await gameStateManager.startGame(serial);
     try {
-      const q = args.join(' ')
+      const q = args.join(' ');
       if (!user || user.balance <= 0) return await sReply("User tidak ditemukan atau saldo 0.\nsilakan gunakan permainan mode grinding dulu seperti .chop, .mine, .fish, .hunt, .ngelonte, .work atau gunakan perintah .daily jika kamu belum daily claim hari ini.");
       const saldoAwal = BigInt(user.balance);
-      let bi0 = args[0] ? args[0].toLowerCase() : '';
+      const bi0 = args[0] ? args[0].toLowerCase() : '';
       if (!bi0) return await sReply("Masukkan jumlah taruhan. Contoh: .bid 1k big");
       let bid = 0n;
       let isAllIn = false;
@@ -59,17 +59,17 @@ export const command = {
       taruhanData.forEach(item => {
         const cleanedItem = item.toLowerCase();
         if (cleanedItem.includes('-')) {
-          let [start, end] = cleanedItem.split('-').map(n => parseInt(n.trim(), 10));
+          const [start, end] = cleanedItem.split('-').map(n => parseInt(n.trim(), 10));
           if (!isNaN(start) && !isNaN(end) && start <= end && start >= 1 && end <= 12) {
             for (let i = start; i <= end; i++) taruhanList.push(i.toString());
           }
         } else if (cleanedItem.includes('>')) {
-          let min = parseInt(cleanedItem.replace('>', ''), 10);
+          const min = parseInt(cleanedItem.replace('>', ''), 10);
           if (!isNaN(min) && min < 12) {
             for (let i = min + 1; i <= 12; i++) taruhanList.push(i.toString());
           }
         } else if (cleanedItem.includes('<')) {
-          let max = parseInt(cleanedItem.replace('<', ''), 10);
+          const max = parseInt(cleanedItem.replace('<', ''), 10);
           if (!isNaN(max) && max > 1) {
             for (let i = 1; i < max; i++) taruhanList.push(i.toString());
           }
@@ -99,7 +99,7 @@ export const command = {
         const sanitizedPercent = bi0.replace(',', '.');
         const percentValue = parseFloat(sanitizedPercent.replace('%', ''));
         if (isNaN(percentValue) || percentValue <= 0 || percentValue > 100) return await sReply("Input persen tidak valid (1-100).");
-        let totalPercent = (saldoAwal * BigInt(Math.floor(percentValue * 100))) / 10000n;
+        const totalPercent = (saldoAwal * BigInt(Math.floor(percentValue * 100))) / 10000n;
         if (totalPercent === 0n) return await sReply("Jumlah taruhan dari persentase terlalu kecil.");
         bid = totalPercent / totalTaruhan;
         if (bid === 0n) return await sReply(`Jumlah taruhan per bet terlalu kecil, coba naikkan persentase.`);
@@ -109,8 +109,8 @@ export const command = {
       }
       if (saldoAwal < tot) return await sReply(`Saldo tidak cukup. Kamu perlu: ${formatNumber(tot)}`);
       if (tot <= 0n) return await sReply("Jumlah total taruhan harus lebih dari 0.");
-      let betInfo = `Taruhan: ${taruhanList.join(', ')}\nBet per taruhan: ${formatNumber(bid)}\nTotal bet: ${formatNumber(tot)}\n\nMemutar dadu...`;
-      let { key } = await sReply(betInfo);
+      const betInfo = `Taruhan: ${taruhanList.join(', ')}\nBet per taruhan: ${formatNumber(bid)}\nTotal bet: ${formatNumber(tot)}\n\nMemutar dadu...`;
+      const { key } = await sReply(betInfo);
       const dice1 = Math.floor(Math.random() * 6) + 1;
       const dice2 = Math.floor(Math.random() * 6) + 1;
       const totalDice = dice1 + dice2;

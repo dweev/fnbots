@@ -137,7 +137,7 @@ export async function createWASocket(dbSettings) {
       if ((connection === 'connecting' || !!qr) && pairingCode && phoneNumber && !fn.authState.creds.registered && !pairingStarted) {
         setTimeout(async () => {
           pairingStarted = true;
-          await log('Requesting Pairing Code...')
+          await log('Requesting Pairing Code...');
           let code = await fn.requestPairingCode(phoneNumber);
           code = code?.match(/.{1,4}/g)?.join('-') || code;
           await log(`Your Pairing Code : ${code}`);

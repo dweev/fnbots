@@ -8,7 +8,7 @@
 
 import path from 'path';
 import fs from 'fs-extra';
-import log from './logger.js'
+import log from './logger.js';
 import config from '../../config.js';
 
 class TempManager {

@@ -23,7 +23,7 @@ class CrotToLive extends Map {
   }
 };
 
-let duplexM = new CrotToLive();
+const duplexM = new CrotToLive();
 
 export default async function updateMessageUpsert(fn, message, dbSettings) {
   try {

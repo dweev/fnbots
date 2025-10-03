@@ -6,7 +6,7 @@
 */
 // ─── Info ────────────────────────────────
 
-import { StoreContact } from '../../../database/index.js'
+import { StoreContact } from '../../../database/index.js';
 
 export const command = {
   name: 'upstory',

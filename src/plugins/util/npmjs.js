@@ -15,7 +15,7 @@ export const command = {
   isCommandWithoutPayment: true,
   execute: async ({ arg, sReply, dbSettings }) => {
     try {
-      let packageName = arg
+      const packageName = arg;
       if (!packageName) return await sReply(`Gagal. Mohon berikan nama paket.\n\nContoh:\n${dbSettings.rname}npmjs baileys`);
       const { data: stalk } = await axios.get(`https://registry.npmjs.org/${packageName}`);
       const latestVersion = stalk['dist-tags']?.latest;

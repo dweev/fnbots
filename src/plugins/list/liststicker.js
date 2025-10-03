@@ -27,7 +27,7 @@ export const command = {
     const stickerLines = stickers.map((sticker, i) => `\n*${skip + i + 1}.* \`${sticker.name}\``);
     listText += stickerLines.join('');
     if (page < totalPages) {
-      listText += `\n\nUntuk melihat halaman selanjutnya, ketik \`.liststicker ${page + 1}\``
+      listText += `\n\nUntuk melihat halaman selanjutnya, ketik \`.liststicker ${page + 1}\``;
     }
     await sReply(listText.trim());
   },

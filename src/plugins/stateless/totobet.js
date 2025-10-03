@@ -21,7 +21,7 @@ export const command = {
       if (args.length < 3) return await sReply("Format salah!\n\nContoh:\n.totobet 1k 4D 1234\n.totobet 1k 2D 56\n.totobet 1k colok 8");
       if (!user || user.balance <= 0) return await sReply("User tidak ditemukan atau saldo 0.\nsilakan gunakan permainan mode grinding dulu seperti .chop, .mine, .fish, .hunt, .ngelonte, .work atau gunakan perintah .daily jika kamu belum daily claim hari ini.");
       const saldoAwal = BigInt(user.balance);
-      let bi0 = args[0] ? args[0].toLowerCase() : '';
+      const bi0 = args[0] ? args[0].toLowerCase() : '';
       if (!bi0) return await sReply("Masukkan jumlah taruhan.");
       let bid = 0n;
       if (bi0 === 'all' || bi0 === 'allin') {
@@ -62,7 +62,7 @@ export const command = {
       if (betType === '3d' && betNumbers.length !== 3) return await sReply("Taruhan 3D harus 3 digit.");
       if (betType === '2d' && betNumbers.length !== 2) return await sReply("Taruhan 2D harus 2 digit.");
       if (betType === 'colok' && betNumbers.length !== 1) return await sReply("Taruhan Colok harus 1 digit.");
-      let { key } = await sReply(`Taruhan Kamu pada *${betType.toUpperCase()}* dengan angka *${betNumbers}* sebesar ${formatNumber(bid)} telah diterima.\n\nMengundi hasil...`);
+      const { key } = await sReply(`Taruhan Kamu pada *${betType.toUpperCase()}* dengan angka *${betNumbers}* sebesar ${formatNumber(bid)} telah diterima.\n\nMengundi hasil...`);
       const winningNumberStr = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
       let menang = false;
       let multiplier = 0.0;

@@ -49,7 +49,7 @@ export const command = {
         return await sReply(`Tidak ada JID yang valid ditemukan dari input: "${fullSelector}"\n\nPending list: ${pendingList.length} orang`);
       }
       await fn.groupRequestParticipantsUpdate(toId, jidsToApprove, 'approve');
-      let mentionParts = [];
+      const mentionParts = [];
       for (const lid of jidsToApprove) {
         let jid;
         if (lid.endsWith('@lid')) {

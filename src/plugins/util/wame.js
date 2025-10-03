@@ -16,4 +16,4 @@ export const command = {
     if (!targetId) return await sReply(`Silakan balas pesan atau sebut nomor yang ingin kamu ubah nomornya menjadi link wa.me/`);
     await sReply(`wa.me/${targetId.split('@')[0]}`);
   }
-}
+};

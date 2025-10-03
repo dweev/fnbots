@@ -17,9 +17,9 @@ export const command = {
   aliases: ['hasil-kelilingbelahketupat'],
   execute: async ({ arg, args, dbSettings, sReply }) => {
     if (!arg) return await sReply(`Masukkan panjang sisi belah ketupat, contoh: ${dbSettings.sname}hasil-kelilingbelahketupat 5`);
-    const res = args[0]
-    const keliling = bdr.datar.keliling.belahKetupat(res, false)
-    const belahKetupat = bdr.datar.keliling.belahKetupat(res, true)
+    const res = args[0];
+    const keliling = bdr.datar.keliling.belahKetupat(res, false);
+    const belahKetupat = bdr.datar.keliling.belahKetupat(res, true);
     await sReply(`*Hasil*: ${keliling}\n${belahKetupat}`);
   }
 };

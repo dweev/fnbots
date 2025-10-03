@@ -17,9 +17,9 @@ export const command = {
   aliases: ['hasil-kelilingpersegi'],
   execute: async ({ arg, args, dbSettings, sReply }) => {
     if (!arg) return await sReply(`Masukkan panjang sisi persegi, contoh: ${dbSettings.sname}hasil-kelilingpersegi 5`);
-    const res = args[0]
-    const keliling = bdr.datar.keliling.persegi(res, false)
-    const persegi = bdr.datar.keliling.persegi(res, true)
+    const res = args[0];
+    const keliling = bdr.datar.keliling.persegi(res, false);
+    const persegi = bdr.datar.keliling.persegi(res, true);
     await sReply(`*Hasil*: ${keliling}\n${persegi}`);
   }
 };

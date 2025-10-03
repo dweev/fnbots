@@ -188,7 +188,7 @@ function formatLogObject(logObj) {
     logObj.level === 60 ? 'FATAL' :
     logObj.level === 20 ? 'DEBUG' :
     logObj.level === 10 ? 'TRACE' : 'INFO';
-  let logParts = [`[${timestamp}] ${level}: ${logObj.msg}`];
+  const logParts = [`[${timestamp}] ${level}: ${logObj.msg}`];
   const excludedKeys = ['time', 'level', 'msg', 'pid', 'hostname', 'v'];
   const additionalData = {};
   for (const key in logObj) {

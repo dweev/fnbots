@@ -17,7 +17,7 @@ export const command = {
   execute: async ({ fn, m, toId, dbSettings, quotedMsg, sReply }) => {
     const targetMsg = quotedMsg ? m.quoted || m : m.message;
     if (!targetMsg) return await sReply("Media tidak ditemukan.");
-    const mime = targetMsg?.imageMessage?.mimetype
+    const mime = targetMsg?.imageMessage?.mimetype;
     if (!mime) return await sReply("Kirim atau balas gambar untuk dijadikan lingkaran.");
     const resBuffer = await makeCircleSticker(await fn.getMediaBuffer(targetMsg));
     const patH = await saveFile(resBuffer, "makecircle", 'jpg');

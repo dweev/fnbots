@@ -42,9 +42,9 @@ export const command = {
     if (targets.length === 0) return await sReply('Tidak ada pengguna yang dituju untuk peringatan.');
     const isAutoKickActive = group.isWarningEnabled();
     const kickThreshold = group.getWarningLimit();
-    let warnedUsers = [];
-    let failedAdmins = [];
-    let failedBots = [];
+    const warnedUsers = [];
+    const failedAdmins = [];
+    const failedBots = [];
     for (const userId of targets) {
       if (userId.includes(fn.user.id)) {
         failedBots.push(userId);

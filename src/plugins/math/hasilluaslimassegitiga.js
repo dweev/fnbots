@@ -17,11 +17,11 @@ export const command = {
   aliases: ['hasil-luaslimassegitiga'],
   execute: async ({ arg, args, dbSettings, sReply }) => {
     if (!arg) throw new Error(`Masukkan panjang sisi segitiga, contoh: ${dbSettings.sname}hasil-luaslimassegitiga 5`);
-    const res = args[0]
-    const ret = args[1]
-    const rets = args[2]
-    const limas = bdr.ruang.limas.segitiga.luasPermukaan(res, ret, rets, false)
-    const segitiga = bdr.ruang.limas.segitiga.luasPermukaan(res, ret, rets, true)
+    const res = args[0];
+    const ret = args[1];
+    const rets = args[2];
+    const limas = bdr.ruang.limas.segitiga.luasPermukaan(res, ret, rets, false);
+    const segitiga = bdr.ruang.limas.segitiga.luasPermukaan(res, ret, rets, true);
     await sReply(`*Hasil*: ${limas}\n${segitiga}`);
   }
 };

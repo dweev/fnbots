@@ -15,20 +15,20 @@ export const command = {
   description: 'Add blur effect to an image',
   isCommandWithoutPayment: true,
   execute: async ({ fn, m, toId, dbSettings, quotedMsg, mentionedJidList, sReply, arg, args }) => {
-    let kontol = !arg ? 5 : (() => {
+    const kontol = !arg ? 5 : (() => {
       const num = parseInt(args[0], 10);
       if (isNaN(num)) return sReply('Argumen pertama harus angka.');
       if (num > 10) return sReply('Angka tidak boleh lebih dari 10.');
       return num;
     })();
     let bufferMedia;
-    let caption = dbSettings.autocommand;
+    const caption = dbSettings.autocommand;
     if (m.message?.imageMessage) {
-      bufferMedia = await fn.getMediaBuffer(m.message)
+      bufferMedia = await fn.getMediaBuffer(m.message);
     } else if (quotedMsg?.imageMessage) {
-      bufferMedia = await fn.getMediaBuffer(quotedMsg)
+      bufferMedia = await fn.getMediaBuffer(quotedMsg);
     } else if (mentionedJidList && mentionedJidList.length > 0) {
-      let targetJid = mentionedJidList[0];
+      const targetJid = mentionedJidList[0];
       let profilePicBuffer;
       try {
         profilePicBuffer = await fn.profilePictureUrl(targetJid, "image");

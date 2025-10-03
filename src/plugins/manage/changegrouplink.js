@@ -14,8 +14,8 @@ export const command = {
   isCommandWithoutPayment: true,
   execute: async ({ fn, m, isBotGroupAdmins, toId, sReply }) => {
     if (!m.isGroup || !isBotGroupAdmins) return await sReply(`Perintah ini hanya bisa digunakan jika bot menjadi admin grup.`);
-    await fn.groupRevokeInvite(toId)
-    let response = await fn.groupInviteCode(toId)
+    await fn.groupRevokeInvite(toId);
+    const response = await fn.groupInviteCode(toId);
     await sReply(`https://chat.whatsapp.com/${response}`);
   }
 };

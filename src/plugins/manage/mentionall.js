@@ -22,4 +22,4 @@ export const command = {
     });
     await fn.sendPesan(toId, message, m);
   }
-}
+};

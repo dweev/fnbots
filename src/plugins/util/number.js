@@ -16,4 +16,4 @@ export const command = {
     if (!targetId) return await sReply(`Silakan balas pesan atau sebut nomor yang ingin kamu ambil nomornya.`);
     await sReply(targetId.split('@')[0]);
   }
-}
+};

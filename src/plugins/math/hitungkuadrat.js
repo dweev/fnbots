@@ -17,8 +17,8 @@ export const command = {
   aliases: ['hitung-kuadrat'],
   execute: async ({ arg, args, dbSettings, sReply }) => {
     if (!arg) return await sReply(`Masukkan angka yang ingin dihitung kuadratnya, contoh: ${dbSettings.sname}hitung-kuadrat 5`);
-    const res = args[0]
-    const kuadrat = bdr.rdb.kuadrat(res)
+    const res = args[0];
+    const kuadrat = bdr.rdb.kuadrat(res);
     await sReply(`*Hasil*: ${kuadrat}`);
   }
 };

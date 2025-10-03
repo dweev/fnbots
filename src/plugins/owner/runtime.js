@@ -16,8 +16,8 @@ export const command = {
   aliases: ['uptime', 'rt'],
   isCommandWithoutPayment: true,
   execute: async ({ sReply }) => {
-    let tms = (Date.now() / 1000) - (timeStart);
-    let cts = waktu(tms);
+    const tms = (Date.now() / 1000) - (timeStart);
+    const cts = waktu(tms);
     await sReply(cts);
   }
 };

@@ -30,7 +30,7 @@ export const command = {
         messageCount[mes.sender] = (messageCount[mes.sender] || 0) + 1;
       }
     });
-    let activityList = participants.map(p => {
+    const activityList = participants.map(p => {
       const shortJid = p.id.replace('@s.whatsapp.net', '@s');
       return {
         id: p.id,

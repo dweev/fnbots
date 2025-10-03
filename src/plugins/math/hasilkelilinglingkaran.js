@@ -17,9 +17,9 @@ export const command = {
   aliases: ['hasil-kelilinglingkaran'],
   execute: async ({ arg, args, dbSettings, sReply }) => {
     if (!arg) return await sReply(`Masukkan jari-jari lingkaran, contoh: ${dbSettings.sname}hasil-kelilinglingkaran 5`);
-    const res = args[0]
-    const keliling = bdr.datar.keliling.lingkaran(res, false)
-    const lingkaran = bdr.datar.keliling.lingkaran(res, true)
+    const res = args[0];
+    const keliling = bdr.datar.keliling.lingkaran(res, false);
+    const lingkaran = bdr.datar.keliling.lingkaran(res, true);
     await sReply(`*Hasil*: ${keliling}\n${lingkaran}`);
   }
 };

@@ -18,7 +18,7 @@ export const command = {
     await gameStateManager.startGame(serial);
     try {
       if (args.length > 1) return await sReply("pesan tidak valid, contoh: .spin 10k, .spin all, .spin 50%");
-      let bi0 = args[0] ? args[0].toLowerCase() : '';
+      const bi0 = args[0] ? args[0].toLowerCase() : '';
       if (!bi0) return await sReply("Masukkan jumlah taruhan, contoh: .spin 10k, .spin all, .spin 50%");
       if (!user || user.balance <= 0) return await sReply("User tidak ditemukan atau saldo 0.\nsilakan gunakan permainan mode grinding dulu seperti .chop, .mine, .fish, .hunt, .ngelonte, .work atau gunakan perintah .daily jika kamu belum daily claim hari ini.");
       const saldoAwal = BigInt(user.balance);
@@ -63,19 +63,19 @@ export const command = {
       let winType = "";
       let multiplier;
       if (a === ' 7️⃣' && b === ' 7️⃣' && c === ' 7️⃣') {
-        multiplier = 10n
+        multiplier = 10n;
         reward = bid * multiplier;
         winType = "Jackpot 777!";
       } else if (a === '💎' && b === '💎' && c === '💎') {
-        multiplier = 7n
+        multiplier = 7n;
         reward = bid * multiplier;
         winType = "Jackpot Diamond!";
       } else if (a === b && b === c) {
-        multiplier = 4n
+        multiplier = 4n;
         reward = bid * multiplier;
         winType = "TRIPLE!";
       } else if (a === b || b === c || a === c) {
-        multiplier = 2n
+        multiplier = 2n;
         reward = bid * multiplier;
         winType = "DOUBLE!";
       }

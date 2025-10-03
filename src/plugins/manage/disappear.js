@@ -12,7 +12,7 @@ export const command = {
   description: 'Menghapus pesan secara otomatis',
   isCommandWithoutPayment: true,
   execute: async ({ fn, toId, sReply, args, reactDone }) => {
-    const _waktu = args[0]?.toLowerCase()
+    const _waktu = args[0]?.toLowerCase();
     if (_waktu === '90d') {
       await fn.sendMessage(toId, { disappearingMessagesInChat: 7776000 });
     } else if (_waktu === '7d') {
@@ -22,9 +22,9 @@ export const command = {
     } else if (_waktu === 'off') {
       await fn.sendMessage(toId, { disappearingMessagesInChat: 0 });
     } else if (args.length > 1) {
-      return await sReply('gunakan argument:\n90d, 7d, 1d, 24jam, off')
+      return await sReply('gunakan argument:\n90d, 7d, 1d, 24jam, off');
     } else {
-      return await sReply('gunakan argument:\n90d, 7d, 1d, 24jam, off')
+      return await sReply('gunakan argument:\n90d, 7d, 1d, 24jam, off');
     };
     await reactDone();
   }

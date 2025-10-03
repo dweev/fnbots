@@ -15,9 +15,9 @@ export const command = {
   isCommandWithoutPayment: true,
   execute: async ({ sReply, args, dbSettings, sPesan }) => {
     if (args) {
-      let _num = parseInt(args[0]);
+      const _num = parseInt(args[0]);
       if (isNaN(_num) || _num < 1) return await sReply(`gunakan perintah dengan benar, contoh: ${dbSettings.rname}spam 5 pesanmu`);
-      let _pesan = args.slice(1).join(' ');
+      const _pesan = args.slice(1).join(' ');
       for (let i = 0; i < _num; i++) {
         await sPesan(_pesan);
         await delay(500);

@@ -27,7 +27,7 @@ export const command = {
     const videoLines = videos.map((video, i) => `\n*${skip + i + 1}.* \`${video.name}\``);
     listText += videoLines.join('');
     if (page < totalPages) {
-      listText += `\n\nUntuk melihat halaman selanjutnya, ketik \`.listvideo ${page + 1}\``
+      listText += `\n\nUntuk melihat halaman selanjutnya, ketik \`.listvideo ${page + 1}\``;
     }
     await sReply(listText.trim());
   },

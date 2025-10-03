@@ -85,4 +85,4 @@ export const command = {
     });
     await sReply(response);
   }
-}
+};

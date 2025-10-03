@@ -16,11 +16,11 @@ export const command = {
   description: 'Mengubah teks menjadi cursive',
   isCommandWithoutPayment: true,
   execute: async ({ quotedMsg, sReply, arg }) => {
-    let c
+    let c;
     if ((quotedMsg && quotedMsg?.type === "extendedTextMessage") || (quotedMsg && quotedMsg?.type === "conversation")) {
-      c = quotedMsg?.body
+      c = quotedMsg?.body;
     } else if (arg.length > 0) {
-      c = arg
+      c = arg;
     } else {
       return await sReply(`Mohon berikan teks yang ingin diubah ke Cursive.`);
     }

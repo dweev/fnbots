@@ -15,4 +15,4 @@ export const command = {
     if (!m.isGroup || !isBotGroupAdmins) return await sReply(`Perintah ini hanya bisa digunakan di grup dan bot harus menjadi admin grup.`);
     await fn.removeProfilePicture(toId); await reactDone();
   }
-}
+};

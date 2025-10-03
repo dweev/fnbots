@@ -21,7 +21,7 @@ export const command = {
       if (args.length > 1) return await sReply("Pesan tidak valid, contoh: .aduq 10k, .aduq all, .aduq 50%");
       if (!user || user.balance <= 0) return await sReply("User tidak ditemukan atau saldo 0.\nsilakan gunakan permainan mode grinding dulu seperti .chop, .mine, .fish, .hunt, .ngelonte, .work atau gunakan perintah .daily jika kamu belum daily claim hari ini.");
       const saldoAwal = BigInt(user.balance);
-      let bi0 = args[0] ? args[0].toLowerCase() : '';
+      const bi0 = args[0] ? args[0].toLowerCase() : '';
       if (!bi0) return await sReply("Masukkan jumlah taruhan, contoh: .aduq 10k, .aduq all, .aduq 50%");
       let bid = 0n;
       if (bi0 === 'all' || bi0 === 'allin') {
@@ -54,9 +54,9 @@ export const command = {
       }
       if (bid <= 0n) return await sReply("Jumlah taruhan harus lebih dari 0.");
       if (saldoAwal < bid) return await sReply(`Saldo tidak cukup. Kamu perlu: ${formatNumber(bid)}`);
-      let { key } = await sReply(`🀄 *ADUQ* 🀄\nAnda bertaruh sebesar ${formatNumber(bid)}.\n\nMengocok kartu domino...`)
+      const { key } = await sReply(`🀄 *ADUQ* 🀄\nAnda bertaruh sebesar ${formatNumber(bid)}.\n\nMengocok kartu domino...`);
       const createDominoDeck = () => {
-        let deck = [];
+        const deck = [];
         for (let i = 0; i <= 6; i++) {
           for (let j = i; j <= 6; j++) {
             deck.push({ a: i, b: j, isBalak: i === j });
@@ -72,7 +72,7 @@ export const command = {
         return highest;
       };
       const formatDominoHand = (hand) => hand.map(c => `[${c.a}|${c.b}]`).join(' ');
-      let deck = createDominoDeck();
+      const deck = createDominoDeck();
       const playerHand = [deck.pop(), deck.pop()];
       const botHand = [deck.pop(), deck.pop()];
       const playerValue = getHandValue(playerHand);

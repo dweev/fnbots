@@ -16,11 +16,11 @@ export const command = {
   description: 'Mengubah teks menjadi emoju',
   isCommandWithoutPayment: true,
   execute: async ({ quotedMsg, sReply, arg }) => {
-    let d
+    let d;
     if ((quotedMsg && quotedMsg?.type === "extendedTextMessage") || (quotedMsg && quotedMsg?.type === "conversation")) {
-      d = quotedMsg?.body
+      d = quotedMsg?.body;
     } else if (arg.length > 0) {
-      d = arg
+      d = arg;
     } else {
       return await sReply(`Mohon berikan teks yang ingin diubah ke Emojify.`);
     }

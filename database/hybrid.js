@@ -80,7 +80,7 @@ export async function saveMediaStream(name, type, mime, filePath) {
     });
     return doc;
   } catch (err) {
-    await fs.remove(destPath).catch(() => { });
+    await fs.remove(destPath);
     throw err;
   }
 }

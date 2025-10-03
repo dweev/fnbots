@@ -16,7 +16,7 @@ const isPm2 = process.env.pm_id !== undefined || process.env.NODE_APP_INSTANCE !
 const isSelfRestarted = process.env.RESTARTED_BY_SELF === '1';
 
 function logRestartInfo() {
-  log('Starting Engine...')
+  log('Starting Engine...');
   log(`Running Mode: ${isPm2 ? 'PM2' : 'Node'} | RestartedBySelf: ${isSelfRestarted}`);
 };
 logRestartInfo();

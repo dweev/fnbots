@@ -14,7 +14,7 @@ export const command = {
   description: 'Memeriksa limit kepada member',
   isCommandWithoutPayment: true,
   execute: async ({ dbSettings, mentionedJidList, quotedParticipant, sReply }) => {
-    let targetId = quotedParticipant || (mentionedJidList && mentionedJidList[0]);
+    const targetId = quotedParticipant || (mentionedJidList && mentionedJidList[0]);
     if (!targetId) {
       let message = '';
       message += `Tidak ada user yang ditargetkan!\n\n`;

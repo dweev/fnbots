@@ -15,7 +15,7 @@ export const command = {
   isCommandWithoutPayment: true,
   execute: async ({ fn, arg, dbSettings, quotedMsg, mentionedJidList, quotedParticipant, sReply }) => {
     const blockNumber = await fn.fetchBlocklist();
-    let targets = [];
+    const targets = [];
     if (quotedMsg) {
       targets.push(quotedParticipant);
     } else if (mentionedJidList.length > 0) {
@@ -30,7 +30,7 @@ export const command = {
       return await sReply(`Tidak ada user yang ditargetkan untuk di-unblock!\n\nCara penggunaan:\n• Reply pesan user yang ingin di-unblock, atau\n• Mention user dengan @username\n• Atau gunakan nomor urut dari daftar blocklist\n\nContoh: ${dbSettings.rname}unblock @user atau .unblock 1`);
     }
     const unblocked = [];
-    for (let jid of targets) {
+    for (const jid of targets) {
       await fn.updateBlockStatus(jid, 'unblock');
       const index = blockNumber.indexOf(jid);
       if (index !== -1) blockNumber.splice(index, 1);

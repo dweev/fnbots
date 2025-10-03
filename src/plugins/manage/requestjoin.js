@@ -22,7 +22,7 @@ export const command = {
           if (p.endsWith('@lid')) {
             jid = await mongoStore.findJidByLid(p);
           } else {
-            jid = p
+            jid = p;
           }
           return `${index + 1}. @${(jid).split('@')[0]}`;
         });

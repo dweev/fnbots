@@ -16,8 +16,8 @@ export const command = {
   isCommandWithoutPayment: true,
   execute: async ({ dbSettings, reactDone, quotedMsg, arg, mentionedJidList, quotedParticipant, sReply }) => {
     if (!arg && !quotedMsg) return await sReply(`gunakan perintah dengan benar, contoh: ${dbSettings.rname}delowner @user atau reply pesan user`);
-    if (mentionedJidList.length != 0) {
-      for (let men of mentionedJidList) {
+    if (mentionedJidList.length !== 0) {
+      for (const men of mentionedJidList) {
         await User.removeMaster(men);
         await reactDone();
       }

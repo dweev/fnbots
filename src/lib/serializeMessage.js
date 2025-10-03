@@ -62,7 +62,7 @@ function unwrapMessage(msg) {
 
 export default async function serializeMessage(fn, msg) {
   try {
-    let botNumber = fn.decodeJid(fn.user?.id);
+    const botNumber = fn.decodeJid(fn.user?.id);
     let groupAdmins = [];
     let mfrom = null;
     let mchat = null;

@@ -16,11 +16,11 @@ export const command = {
   description: 'Mengubah teks menjadi brony talk',
   isCommandWithoutPayment: true,
   execute: async ({ quotedMsg, sReply, arg }) => {
-    let g
+    let g;
     if ((quotedMsg && quotedMsg?.type === "extendedTextMessage") || (quotedMsg && quotedMsg?.type === "conversation")) {
-      g = quotedMsg?.body
+      g = quotedMsg?.body;
     } else if (arg.length > 0) {
-      g = arg
+      g = arg;
     } else {
       return await sReply(`Mohon berikan teks yang ingin diubah ke Brony Talk.`);
     }

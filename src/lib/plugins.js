@@ -19,7 +19,7 @@ export const pluginCache = {
   isLoading: false,
 };
 
-let moduleUrlCache = new Set();
+const moduleUrlCache = new Set();
 
 const clearModuleCache = (moduleUrl) => {
   try {

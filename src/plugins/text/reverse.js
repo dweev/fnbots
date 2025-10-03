@@ -12,11 +12,11 @@ export const command = {
   description: 'Membalik teks',
   isCommandWithoutPayment: true,
   execute: async ({ quotedMsg, sReply, arg }) => {
-    let a
+    let a;
     if ((quotedMsg && quotedMsg?.type === "extendedTextMessage") || (quotedMsg && quotedMsg?.type === "conversation")) {
-      a = quotedMsg?.body
+      a = quotedMsg?.body;
     } else if (arg.length > 0) {
-      a = arg
+      a = arg;
     } else {
       return await sReply(`Mohon berikan teks yang ingin dibalik.`);
     }

@@ -17,11 +17,11 @@ export const command = {
   aliases: ['hitung-luasbalok'],
   execute: async ({ arg, args, dbSettings, sReply }) => {
     if (!arg) return await sReply(`Masukkan panjang, lebar, dan tinggi balok, contoh: ${dbSettings.sname}hitung-luasbalok 5 10 7`);
-    const res = args[0]
-    const ret = args[1]
-    const rea = args[2]
-    const ruang = bdr.ruang.balok('luas', res, ret, rea, false)
-    const balok = bdr.ruang.balok('luas', res, ret, rea, true)
+    const res = args[0];
+    const ret = args[1];
+    const rea = args[2];
+    const ruang = bdr.ruang.balok('luas', res, ret, rea, false);
+    const balok = bdr.ruang.balok('luas', res, ret, rea, true);
     await sReply(`*Hasil*: ${ruang}\n${balok}`);
   }
 };

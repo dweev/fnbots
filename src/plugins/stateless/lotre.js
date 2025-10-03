@@ -24,7 +24,7 @@ export const command = {
       count = parseInt(args[0].toLowerCase().replace('x', ''));
       if (isNaN(count) || count <= 0 || count > 10) return await sReply("Jumlah tiket tidak valid (1-10).");
       if (args[1]) {
-        let bi0 = args[1].toLowerCase();
+        const bi0 = args[1].toLowerCase();
         let multiplier = 1n;
         let numPart = bi0;
         if (bi0.endsWith('k')) { multiplier = 1000n; numPart = bi0.slice(0, -1); }
@@ -46,7 +46,7 @@ export const command = {
         }
       }
       if (!user || user.balance <= 0) return await sReply("User tidak ditemukan atau saldo 0.\nsilakan gunakan permainan mode grinding dulu seperti .chop, .mine, .fish, .hunt, .ngelonte, .work atau gunakan perintah .daily jika kamu belum daily claim hari ini.");
-      const saldoAwal = BigInt(user.balance)
+      const saldoAwal = BigInt(user.balance);
       const totalCost = BigInt(count) * pricePerTicket;
       if (saldoAwal < totalCost) return await sReply(`Saldo tidak cukup. Total: ${formatNumber(totalCost)}`);
       await user.minBalance(totalCost);
@@ -57,7 +57,7 @@ export const command = {
         const powerball = Math.floor(Math.random() * 26) + 1;
         tickets.push({ numbers: [...numbers].sort((a, b) => a - b), powerball });
       }
-      let { key } = await sReply(`Membeli ${count} tiket lotre`);
+      const { key } = await sReply(`Membeli ${count} tiket lotre`);
       const undian = new Set();
       while (undian.size < 5) undian.add(Math.floor(Math.random() * 69) + 1);
       const powerballUndian = Math.floor(Math.random() * 26) + 1;
@@ -85,7 +85,7 @@ export const command = {
         else if (match === 1 && powerMatch) multiplier = 3n;
         else if (powerMatch) multiplier = 2n;
         const payout = pricePerTicket * multiplier;
-        totalMenang += payout
+        totalMenang += payout;
         return { ...t, match, powerMatch, payout };
       });
       if (totalMenang > 0n) await user.addBalance(totalMenang);

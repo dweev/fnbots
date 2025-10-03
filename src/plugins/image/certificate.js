@@ -21,9 +21,9 @@ export const command = {
     const name = arg.split('|')[0].trim();
     const reason = arg.split('|')[1].trim();
     const base = await loadImage(await fs.readFile('./src/image/certificate.png'));
-    const canvas = createCanvas(base.width, base.height)
-    const ctx = canvas.getContext('2d')
-    ctx.drawImage(base, 0, 0)
+    const canvas = createCanvas(base.width, base.height);
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(base, 0, 0);
     ctx.font = '30px Old English Text MT';
     ctx.textBaseline = 'top';
     ctx.textAlign = 'center';

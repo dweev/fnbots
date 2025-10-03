@@ -33,7 +33,7 @@ export const command = {
       if (!mimeType || !mimeType.startsWith('image/')) return await sReply(`Balas pesan gambar atau kirim gambar dengan perintah ini.`);
       const resBuffer = await fn.getMediaBuffer(targetMsg);
       if (!resBuffer) return await sReply(`Gagal mendapatkan gambar dari pesan yang dibalas.`);
-      let { img } = await generateProfilePicture(resBuffer);
+      const { img } = await generateProfilePicture(resBuffer);
       await fn.query({
         tag: 'iq',
         attrs: {

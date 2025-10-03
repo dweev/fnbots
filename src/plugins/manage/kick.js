@@ -15,7 +15,7 @@ export const command = {
   execute: async ({ fn, m, toId, sReply, isBotGroupAdmins, quotedMsg, mentionedJidList, ownerNumber, reactDone }) => {
     if (!m.isGroup) return await sReply(`Perintah ini hanya bisa digunakan di grup.`);
     if (!isBotGroupAdmins) return await sReply(`Bot harus menjadi admin grup untuk menjalankan perintah ini.`);
-    let targets = [];
+    const targets = [];
     if (quotedMsg) {
       targets.push(m.quoted.sender);
     } else if (mentionedJidList.length > 0) {
@@ -23,7 +23,7 @@ export const command = {
     } else {
       return await sReply(`Gunakan perintah ini dengan membalas pesan atau tag @user yang ingin di-kick.`);
     }
-    let failedUsers = [];
+    const failedUsers = [];
     const metadata = await fn.groupMetadata(toId);
     const groupAdmins = metadata?.participants?.filter(p => p.admin) || [];
     for (const jid of targets) {

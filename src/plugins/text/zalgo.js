@@ -18,11 +18,11 @@ export const command = {
   description: 'Mengubah teks menjadi zalgo',
   isCommandWithoutPayment: true,
   execute: async ({ quotedMsg, sReply, arg }) => {
-    let text
+    let text;
     if ((quotedMsg && quotedMsg?.type === "extendedTextMessage") || (quotedMsg && quotedMsg?.type === "conversation")) {
-      text = quotedMsg?.body
+      text = quotedMsg?.body;
     } else if (arg.length > 0) {
-      text = arg
+      text = arg;
     } else {
       return await sReply(`Mohon berikan teks yang ingin di-zalgo.`);
     }
@@ -30,7 +30,7 @@ export const command = {
     for (let i = 0; i < text.length; i++) {
       result += text[i];
       for (const chars of Object.values(zalgo)) {
-        let count = Math.floor(Math.random() * 5)
+        let count = Math.floor(Math.random() * 5);
         while (count--) result += chars[Math.floor(Math.random() * chars.length)];
       }
     }

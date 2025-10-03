@@ -40,10 +40,10 @@ export const command = {
         break;
       }
       default: {
-        let message = `Gunakan:\n`
-        message += `${dbSettings.rname}banchat on untuk monaktifkan bot di group ini.\n`
-        message += `${dbSettings.rname}banchat off untuk mengaktifkan bot di group ini.\n`
-        message += `${dbSettings.rname}banchat reset untuk mereset semua pengaturan keaktifan bot di semua group..`
+        let message = `Gunakan:\n`;
+        message += `${dbSettings.rname}banchat on untuk monaktifkan bot di group ini.\n`;
+        message += `${dbSettings.rname}banchat off untuk mengaktifkan bot di group ini.\n`;
+        message += `${dbSettings.rname}banchat reset untuk mereset semua pengaturan keaktifan bot di semua group..`;
         await sReply(message);
       }
     }

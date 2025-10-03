@@ -39,7 +39,7 @@ export const command = {
       message += `Mmessagekkan nilai positif untuk memberikan limit.`;
       return await sReply(message);
     }
-    let targetId = quotedParticipant || (mentionedJidList && mentionedJidList[0]);
+    const targetId = quotedParticipant || (mentionedJidList && mentionedJidList[0]);
     if (!targetId) {
       let message = '';
       message += `Target user tidak ditemukan!\n\n`;

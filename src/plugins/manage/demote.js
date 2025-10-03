@@ -29,4 +29,4 @@ export const command = {
     await fn.demoteParticipant(toId, targetId);
     await sReply(`Sukses menghapus @${targetId.split('@')[0]} dari admin.`);
   }
-}
+};

@@ -15,7 +15,7 @@ export const command = {
   execute: async ({ fn, m, toId, sReply, isBotGroupAdmins, quotedMsg, mentionedJidList, args, dbSettings, serial }) => {
     if (!m.isGroup) return await sReply('Perintah ini hanya bisa digunakan di grup.');
     if (!isBotGroupAdmins) return await sReply("Saya harus menjadi admin di grup ini untuk bisa mengundang orang lain.");
-    let targets = [];
+    const targets = [];
     if (quotedMsg) {
       targets.push(m.quoted.sender);
     } else if (mentionedJidList.length > 0) {

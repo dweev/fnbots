@@ -12,7 +12,7 @@ export const command = {
   description: 'Memblokir user dari bot',
   isCommandWithoutPayment: true,
   execute: async ({ fn, toId, arg, dbSettings, quotedMsg, mentionedJidList, quotedParticipant, sReply }) => {
-    let targets = [];
+    const targets = [];
     if (quotedMsg) {
       targets.push(quotedParticipant);
     } else if (mentionedJidList.length > 0) {
@@ -29,7 +29,7 @@ export const command = {
       if (b.admin) a.push({ id: b.id, admin: b.admin });
       return a;
     }, []) || [];
-    for (let jid of targets) {
+    for (const jid of targets) {
       if (groupAdmins && groupAdmins.some(admin => admin.id === jid)) {
         failed.push(jid);
         continue;

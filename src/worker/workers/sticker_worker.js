@@ -14,7 +14,7 @@ import { tmpDir } from '../../lib/tempManager.js';
 async function runConversion(mediaBuffer, type) {
   const tmpFileIn = await tmpDir.createTempFileWithContent(mediaBuffer, '');
   const tmpFileOut = tmpDir.createTempFile('webp');
-  let ffmpegCommand = ffmpeg(tmpFileIn);
+  const ffmpegCommand = ffmpeg(tmpFileIn);
   if (type === 'image') {
     ffmpegCommand.addOutputOptions([
       '-vcodec', 'libwebp', '-vf',

@@ -17,9 +17,9 @@ export const command = {
   aliases: ['hitung-luasbola'],
   execute: async ({ arg, args, dbSettings, sReply }) => {
     if (!arg) return await sReply(`Masukkan jari-jari bola, contoh: ${dbSettings.sname}hitung-luasbola 5`);
-    const res = args[0]
-    const ruang = bdr.ruang.bola('luas', res, false)
-    const bola = bdr.ruang.bola('luas', res, true)
+    const res = args[0];
+    const ruang = bdr.ruang.bola('luas', res, false);
+    const bola = bdr.ruang.bola('luas', res, true);
     await sReply(`*Hasil*: ${ruang}\n${bola}`);
   }
 };

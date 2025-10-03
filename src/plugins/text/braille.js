@@ -16,11 +16,11 @@ export const command = {
   description: 'Mengubah teks menjadi braille',
   isCommandWithoutPayment: true,
   execute: async ({ quotedMsg, sReply, arg }) => {
-    let b
+    let b;
     if ((quotedMsg && quotedMsg?.type === "extendedTextMessage") || (quotedMsg && quotedMsg?.type === "conversation")) {
-      b = quotedMsg?.body
+      b = quotedMsg?.body;
     } else if (arg.length > 0) {
-      b = arg
+      b = arg;
     } else {
       return await sReply(`Mohon berikan teks yang ingin diubah ke Braille.`);
     }

@@ -15,10 +15,10 @@ export const command = {
   isCommandWithoutPayment: true,
   execute: async ({ sReply, args, mentionedJidList, dbSettings }) => {
     if (mentionedJidList.length !== 0) {
-      for (let a of mentionedJidList) {
+      for (const a of mentionedJidList) {
         const groupsFound = await getCommonGroups(a);
         let list = '';
-        for (let grp of groupsFound) {
+        for (const grp of groupsFound) {
           list += `${grp.subject || grp.formattedTitle || 'Unnamed Group'}\n`;
         }
         await sReply(`Hasil pencarian untuk:\n@${a.split('@')[0]}\n\n${list || 'Tidak ditemukan grup.'}`);
@@ -27,7 +27,7 @@ export const command = {
       const a = args[0].replace(/[^0-9]/g, '') + '@s.whatsapp.net';
       const groupsFound = await getCommonGroups(a);
       let list = '';
-      for (let grp of groupsFound) {
+      for (const grp of groupsFound) {
         list += `${grp.subject || grp.formattedTitle || 'Unnamed Group'}\n`;
       }
       await sReply(`Hasil pencarian untuk:\n@${a.split('@')[0]}\n\n${list || 'Tidak ditemukan grup.'}`);

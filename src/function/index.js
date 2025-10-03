@@ -7,13 +7,16 @@
 // ─── info src/function/index.js ─────────────────
 
 import {
+  colorNameMap, getContrastColor, generateFakeChatWithQCGenerator, processAllTextFormatting
+} from './fakeFunction.js';
+import {
   SESSION_TIMEOUT, getSession, safetySettings
 } from './chatbot.js';
 import { 
   generateBoardImage 
 } from './chess.js';
 import { 
-  makeCircleSticker, parseImageSelection, cleanYoutubeUrl, chunkArray, fetchTikTokData, buildBaseCaption, sendImages
+  makeCircleSticker, parseImageSelection, cleanYoutubeUrl, chunkArray, fetchTikTokData, buildBaseCaption, sendImages, webpFormatter, cleanFormattingText, formatTimestampToHourMinute
 } from './function2.js';
 import { 
   PLAYER_BLACK, PLAYER_WHITE,fileLabels, rankLabels, parseOthelloMove, makeOthelloMove, getValidOthelloMoves, calculateOthelloScore, generateOthelloBoardImage, createOthelloBoard
@@ -53,5 +56,5 @@ import {
 } from './math.js';
 
 export { 
-  parseNIK, speedtest, getCommonGroups, getServerIp, formatNumber, saveFile, getTxt, getSerial, expiredVIPcheck, expiredCheck, sendAndCleanupFile, convertAudio, writeExif, getBuffer, mycmd, reviver, replacer, msgs, randomByte, arrayRemove, ulang, list, firstUpperCase, formatTimeAgo, formatCommandList, formatDurationMessage, formatDuration, waktu, color, bytesToSize, parseSelector, archimed, randomChoice, getSizeMedia, safeStringify, checkDepth, processContactUpdate, updateContact, isUserVerified, checkCommandAccess, textMatch2, textMatch1, initializeFuse, videoToWebp, gifToWebp, imageToWebp, deepfry, glitch, mataikan, mirror, approved, rejected, thuglife, tobecontinue, subtitle, burn, blur, ghost, getMyLevel, getMyBalance, getLeaderboardText, makeCircleSticker, parseCheatAmount, wrapText, parseImageSelection, cleanYoutubeUrl, chunkArray, fetchTikTokData, buildBaseCaption, sendImages, generateBoardImage, formatHandSimple, getHandDetails, anteBonusMultipliers, createDeck, shuffleDeck, formatKartu, calculateScore, rollDice, generateUlarTanggaImage, runBotUlarTanggaTurnV2, runBotUlarTanggaTurn, PLAYER_BLACK, PLAYER_WHITE,fileLabels, rankLabels, parseOthelloMove, makeOthelloMove, getValidOthelloMoves, calculateOthelloScore, generateOthelloBoardImage, runBotLudoTurns, calculateNewPosition, HOME_POSITIONS, checkForCapture, generateLudoBoard, startLudoTimeout, runBotTurn41, calculateSamgongValue, runBotSamgongTurn, emoji_role, checkWinner, formatTicTacToeBoard, formatMinesweeperBoard, revealCell, checkWinCondition, generateSudokuBoardImage, parseSudokuCoord, SESSION_TIMEOUT, getSession, safetySettings, turboBoard, createRandomMap, createOthelloBoard, generateMinesweeperBoard, PLAYERS, BASE_POSITIONS, modes, genMath, endGame, initializeGameWW, startUlarTanggaTimeout
+  parseNIK, speedtest, getCommonGroups, getServerIp, formatNumber, saveFile, getTxt, getSerial, expiredVIPcheck, expiredCheck, sendAndCleanupFile, convertAudio, writeExif, getBuffer, mycmd, reviver, replacer, msgs, randomByte, arrayRemove, ulang, list, firstUpperCase, formatTimeAgo, formatCommandList, formatDurationMessage, formatDuration, waktu, color, bytesToSize, parseSelector, archimed, randomChoice, getSizeMedia, safeStringify, checkDepth, processContactUpdate, updateContact, isUserVerified, checkCommandAccess, textMatch2, textMatch1, initializeFuse, videoToWebp, gifToWebp, imageToWebp, deepfry, glitch, mataikan, mirror, approved, rejected, thuglife, tobecontinue, subtitle, burn, blur, ghost, getMyLevel, getMyBalance, getLeaderboardText, makeCircleSticker, parseCheatAmount, wrapText, parseImageSelection, cleanYoutubeUrl, chunkArray, fetchTikTokData, buildBaseCaption, sendImages, generateBoardImage, formatHandSimple, getHandDetails, anteBonusMultipliers, createDeck, shuffleDeck, formatKartu, calculateScore, rollDice, generateUlarTanggaImage, runBotUlarTanggaTurnV2, runBotUlarTanggaTurn, PLAYER_BLACK, PLAYER_WHITE,fileLabels, rankLabels, parseOthelloMove, makeOthelloMove, getValidOthelloMoves, calculateOthelloScore, generateOthelloBoardImage, runBotLudoTurns, calculateNewPosition, HOME_POSITIONS, checkForCapture, generateLudoBoard, startLudoTimeout, runBotTurn41, calculateSamgongValue, runBotSamgongTurn, emoji_role, checkWinner, formatTicTacToeBoard, formatMinesweeperBoard, revealCell, checkWinCondition, generateSudokuBoardImage, parseSudokuCoord, SESSION_TIMEOUT, getSession, safetySettings, turboBoard, createRandomMap, createOthelloBoard, generateMinesweeperBoard, PLAYERS, BASE_POSITIONS, modes, genMath, endGame, initializeGameWW, startUlarTanggaTimeout, colorNameMap, getContrastColor, webpFormatter, cleanFormattingText, formatTimestampToHourMinute, generateFakeChatWithQCGenerator, processAllTextFormatting
 };

@@ -6,8 +6,9 @@
 */
 // ─── info src/function/function2.js ─────────────
 
-import { createCanvas, loadImage } from 'canvas';
+import sharp from 'sharp';
 import { delay } from 'baileys';
+import { createCanvas, loadImage } from 'canvas';
 import { Downloader } from '@tobyg74/tiktok-api-dl';
 
 export function cleanYoutubeUrl(url) {
@@ -102,4 +103,45 @@ export async function makeCircleSticker(buffer) {
   ctx.clip();
   ctx.drawImage(img, sx, sy, diameter, diameter, 0, 0, diameter, diameter);
   return canvas.toBuffer('image/png');
+};
+export async function webpFormatter(buffer, formatFit) {
+  return await sharp(buffer)
+    .resize(512, 512, {
+      fit: formatFit
+    })
+    .webp()
+    .toBuffer();
+};
+export function cleanFormattingText(text) {
+  if (!text || typeof text !== 'string') return text;
+  const patterns = [
+    /\*~_([^~*_]+)_~*/g,
+    /_\*~([^*~_]+)~\*_/g,
+    /~_\*([^~*_]+)\*_~/g,
+    /\*_~([^~*_]+)~_*/g,
+    /_\*([^*_]+)\*_/g,
+    /\*_([^*_]+)_*/g,
+
+    /\*~([^~*]+)~\*/g,
+    /~\*([^~*]+)\*~/g,
+    /_~([^~_]+)~_/g,
+    /~_([^~_]+)_~/g,
+
+    /\*{1,2}([^*]+)\*{1,2}/g,
+    /_{1,2}([^_]+)_{1,2}/g,
+    /~{1,2}([^~]+)~{1,2}/g,
+    /```([^`]+)```/g
+  ];
+  let cleanedText = text;
+  patterns.forEach(pattern => {
+    cleanedText = cleanedText.replace(pattern, '$1');
+  });
+  return cleanedText.trim();
+};
+export function formatTimestampToHourMinute(ts) {
+  if (ts.toString().length === 13) ts = Math.floor(ts / 1000);
+  const date = new Date(ts * 1000);
+  const hours = date.getHours().toString().padStart(2, '0');
+  const minutes = date.getMinutes().toString().padStart(2, '0');
+  return `${hours}.${minutes}`;
 };

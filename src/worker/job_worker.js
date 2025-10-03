@@ -10,12 +10,14 @@ import stickerJob from './jobs/sticker.js';
 import groupImageJob from './jobs/group_image.js';
 import audioChangerJob from './jobs/audio_changer.js';
 import mediaProcessorJob from './jobs/media_processor.js';
+import imageGeneratorJob from './jobs/image_generator.js';
 
 const jobMap = {
   sticker: stickerJob,
   groupImage: groupImageJob,
   audioChanger: audioChangerJob,
   mediaProcessor: mediaProcessorJob,
+  imageGenerator: imageGeneratorJob,
 };
 
 export default async function(job) {

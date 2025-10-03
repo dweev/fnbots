@@ -19,7 +19,7 @@ import { runJob } from '../src/worker/worker_manager.js';
 import { restartManager } from '../src/lib/restartManager.js';
 import { cleanupPlugins, pluginCache } from '../src/lib/plugins.js';
 import { performanceManager } from '../src/lib/performanceManager.js';
-import { User, Group, Settings, Command, StoreGroupMetadata, OTPSession, Media, DatabaseBot } from '../database/index.js';
+import { User, Group, Settings, Command, StoreGroupMetadata, OTPSession, Media, DatabaseBot, StoreMessages } from '../database/index.js';
 import { handleAntiDeleted, handleAutoJoin, handleAudioChanger, handleAutoSticker, handleChatbot, handleAutoDownload, handleGameBotResponse } from '../src/handler/index.js';
 import { color, msgs, mycmd, safeStringify, sendAndCleanupFile, waktu, checkCommandAccess, isUserVerified, textMatch1, textMatch2, expiredVIPcheck, expiredCheck, getSerial, getTxt, initializeFuse } from '../src/function/index.js';
 
@@ -547,7 +547,7 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
                   serial, user, groupData, botNumber, mygroupMembers, mygroup, isPrivileged, pushname, yts, tebaklirik, tekateki, tebakkata, susunkata, 
                   tebakkimia, tebaknegara, tebakbendera, tebakgambar, caklontong, sudokuGame, family100, hangman, chatBots, sessions, chessGame, othelloGame, 
                   ludoSessions, game41Sessions, gamematematika, werewolfSessions, minesweeperSessions, ularTanggaSessions, tictactoeSessions, samgongSessions, 
-                  tebakkalimat, siapakahaku, ulartangga, tebakgame
+                  tebakkalimat, siapakahaku, ulartangga, tebakgame, sendRawWebpAsSticker, StoreMessages
                 };
                 await command.execute(commandArgs);
                 commandFound = true;

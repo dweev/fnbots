@@ -93,7 +93,7 @@ export async function createWASocket(dbSettings) {
   fn.getPNForLID = authStore.getPNForLID;
   fn.getLIDForPN = authStore.getLIDForPN;
   fn.getLidMappings = authStore.getLidMappings;
-  
+
   fn.ev.on('lid-mapping.update', async ({ lid, pn }) => {
     try {
       await log(`LID mapping update received: ${pn} <-> ${lid}`);
@@ -210,5 +210,5 @@ export async function createWASocket(dbSettings) {
       await log(error, true);
     }
   });
-  return fn;
+  return { fn, authStore };
 }

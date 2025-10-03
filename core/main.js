@@ -31,6 +31,7 @@ const __dirname = dirname(__filename);
 
 let dbSettings;
 let fn;
+let authStore;
 global.randomSuffix = randomByte(16);
 global.debugs = false;
 
@@ -125,7 +126,7 @@ function setupWhatsAppEventHandlers(fn) {
     for (const participantId in update) {
       let resolvedJid;
       if (participantId.endsWith('@lid')) {
-        resolvedJid = await mongoStore.findJidByLid(participantId);
+        resolvedJid = await mongoStore.resolveJid(participantId);
       } else {
         resolvedJid = jidNormalizedUser(participantId);
       }
@@ -155,7 +156,11 @@ async function starts() {
     await initializeFuse();
     startPluginWatcher();
     mongoStore.init();
-    fn = await createWASocket(dbSettings);
+    const result = await createWASocket(dbSettings);
+    fn = result.fn;
+    authStore = result.authStore;
+    mongoStore.setAuthStore(authStore);
+    await log('AuthStore successfully injected into MongoStore');
     setupWhatsAppEventHandlers(fn);
     await performanceManager.initialize(fn, config, dbSettings);
   } catch (error) {
@@ -168,6 +173,10 @@ async function starts() {
 signalHandler.register('database', async (signal) => {
   await log(`${signal}: Database cleanup initiated...`);
   try {
+    if (authStore) {
+      await authStore.saveCreds();
+      await log('Credentials saved');
+    }
     if (dbSettings) {
       await Settings.updateSettings(dbSettings);
     }

@@ -54,13 +54,13 @@ export async function handleGameBotResponse(params) {
       if (store && quotedMsg.body && regex.test(quotedMsg.body)) {
         const game = store[toId];
         const counthits = { $inc: { userCount: 1 } };
-        const addStat = () => {
-          user.addXp();
-          performanceManager.cache.updateUserStats(user.userId, counthits);
+        const addStat = async () => {
+          await user.addXp();
+          await performanceManager.cache.updateUserStats(user.userId, counthits);
         };
         if (!game || quotedMsg?.id !== game[0]?.id) {
           sReply(`Soal itu sudah berakhir`);
-          addStat();
+          await addStat();
           return true;
         }
         const gameData = game[1];
@@ -80,7 +80,7 @@ export async function handleGameBotResponse(params) {
             await sReply(`*Jawaban Salah!*\nMasih ada ${chances} kesempatan`);
           }
         }
-        addStat();
+        await addStat();
         return true;
       }
     }
@@ -166,7 +166,7 @@ export async function handleGameBotResponse(params) {
           delete hangman[toId];
           await sReply(pesanAkhir, { mentions });
           await user.addXp();
-          performanceManager.cache.updateUserStats(user.userId, counthits);
+          await performanceManager.cache.updateUserStats(user.userId, counthits);
           return true;
         }
       } else {
@@ -177,7 +177,7 @@ export async function handleGameBotResponse(params) {
           await user.addXp();
           await user.minBalance(penalti);
           await sReply(`😵 @${serial.split('@')[0]} kehabisan nyawa!\n💸 Penalti: -${penalti} saldo`, { mentions: [serial] });
-          performanceManager.cache.updateUserStats(user.userId, counthits);
+          await performanceManager.cache.updateUserStats(user.userId, counthits);
         }
       }
       return true;
@@ -218,7 +218,7 @@ export async function handleGameBotResponse(params) {
         await tmpDir.deleteFile(outputPath);
         delete chessGame[toId];
         await user.addXp();
-        performanceManager.cache.updateUserStats(user.userId, counthits);
+        await performanceManager.cache.updateUserStats(user.userId, counthits);
         return true;
       }
       await delay(1000);
@@ -250,7 +250,7 @@ export async function handleGameBotResponse(params) {
         await tmpDir.deleteFile(outputPath);
         delete chessGame[toId];
         await user.addXp();
-        performanceManager.cache.updateUserStats(user.userId, counthits);
+        await performanceManager.cache.updateUserStats(user.userId, counthits);
         return true;
       }
       if (gameState.game.isDraw()) {
@@ -260,7 +260,7 @@ export async function handleGameBotResponse(params) {
         await tmpDir.deleteFile(outputPath);
         delete chessGame[toId];
         await user.addXp();
-        performanceManager.cache.updateUserStats(user.userId, counthits);
+        await performanceManager.cache.updateUserStats(user.userId, counthits);
         return true;
       }
       caption += `Giliran Kamu selanjutnya.`;
@@ -270,7 +270,7 @@ export async function handleGameBotResponse(params) {
       await fn.sendFilePath(toId, caption, outputPath, { quoted: m });
       await tmpDir.deleteFile(outputPath);
       await user.addXp();
-      performanceManager.cache.updateUserStats(user.userId, counthits);
+      await performanceManager.cache.updateUserStats(user.userId, counthits);
       return true;
     }
   }
@@ -283,7 +283,7 @@ export async function handleGameBotResponse(params) {
       clearTimeout(gameState.timeoutId);
       delete ulartangga[toId];
       await user.addXp();
-      performanceManager.cache.updateUserStats(user.userId, counthits);
+      await performanceManager.cache.updateUserStats(user.userId, counthits);
       await sReply("Permainan Ular Tangga telah dihentikan.");
       return true;
     }
@@ -309,13 +309,13 @@ export async function handleGameBotResponse(params) {
         if (finalBoard) await sReply({ image: finalBoard, caption: moveText + `\n🎉 Selamat, Kamu MENANG!`, mentions: [serial] });
         delete ulartangga[toId];
         await user.addXp();
-        performanceManager.cache.updateUserStats(user.userId, counthits);
+        await performanceManager.cache.updateUserStats(user.userId, counthits);
         return true;
       }
       gameState.turn = 'bot';
       await sReply(moveText + `\nSekarang giliran Bot...`);
       await user.addXp();
-      performanceManager.cache.updateUserStats(user.userId, counthits);
+      await performanceManager.cache.updateUserStats(user.userId, counthits);
       setTimeout(() => runBotUlarTanggaTurnV2(toId, m, fn, ulartangga), 1000);
     }
     return true;
@@ -328,7 +328,7 @@ export async function handleGameBotResponse(params) {
     if (gameState.turn !== PLAYER_BLACK) return true;
     const stopKeywords = ['menyerah', 'stop', 'surrender'];
     if (stopKeywords.includes(messageText)) {
-      performanceManager.cache.updateUserStats(user.userId, counthits);
+      await performanceManager.cache.updateUserStats(user.userId, counthits);
       await sReply(`Kamu telah menyerah. Bot memenangkan permainan Othello. 🤖`);
       clearTimeout(gameState.timeoutId);
       delete othelloGame[toId];
@@ -382,7 +382,7 @@ export async function handleGameBotResponse(params) {
       clearTimeout(gameState.timeoutId);
       delete othelloGame[toId];
       await user.addXp();
-      performanceManager.cache.updateUserStats(user.userId, counthits);
+      await performanceManager.cache.updateUserStats(user.userId, counthits);
       return true;
     }
     if (playerNextMoves.length > 0) {
@@ -465,7 +465,7 @@ export async function handleGameBotResponse(params) {
       await sReply(`Kamu telah menyerah. Bot memenangkan permainan. 🤖`);
       delete game41Sessions[toId];
       await user.addXp();
-      performanceManager.cache.updateUserStats(user.userId, counthits);
+      await performanceManager.cache.updateUserStats(user.userId, counthits);
       return true;
     }
     if (['ambil dek', 'ambil buangan'].includes(messageText) && gameState.playerHand.length === 4) {
@@ -480,7 +480,7 @@ export async function handleGameBotResponse(params) {
         `Ketik *buang <nomor kartu>* (1-5) di grup untuk membuang kartu.`;
       await fn.sendPesan(gameState.playerJid, privateMessage, m);
       await user.addXp();
-      performanceManager.cache.updateUserStats(user.userId, counthits);
+      await performanceManager.cache.updateUserStats(user.userId, counthits);
       return true;
     }
     if (messageText.startsWith('buang ') && gameState.playerHand.length === 5) {
@@ -494,7 +494,7 @@ export async function handleGameBotResponse(params) {
       gameState.turn = 'bot';
       await sReply(`Kamu membuang kartu [ ${discardedCard.display} ]. Giliran Bot...`);
       await user.addXp();
-      performanceManager.cache.updateUserStats(user.userId, counthits);
+      await performanceManager.cache.updateUserStats(user.userId, counthits);
       setTimeout(() => runBotTurn41(toId, m, fn, game41Sessions), 2000);
       return true;
     }
@@ -511,7 +511,7 @@ export async function handleGameBotResponse(params) {
       await sReply(resultText);
       delete game41Sessions[toId];
       await user.addXp();
-      performanceManager.cache.updateUserStats(user.userId, counthits);
+      await performanceManager.cache.updateUserStats(user.userId, counthits);
       return true;
     }
   }
@@ -535,7 +535,7 @@ export async function handleGameBotResponse(params) {
       delete samgongSessions[toId];
       await sReply('Kamu telah berdiri dari meja Samgong. Sesi dihentikan.');
       await user.addXp();
-      performanceManager.cache.updateUserStats(user.userId, counthits);
+      await performanceManager.cache.updateUserStats(user.userId, counthits);
       return true;
     }
     if (gameState.status !== 'player_turn') return true;
@@ -555,14 +555,14 @@ export async function handleGameBotResponse(params) {
         await sReply(`💥 *HANGUS!* Nilai kartu Kamu (*${playerScore}*) melebihi 30. Bot menang!`);
         delete samgongSessions[toId];
         await user.addXp();
-        performanceManager.cache.updateUserStats(user.userId, counthits);
+        await performanceManager.cache.updateUserStats(user.userId, counthits);
         return true;
       } else {
         privateMessage += `\n\nKetik *hit* lagi atau *stand*.`;
         await fn.sendPesan(gameState.playerJid, privateMessage, m);
         startTimeout(toId);
         await user.addXp();
-        performanceManager.cache.updateUserStats(user.userId, counthits);
+        await performanceManager.cache.updateUserStats(user.userId, counthits);
         return true;
       }
     }
@@ -602,7 +602,7 @@ export async function handleGameBotResponse(params) {
           await sReply(`Kamu memeriksa @${targetPlayer.id.split('@')[0]}. Dia adalah seorang *${targetPlayer.role}* ${emoji_role(targetPlayer.role)}.`);
         }
         await user.addXp();
-        performanceManager.cache.updateUserStats(user.userId, counthits);
+        await performanceManager.cache.updateUserStats(user.userId, counthits);
       } catch (error) {
         await sReply(error.message);
       }
@@ -618,7 +618,7 @@ export async function handleGameBotResponse(params) {
         if (targetPlayer.id === serial) throw new Error("Kamu tidak bisa vote diri sendiri.");
         gameState.votes[serial] = targetPlayer.id;
         await user.addXp();
-        performanceManager.cache.updateUserStats(user.userId, counthits);
+        await performanceManager.cache.updateUserStats(user.userId, counthits);
       } catch (error) {
         await sReply(error.message);
       }
@@ -645,7 +645,7 @@ export async function handleGameBotResponse(params) {
       delete tictactoeSessions[toId];
       await sReply('Permainan Tic-Tac-Toe dihentikan.');
       await user.addXp();
-      performanceManager.cache.updateUserStats(user.userId, counthits);
+      await performanceManager.cache.updateUserStats(user.userId, counthits);
       return true;
     }
     if (gameState.turn !== 'player') return true;
@@ -666,7 +666,7 @@ export async function handleGameBotResponse(params) {
       await sReply(endText);
       delete tictactoeSessions[toId];
       await user.addXp();
-      performanceManager.cache.updateUserStats(user.userId, counthits);
+      await performanceManager.cache.updateUserStats(user.userId, counthits);
       return true;
     }
     await sReply("Langkah Kamu diterima. Bot sedang berpikir...");
@@ -712,7 +712,7 @@ export async function handleGameBotResponse(params) {
       await sReply(endText);
       delete tictactoeSessions[toId];
       await user.addXp();
-      performanceManager.cache.updateUserStats(user.userId, counthits);
+      await performanceManager.cache.updateUserStats(user.userId, counthits);
       return true;
     }
     gameState.turn = 'player';
@@ -741,7 +741,7 @@ export async function handleGameBotResponse(params) {
       delete ularTanggaSessions[toId];
       await sReply('Sesi Ular Tangga berhasil dihentikan.');
       await user.addXp();
-      performanceManager.cache.updateUserStats(user.userId, counthits);
+      await performanceManager.cache.updateUserStats(user.userId, counthits);
       return true;
     }
     if (gameState.turn !== 'player') return true;
@@ -770,7 +770,7 @@ export async function handleGameBotResponse(params) {
         await sReply(playerText);
         delete ularTanggaSessions[toId];
         await user.addXp();
-        performanceManager.cache.updateUserStats(user.userId, counthits);
+        await performanceManager.cache.updateUserStats(user.userId, counthits);
         return true;
       }
       if (isDouble) {
@@ -783,7 +783,7 @@ export async function handleGameBotResponse(params) {
       }
       await sReply(playerText);
       await user.addXp();
-      performanceManager.cache.updateUserStats(user.userId, counthits);
+      await performanceManager.cache.updateUserStats(user.userId, counthits);
     }
     return true;
   }
@@ -809,7 +809,7 @@ export async function handleGameBotResponse(params) {
     if (action === 'stop' || action === 'menyerah') {
       delete minesweeperSessions[toId];
       await user.addXp();
-      performanceManager.cache.updateUserStats(user.userId, counthits);
+      await performanceManager.cache.updateUserStats(user.userId, counthits);
       await sReply("Permainan Minesweeper dihentikan.");
       return true;
     }
@@ -824,14 +824,14 @@ export async function handleGameBotResponse(params) {
       if (gameState.playerBoard[row][col].status === 'terbuka') {
         startMinesweeperTimeout(toId);
         await user.addXp();
-        performanceManager.cache.updateUserStats(user.userId, counthits);
+        await performanceManager.cache.updateUserStats(user.userId, counthits);
         await sReply("Kotak itu sudah terbuka.");
         return true;
       }
       if (gameState.playerBoard[row][col].status === 'ditandai') {
         startMinesweeperTimeout(toId);
         await user.addXp();
-        performanceManager.cache.updateUserStats(user.userId, counthits);
+        await performanceManager.cache.updateUserStats(user.userId, counthits);
         await sReply("Kotak ini ditandai dengan bendera. Gunakan 'batal' terlebih dahulu jika ingin membukanya.");
         return true;
       }
@@ -841,7 +841,7 @@ export async function handleGameBotResponse(params) {
         await sReply("💣 BOOM! Kamu menginjak bom. Game Selesai.\n" + finalBoard);
         delete minesweeperSessions[toId];
         await user.addXp();
-        performanceManager.cache.updateUserStats(user.userId, counthits);
+        await performanceManager.cache.updateUserStats(user.userId, counthits);
         return true;
       }
       revealCell(row, col, gameState);
@@ -851,7 +851,7 @@ export async function handleGameBotResponse(params) {
         await sReply("🎉 Selamat! Kamu menemukan semua bom dan MEMENANGKAN permainan!\n" + finalBoard);
         delete minesweeperSessions[toId];
         await user.addXp();
-        performanceManager.cache.updateUserStats(user.userId, counthits);
+        await performanceManager.cache.updateUserStats(user.userId, counthits);
         return true;
       }
     } else if (action === 'tandai') {
@@ -866,7 +866,7 @@ export async function handleGameBotResponse(params) {
     await sReply("Langkah diterima:\n" + formatMinesweeperBoard(gameState.playerBoard));
     startMinesweeperTimeout(toId);
     await user.addXp();
-    performanceManager.cache.updateUserStats(user.userId, counthits);
+    await performanceManager.cache.updateUserStats(user.userId, counthits);
     return true;
   }
   if (quotedMsg && /^Berapa hasil dari/i.test(quotedMsg.body)) {
@@ -875,7 +875,7 @@ export async function handleGameBotResponse(params) {
       const userAnswer = parseInt(body.trim());
       if (isNaN(userAnswer)) {
         await user.addXp();
-        performanceManager.cache.updateUserStats(user.userId, counthits);
+        await performanceManager.cache.updateUserStats(user.userId, counthits);
         return true;
       }
       const math = gamematematika[toId][1];
@@ -885,7 +885,7 @@ export async function handleGameBotResponse(params) {
         clearTimeout(gamematematika[toId][3]);
         delete gamematematika[toId];
         await user.addXp();
-        performanceManager.cache.updateUserStats(user.userId, counthits);
+        await performanceManager.cache.updateUserStats(user.userId, counthits);
         return true;
       } else {
         if (--gamematematika[toId][2] === 0) {
@@ -893,11 +893,11 @@ export async function handleGameBotResponse(params) {
           clearTimeout(gamematematika[toId][3]);
           delete gamematematika[toId];
           await user.addXp();
-          performanceManager.cache.updateUserStats(user.userId, counthits);
+          await performanceManager.cache.updateUserStats(user.userId, counthits);
           return true;
         } else {
           await user.addXp();
-          performanceManager.cache.updateUserStats(user.userId, counthits);
+          await performanceManager.cache.updateUserStats(user.userId, counthits);
           await sReply(`*Jawaban Salah!*\nMasih ada ${gamematematika[toId][2]} kesempatan`);
           return true;
         }
@@ -905,7 +905,7 @@ export async function handleGameBotResponse(params) {
     } else {
       await sReply(`Soal itu sudah berakhir`);
       await user.addXp();
-      performanceManager.cache.updateUserStats(user.userId, counthits);
+      await performanceManager.cache.updateUserStats(user.userId, counthits);
       return true;
     }
   }
@@ -913,7 +913,7 @@ export async function handleGameBotResponse(params) {
     const counthits = { $inc: { userCount: 1 } };
     const addStat = async () => {
       await user.addXp();
-      performanceManager.cache.updateUserStats(user.userId, counthits);
+      await performanceManager.cache.updateUserStats(user.userId, counthits);
     };
     if ((toId in family100) && quotedMsg?.id === family100[toId]?.[6]?.key?.id) {
       const [, jawaban, status, contribs, timeout] = family100[toId];
@@ -994,7 +994,7 @@ export async function handleGameBotResponse(params) {
       if (messageText === 'menyerah') {
         const solutionBoardBuffer = await generateSudokuBoardImage(gameState.puzzle, gameState.solution);
         await sReply({ image: solutionBoardBuffer, caption: "Baiklah, game telah dihentikan. Ini adalah jawaban yang benar." });
-        performanceManager.cache.updateUserStats(user.userId, counthits);
+        await performanceManager.cache.updateUserStats(user.userId, counthits);
         clearTimeout(gameState.timeoutId);
         delete sudokuGame[toId];
         return true;
@@ -1089,7 +1089,7 @@ export async function handleGameBotResponse(params) {
             await sReply({ image: errorBoardBuffer, caption: "Papan sudah penuh, namun masih ada jawaban yang salah (ditandai merah)." });
           }
           await user.addXp();
-          performanceManager.cache.updateUserStats(user.userId, counthits);
+          await performanceManager.cache.updateUserStats(user.userId, counthits);
           clearTimeout(gameState.timeoutId);
           delete sudokuGame[toId];
         }

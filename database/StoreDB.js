@@ -9,37 +9,50 @@
 import config from '../config.js';
 import log from '../src/lib/logger.js';
 import { jidNormalizedUser } from 'baileys';
-import { StoreContact, StoreMessages, StoreGroupMetadata } from './index.js';
+import { StoreContact, StoreMessages, StoreGroupMetadata, redis } from './index.js';
+
+const REDIS_TTL = {
+  CONTACT: 86400,
+  GROUP: 3600,
+  LID_MAPPING: 86400,
+  MESSAGE: 1800,
+  PRESENCE: 300,
+  STATUS: 3600
+};
+
+const REDIS_PREFIX = {
+  CONTACT: 'cache:contact:',
+  GROUP: 'cache:groupmeta:',
+  LID_TO_JID: 'cache:lid2jid:',
+  JID_TO_LID: 'cache:jid2lid:',
+  MESSAGES: 'cache:messages:',
+  CONVERSATIONS: 'cache:conv:',
+  PRESENCE: 'cache:presence:',
+  STATUS: 'cache:status:'
+};
 
 class DBStore {
   constructor() {
-    this.contactsCache = new Map();
-    this.groupMetadataCache = new Map();
-    this.cacheHits = new Map();
-    this.cacheTimestamps = new Map();
-    this.lidToJidCache = new Map();
-    this.jidToLidCache = new Map();
-    this.maxCacheSize = config.performance.maxCacheSize;
-    this.cacheTTL = {
-      groups: config.performance.cacheTTL
-    };
-    this.pendingUpdates = {
+    this.updateQueues = {
       contacts: new Map(),
       groups: new Map()
     };
+    this.queueLocks = {
+      contacts: false,
+      groups: false
+    };
     this.batchInterval = 2000;
     this.cacheCleanupInterval = config.performance.cacheCleanup;
-    this.cacheStats = {
-      hits: 0,
-      misses: 0,
-      evictions: 0,
-      ttlExpirations: 0
+    this.stats = {
+      redisHits: 0,
+      redisMisses: 0,
+      dbHits: 0,
+      dbMisses: 0,
+      batchedWrites: 0,
+      skippedWrites: 0,
+      errors: 0
     };
     this.isConnected = false;
-    this.messages = {};
-    this.conversations = {};
-    this.presences = {};
-    this.status = {};
     this.authStore = null;
   }
   setAuthStore(authStore) {
@@ -53,349 +66,389 @@ class DBStore {
   }
   async connect() {
     this.isConnected = true;
-    log("Warming up MongoDB store caches...");
-    await this.warmCaches();
-    log('MongoDB store ready');
+    log("Warming up Redis cache...");
+    await this.warmRedisCache();
+    log('Pure Redis + DB store ready');
     return this;
   }
   async disconnect() {
-    await this.processBatchUpdates();
+    await this.flushAllBatches();
     this.isConnected = false;
-    this.clearGroupsCache();
+    log('Store disconnected');
+  }
+  async getRedis(key) {
+    try {
+      const data = await redis.get(key);
+      if (data) {
+        this.stats.redisHits++;
+        return JSON.parse(data);
+      }
+      this.stats.redisMisses++;
+      return null;
+    } catch (error) {
+      this.stats.errors++;
+      log(`Redis GET error for ${key}: ${error.message}`, true);
+      return null;
+    }
+  }
+  async setRedis(key, value, ttl) {
+    try {
+      await redis.set(key, JSON.stringify(value), 'EX', ttl);
+    } catch (error) {
+      this.stats.errors++;
+      log(`Redis SET error for ${key}: ${error.message}`, true);
+    }
+  }
+  async delRedis(key) {
+    try {
+      await redis.del(key);
+    } catch (error) {
+      log(`Redis DEL error for ${key}: ${error.message}`, true);
+    }
+  }
+  async mgetRedis(keys) {
+    try {
+      if (keys.length === 0) return [];
+      const results = await redis.mget(keys);
+      return results.map(r => r ? JSON.parse(r) : null);
+    } catch (error) {
+      this.stats.errors++;
+      log(`Redis MGET error: ${error.message}`, true);
+      return keys.map(() => null);
+    }
+  }
+  async getRedisString(key) {
+    try {
+      const data = await redis.get(key);
+      if (data) {
+        this.stats.redisHits++;
+        return data;
+      }
+      this.stats.redisMisses++;
+      return null;
+    } catch (error) {
+      this.stats.errors++;
+      log(`Redis GET error for ${key}: ${error.message}`, true);
+      return null;
+    }
+  }
+  async setRedisString(key, value, ttl) {
+    try {
+      await redis.set(key, value, 'EX', ttl);
+    } catch (error) {
+      this.stats.errors++;
+      log(`Redis SET error for ${key}: ${error.message}`, true);
+    }
   }
   startBatchProcessor() {
-    setInterval(() => this.processBatchUpdates(), this.batchInterval);
+    setInterval(() => this.flushAllBatches(), this.batchInterval);
   }
-  async processBatchUpdates() {
+  async flushAllBatches() {
     if (!this.isConnected) return;
-    if (this.pendingUpdates.contacts.size > 0) {
-      const contactsToUpdate = Array.from(this.pendingUpdates.contacts.values());
-      try {
-        await StoreContact.bulkUpsert(contactsToUpdate);
-        this.pendingUpdates.contacts.clear();
-      } catch (error) {
-        log(error, true);
+    await Promise.all([
+      this.flushBatch('contacts', StoreContact),
+      this.flushBatch('groups', StoreGroupMetadata)
+    ]);
+  }
+  async flushBatch(type, Model) {
+    if (this.queueLocks[type]) return;
+    if (this.updateQueues[type].size === 0) return;
+    this.queueLocks[type] = true;
+    try {
+      const queue = new Map(this.updateQueues[type]);
+      this.updateQueues[type].clear();
+      const items = Array.from(queue.values());
+      if (items.length > 0) {
+        const itemsToUpdate = await this.filterDirtyItems(type, items, Model);
+        if (itemsToUpdate.length > 0) {
+          await Model.bulkUpsert(itemsToUpdate);
+          this.stats.batchedWrites += itemsToUpdate.length;
+          this.stats.skippedWrites += (items.length - itemsToUpdate.length);
+          log(`Flushed ${itemsToUpdate.length}/${items.length} ${type} to database (${items.length - itemsToUpdate.length} skipped)`);
+        } else {
+          this.stats.skippedWrites += items.length;
+          log(`Skipped flush for ${items.length} ${type} (no changes detected)`);
+        }
       }
-    }
-    if (this.pendingUpdates.groups.size > 0) {
-      const groupsToUpdate = Array.from(this.pendingUpdates.groups.values());
-      try {
-        await StoreGroupMetadata.bulkUpsert(groupsToUpdate);
-        this.pendingUpdates.groups.clear();
-      } catch (error) {
-        log(error, true);
-      }
+    } catch (error) {
+      this.stats.errors++;
+      log(`Batch flush error for ${type}: ${error.message}`, true);
+    } finally {
+      this.queueLocks[type] = false;
     }
   }
-  async warmCaches() {
+  async filterDirtyItems(type, items, Model) {
+    if (items.length === 0) return [];
+    try {
+      const ids = items.map(item => {
+        if (type === 'contacts') return item.jid;
+        if (type === 'groups') return item.groupId;
+        return null;
+      }).filter(Boolean);
+      if (ids.length === 0) return items;
+      const queryField = type === 'contacts' ? 'jid' : 'groupId';
+      const existingRecords = await Model.find({
+        [queryField]: { $in: ids }
+      }).lean();
+      const existingMap = new Map(
+        existingRecords.map(record => [
+          type === 'contacts' ? record.jid : record.groupId,
+          record
+        ])
+      );
+      const dirtyItems = items.filter(item => {
+        const id = type === 'contacts' ? item.jid : item.groupId;
+        const existing = existingMap.get(id);
+        if (!existing) return true;
+        return this.hasChanges(existing, item, type);
+      });
+      return dirtyItems;
+    } catch (error) {
+      log(`Dirty check error for ${type}: ${error.message}`, true);
+      return items;
+    }
+  }
+  hasChanges(existing, updated, type) {
+    const fieldsToCheck = type === 'contacts' ? ['name', 'notify', 'verifiedName', 'lid'] : ['subject', 'subjectOwner', 'subjectTime', 'creation', 'owner', 'desc', 'descOwner', 'descId', 'restrict', 'announce', 'size', 'participants'];
+    for (const field of fieldsToCheck) {
+      const existingVal = existing[field];
+      const updatedVal = updated[field];
+      if (existingVal === null && updatedVal === null) continue;
+      if (Array.isArray(existingVal) && Array.isArray(updatedVal)) {
+        if (JSON.stringify(existingVal) !== JSON.stringify(updatedVal)) {
+          return true;
+        }
+        continue;
+      }
+      if (existingVal !== updatedVal) {
+        return true;
+      }
+    }
+    return false;
+  }
+  async warmRedisCache() {
     try {
       const activeGroups = await StoreGroupMetadata.find()
         .sort({ lastUpdated: -1 })
         .limit(50)
         .lean();
-      activeGroups.forEach(group => this.addGroupToCache(group.groupId, group));
-      const allContacts = await StoreContact.find({}).lean();
-      allContacts.forEach(contact => {
-        this.addContactToCache(contact.jid, contact);
+      const groupPipeline = redis.pipeline();
+      for (const group of activeGroups) {
+        groupPipeline.set(
+          `${REDIS_PREFIX.GROUP}${group.groupId}`,
+          JSON.stringify(group),
+          'EX',
+          REDIS_TTL.GROUP
+        );
+      }
+      await groupPipeline.exec();
+      const recentContacts = await StoreContact.find({})
+        .sort({ updatedAt: -1 })
+        .limit(1000)
+        .lean();
+      const contactPipeline = redis.pipeline();
+      for (const contact of recentContacts) {
+        contactPipeline.set(
+          `${REDIS_PREFIX.CONTACT}${contact.jid}`,
+          JSON.stringify(contact),
+          'EX',
+          REDIS_TTL.CONTACT
+        );
         if (contact.lid) {
-          this.addLidToJidCache(contact.lid, contact.jid);
+          contactPipeline.set(
+            `${REDIS_PREFIX.LID_TO_JID}${contact.lid}`,
+            contact.jid,
+            'EX',
+            REDIS_TTL.LID_MAPPING
+          );
+          contactPipeline.set(
+            `${REDIS_PREFIX.JID_TO_LID}${contact.jid}`,
+            contact.lid,
+            'EX',
+            REDIS_TTL.LID_MAPPING
+          );
         }
-      });
-      log(`Cache warmed: ${this.contactsCache.size} contacts, ${this.groupMetadataCache.size} groups, ${this.lidToJidCache.size} LID mappings`);
+      }
+      await contactPipeline.exec();
+      log(`Redis cache warmed: ${activeGroups.length} groups, ${recentContacts.length} contacts`);
     } catch (error) {
-      log(error, true);
+      this.stats.errors++;
+      log(`Cache warming error: ${error.message}`, true);
     }
-  }
-  addLidToJidCache(lid, jid) {
-    if (lid && jid) {
-      this.lidToJidCache.set(lid, jid);
-      this.jidToLidCache.set(jid, lid);
-    }
-  }
-  getJidFromLidCache(lid) {
-    return this.lidToJidCache.get(lid) || null;
-  }
-  getLidFromJidCache(jid) {
-    return this.jidToLidCache.get(jid) || null;
-  }
-  addContactToCache(jid, data) {
-    const safeMerge = (existing, newData) => {
-      const merged = { ...existing };
-      for (const key in newData) {
-        if (newData[key] !== undefined && newData[key] !== null) {
-          merged[key] = newData[key];
-        }
-      }
-      return merged;
-    };
-    const existing = this.contactsCache.get(jid);
-    let finalData;
-    if (existing) {
-      finalData = { ...safeMerge(existing, data), jid };
-    } else {
-      finalData = { ...data, jid };
-    }
-    this.contactsCache.set(jid, finalData);
-    if (finalData.lid) {
-      this.addLidToJidCache(finalData.lid, jid);
-    }
-    if (this.contactsCache.size > this.maxCacheSize.contacts) {
-      const oldestJid = this.contactsCache.keys().next().value;
-      if (oldestJid) {
-        const contactToDelete = this.contactsCache.get(oldestJid);
-        this.contactsCache.delete(oldestJid);
-        if (contactToDelete && contactToDelete.lid) {
-          this.lidToJidCache.delete(contactToDelete.lid);
-          this.jidToLidCache.delete(oldestJid);
-        }
-        this.cacheStats.evictions++;
-      }
-    }
-    return finalData;
-  }
-  addGroupToCache(groupId, data) {
-    const cache = this.groupMetadataCache;
-    const maxSize = this.maxCacheSize.groups;
-    if (cache.size >= maxSize) {
-      this.applyLRUCleanup('groups', cache);
-    }
-    const existing = cache.get(groupId) || {};
-    const mergedData = { ...existing, ...data };
-    cache.set(groupId, mergedData);
-    this.cacheHits.set(groupId, (this.cacheHits.get(groupId) || 0) + 1);
-    this.cacheTimestamps.set(groupId, Date.now());
-    return mergedData;
   }
   async getContact(jid) {
     if (!this.isConnected) return null;
-    if (this.contactsCache.has(jid)) {
-      this.cacheStats.hits++;
-      const contactData = this.contactsCache.get(jid);
-      this.contactsCache.delete(jid);
-      this.contactsCache.set(jid, contactData);
-      return contactData;
-    }
-    this.cacheStats.misses++;
+    const redisKey = `${REDIS_PREFIX.CONTACT}${jid}`;
+    const fromRedis = await this.getRedis(redisKey);
+    if (fromRedis) return fromRedis;
     try {
       const contact = await StoreContact.findOne({ jid }).lean();
+      this.stats.dbHits++;
       if (contact) {
-        this.addContactToCache(jid, contact);
+        await this.setRedis(redisKey, contact, REDIS_TTL.CONTACT);
+        if (contact.lid) {
+          await this.cacheLidMapping(contact.lid, contact.jid);
+        }
+      } else {
+        this.stats.dbMisses++;
       }
       return contact;
     } catch (error) {
-      log(error, true);
+      this.stats.errors++;
+      log(`Get contact error: ${error.message}`, true);
       return null;
     }
   }
   async updateContact(jid, data) {
     if (!this.isConnected) return;
-    const updatedContact = this.addContactToCache(jid, data);
-    this.pendingUpdates.contacts.set(jid, updatedContact);
+    const redisKey = `${REDIS_PREFIX.CONTACT}${jid}`;
+    let existing = await this.getRedis(redisKey);
+    if (!existing) {
+      try {
+        existing = await StoreContact.findOne({ jid }).lean();
+      } catch (error) {
+        log(`Error fetching existing contact: ${error.message}`, true);
+      }
+    }
+    const updated = { ...existing };
+    for (const key in data) {
+      if (data[key] !== undefined && data[key] !== null) {
+        updated[key] = data[key];
+      }
+    }
+    updated.jid = jid;
+    if (existing && !this.hasChanges(existing, updated, 'contacts')) {
+      this.stats.skippedWrites++;
+      return;
+    }
+    await this.setRedis(redisKey, updated, REDIS_TTL.CONTACT);
+    this.updateQueues.contacts.set(jid, updated);
+    if (updated.lid) {
+      await this.cacheLidMapping(updated.lid, jid);
+    }
+  }
+  async getArrayContacts(jids) {
+    if (!this.isConnected || !jids || jids.length === 0) return [];
+    const redisKeys = jids.map(jid => `${REDIS_PREFIX.CONTACT}${jid}`);
+    const redisResults = await this.mgetRedis(redisKeys);
+    const foundInRedis = [];
+    const missingJids = [];
+    redisResults.forEach((result, index) => {
+      if (result) {
+        foundInRedis.push(result);
+      } else {
+        missingJids.push(jids[index]);
+      }
+    });
+    if (missingJids.length === 0) return foundInRedis;
+    let foundInDb = [];
+    try {
+      foundInDb = await StoreContact.find({ jid: { $in: missingJids } }).lean();
+      this.stats.dbHits += foundInDb.length;
+      if (foundInDb.length > 0) {
+        const pipeline = redis.pipeline();
+        for (const contact of foundInDb) {
+          pipeline.set(
+            `${REDIS_PREFIX.CONTACT}${contact.jid}`,
+            JSON.stringify(contact),
+            'EX',
+            REDIS_TTL.CONTACT
+          );
+          if (contact.lid) {
+            pipeline.set(
+              `${REDIS_PREFIX.LID_TO_JID}${contact.lid}`,
+              contact.jid,
+              'EX',
+              REDIS_TTL.LID_MAPPING
+            );
+            pipeline.set(
+              `${REDIS_PREFIX.JID_TO_LID}${contact.jid}`,
+              contact.lid,
+              'EX',
+              REDIS_TTL.LID_MAPPING
+            );
+          }
+        }
+        await pipeline.exec();
+      }
+    } catch (error) {
+      this.stats.errors++;
+      log(`Get array contacts error: ${error.message}`, true);
+    }
+
+    return [...foundInRedis, ...foundInDb];
   }
   async getGroupMetadata(groupId) {
     if (!this.isConnected) return null;
-    if (this.groupMetadataCache.has(groupId)) {
-      this.cacheHits.set(groupId, (this.cacheHits.get(groupId) || 0) + 1);
-      this.cacheTimestamps.set(groupId, Date.now());
-      this.cacheStats.hits++;
-      return this.groupMetadataCache.get(groupId);
-    }
-    this.cacheStats.misses++;
+    const redisKey = `${REDIS_PREFIX.GROUP}${groupId}`;
+    const fromRedis = await this.getRedis(redisKey);
+    if (fromRedis) return fromRedis;
     try {
       const metadata = await StoreGroupMetadata.findOne({ groupId }).lean();
+      this.stats.dbHits++;
       if (metadata) {
-        this.addGroupToCache(groupId, metadata);
+        await this.setRedis(redisKey, metadata, REDIS_TTL.GROUP);
+      } else {
+        this.stats.dbMisses++;
       }
       return metadata;
     } catch (error) {
-      log(error, true);
+      this.stats.errors++;
+      log(`Get group metadata error: ${error.message}`, true);
       return null;
     }
   }
   async updateGroupMetadata(groupId, metadata) {
     if (!this.isConnected) return;
-    const updatedMetadata = this.addGroupToCache(groupId, metadata);
-    this.pendingUpdates.groups.set(groupId, updatedMetadata);
-  }
-  startStatsLogger() {
-    setInterval(() => {
-      const stats = this.getCacheStats();
-      const totalAccess = stats.contacts.hits + stats.contacts.misses;
-      if (totalAccess > 0) {
-        /*
-        log('Cache Stats:', {
-          hitRate: `${(stats.contacts.hitRate * 100).toFixed(1)}%`,
-          contacts: stats.contacts.size,
-          groups: `${stats.groups.size}/${this.maxCacheSize.groups}`,
-          lidMappings: stats.lidMappings,
-          pendingUpdates: stats.pendingUpdates,
-          ttlExpirations: stats.ttlExpirations,
-          evictions: stats.evictions
-        });
-        */
+    const redisKey = `${REDIS_PREFIX.GROUP}${groupId}`;
+    let existing = await this.getRedis(redisKey);
+    if (!existing) {
+      try {
+        existing = await StoreGroupMetadata.findOne({ groupId }).lean();
+      } catch (error) {
+        log(`Error fetching existing group: ${error.message}`, true);
       }
-    }, 30000);
-  }
-  getCacheStats() {
-    const totalAccess = this.cacheStats.hits + this.cacheStats.misses;
-    return {
-      contacts: {
-        size: this.contactsCache.size,
-        hits: this.cacheStats.hits,
-        misses: this.cacheStats.misses,
-        hitRate: totalAccess > 0 ? this.cacheStats.hits / totalAccess : 0,
-      },
-      groups: {
-        size: this.groupMetadataCache.size,
-        evictions: this.cacheStats.evictions
-      },
-      lidMappings: this.lidToJidCache.size,
-      pendingUpdates: {
-        contacts: this.pendingUpdates.contacts.size,
-        groups: this.pendingUpdates.groups.size
-      },
-      ttlExpirations: this.cacheStats.ttlExpirations,
-      evictions: this.cacheStats.evictions
-    };
-  }
-  getCacheItemTTL(key) {
-    if (!this.cacheTimestamps.has(key) || !this.groupMetadataCache.has(key)) {
-      return null;
     }
-    const timestamp = this.cacheTimestamps.get(key);
-    const now = Date.now();
-    const ttlMs = this.cacheTTL.groups - (now - timestamp);
-    return {
-      key,
-      type: 'groups',
-      ttlMs,
-      ttlFormatted: this.formatTTL(ttlMs),
-      expiresAt: new Date(timestamp + this.cacheTTL.groups),
-      hitCount: this.cacheHits.get(key) || 0
-    };
-  }
-  formatTTL(ms) {
-    if (ms <= 0) return 'Expired';
-    const days = Math.floor(ms / (24 * 60 * 60 * 1000));
-    const hours = Math.floor((ms % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
-    const minutes = Math.floor((ms % (60 * 60 * 1000)) / (60 * 1000));
-    return `${days}d ${hours}h ${minutes}m`;
-  }
-  getAllContacts() {
-    return Array.from(this.contactsCache.values());
-  }
-  updateMessages(chatId, message, maxSize = 50) {
-    if (!this.messages[chatId]) this.messages[chatId] = [];
-    this.messages[chatId].push(message);
-    this.messages[chatId] = this.messages[chatId].slice(-maxSize);
-  }
-  updateConversations(chatId, conversation, maxSize = 200) {
-    if (!this.conversations[chatId]) this.conversations[chatId] = [];
-    this.conversations[chatId].push(conversation);
-    this.conversations[chatId] = this.conversations[chatId].slice(-maxSize);
-  }
-  updatePresences(chatId, presenceUpdate) {
-    if (!this.presences[chatId]) this.presences[chatId] = {};
-    Object.assign(this.presences[chatId], presenceUpdate);
-  }
-  addStatus(userId, statusMessage, maxSize = 20) {
-    if (!this.status[userId]) this.status[userId] = [];
-    this.status[userId].push(statusMessage);
-    this.status[userId] = this.status[userId].slice(-maxSize);
-  }
-  deleteStatus(userId, messageId) {
-    if (this.status[userId]) {
-      this.status[userId] = this.status[userId].filter(
-        status => status.key.id !== messageId
-      );
+    const updated = { ...existing, ...metadata, groupId };
+    if (existing && !this.hasChanges(existing, updated, 'groups')) {
+      this.stats.skippedWrites++;
+      return;
     }
+    await this.setRedis(redisKey, updated, REDIS_TTL.GROUP);
+    this.updateQueues.groups.set(groupId, updated);
   }
-  clearCache() {
-    this.lidToJidCache.clear();
-    this.jidToLidCache.clear();
-    this.contactsCache.clear();
-    this.groupMetadataCache.clear();
-    this.cacheHits.clear();
-    this.cacheTimestamps.clear();
-    this.pendingUpdates.contacts.clear();
-    this.pendingUpdates.groups.clear();
-    this.messages = {};
-    this.conversations = {};
-    this.presences = {};
-    this.status = {};
+  async syncGroupMetadata(fn, groupId) {
+    if (!fn || !groupId) return null;
+    try {
+      const freshMetadata = await fn.groupMetadata(groupId);
+      if (freshMetadata) {
+        await this.updateGroupMetadata(groupId, freshMetadata);
+        return freshMetadata;
+      }
+    } catch (error) {
+      this.stats.errors++;
+      log(`Sync group metadata error: ${error.message}`, true);
+    }
+    return null;
+  }
+  async clearGroupCacheByKey(groupId) {
+    await this.delRedis(`${REDIS_PREFIX.GROUP}${groupId}`);
+    this.updateQueues.groups.delete(groupId);
   }
   clearGroupsCache() {
-    this.groupMetadataCache.clear();
-    for (const [key] of this.cacheHits) {
-      if (this.groupMetadataCache.has(key)) {
-        this.cacheHits.delete(key);
-        this.cacheTimestamps.delete(key);
-      }
-    }
-    this.pendingUpdates.groups.clear();
-    log('Groups cache cleared');
+    this.updateQueues.groups.clear();
+    log('Groups queue cleared');
   }
-  clearGroupCacheByKey(groupId) {
-    if (this.groupMetadataCache.has(groupId)) {
-      this.groupMetadataCache.delete(groupId);
-      this.cacheHits.delete(groupId);
-      this.cacheTimestamps.delete(groupId);
+  async cacheLidMapping(lid, jid) {
+    if (!lid || !jid) return;
+    try {
+      const pipeline = redis.pipeline();
+      pipeline.set(`${REDIS_PREFIX.LID_TO_JID}${lid}`, jid, 'EX', REDIS_TTL.LID_MAPPING);
+      pipeline.set(`${REDIS_PREFIX.JID_TO_LID}${jid}`, lid, 'EX', REDIS_TTL.LID_MAPPING);
+      await pipeline.exec();
+    } catch (error) {
+      log(`Cache LID mapping error: ${error.message}`, true);
     }
-  }
-  cleanupExpiredGroupsCache() {
-    if (!this.isConnected) return;
-    const now = Date.now();
-    let expiredCount = 0;
-    for (const [groupId, timestamp] of this.cacheTimestamps) {
-      if (this.groupMetadataCache.has(groupId)) {
-        if (now - timestamp > this.cacheTTL.groups) {
-          this.groupMetadataCache.delete(groupId);
-          this.cacheHits.delete(groupId);
-          this.cacheTimestamps.delete(groupId);
-          expiredCount++;
-          this.cacheStats.ttlExpirations++;
-        }
-      }
-    }
-    if (expiredCount > 0) {
-      log(`TTL cleanup: Removed ${expiredCount} expired group cache entries`);
-    }
-    if (this.groupMetadataCache.size > this.maxCacheSize.groups) {
-      this.applyLRUCleanup('groups', this.groupMetadataCache);
-    }
-  }
-  startCacheCleanup() {
-    setInterval(() => {
-      this.cleanupExpiredGroupsCache();
-    }, this.cacheCleanupInterval);
-  }
-  applyLRUCleanup(type, cache) {
-    const maxSize = this.maxCacheSize[type];
-    const entries = Array.from(this.cacheHits.entries());
-    if (entries.length > 0) {
-      const relevantEntries = entries.filter(([key]) => cache.has(key));
-      if (relevantEntries.length > 0) {
-        const sortedByHits = relevantEntries.sort((a, b) => a[1] - b[1]);
-        const itemsToRemove = cache.size - maxSize;
-        for (let i = 0; i < itemsToRemove && i < sortedByHits.length; i++) {
-          const [key] = sortedByHits[i];
-          if (cache.has(key)) {
-            cache.delete(key);
-            this.cacheHits.delete(key);
-            this.cacheTimestamps.delete(key);
-            this.cacheStats.evictions++;
-          }
-        }
-        log(`LRU cleanup: Removed ${itemsToRemove} ${type} due to size limit`);
-      }
-    }
-  }
-  async forceCleanup() {
-    log('Manual groups cache cleanup initiated');
-    this.cleanupExpiredGroupsCache();
-  }
-  findContacts(filterFn) {
-    return Array.from(this.contactsCache.values()).filter(filterFn);
   }
   async resolveJid(id) {
     if (!id) return null;
@@ -409,126 +462,258 @@ class DBStore {
   }
   async findJidByLid(lid) {
     if (!lid) return null;
-    const cachedJid = this.getJidFromLidCache(lid);
-    if (cachedJid) {
-      return cachedJid;
-    }
+    const cached = await this.getRedisString(`${REDIS_PREFIX.LID_TO_JID}${lid}`);
+    if (cached) return cached;
     if (this.authStore) {
       try {
         const jidFromAuth = await this.authStore.getPNForLID(lid);
         if (jidFromAuth) {
-          this.addLidToJidCache(lid, jidFromAuth);
+          await this.cacheLidMapping(lid, jidFromAuth);
           return jidFromAuth;
         }
       } catch (error) {
-        await log(`AuthStore lookup failed for LID ${lid}: ${error.message}`, true);
+        log(`AuthStore lookup failed for LID ${lid}: ${error.message}`, true);
       }
     }
     try {
       const contact = await StoreContact.findOne({ lid }).lean();
       const jid = contact?.jid || null;
       if (jid) {
-        this.addLidToJidCache(lid, jid);
-        await log(`LID ${lid} resolved from database fallback: ${jid}`);
+        await this.cacheLidMapping(lid, jid);
       }
       return jid;
     } catch (error) {
-      await log(`Database lookup failed for LID ${lid}: ${error.message}`, true);
+      this.stats.errors++;
+      log(`Database lookup failed for LID ${lid}: ${error.message}`, true);
       return null;
     }
   }
   async getLidForJid(jid) {
     if (!jid) return null;
-    const cachedLid = this.getLidFromJidCache(jid);
-    if (cachedLid) {
-      return cachedLid;
-    }
+    const cached = await this.getRedisString(`${REDIS_PREFIX.JID_TO_LID}${jid}`);
+    if (cached) return cached;
     if (this.authStore) {
       try {
         const lidFromAuth = await this.authStore.getLIDForPN(jid);
         if (lidFromAuth) {
-          this.addLidToJidCache(lidFromAuth, jid);
+          await this.cacheLidMapping(lidFromAuth, jid);
           return lidFromAuth;
         }
       } catch (error) {
-        await log(`AuthStore reverse lookup failed for JID ${jid}: ${error.message}`, true);
+        log(`AuthStore reverse lookup failed for JID ${jid}: ${error.message}`, true);
       }
     }
     try {
       const contact = await StoreContact.findOne({ jid }).lean();
       const lid = contact?.lid || null;
       if (lid) {
-        this.addLidToJidCache(lid, jid);
-        await log(`JID ${jid} reverse resolved from database: ${lid}`);
+        await this.cacheLidMapping(lid, jid);
       }
       return lid;
     } catch (error) {
-      await log(`Database reverse lookup failed for JID ${jid}: ${error.message}`, true);
+      this.stats.errors++;
+      log(`Database reverse lookup failed for JID ${jid}: ${error.message}`, true);
       return null;
     }
   }
-  async loadMessage(remoteJid, id) {
-    const messageArray = this.messages?.[remoteJid];
-    if (messageArray) {
-      const messageFromCache = messageArray.find(msg => msg?.key?.id === id);
-      if (messageFromCache) {
-        return messageFromCache;
+  async updateMessages(chatId, message, maxSize = 50) {
+    try {
+      const key = `${REDIS_PREFIX.MESSAGES}${chatId}`;
+      await redis.rpush(key, JSON.stringify(message));
+      await redis.ltrim(key, -maxSize, -1);
+      await redis.expire(key, REDIS_TTL.MESSAGE);
+    } catch (error) {
+      log(`Update messages error: ${error.message}`, true);
+    }
+  }
+  async getMessages(chatId, limit = 50) {
+    try {
+      const key = `${REDIS_PREFIX.MESSAGES}${chatId}`;
+      const messages = await redis.lrange(key, -limit, -1);
+      return messages.map(m => JSON.parse(m));
+    } catch (error) {
+      log(`Get messages error: ${error.message}`, true);
+      return [];
+    }
+  }
+  async updateConversations(chatId, conversation, maxSize = 200) {
+    try {
+      const key = `${REDIS_PREFIX.CONVERSATIONS}${chatId}`;
+      await redis.rpush(key, JSON.stringify(conversation));
+      await redis.ltrim(key, -maxSize, -1);
+      await redis.expire(key, REDIS_TTL.MESSAGE);
+    } catch (error) {
+      log(`Update conversations error: ${error.message}`, true);
+    }
+  }
+  async updatePresences(chatId, presenceUpdate) {
+    try {
+      const key = `${REDIS_PREFIX.PRESENCE}${chatId}`;
+      const fields = Object.entries(presenceUpdate).flat();
+      if (fields.length > 0) {
+        await redis.hmset(key, ...fields.map(f => typeof f === 'object' ? JSON.stringify(f) : f));
+        await redis.expire(key, REDIS_TTL.PRESENCE);
       }
+    } catch (error) {
+      log(`Update presences error: ${error.message}`, true);
+    }
+  }
+  async getPresences(chatId) {
+    try {
+      const key = `${REDIS_PREFIX.PRESENCE}${chatId}`;
+      const data = await redis.hgetall(key);
+      const parsed = {};
+      for (const [k, v] of Object.entries(data)) {
+        try {
+          parsed[k] = JSON.parse(v);
+        } catch {
+          parsed[k] = v;
+        }
+      }
+      return parsed;
+    } catch (error) {
+      log(`Get presences error: ${error.message}`, true);
+      return {};
+    }
+  }
+  async addStatus(userId, statusMessage, maxSize = 20) {
+    try {
+      const key = `${REDIS_PREFIX.STATUS}${userId}`;
+      await redis.rpush(key, JSON.stringify(statusMessage));
+      await redis.ltrim(key, -maxSize, -1);
+      await redis.expire(key, REDIS_TTL.STATUS);
+    } catch (error) {
+      log(`Add status error: ${error.message}`, true);
+    }
+  }
+  async deleteStatus(userId, messageId) {
+    try {
+      const key = `${REDIS_PREFIX.STATUS}${userId}`;
+      const statuses = await redis.lrange(key, 0, -1);
+      const filtered = statuses
+        .map(s => JSON.parse(s))
+        .filter(status => status.key.id !== messageId);
+      await redis.del(key);
+      if (filtered.length > 0) {
+        await redis.rpush(key, ...filtered.map(s => JSON.stringify(s)));
+        await redis.expire(key, REDIS_TTL.STATUS);
+      }
+    } catch (error) {
+      log(`Delete status error: ${error.message}`, true);
+    }
+  }
+  async loadMessage(remoteJid, id) {
+    try {
+      const messages = await this.getMessages(remoteJid, 50);
+      const messageFromCache = messages.find(msg => msg?.key?.id === id);
+      if (messageFromCache) return messageFromCache;
+    } catch (error) {
+      log(`Load message from Redis error: ${error.message}`, true);
     }
     try {
       const chatHistory = await StoreMessages.findOne(
         { chatId: remoteJid, 'messages.key.id': id },
         { 'messages.$': 1 }
       ).lean();
-      if (chatHistory && chatHistory.messages?.length > 0) {
-        return chatHistory.messages[0];
-      }
+      return chatHistory?.messages?.[0] || null;
     } catch (error) {
-      log(error, true);
+      this.stats.errors++;
+      log(`Load message error: ${error.message}`, true);
+      return null;
     }
-    return null;
   }
-  async getArrayContacts(jids) {
-    if (!this.isConnected || !jids || jids.length === 0) return [];
-    const foundInCache = [];
-    const jidsToFetchFromDb = [];
-    for (const jid of jids) {
-      if (this.contactsCache.has(jid)) {
-        this.cacheStats.hits++;
-        const contactData = this.contactsCache.get(jid);
-        this.contactsCache.delete(jid);
-        this.contactsCache.set(jid, contactData);
-        foundInCache.push(contactData);
-      } else {
-        this.cacheStats.misses++;
-        jidsToFetchFromDb.push(jid);
-      }
-    }
-    let foundInDb = [];
-    if (jidsToFetchFromDb.length > 0) {
-      try {
-        foundInDb = await StoreContact.find({ jid: { $in: jidsToFetchFromDb } }).lean();
-        for (const contact of foundInDb) {
-          this.addContactToCache(contact.jid, contact);
-        }
-      } catch (error) {
-        log(error, true);
-      }
-    }
-    return [...foundInCache, ...foundInDb];
-  }
-  async syncGroupMetadata(fn, groupId) {
-    if (!fn || !groupId) return null;
+  async clearCache() {
+    this.updateQueues.contacts.clear();
+    this.updateQueues.groups.clear();
     try {
-      const freshMetadata = await fn.groupMetadata(groupId);
-      if (freshMetadata) {
-        await this.updateGroupMetadata(groupId, freshMetadata);
-        return freshMetadata;
+      const patterns = [
+        `${REDIS_PREFIX.CONTACT}*`,
+        `${REDIS_PREFIX.GROUP}*`,
+        `${REDIS_PREFIX.LID_TO_JID}*`,
+        `${REDIS_PREFIX.JID_TO_LID}*`,
+        `${REDIS_PREFIX.MESSAGES}*`,
+        `${REDIS_PREFIX.CONVERSATIONS}*`,
+        `${REDIS_PREFIX.PRESENCE}*`,
+        `${REDIS_PREFIX.STATUS}*`
+      ];
+      for (const pattern of patterns) {
+        const stream = redis.scanStream({ match: pattern, count: 100 });
+        const keysToDelete = [];
+        stream.on('data', (keys) => keysToDelete.push(...keys));
+        await new Promise((resolve, reject) => {
+          stream.on('end', async () => {
+            try {
+              if (keysToDelete.length > 0) {
+                for (let i = 0; i < keysToDelete.length; i += 1000) {
+                  const batch = keysToDelete.slice(i, i + 1000);
+                  await redis.del(batch);
+                }
+                log(`Deleted ${keysToDelete.length} keys for pattern ${pattern}`);
+              }
+              resolve();
+            } catch (error) {
+              reject(error);
+            }
+          });
+          stream.on('error', reject);
+        });
       }
+      log('All caches cleared');
     } catch (error) {
-      log(error, true);
+      this.stats.errors++;
+      log(`Failed to clear Redis cache: ${error.message}`, true);
     }
-    return null;
+  }
+  startCacheCleanup() {
+    setInterval(async () => {
+      await this.performMaintenance();
+    }, this.cacheCleanupInterval);
+  }
+  async performMaintenance() {
+    if (!this.isConnected) return;
+    try {
+      await this.flushAllBatches();
+    } catch (error) {
+      log(`Maintenance error: ${error.message}`, true);
+    }
+  }
+  async forceCleanup() {
+    log('Manual cleanup initiated');
+    await this.flushAllBatches();
+    await this.performMaintenance();
+  }
+  startStatsLogger() {
+    setInterval(() => {
+      const stats = this.getStats();
+      if (stats.total > 0) {
+        // log('Store Stats:', stats);
+      }
+    }, 30000);
+  }
+  getStats() {
+    const total = this.stats.redisHits + this.stats.redisMisses;
+    return {
+      redis: {
+        hits: this.stats.redisHits,
+        misses: this.stats.redisMisses,
+        hitRate: total > 0 ? (this.stats.redisHits / total * 100).toFixed(2) + '%' : '0%'
+      },
+      database: {
+        hits: this.stats.dbHits,
+        misses: this.stats.dbMisses
+      },
+      batches: {
+        pendingContacts: this.updateQueues.contacts.size,
+        pendingGroups: this.updateQueues.groups.size,
+        totalWrites: this.stats.batchedWrites,
+        skippedWrites: this.stats.skippedWrites,
+        efficiency: this.stats.batchedWrites > 0
+          ? ((this.stats.skippedWrites / (this.stats.batchedWrites + this.stats.skippedWrites)) * 100).toFixed(2) + '%'
+          : '0%'
+      },
+      errors: this.stats.errors,
+      total
+    };
   }
 }
 

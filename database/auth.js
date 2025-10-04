@@ -6,31 +6,20 @@
 */
 // ─── Info database/auth.js ────────────────────────
 
-import mongoose from 'mongoose';
-import config from '../config.js';
-import { Mutex } from 'async-mutex';
 import log from '../src/lib/logger.js';
-import { StoreContact } from './index.js';
+import { StoreContact, redis } from './index.js';
 import { BufferJSON, initAuthCreds, proto } from 'baileys';
 
-const ACQUIRE_TIMEOUT = config.performance.acquireMutexInterval;
-const BaileysSessionSchema = new mongoose.Schema({
-  key: {
-    type: String,
-    required: true,
-    unique: true
-  },
-  value: {
-    type: mongoose.Schema.Types.Mixed,
-    required: true
-  }
-}, {
-  timestamps: true
-});
-
-BaileysSessionSchema.index({ updatedAt: -1 });
-
-export const BaileysSession = mongoose.models.BaileysSession || mongoose.model('BaileysSession', BaileysSessionSchema);
+const REDIS_LOCK_TTL = 5;
+const REDIS_PREFIX = {
+  LOCK: 'lock:auth:',
+  CREDS: 'creds',
+  LID_MAPPING: 'lid-mapping-',
+  APP_STATE: 'app-state-sync-key-',
+  SESSION: 'session-',
+  DEDUP: 'dedup:op:',
+  RESULT: 'result:op:'
+};
 
 const validateKey = (key) => {
   if (typeof key !== 'string' || !key.trim()) {
@@ -55,104 +44,165 @@ const validateJID = (jid) => {
 
 const safeJSONParse = (value, fallback = null) => {
   try {
+    if (value === null) return fallback;
     return JSON.parse(value, BufferJSON.reviver);
   } catch {
     return fallback;
   }
 };
 
-export async function AuthStore() {
-  const writeData = async (key, data) => {
+const acquireRedisLock = async (key, ttl = REDIS_LOCK_TTL) => {
+  const lockKey = `${REDIS_PREFIX.LOCK}${key}`;
+  const lockValue = `${Date.now()}-${Math.random()}`;
+  const maxRetries = 20;
+  const retryDelay = 100;
+  for (let i = 0; i < maxRetries; i++) {
     try {
-      const validKey = validateKey(key);
-      let stringified;
-      try {
-        stringified = JSON.stringify(data, BufferJSON.replacer);
-      } catch {
-        throw new Error('Cannot stringify circular reference');
-      }
-      if (stringified.length > 16 * 1024 * 1024) {
-        throw new Error('Data too large');
-      }
-      const fullKey = validKey;
-      await BaileysSession.findOneAndUpdate(
-        { key: fullKey },
-        { value: stringified },
-        { upsert: true }
-      );
-      return true;
-    } catch (error) {
-      await log(`Failed to write data for key ${key}: ${error.message}`, true);
-      return false;
-    }
-  };
-  const readData = async (key) => {
-    try {
-      const validKey = validateKey(key);
-      const fullKey = validKey;
-      const session = await BaileysSession.findOne({ key: fullKey }).lean();
-      if (!session) return null;
-      if (!session.value) return null;
-      return safeJSONParse(session.value);
-    } catch (error) {
-      await log(`Failed to read data for key ${key}: ${error.message}`, true);
-      return null;
-    }
-  };
-  const writeBatch = async (items) => {
-    try {
-      const operations = Object.entries(items).map(([key, value]) => {
-        const fullKey = key;
-        const BSONValue = JSON.stringify(value, BufferJSON.replacer);
-        return {
-          updateOne: {
-            filter: { key: fullKey },
-            update: { $set: { value: BSONValue } },
-            upsert: true,
-          },
+      const acquired = await redis.set(lockKey, lockValue, 'NX', 'EX', ttl);
+      if (acquired === 'OK') {
+        return async () => {
+          try {
+            const currentValue = await redis.get(lockKey);
+            if (currentValue === lockValue) {
+              await redis.del(lockKey);
+            }
+          } catch (error) {
+            log(`Failed to release lock ${key}: ${error.message}`, true);
+          }
         };
-      });
-      await BaileysSession.bulkWrite(operations);
-      return true;
+      }
     } catch (error) {
-      await log(`Failed to write batch data: ${error.message}`, true);
-      return false;
+      log(`Lock acquisition error for ${key}: ${error.message}`, true);
     }
-  };
-  const removeBatch = async (keys) => {
-    if (keys.length === 0) return true;
+    await new Promise(resolve => setTimeout(resolve, retryDelay));
+  }
+  throw new Error(`Failed to acquire lock for ${key} after ${maxRetries} retries`);
+};
+
+const executeWithDedup = async (operationKey, operation, ttl = 2) => {
+  const dedupKey = `${REDIS_PREFIX.DEDUP}${operationKey}`;
+  const resultKey = `${REDIS_PREFIX.RESULT}${operationKey}`;
+  const existingResult = await redis.get(resultKey);
+  if (existingResult !== null) {
+    return safeJSONParse(existingResult);
+  }
+  const lock = await acquireRedisLock(dedupKey, ttl);
+  try {
+    const cachedResult = await redis.get(resultKey);
+    if (cachedResult !== null) {
+      return safeJSONParse(cachedResult);
+    }
+    const result = await operation();
+    const serialized = JSON.stringify(result, BufferJSON.replacer);
+    await redis.setex(resultKey, ttl, serialized);
+    return result;
+  } finally {
+    await lock();
+  }
+};
+
+const writeData = async (key, data) => {
+  try {
+    const validKey = validateKey(key);
+    let stringified;
     try {
-      const fullKeys = keys.map(key => key);
-      await BaileysSession.deleteMany({ key: { $in: fullKeys } });
-      return true;
-    } catch (error) {
-      await log(`Failed to remove batch data: ${error.message}`, true);
-      return false;
+      stringified = JSON.stringify(data, BufferJSON.replacer);
+    } catch {
+      throw new Error('Cannot stringify circular reference');
     }
-  };
-  const backupLIDMapping = async (id, value) => {
+    if (stringified.length > 16 * 1024 * 1024) {
+      throw new Error('Data too large');
+    }
+    await redis.set(validKey, stringified);
+    return true;
+  } catch (error) {
+    await log(`Failed to write Redis data for key ${key}: ${error.message}`, true);
+    return false;
+  }
+};
+
+const readData = async (key) => {
+  try {
+    const validKey = validateKey(key);
+    const data = await redis.get(validKey);
+    return safeJSONParse(data);
+  } catch (error) {
+    await log(`Failed to read Redis data for key ${key}: ${error.message}`, true);
+    return null;
+  }
+};
+
+const writeBatch = async (items) => {
+  try {
+    const pipeline = redis.pipeline();
+    for (const [key, value] of Object.entries(items)) {
+      const stringified = JSON.stringify(value, BufferJSON.replacer);
+      pipeline.set(key, stringified);
+    }
+    await pipeline.exec();
+    return true;
+  } catch (error) {
+    await log(`Failed to write batch data: ${error.message}`, true);
+    return false;
+  }
+};
+
+const removeBatch = async (keys) => {
+  if (keys.length === 0) return true;
+  try {
+    await redis.del(keys);
+    return true;
+  } catch (error) {
+    await log(`Failed to remove batch data: ${error.message}`, true);
+    return false;
+  }
+};
+
+const backupLIDMapping = async (id, value) => {
+  return executeWithDedup(`backup:${id}:${value}`, async () => {
     try {
       let phoneNumber, lid;
       if (id.endsWith('_reverse')) {
         const lidNumber = id.replace('_reverse', '');
-        lid = lidNumber.includes('@') ? lidNumber : lidNumber + '@lid';
-        phoneNumber = value ? (value.includes('@') ? value : value + '@s.whatsapp.net') : null;
+        lid = lidNumber.includes('@') ? lidNumber : `${lidNumber}@lid`;
+        phoneNumber = value ? (value.includes('@') ? value : `${value}@s.whatsapp.net`) : null;
       } else {
-        phoneNumber = id.includes('@') ? id : id + '@s.whatsapp.net';
-        lid = value ? (value.includes('@') ? value : value + '@lid') : null;
+        phoneNumber = id.includes('@') ? id : `${id}@s.whatsapp.net`;
+        lid = value ? (value.includes('@') ? value : `${value}@lid`) : null;
       }
       if (phoneNumber && lid) {
-        await StoreContact.findOneAndUpdate(
-          { $or: [{ jid: phoneNumber }, { lid: lid }] },
-          {
-            $set: {
-              jid: phoneNumber,
-              lid: lid,
-              lastUpdated: new Date()
+        const existing = await StoreContact.findOne({ jid: phoneNumber }).lean();
+        if (existing) {
+          await StoreContact.updateOne(
+            { jid: phoneNumber },
+            { $set: { lid: lid, lastUpdated: new Date() } }
+          );
+        } else {
+          const existingByLid = await StoreContact.findOne({ lid: lid }).lean();
+          if (existingByLid) {
+            await StoreContact.updateOne(
+              { lid: lid },
+              { $set: { jid: phoneNumber, lastUpdated: new Date() } }
+            );
+          } else {
+            try {
+              await StoreContact.create({
+                jid: phoneNumber,
+                lid: lid,
+                lastUpdated: new Date()
+              });
+            } catch (dupError) {
+              if (dupError.code === 11000) {
+                await StoreContact.updateOne(
+                  { $or: [{ jid: phoneNumber }, { lid: lid }] },
+                  { $set: { jid: phoneNumber, lid: lid, lastUpdated: new Date() } }
+                );
+              } else {
+                throw dupError;
+              }
             }
-          },
-          { upsert: true }
-        );
+          }
+        }
         await log(`LID Mapping backed up to StoreContact: ${phoneNumber} <-> ${lid}`);
         return true;
       }
@@ -161,96 +211,65 @@ export async function AuthStore() {
       await log(`Failed to backup LID mapping: ${error.message}`, true);
       return false;
     }
-  };
-  const credsMutex = new Mutex();
-  let credsCache;
-  let release = null;
-  try {
-    release = await Promise.race([
-      credsMutex.acquire(),
-      new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Mutex timeout')), ACQUIRE_TIMEOUT)
-      )
-    ]);
-    credsCache = (await readData('creds')) || initAuthCreds();
-  } catch (error) {
-    await log(`Failed to acquire credentials: ${error.message}`, true);
-    credsCache = initAuthCreds();
-  } finally {
-    if (release && typeof release === 'function') {
-      try {
-        release();
-      } catch (releaseError) {
-        await log(`Mutex release error: ${releaseError.message}`, true);
-      }
-    }
-  }
-  const keyLocks = new Map();
-  const acquireKeyLock = async (key) => {
-    if (!keyLocks.has(key)) {
-      keyLocks.set(key, new Mutex());
-    }
-    return await keyLocks.get(key).acquire();
-  };
-  const validateAndMigrateSession = async (fromJid, toJid) => {
-    const session = await mongoose.startSession();
-    session.startTransaction();
+  });
+};
+
+const validateAndMigrateSession = async (fromJid, toJid) => {
+  return executeWithDedup(`migrate:${fromJid}:${toJid}`, async () => {
     try {
       validateJID(fromJid);
       validateJID(toJid);
       const normalizedFrom = fromJid.includes('@') ? fromJid.split('@')[0] : fromJid;
       const normalizedTo = toJid.includes('@') ? toJid.split('@')[0] : toJid;
-      const patterns = [
-        new RegExp(`^session-${normalizedFrom}$`),
-        new RegExp(`^session-${normalizedFrom}[:-_]`)
-      ];
-      const oldSessions = await BaileysSession.find({
-        $or: patterns.map(pattern => ({ key: { $regex: pattern } }))
-      }).session(session).lean();
-      if (oldSessions.length === 0) {
-        await session.abortTransaction();
-        await log(`No sessions found for ${fromJid} to migrate`);
+      const stream = redis.scanStream({
+        match: `*${normalizedFrom}*`,
+        count: 100
+      });
+      const keysToMigrate = [];
+      stream.on('data', (keys) => {
+        keys.forEach(key => {
+          if (key.includes(`session-${normalizedFrom}`) ||
+            key.includes(`${normalizedFrom}-`) ||
+            key.includes(`-${normalizedFrom}`)) {
+            keysToMigrate.push(key);
+          }
+        });
+      });
+      await new Promise(resolve => stream.on('end', resolve));
+      if (keysToMigrate.length === 0) {
         return false;
       }
-      const bulkOps = oldSessions.map(oldSession => {
-        const suffix = oldSession.key.replace(`session-${normalizedFrom}`, '');
-        const newSessionKey = `session-${normalizedTo}${suffix}`;
-        return {
-          updateOne: {
-            filter: { key: newSessionKey },
-            update: { $set: { value: oldSession.value } },
-            upsert: true
-          }
-        };
-      });
-      await BaileysSession.bulkWrite(bulkOps, { session });
-      await session.commitTransaction();
-      await log(`Migrated ${oldSessions.length} session(s) from ${fromJid} to ${toJid}`);
+      const values = await redis.mget(keysToMigrate);
+      const pipeline = redis.pipeline();
+      for (let i = 0; i < keysToMigrate.length; i++) {
+        const oldKey = keysToMigrate[i];
+        const value = values[i];
+        if (value) {
+          const newKey = oldKey.replace(normalizedFrom, normalizedTo);
+          pipeline.set(newKey, value);
+        }
+      }
+      await pipeline.exec();
+      await log(`Migrated ${keysToMigrate.length} session(s) from ${fromJid} to ${toJid}`);
       return true;
     } catch (error) {
-      await session.abortTransaction();
       await log(`Failed to migrate session from ${fromJid} to ${toJid}: ${error.message}`, true);
       return false;
-    } finally {
-      session.endSession();
     }
-  };
-  const storeLIDMapping = async (lid, phoneNumber, autoMigrate = true) => {
+  });
+};
+
+const storeLIDMapping = async (lid, phoneNumber, autoMigrate = true) => {
+  return executeWithDedup(`store:${lid}:${phoneNumber}`, async () => {
     try {
-      const normalizedLid = lid.includes('@') ? lid : lid + '@lid';
-      const normalizedPN = phoneNumber.includes('@') ? phoneNumber : phoneNumber + '@s.whatsapp.net';
+      const normalizedLid = lid.includes('@') ? lid : `${lid}@lid`;
+      const normalizedPN = phoneNumber.includes('@') ? phoneNumber : `${phoneNumber}@s.whatsapp.net`;
       await StoreContact.findOneAndUpdate(
         { $or: [{ jid: normalizedPN }, { lid: normalizedLid }] },
-        {
-          $set: {
-            jid: normalizedPN,
-            lid: normalizedLid,
-            lastUpdated: new Date()
-          }
-        },
+        { $set: { jid: normalizedPN, lid: normalizedLid, lastUpdated: new Date() } },
         { upsert: true }
       );
-      await log(`LID Mapping stored manually: ${normalizedPN} <-> ${normalizedLid}`);
+      await log(`LID Mapping stored: ${normalizedPN} <-> ${normalizedLid}`);
       if (autoMigrate) {
         await validateAndMigrateSession(normalizedPN, normalizedLid);
       }
@@ -259,7 +278,11 @@ export async function AuthStore() {
       await log(`Failed to store LID mapping: ${error.message}`, true);
       return false;
     }
-  };
+  });
+};
+
+export default async function AuthStore() {
+  let credsCache = (await readData(REDIS_PREFIX.CREDS)) || initAuthCreds();
   return {
     state: {
       get creds() {
@@ -273,15 +296,14 @@ export async function AuthStore() {
           try {
             if (type === 'lid-mapping') {
               const keys = ids.map(id => `${type}-${id}`);
-              const sessions = await BaileysSession.find({ key: { $in: keys } }).lean();
+              if (keys.length === 0) return {};
               const data = {};
-              for (const session of sessions) {
-                if (session.value) {
-                  const keyParts = session.key.split(':');
-                  const originalKey = keyParts.slice(2).join(':');
-                  const id = originalKey.replace(`${type}-`, '');
-                  const value = safeJSONParse(session.value);
-                  data[id] = typeof value === 'string' ? value : null;
+              const results = await redis.mget(keys);
+              for (let i = 0; i < ids.length; i++) {
+                const id = ids[i];
+                const value = safeJSONParse(results[i]);
+                if (typeof value === 'string') {
+                  data[id] = value;
                 }
               }
               if (Object.keys(data).length === 0 && ids.length > 0) {
@@ -292,11 +314,11 @@ export async function AuthStore() {
                   const isReverse = id.endsWith('_reverse');
                   if (isReverse) {
                     const lidNumber = id.replace('_reverse', '');
-                    const lid = lidNumber.includes('@') ? lidNumber : lidNumber + '@lid';
+                    const lid = lidNumber.includes('@') ? lidNumber : `${lidNumber}@lid`;
                     lids.push(lid);
                     idMapping[lid] = id;
                   } else {
-                    const phoneNumber = id.includes('@') ? id : id + '@s.whatsapp.net';
+                    const phoneNumber = id.includes('@') ? id : `${id}@s.whatsapp.net`;
                     phoneNumbers.push(phoneNumber);
                     idMapping[phoneNumber] = id;
                   }
@@ -318,12 +340,10 @@ export async function AuthStore() {
                     if (contact.jid && idMapping[contact.jid] && contact.lid) {
                       const lidValue = contact.lid.replace('@lid', '');
                       data[idMapping[contact.jid]] = lidValue;
-                      await log(`Fallback from StoreContact: ${contact.jid} -> ${lidValue}`);
                     }
                     if (contact.lid && idMapping[contact.lid] && contact.jid) {
                       const pnValue = contact.jid.replace('@s.whatsapp.net', '');
                       data[idMapping[contact.lid]] = pnValue;
-                      await log(`Fallback from StoreContact: ${contact.lid} -> ${pnValue}`);
                     }
                   }
                 }
@@ -331,35 +351,33 @@ export async function AuthStore() {
               return data;
             }
             const keys = ids.map(id => `${type}-${id}`);
-            const sessions = await BaileysSession.find({ key: { $in: keys } }).lean();
+            if (keys.length === 0) return {};
             const data = {};
-            for (const session of sessions) {
-              if (!session.value) continue;
-              const keyParts = session.key.split(':');
-              const originalKey = keyParts.slice(2).join(':');
-              const id = originalKey.replace(`${type}-`, '');
-              let value = safeJSONParse(session.value);
+            const results = await redis.mget(keys);
+            for (let i = 0; i < ids.length; i++) {
+              const id = ids[i];
+              let value = safeJSONParse(results[i]);
               if (type === 'app-state-sync-key' && value) {
-                value = proto.Message.AppStateSyncKeyData.create(value);
+                value = proto.Message.AppStateSyncKeyData.fromObject(value);
               }
               data[id] = value;
             }
             return data;
           } catch (error) {
-            await log(`Failed to get keys for type ${type}: ${error.message}`, true);
+            await log(`Failed to get keys from Redis for type ${type}: ${error.message}`, true);
             return {};
           }
         },
         set: async (data) => {
-          const locks = new Map();
+          const locks = [];
           const writeItems = {};
           const removeKeys = [];
           try {
             for (const category in data) {
               for (const id in data[category]) {
                 const key = `${category}-${id}`;
-                const lockRelease = await acquireKeyLock(key);
-                locks.set(key, lockRelease);
+                const releaseLock = await acquireRedisLock(key);
+                locks.push({ key, release: releaseLock });
               }
             }
             for (const category in data) {
@@ -372,7 +390,6 @@ export async function AuthStore() {
                       await log(`Invalid lid-mapping value for ${id}, expected string got ${typeof value}`, true);
                       continue;
                     }
-                    await log(`LID Mapping update: ${id} -> ${value}`);
                     backupLIDMapping(id, value).catch(err =>
                       log(`Backup LID mapping failed for ${id}: ${err.message}`, true)
                     );
@@ -390,22 +407,16 @@ export async function AuthStore() {
             if (removeKeys.length > 0) {
               promises.push(removeBatch(removeKeys));
             }
-            const results = await Promise.all(promises);
-            const success = results.every(result => result === true);
-            if (!success) {
-              await log('Some batch operations failed', true);
-            }
+            await Promise.all(promises);
           } catch (error) {
-            await log(`Failed to set keys: ${error.message}`, true);
+            await log(`Failed to set keys in Redis: ${error.message}`, true);
             throw error;
           } finally {
-            for (const [key, release] of locks) {
+            for (const { key, release } of locks) {
               try {
-                if (release && typeof release === 'function') {
-                  release();
-                }
-              } catch {
-                await log(`Failed to release lock for ${key}`, true);
+                await release();
+              } catch (releaseError) {
+                await log(`Failed to release lock for ${key}: ${releaseError.message}`, true);
               }
             }
           }
@@ -413,124 +424,121 @@ export async function AuthStore() {
       },
     },
     saveCreds: async () => {
-      const release = await credsMutex.acquire();
+      const releaseLock = await acquireRedisLock('creds');
       try {
-        const success = await writeData('creds', credsCache);
+        const success = await writeData(REDIS_PREFIX.CREDS, credsCache);
         if (!success) {
           throw new Error('Failed to save credentials');
         }
         return success;
       } finally {
-        if (release && typeof release === 'function') {
-          try {
-            release();
-          } catch (releaseError) {
-            await log(`Mutex release error in saveCreds: ${releaseError.message}`, true);
-          }
-        }
+        await releaseLock();
       }
     },
     clearSession: async () => {
       try {
-        const result = await BaileysSession.deleteMany({
-          key: { $regex: /^session-/ }
+        const stream = redis.scanStream({ match: '*', count: 100 });
+        const keysToDelete = [];
+        stream.on('data', (keys) => {
+          keys.forEach(k => {
+            if (!k.startsWith(REDIS_PREFIX.LOCK)) {
+              keysToDelete.push(k);
+            }
+          });
         });
-        await log(`Session cleared successfully. Deleted ${result.deletedCount} documents`, false);
+        await new Promise(resolve => stream.on('end', resolve));
+        if (keysToDelete.length > 0) {
+          for (let i = 0; i < keysToDelete.length; i += 1000) {
+            const batch = keysToDelete.slice(i, i + 1000);
+            await redis.del(batch);
+          }
+        }
+        await log(`Session cleared from Redis. Deleted ${keysToDelete.length} keys.`);
+        credsCache = initAuthCreds();
+        await writeData(REDIS_PREFIX.CREDS, credsCache);
         return true;
       } catch (error) {
-        await log(`Failed to clear session: ${error.message}`, true);
+        await log(`Failed to clear session from Redis: ${error.message}`, true);
         return false;
       }
     },
     getLidMappings: async () => {
-      try {
-        return await StoreContact.find({}, { jid: 1, lid: 1, lastUpdated: 1, _id: 0 }).lean();
-      } catch (error) {
-        await log(`Failed to get LID mappings: ${error.message}`, true);
-        return [];
-      }
+      return executeWithDedup('get-all-mappings', async () => {
+        try {
+          return await StoreContact.find({}, { jid: 1, lid: 1, lastUpdated: 1, _id: 0 }).lean();
+        } catch (error) {
+          await log(`Failed to get LID mappings: ${error.message}`, true);
+          return [];
+        }
+      }, 10);
     },
     getLIDForPN: async (phoneNumber) => {
-      try {
-        const normalizedPN = phoneNumber.includes('@') ? phoneNumber : phoneNumber + '@s.whatsapp.net';
-        const contact = await StoreContact.findOne({ jid: normalizedPN }, { lid: 1, _id: 0 }).lean();
-        if (contact?.lid) {
-          await log(`Phone ${phoneNumber} mapped to LID ${contact.lid} (from StoreContact)`);
-          return contact.lid;
-        }
-        const pnNumber = normalizedPN.split('@')[0];
-        const key = `lid-mapping-${pnNumber}`;
-        const session = await BaileysSession.findOne({ key }).lean();
-        if (session?.value) {
-          const lid = safeJSONParse(session.value);
-          if (typeof lid === 'string') {
-            const fullLid = lid.includes('@') ? lid : lid + '@lid';
-            await log(`Phone ${phoneNumber} mapped to LID ${fullLid} (from Baileys session)`);
-            return fullLid;
+      return executeWithDedup(`getLIDForPN:${phoneNumber}`, async () => {
+        try {
+          const normalizedPN = phoneNumber.includes('@') ? phoneNumber : `${phoneNumber}@s.whatsapp.net`;
+          const contact = await StoreContact.findOne({ jid: normalizedPN }, { lid: 1, _id: 0 }).lean();
+          if (contact?.lid) {
+            return contact.lid;
           }
+          const pnNumber = normalizedPN.split('@')[0];
+          const key = `lid-mapping-${pnNumber}`;
+          const lidFromRedis = await readData(key);
+          if (typeof lidFromRedis === 'string') {
+            return lidFromRedis.includes('@') ? lidFromRedis : `${lidFromRedis}@lid`;
+          }
+          return null;
+        } catch (error) {
+          await log(`Failed to get LID for PN ${phoneNumber}: ${error.message}`, true);
+          return null;
         }
-        await log(`No LID found for phone: ${phoneNumber}`, true);
-        return null;
-      } catch (error) {
-        await log(`Failed to get LID for PN ${phoneNumber}: ${error.message}`, true);
-        return null;
-      }
+      }, 2);
     },
     getPNForLID: async (lid) => {
-      try {
-        const normalizedLid = lid.includes('@') ? lid : lid + '@lid';
-        const contact = await StoreContact.findOne({ lid: normalizedLid }, { jid: 1, _id: 0 }).lean();
-        if (contact?.jid) {
-          await log(`LID ${lid} mapped to phone ${contact.jid} (from StoreContact)`);
-          return contact.jid;
-        }
-        const lidNumber = normalizedLid.split('@')[0];
-        const reverseKey = `${lidNumber}_reverse`;
-        const key = `lid-mapping-${reverseKey}`;
-        const session = await BaileysSession.findOne({ key }).lean();
-        if (session?.value) {
-          const pn = safeJSONParse(session.value);
-          if (typeof pn === 'string') {
-            const fullPN = pn.includes('@') ? pn : pn + '@s.whatsapp.net';
-            await log(`LID ${lid} mapped to phone ${fullPN} (from Baileys session)`);
-            return fullPN;
+      return executeWithDedup(`getPNForLID:${lid}`, async () => {
+        try {
+          const normalizedLid = lid.includes('@') ? lid : `${lid}@lid`;
+          const contact = await StoreContact.findOne({ lid: normalizedLid }, { jid: 1, _id: 0 }).lean();
+          if (contact?.jid) {
+            return contact.jid;
           }
+          const lidNumber = normalizedLid.split('@')[0];
+          const reverseKey = `lid-mapping-${lidNumber}_reverse`;
+          const pnFromRedis = await readData(reverseKey);
+          if (typeof pnFromRedis === 'string') {
+            return pnFromRedis.includes('@') ? pnFromRedis : `${pnFromRedis}@s.whatsapp.net`;
+          }
+          return null;
+        } catch (error) {
+          await log(`Failed to get PN for LID ${lid}: ${error.message}`, true);
+          return null;
         }
-        await log(`No mapping found for LID: ${lid}`, true);
-        return null;
-      } catch (error) {
-        await log(`Failed to get PN for LID ${lid}: ${error.message}`, true);
-        return null;
-      }
+      }, 2);
     },
     getSessionStats: async () => {
-      try {
-        const stats = await BaileysSession.aggregate([
-          {
-            $match: {
-              key: {
-                $regex: /^session-/
+      return executeWithDedup('session-stats', async () => {
+        try {
+          const stream = redis.scanStream({ match: '*', count: 100 });
+          const keysByCategory = {};
+          stream.on('data', (keys) => {
+            keys.forEach(key => {
+              if (key.startsWith(REDIS_PREFIX.LOCK)) return;
+              const category = key.split('-')[0];
+              if (!keysByCategory[category]) {
+                keysByCategory[category] = 0;
               }
-            }
-          },
-          {
-            $group: {
-              _id: {
-                $arrayElemAt: [
-                  { $split: ['$key', '-'] },
-                  0
-                ]
-              },
-              count: { $sum: 1 }
-            }
-          },
-          { $sort: { count: -1 } }
-        ]);
-        return stats;
-      } catch (error) {
-        await log(`Failed to get session stats: ${error.message}`, true);
-        return [];
-      }
+              keysByCategory[category]++;
+            });
+          });
+          await new Promise(resolve => stream.on('end', resolve));
+          return Object.entries(keysByCategory).map(([category, count]) => ({
+            _id: category,
+            count
+          })).sort((a, b) => b.count - a.count);
+        } catch (error) {
+          await log(`Failed to get session stats: ${error.message}`, true);
+          return [];
+        }
+      }, 5);
     },
     validateAndMigrateSession,
     storeLIDMapping,

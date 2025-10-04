@@ -92,7 +92,7 @@ class AutoDownloadHandler {
           }
         }
       }
-      performanceManager.cache.updateUserStats(user.userId, { $inc: { userCount: 1 } });
+      await performanceManager.cache.updateUserStats(user.userId, { $inc: { userCount: 1 } });
       performanceManager.cache.incrementGlobalStats();
     } catch (error) {
       log(`Error autodownload Instagram: ${error.message}`, true);
@@ -122,7 +122,7 @@ class AutoDownloadHandler {
         } else if (result.type === 'image' && result.images?.length > 0) {
           await sendImages(fn, result, [], toId, m, baseCaption);
         }
-        performanceManager.cache.updateUserStats(user.userId, { $inc: { userCount: 1 } });
+        await performanceManager.cache.updateUserStats(user.userId, { $inc: { userCount: 1 } });
         performanceManager.cache.incrementGlobalStats();
       }
     } catch (error) {
@@ -145,7 +145,7 @@ class AutoDownloadHandler {
       const ffmpegCmd = `ffmpeg -i "${tempVideoPath}" -i "${tempAudioPath}" -c:v copy -c:a aac "${finalOutputPath}"`;
       await exec(ffmpegCmd);
       await fn.sendFilePath(toId, dbSettings.autocommand, finalOutputPath, { quoted: m });
-      performanceManager.cache.updateUserStats(user.userId, { $inc: { userCount: 1 } });
+      await performanceManager.cache.updateUserStats(user.userId, { $inc: { userCount: 1 } });
       performanceManager.cache.incrementGlobalStats();
     } catch (error) {
       log(`Error autodownload Facebook: ${error.message}`, true);
@@ -173,7 +173,7 @@ class AutoDownloadHandler {
       const ffmpegCmd = `ffmpeg -i "${tempVideoPath}" -i "${tempAudioPath}" -c:v copy -c:a aac "${finalOutputPath}"`;
       await exec(ffmpegCmd);
       await fn.sendFilePath(toId, dbSettings.autocommand, finalOutputPath, { quoted: m });
-      performanceManager.cache.updateUserStats(user.userId, { $inc: { userCount: 1 } });
+      await performanceManager.cache.updateUserStats(user.userId, { $inc: { userCount: 1 } });
       performanceManager.cache.incrementGlobalStats();
     } catch (error) {
       log(`Error autodownload Twitter/X: ${error.message}`, true);

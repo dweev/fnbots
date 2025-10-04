@@ -110,6 +110,7 @@ class DatabaseConnection {
 
 const database = new DatabaseConnection();
 
+import redis from './redis.js';
 import mongoStore from './StoreDB.js';
 import User from '../src/models/User/index.js';
 import Media from '../src/models/Media/index.js';
@@ -117,13 +118,13 @@ import Group from '../src/models/Group/index.js';
 import Command from '../src/models/Command/index.js';
 import Settings from '../src/models/Settings/index.js';
 import Whitelist from '../src/models/Whitelist/index.js';
+import OTPSession from '../src/models/OTPSession/index.js';
 import StoreContact from '../src/models/StoreContact/index.js';
 import StoreGroupMetadata from '../src/models/StoreGroupMetadata/index.js';
 import { saveMediaStream, getMediaStream, deleteMedia, findMedia } from './hybrid.js';
 import StoreMessages from '../src/models/StoreMessages/index.js';
 import DatabaseBot from '../src/models/DatabaseBot/index.js';
 import StoreStory from '../src/models/StoreStory/index.js';
-import OTPSession from '../src/models/OTPSession/index.js';
 
 export {
   database,
@@ -143,5 +144,6 @@ export {
   saveMediaStream,
   getMediaStream,
   deleteMedia,
-  findMedia
+  findMedia,
+  redis
 };

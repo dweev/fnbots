@@ -9,6 +9,7 @@
 import cron from 'node-cron';
 import process from 'process';
 import { LRUCache } from 'lru-cache';
+import { redis } from '../../database/index.js';
 import { signalHandler } from './signalHandler.js';
 import { restartManager } from './restartManager.js';
 
@@ -18,9 +19,6 @@ const PERFORMANCE_CONFIG = {
   CACHE_SIZES: {
     whitelist: { max: 1000, ttl: 300000 },
     groupData: { max: 500, ttl: 60000 },
-    userStats: 10000,
-    groupStats: 5000,
-    commandStats: 2000
   },
   MEMORY_CHECK_INTERVAL: 600000,
   MEMORY_THRESHOLD: 0.8,
@@ -33,9 +31,6 @@ class UnifiedCacheManager {
   constructor() {
     this.whitelistCache = new LRUCache(PERFORMANCE_CONFIG.CACHE_SIZES.whitelist);
     this.groupDataCache = new LRUCache(PERFORMANCE_CONFIG.CACHE_SIZES.groupData);
-    this.userStatsCache = new Map();
-    this.groupStatsCache = new Map();
-    this.commandStatsCache = new Map();
     this.globalStatsCache = {
       totalHits: 0,
       lastSync: Date.now()
@@ -45,55 +40,49 @@ class UnifiedCacheManager {
     this.syncTimer = null;
     this.startSyncTimer();
   }
-  updateUserStats(userId, updates) {
-    if (!this.userStatsCache.has(userId)) {
-      this.userStatsCache.set(userId, {
-        userCount: 0,
-        commandStats: {},
-        limit: { current: 0 },
-        limitgame: { current: 0 },
-        lastUpdated: Date.now()
-      });
+  async updateUserStats(userId, updates) {
+    try {
+      const key = `stats:user:${userId}`;
+      const pipeline = redis.pipeline();
+      if (updates.$inc) {
+        Object.entries(updates.$inc).forEach(([field, value]) => {
+          pipeline.hincrby(key, field, value);
+        });
+      }
+      pipeline.hset(key, 'lastUpdated', Date.now());
+      await pipeline.exec();
+    } catch (error) {
+      console.error(`Error updating user stats for ${userId}:`, error);
     }
-    const stats = this.userStatsCache.get(userId);
-    if (updates.$inc) {
-      Object.entries(updates.$inc).forEach(([key, value]) => {
-        if (key === 'userCount') {
-          stats.userCount += value;
-        } else if (key === 'limit.current') {
-          stats.limit.current += value;
-        } else if (key === 'limitgame.current') {
-          stats.limitgame.current += value;
-        } else if (key.startsWith('commandStats.')) {
-          const commandName = key.replace('commandStats.', '');
-          stats.commandStats[commandName] = (stats.commandStats[commandName] || 0) + value;
+  }
+  async updateGroupStats(groupId, updates) {
+    try {
+      const key = `stats:group:${groupId}`;
+      const pipeline = redis.pipeline();
+      if (updates.$inc) {
+        if (updates.$inc.messageCount) {
+          pipeline.hincrby(key, 'messageCount', updates.$inc.messageCount);
         }
-      });
+        if (updates.$inc.commandCount) {
+          pipeline.hincrby(key, 'commandCount', updates.$inc.commandCount);
+        }
+      }
+      pipeline.hset(key, 'lastUpdated', Date.now());
+      await pipeline.exec();
+    } catch (error) {
+      console.error(`Error updating group stats for ${groupId}:`, error);
     }
-    stats.lastUpdated = Date.now();
   }
-  updateGroupStats(groupId, updates) {
-    if (!this.groupStatsCache.has(groupId)) {
-      this.groupStatsCache.set(groupId, {
-        messageCount: 0,
-        commandCount: 0,
-        lastUpdated: Date.now()
-      });
+  async updateCommandStats(commandName, increment = 1) {
+    try {
+      const key = `stats:command:${commandName}`;
+      const pipeline = redis.pipeline();
+      pipeline.hincrby(key, 'count', increment);
+      pipeline.hset(key, 'lastUpdated', Date.now());
+      await pipeline.exec();
+    } catch (error) {
+      console.error(`Error updating command stats for ${commandName}:`, error);
     }
-    const stats = this.groupStatsCache.get(groupId);
-    if (updates.$inc) {
-      if (updates.$inc.messageCount) stats.messageCount += updates.$inc.messageCount;
-      if (updates.$inc.commandCount) stats.commandCount += updates.$inc.commandCount;
-    }
-    stats.lastUpdated = Date.now();
-  }
-  updateCommandStats(commandName, increment = 1) {
-    if (!this.commandStatsCache.has(commandName)) {
-      this.commandStatsCache.set(commandName, { count: 0, lastUpdated: Date.now() });
-    }
-    const stats = this.commandStatsCache.get(commandName);
-    stats.count += increment;
-    stats.lastUpdated = Date.now();
   }
   incrementGlobalStats() {
     this.globalStatsCache.totalHits++;
@@ -144,87 +133,163 @@ class UnifiedCacheManager {
     }
   }
   async syncUserStats() {
-    if (this.userStatsCache.size === 0) return;
-    const { User } = await import('../../database/index.js');
-    const operations = [];
-    const entries = Array.from(this.userStatsCache.entries()).slice(0, PERFORMANCE_CONFIG.BATCH_SIZE);
-    for (const [userId, stats] of entries) {
-      const updateDoc = { $inc: {} };
-      if (stats.userCount > 0) updateDoc.$inc.userCount = stats.userCount;
-      if (stats.limit.current !== 0) updateDoc.$inc['limit.current'] = stats.limit.current;
-      if (stats.limitgame.current !== 0) updateDoc.$inc['limitgame.current'] = stats.limitgame.current;
-      Object.entries(stats.commandStats).forEach(([cmd, count]) => {
-        if (count > 0) updateDoc.$inc[`commandStats.${cmd}`] = count;
+    try {
+      const stream = redis.scanStream({ match: 'stats:user:*', count: 100 });
+      const keysToSync = [];
+      stream.on('data', (keys) => {
+        keys.forEach(k => keysToSync.push(k));
       });
-      if (Object.keys(updateDoc.$inc).length > 0) {
-        operations.push({
-          updateOne: {
-            filter: { userId },
-            update: updateDoc,
-            upsert: true
+      await new Promise((resolve, reject) => {
+        stream.on('end', async () => {
+          try {
+            if (keysToSync.length === 0) {
+              resolve();
+              return;
+            }
+            const { User } = await import('../../database/index.js');
+            const operations = [];
+            for (const key of keysToSync) {
+              const stats = await redis.hgetall(key);
+              const userId = key.split(':')[2];
+              const updateDoc = { $inc: {} };
+              Object.entries(stats).forEach(([field, value]) => {
+                if (field !== 'lastUpdated' && parseInt(value) !== 0) {
+                  updateDoc.$inc[field] = parseInt(value);
+                }
+              });
+              if (Object.keys(updateDoc.$inc).length > 0) {
+                operations.push({
+                  updateOne: {
+                    filter: { userId },
+                    update: updateDoc,
+                    upsert: true
+                  }
+                });
+              }
+            }
+            if (operations.length > 0) {
+              await User.collection.bulkWrite(operations, { ordered: false });
+              await redis.del(keysToSync);
+            }
+            resolve();
+          } catch (error) {
+            reject(error);
           }
         });
-      }
-      this.userStatsCache.delete(userId);
-    }
-    if (operations.length > 0) {
-      await User.collection.bulkWrite(operations, { ordered: false });
+        stream.on('error', reject);
+      });
+    } catch (error) {
+      console.error('Error syncing user stats:', error);
     }
   }
   async syncGroupStats() {
-    if (this.groupStatsCache.size === 0) return;
-    const { Group } = await import('../../database/index.js');
-    const operations = [];
-    const entries = Array.from(this.groupStatsCache.entries()).slice(0, PERFORMANCE_CONFIG.BATCH_SIZE);
-    for (const [groupId, stats] of entries) {
-      const updateDoc = { $inc: {} };
-      if (stats.messageCount > 0) updateDoc.$inc.messageCount = stats.messageCount;
-      if (stats.commandCount > 0) updateDoc.$inc.commandCount = stats.commandCount;
-      if (Object.keys(updateDoc.$inc).length > 0) {
-        operations.push({
-          updateOne: {
-            filter: { groupId },
-            update: updateDoc,
-            upsert: true
+    try {
+      const stream = redis.scanStream({ match: 'stats:group:*', count: 100 });
+      const keysToSync = [];
+      stream.on('data', (keys) => {
+        keys.forEach(k => keysToSync.push(k));
+      });
+      await new Promise((resolve, reject) => {
+        stream.on('end', async () => {
+          try {
+            if (keysToSync.length === 0) {
+              resolve();
+              return;
+            }
+            const { Group } = await import('../../database/index.js');
+            const operations = [];
+            for (const key of keysToSync) {
+              const stats = await redis.hgetall(key);
+              const groupId = key.split(':')[2];
+              const updateDoc = { $inc: {} };
+              if (stats.messageCount) {
+                updateDoc.$inc.messageCount = parseInt(stats.messageCount);
+              }
+              if (stats.commandCount) {
+                updateDoc.$inc.commandCount = parseInt(stats.commandCount);
+              }
+              if (Object.keys(updateDoc.$inc).length > 0) {
+                operations.push({
+                  updateOne: {
+                    filter: { groupId },
+                    update: updateDoc,
+                    upsert: true
+                  }
+                });
+              }
+            }
+            if (operations.length > 0) {
+              await Group.collection.bulkWrite(operations, { ordered: false });
+              await redis.del(keysToSync);
+            }
+            resolve();
+          } catch (error) {
+            reject(error);
           }
         });
-      }
-      this.groupStatsCache.delete(groupId);
-    }
-    if (operations.length > 0) {
-      await Group.collection.bulkWrite(operations, { ordered: false });
+        stream.on('error', reject);
+      });
+    } catch (error) {
+      console.error('Error syncing group stats:', error);
     }
   }
   async syncCommandStats() {
-    if (this.commandStatsCache.size === 0) return;
-    const { Command } = await import('../../database/index.js');
-    const operations = [];
-    const entries = Array.from(this.commandStatsCache.entries()).slice(0, PERFORMANCE_CONFIG.BATCH_SIZE);
-    for (const [commandName, stats] of entries) {
-      if (stats.count > 0) {
-        operations.push({
-          updateOne: {
-            filter: { name: commandName },
-            update: { $inc: { count: stats.count } },
-            upsert: true
+    try {
+      const stream = redis.scanStream({ match: 'stats:command:*', count: 100 });
+      const keysToSync = [];
+      stream.on('data', (keys) => {
+        keys.forEach(k => keysToSync.push(k));
+      });
+      await new Promise((resolve, reject) => {
+        stream.on('end', async () => {
+          try {
+            if (keysToSync.length === 0) {
+              resolve();
+              return;
+            }
+            const { Command } = await import('../../database/index.js');
+            const operations = [];
+            for (const key of keysToSync) {
+              const stats = await redis.hgetall(key);
+              const commandName = key.split(':')[2];
+              if (stats.count && parseInt(stats.count) > 0) {
+                operations.push({
+                  updateOne: {
+                    filter: { name: commandName },
+                    update: { $inc: { count: parseInt(stats.count) } },
+                    upsert: true
+                  }
+                });
+              }
+            }
+            if (operations.length > 0) {
+              await Command.collection.bulkWrite(operations, { ordered: false });
+              await redis.del(keysToSync);
+            }
+            resolve();
+          } catch (error) {
+            reject(error);
           }
         });
-      }
-      this.commandStatsCache.delete(commandName);
-    }
-    if (operations.length > 0) {
-      await Command.collection.bulkWrite(operations, { ordered: false });
+        stream.on('error', reject);
+      });
+    } catch (error) {
+      console.error('Error syncing command stats:', error);
     }
   }
   async syncGlobalStats() {
-    if (this.globalStatsCache.totalHits > 0) {
-      const { Settings } = await import('../../database/index.js');
-      await Settings.collection.updateOne(
-        {},
-        { $inc: { totalHitCount: this.globalStatsCache.totalHits } },
-        { upsert: true }
-      );
-      this.globalStatsCache.totalHits = 0;
+    try {
+      if (this.globalStatsCache.totalHits > 0) {
+        const { Settings } = await import('../../database/index.js');
+        await Settings.collection.updateOne(
+          {},
+          { $inc: { totalHitCount: this.globalStatsCache.totalHits } },
+          { upsert: true }
+        );
+        this.globalStatsCache.totalHits = 0;
+      }
+    } catch (error) {
+      console.error('Error syncing global stats:', error);
     }
   }
   startSyncTimer() {
@@ -244,7 +309,7 @@ class UnifiedCacheManager {
     const heapUsedMB = Math.round(memUsage.heapUsed / 1024 / 1024);
     const heapTotalMB = Math.round(memUsage.heapTotal / 1024 / 1024);
     const rssMB = Math.round(memUsage.rss / 1024 / 1024);
-    console.log(`Usage: ${heapUsedMB}MB/${heapTotalMB}MB | ${rssMB}MB | U:${this.userStatsCache.size} G:${this.groupStatsCache.size} C:${this.commandStatsCache.size}`);
+    console.log(`Memory Usage: Heap ${heapUsedMB}MB/${heapTotalMB}MB | RSS ${rssMB}MB`);
     if (heapUsedMB > heapTotalMB * PERFORMANCE_CONFIG.MEMORY_THRESHOLD) {
       this.whitelistCache.clear();
       this.groupDataCache.clear();
@@ -255,28 +320,58 @@ class UnifiedCacheManager {
     }
     return { heapUsedMB, heapTotalMB, rssMB };
   }
-  getStats() {
-    return {
-      userStats: { size: this.userStatsCache.size },
-      groupStats: { size: this.groupStatsCache.size },
-      commandStats: { size: this.commandStatsCache.size },
-      globalStats: {
-        pendingHits: this.globalStatsCache.totalHits,
-        lastSync: new Date(this.globalStatsCache.lastSync).toISOString()
-      },
-      whitelist: {
-        size: this.whitelistCache.size,
-        hitRate: this.whitelistCache.calculatedSize
-      },
-      groupData: {
-        size: this.groupDataCache.size,
-        hitRate: this.groupDataCache.calculatedSize
-      },
-      performance: {
-        lastSync: new Date(this.lastSyncTime).toISOString(),
-        syncInProgress: this.syncInProgress
-      }
-    };
+  async getStats() {
+    try {
+      const counts = {
+        users: 0,
+        groups: 0,
+        commands: 0
+      };
+      const stream = redis.scanStream({ match: 'stats:*', count: 100 });
+      stream.on('data', (keys) => {
+        keys.forEach(key => {
+          if (key.startsWith('stats:user:')) counts.users++;
+          else if (key.startsWith('stats:group:')) counts.groups++;
+          else if (key.startsWith('stats:command:')) counts.commands++;
+        });
+      });
+      await new Promise((resolve, reject) => {
+        stream.on('end', resolve);
+        stream.on('error', reject);
+      });
+      return {
+        redisCacheStats: counts,
+        globalStats: {
+          pendingHits: this.globalStatsCache.totalHits,
+          lastSync: new Date(this.globalStatsCache.lastSync).toISOString()
+        },
+        whitelist: {
+          size: this.whitelistCache.size
+        },
+        groupData: {
+          size: this.groupDataCache.size
+        },
+        performance: {
+          lastSync: new Date(this.lastSyncTime).toISOString(),
+          syncInProgress: this.syncInProgress
+        }
+      };
+    } catch (error) {
+      console.error('Error getting stats:', error);
+      return {
+        redisCacheStats: { users: 0, groups: 0, commands: 0 },
+        globalStats: {
+          pendingHits: this.globalStatsCache.totalHits,
+          lastSync: new Date(this.globalStatsCache.lastSync).toISOString()
+        },
+        whitelist: { size: this.whitelistCache.size },
+        groupData: { size: this.groupDataCache.size },
+        performance: {
+          lastSync: new Date(this.lastSyncTime).toISOString(),
+          syncInProgress: this.syncInProgress
+        }
+      };
+    }
   }
   async forceSync() {
     console.log('Force syncing all caches...');
@@ -284,21 +379,43 @@ class UnifiedCacheManager {
   }
   async clearAllCaches() {
     console.log('Clearing all caches...');
-    await this.syncToDatabase();
-    this.userStatsCache.clear();
-    this.groupStatsCache.clear();
-    this.commandStatsCache.clear();
-    this.globalStatsCache.totalHits = 0;
-    this.whitelistCache.clear();
-    this.groupDataCache.clear();
+    await this.forceSync();
+    try {
+      const patterns = ['stats:user:*', 'stats:group:*', 'stats:command:*'];
+      for (const pattern of patterns) {
+        const stream = redis.scanStream({ match: pattern, count: 100 });
+        const keysToDelete = [];
+        stream.on('data', (keys) => {
+          keysToDelete.push(...keys);
+        });
+        await new Promise((resolve, reject) => {
+          stream.on('end', async () => {
+            try {
+              if (keysToDelete.length > 0) {
+                await redis.del(keysToDelete);
+              }
+              resolve();
+            } catch (error) {
+              reject(error);
+            }
+          });
+          stream.on('error', reject);
+        });
+      }
+      this.globalStatsCache.totalHits = 0;
+      this.whitelistCache.clear();
+      this.groupDataCache.clear();
+      console.log('All caches cleared.');
+    } catch (error) {
+      console.error('Error clearing caches:', error);
+    }
   }
   async shutdown() {
     console.log('Cache manager shutting down...');
     this.stopSyncTimer();
     await this.syncToDatabase();
   }
-}
-
+};
 class UnifiedJobScheduler {
   constructor(cacheManager) {
     this.cacheManager = cacheManager;
@@ -464,8 +581,7 @@ class UnifiedJobScheduler {
       restarting: this.restarting
     };
   }
-}
-
+};
 class UnifiedPerformanceManager {
   constructor() {
     this.cacheManager = new UnifiedCacheManager();
@@ -491,9 +607,9 @@ class UnifiedPerformanceManager {
   get scheduler() {
     return this.jobScheduler;
   }
-  getFullStatus() {
+  async getFullStatus() {
     return {
-      cache: this.cacheManager.getStats(),
+      cache: await this.cacheManager.getStats(),
       scheduler: this.jobScheduler.getStatus(),
       performance: {
         config: PERFORMANCE_CONFIG,
@@ -502,7 +618,7 @@ class UnifiedPerformanceManager {
       }
     };
   }
-}
+};
 
 export const performanceManager = new UnifiedPerformanceManager();
 export default performanceManager;

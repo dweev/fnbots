@@ -228,7 +228,7 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
   } else if (body?.toLowerCase().trim() === "cachestats") {
     if (!isSadmin && !isMaster) return;
     try {
-      const stats = performanceManager.getFullStatus();
+      const stats = await performanceManager.getFullStatus();
       let statsText = `*Performance Statistics*\n\n`;
 
       statsText += `*Cache Statistics:*\n`;
@@ -310,7 +310,7 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
   if (selfMode === 'false' && fromBot) return;
 
   if (m.isGroup) {
-    performanceManager.cache.updateGroupStats(toId, {
+    await performanceManager.cache.updateGroupStats(toId, {
       $inc: {
         messageCount: 1,
         commandCount: isCmd ? 1 : 0
@@ -568,8 +568,8 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
                     }
                   }
                 }
-                performanceManager.cache.updateUserStats(user.userId, userUpdates);
-                performanceManager.cache.updateCommandStats(command.name, 1);
+                await performanceManager.cache.updateUserStats(user.userId, userUpdates);
+                await performanceManager.cache.updateCommandStats(command.name, 1);
                 performanceManager.cache.incrementGlobalStats();
               }
             } catch (error) {

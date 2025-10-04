@@ -14,10 +14,10 @@ import config from '../config.js';
 import { Boom } from '@hapi/boom';
 import qrcode from 'qrcode-terminal';
 import { clientBot } from './client.js';
+import AuthStore from '../database/auth.js';
 import { parsePhoneNumber } from 'awesome-phonenumber';
 import log, { pinoLogger } from '../src/lib/logger.js';
 import { restartManager } from '../src/lib/restartManager.js';
-import { AuthStore, BaileysSession } from '../database/auth.js';
 import { Settings, mongoStore, StoreGroupMetadata, OTPSession } from '../database/index.js';
 import { default as makeWASocket, jidNormalizedUser, Browsers, makeCacheableSignalKeyStore, isJidBroadcast, fetchLatestBaileysVersion } from 'baileys';
 
@@ -86,13 +86,10 @@ export async function createWASocket(dbSettings) {
     enableRecentMessageCache: true
   });
 
-  fn.validateAndMigrateSession = authStore.validateAndMigrateSession;
   fn.clearSession = authStore.clearSession;
-  fn.getSessionStats = authStore.getSessionStats;
   fn.storeLIDMapping = authStore.storeLIDMapping;
   fn.getPNForLID = authStore.getPNForLID;
   fn.getLIDForPN = authStore.getLIDForPN;
-  fn.getLidMappings = authStore.getLidMappings;
 
   fn.ev.on('lid-mapping.update', async ({ lid, pn }) => {
     try {
@@ -125,7 +122,7 @@ export async function createWASocket(dbSettings) {
         numberToValidate = null;
       }
     }
-    await BaileysSession.deleteMany({});
+    await authStore.clearSession();
     dbSettings.botNumber = null;
     await Settings.updateSettings(dbSettings);
   };
@@ -169,8 +166,10 @@ export async function createWASocket(dbSettings) {
             await log(`Mendeteksi ${staleGroupIds.length} grup usang. Memulai pembersihan...`);
             const deleteResult = await StoreGroupMetadata.deleteMany({ groupId: { $in: staleGroupIds } });
             await log(`Pembersihan database selesai: ${deleteResult.deletedCount} metadata grup usang telah dihapus.`);
-            staleGroupIds.forEach(id => mongoStore.clearGroupCacheByKey(id));
-            await log(`Cache untuk ${staleGroupIds.length} grup usang telah dibersihkan...`);
+            for (const id of staleGroupIds) {
+              await mongoStore.clearGroupCacheByKey(id);
+            }
+            await log(`Cache Redis untuk ${staleGroupIds.length} grup usang telah dibersihkan...`);
           } else {
             await log('Sinkronisasi selesai...');
           }
@@ -188,7 +187,7 @@ export async function createWASocket(dbSettings) {
         const code = [401, 402, 403, 411, 500];
         if (code.includes(statusCode)) {
           dbSettings.botNumber = null;
-          await BaileysSession.deleteMany({});
+          await authStore.clearSession();
           await Settings.updateSettings(dbSettings);
           restartManager.forceExit(1);
         } else {

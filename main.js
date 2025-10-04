@@ -6221,19 +6221,19 @@ async function arfine(fn, m, store, asu) {
   let ar = args.map((v) => v.toLowerCase());
   let txt = body?.toLowerCase();
   let isCmd = txt?.startsWith(dbSettings.rname) || txt?.startsWith(dbSettings.sname);
-  let gameDefinitions = [
-    { name: 'Tebak Lirik', regex: /^Tebak Lirik:/i, store: tebaklirik },
-    { name: 'Tebak Kalimat', regex: /^Tebak Kalimat:/i, store: tebaklirik },
-    { name: 'Siapakah Aku', regex: /^Siapakah Aku:/i, store: tebaklirik },
-    { name: 'Teka Teki', regex: /^Teka Teki:/i, store: tekateki },
-    { name: 'Tebak Kata', regex: /^Tebak Kata:/i, store: tebakkata },
-    { name: 'Susun Kata', regex: /^Susun Kata:/i, store: susunkata },
-    { name: 'Tebak Kimia', regex: /^Tebak Kimia:/i, store: tebakkimia },
-    { name: 'Tebak Negara', regex: /^Tebak Negara:/i, store: tebaknegara },
-    { name: 'Tebak Bendera', regex: /^Tebak Bendera:/i, store: tebakbendera },
-    { name: 'Tebak Gambar Berikut', regex: /^Tebak Gambar Berikut:/i, store: tebakgambar },
-    { name: 'Tebak Game Berikut', regex: /^Tebak Game Berikut:/i, store: tebakgambar },
-    { name: 'Kuis Caklontong', regex: /^Kuis Caklontong:/i, store: caklontong }
+  const gameDefinitions = [
+    { name: 'Tebak Lirik',          regex: /^Tebak Lirik:/i,          store: tebaklirik     },
+    { name: 'Tebak Kalimat',        regex: /^Tebak Kalimat:/i,        store: tebakkalimat   },
+    { name: 'Siapakah Aku',         regex: /^Siapakah Aku:/i,         store: siapakahaku    },
+    { name: 'Teka Teki',            regex: /^Teka Teki:/i,            store: tekateki       },
+    { name: 'Tebak Kata',           regex: /^Tebak Kata:/i,           store: tebakkata      },
+    { name: 'Susun Kata',           regex: /^Susun Kata:/i,           store: susunkata      },
+    { name: 'Tebak Kimia',          regex: /^Tebak Kimia:/i,          store: tebakkimia     },
+    { name: 'Tebak Negara',         regex: /^Tebak Negara:/i,         store: tebaknegara    },
+    { name: 'Tebak Bendera',        regex: /^Tebak Bendera:/i,        store: tebakbendera   },
+    { name: 'Tebak Gambar Berikut', regex: /^Tebak Gambar Berikut:/i, store: tebakgambar    },
+    { name: 'Tebak Game Berikut',   regex: /^Tebak Game Berikut:/i,   store: tebakgame      },
+    { name: 'Kuis Caklontong',      regex: /^Kuis Caklontong:/i,      store: caklontong     }
   ];
 
   if (m.isGroup) {

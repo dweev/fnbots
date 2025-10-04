@@ -29,6 +29,9 @@ export const statics = {
   getExpiredVIPUsers() {
     return this.find({ isVIP: true, vipExpired: { $ne: null, $lte: new Date() } });
   },
+  getMasters() {
+    return this.find({ isMaster: true });
+  },
   addMaster(userId) {
     return this.findOneAndUpdate({ userId }, { $set: { isMaster: true } }, { upsert: true, new: true });
   },

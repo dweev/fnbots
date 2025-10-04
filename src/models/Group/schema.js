@@ -1,10 +1,10 @@
-// ─── Info ────────────────────────────────
+// ─── Info ─────────────────────────────────────────────────────────────
 /*
 * Created with ❤️ and 💦 By FN
 * Follow https://github.com/Terror-Machine
 * Feel Free To Use
 */
-// ─── Info ────────────────────────────────
+// ─── Info src/models/Group/schema.js ──────────────────────────────────
 
 import mongoose from 'mongoose';
 

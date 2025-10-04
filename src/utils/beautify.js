@@ -6,8 +6,8 @@
 */
 // ─── Info src/utils/beautify.js ─────────────────
 
-import fs from 'fs-extra';
 import path from 'path';
+import fs from 'fs-extra';
 import axios from "axios";
 import AdmZip from "adm-zip";
 import uglify from "uglify-js";

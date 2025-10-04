@@ -11,9 +11,9 @@ import { handleChatbot } from './chatbot.js';
 import { handleAutoJoin } from './autojoin.js';
 import { handleAntiDeleted } from './antidelete.js';
 import { handleAutoSticker } from './autosticker.js';
+import { handleGameBotResponse } from './gameBot.js';
 import { handleAudioChanger } from './autochanger.js';
 import { handleAutoDownload } from './autodownload.js';
-import { handleGameBotResponse } from './gameBot.js';
 
 export {
   handleAntiDeleted,

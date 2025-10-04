@@ -1,3 +1,11 @@
+// ─── Info ────────────────────────────────────────────
+/*
+* Created with ❤️ and 💦 By FN
+* Follow https://github.com/Terror-Machine
+* Feel Free To Use
+*/
+// ─── Info src/handler/gameBot.js ─────────────────────
+
 import { delay } from 'baileys';
 import { User } from '../../database/index.js';
 import { GoogleGenerativeAI } from '@google/generative-ai';

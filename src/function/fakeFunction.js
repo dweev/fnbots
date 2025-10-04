@@ -1,3 +1,11 @@
+// ─── Info ────────────────────────────────────────────
+/*
+* Created with ❤️ and 💦 By FN
+* Follow https://github.com/Terror-Machine
+* Feel Free To Use
+*/
+// ─── info src/function/fakeFunction.js ───────────────
+
 import { delay } from 'baileys';
 import log from '../lib/logger.js';
 import { tmpDir } from '../lib/tempManager.js';

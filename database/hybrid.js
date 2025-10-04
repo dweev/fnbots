@@ -10,8 +10,8 @@ import path from 'path';
 import fs from 'fs-extra';
 import mongoose from 'mongoose';
 import config from '../config.js';
-import { GridFSBucket } from 'mongodb';
 import { Media } from './index.js';
+import { GridFSBucket } from 'mongodb';
 
 const STORAGE_PATH = config.paths.databaseMedia;
 const GRIDFS_BUCKET_NAME = 'media_files';

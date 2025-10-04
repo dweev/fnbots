@@ -16,6 +16,7 @@ for (const variable of requiredVariables) {
 }
 
 const config = {
+  openWather: process.env.OPENWEATHER_API_KEY,
   huggigFace: process.env.HUGGINGFACE_API_KEY,
   geminiApikey: process.env.GEMINI_API_KEY,
   mongodbUri: process.env.MONGODB_URI,

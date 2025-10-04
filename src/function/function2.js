@@ -201,3 +201,19 @@ export async function jadwalSholat(kode_daerah) {
     };
   }
 };
+export async function getZodiak(nama, tgl) {
+  try {
+    const url = `https://script.google.com/macros/exec?service=AKfycbw7gKzP-WYV2F5mc9RaR7yE3Ve1yN91Tjs91hp_jHSE02dSv9w&nama=${nama}&tanggal=${tgl}`;
+    const response = await axios.get(url);
+    const { lahir, usia, ultah, zodiak } = response.data.data;
+    let text = `*Nama*: ${nama}\n`;
+    text += `*Lahir*: ${lahir}\n`;
+    text += `*Usia*: ${usia}\n`;
+    text += `*Ultah*: ${ultah}\n`;
+    text += `*Zodiak*: ${zodiak}`;
+    return text;
+  } catch (error) {
+    await log(`Error getZodiak:\n${error}`, true);
+    throw error;
+  }
+};

@@ -17,7 +17,7 @@ export const command = {
   category: 'ai',
   description: 'Ask Gemini something.',
   isLimitCommand: true,
-  aliases: ['gemini-img2text'],
+  aliases: ['gemini-img2text', 'ocr'],
   execute: async ({ fn, m, quotedMsg, sReply }) => {
     const targetMsg = quotedMsg ? m.quoted || m : m.message;
     const mimeType = targetMsg?.imageMessage?.mimetype;

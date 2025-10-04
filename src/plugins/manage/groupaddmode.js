@@ -1,0 +1,25 @@
+// ─── Info ────────────────────────────────
+/*
+* Created with ❤️ and 💦 By FN
+* Follow https://github.com/Terror-Machine
+* Feel Free To Use
+*/
+// ─── Info ────────────────────────────────
+
+export const command = {
+  name: 'groupaddmode',
+  category: 'manage',
+  description: 'Memberikan informasi group.',
+  isCommandWithoutPayment: true,
+  execute: async ({ fn, m, isBotGroupAdmins, toId, sReply, args, reactDone }) => {
+    if (!m.isGroup || !isBotGroupAdmins) return await sReply(`Perintah ini hanya bisa digunakan di grup dan bot harus menjadi admin grup.`);
+    const modeInput = (args[0] || '').toLowerCase();
+    const modeMap = {
+      'member': 'all_member_add',
+      'admin': 'admin_add'
+    };
+    if (!Object.prototype.hasOwnProperty.call(modeMap, modeInput)) return await sReply(`Gunakan argumen "member" atau "admin"`);
+    const mode = modeMap[modeInput];
+    await fn.groupMemberAddMode(toId, mode); await reactDone();
+  }
+};

@@ -1,6 +1,6 @@
-const { chromium, devices } = require('playwright');
+import { chromium, devices } from 'playwright';
 
-async function screenshotWeb(targetUrl, options = {}) {
+export async function screenshotWeb(targetUrl, options = {}) {
   if (!targetUrl) {
     return null;
   }
@@ -45,6 +45,3 @@ async function screenshotWeb(targetUrl, options = {}) {
     }
   }
 }
-module.exports = {
-  screenshotWeb
-};

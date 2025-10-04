@@ -1,18 +1,25 @@
-const { getContentType } = require('baileys');
+// ─── Info ────────────────────────────────
+/*
+* Created with ❤️ and 💦 By FN
+* Follow https://github.com/Terror-Machine
+* Feel Free To Use
+*/
+// ─── Info src/utils/security.js ──────────
 
+import { getContentType } from 'baileys';
+
+const RLO_RE = /\u202E/;
+const NULL_RE = /\\u0000/;
+const EMOJI_UNICODE_RE = /\p{Emoji}/u;
 const EMOJI_RE = /[\u{1F000}-\u{1FAFF}]/u;
 const ZW_RE = /[\u200B-\u200D\u2060\u3164]/;
-const NULL_RE = /\u0000/;
-const RLO_RE = /\u202E/;
-const EMOJI_UNICODE_RE = /\p{Emoji}/u;
 
-function isBug(protoMsg) {
+export function isBug(protoMsg) {
   const msg = protoMsg.message || {};
   const type = getContentType(msg);
   const node = msg[type] || {};
   const ctx = node.contextInfo || {};
   const jsonStringMsg = JSON.stringify(msg);
-
   if (msg.viewOnceMessage?.message?.interactiveMessage?.carouselMessage) {
     const carousel = msg.viewOnceMessage.message.interactiveMessage.carouselMessage;
     if ((carousel.cards?.length || 0) > 10) {
@@ -43,15 +50,13 @@ function isBug(protoMsg) {
   if (msg.viewOnceMessage?.message?.interactiveMessage) {
     return 'Interactive Message in ViewOnce';
   }
-  if ((node.carouselMessage?.cards?.length > 5) ||
-    (node.nativeFlowResponseMessage?.paramsJson && node.nativeFlowResponseMessage.paramsJson.length > 10_000)) {
+  if ((node.carouselMessage?.cards?.length > 5) || (node.nativeFlowResponseMessage?.paramsJson && node.nativeFlowResponseMessage.paramsJson.length > 10_000)) {
     return 'Heavy Carousel/NativeFlow';
   }
   if (type === 'call' || msg.callOfferMessage || msg.call) {
     return 'Call Offer Spam';
   }
-  if (node.stickerMessage?.fileLength?.low > 5_000_000 ||
-    node.audioMessage?.fileLength > 5_000_000) {
+  if (node.stickerMessage?.fileLength?.low > 5_000_000 || node.audioMessage?.fileLength > 5_000_000) {
     return 'Fake Media Size';
   }
   const textContent = (type === 'conversation') ? node : (type === 'extendedTextMessage') ? node.text : '';
@@ -62,8 +67,7 @@ function isBug(protoMsg) {
     return 'Null-Byte Injection';
   }
   const jid = (protoMsg.key.participant || protoMsg.key.participantAlt || protoMsg.key.remoteJid || protoMsg.key.remoteJidAlt) || '';
-  if (!/^[0-9]+@s\.whatsapp\.net$/.test(jid) &&
-    !jid.endsWith('@g.us') && !jid.endsWith('@lid') && jid !== 'status@broadcast') {
+  if (!/^[0-9]+@s\.whatsapp\.net$/.test(jid) && !jid.endsWith('@g.us') && !jid.endsWith('@lid') && jid !== 'status@broadcast') {
     return 'Invalid Sender';
   }
   let quoteDepth = 0;
@@ -103,6 +107,4 @@ function isBug(protoMsg) {
     return 'Virus JID (Strange Mention)';
   }
   return null;
-}
-
-module.exports = { isBug };
+};

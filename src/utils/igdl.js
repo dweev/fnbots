@@ -1,7 +1,15 @@
-require('dotenv').config();
-const axios = require('axios');
-const qs = require('qs');
-const cheerio = require('cheerio');
+// ─── Info ───────────────────────────────────────
+/*
+* Created with ❤️ and 💦 By FN
+* Follow https://github.com/Terror-Machine
+* Feel Free To Use
+*/
+// ─── Info src/utils/igdl.js ─────────────────────
+
+import qs from 'qs';
+import axios from 'axios';
+import * as cheerio from 'cheerio';
+
 const ssig = process.env.SESSION_IG_COOKIE;
 
 async function instagramDl(url) {
@@ -178,7 +186,7 @@ function createOutputData(requestData) {
     media_details
   };
 }
-async function instagram(url) {
+export default async function instagram(url) {
   try {
     const cleanUrl = url.split("?")[0];
     if (cleanUrl.includes('/stories/') || cleanUrl.includes('/s/')) {
@@ -191,7 +199,3 @@ async function instagram(url) {
     throw error;
   }
 }
-
-module.exports = {
-  instagram
-};

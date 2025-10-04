@@ -1,9 +1,17 @@
-const fs = require('fs-extra');
-const path = require('path');
-const axios = require("axios");
-const AdmZip = require("adm-zip");
-const uglify = require("uglify-js");
-const beautify = require("js-beautify");
+// ─── Info ───────────────────────────────────────
+/*
+* Created with ❤️ and 💦 By FN
+* Follow https://github.com/Terror-Machine
+* Feel Free To Use
+*/
+// ─── Info src/utils/beautify.js ─────────────────
+
+import path from 'path';
+import fs from 'fs-extra';
+import axios from "axios";
+import AdmZip from "adm-zip";
+import uglify from "uglify-js";
+import beautify from "js-beautify";
 
 const FIXED_UGLIFY_OPTIONS = {
   compress: false,
@@ -217,4 +225,4 @@ class FileProcessor {
   }
 }
 
-module.exports = FileProcessor;
+export default FileProcessor;

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 .clinic
 database/coms/fnbots.*.json
 database/db/fnbots.*.json
@@ -26,3 +27,17 @@ x.js
 y.js
 yarn.lock
 z.js
+=======
+logs
+node_modules
+src/session/*.json
+package-lock.json
+.env
+oldmain.js
+*.yaml
+flow1.md
+flow2.md
+venv
+fake.js
+server.js
+>>>>>>> wabot/master

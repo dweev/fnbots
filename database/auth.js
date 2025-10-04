@@ -61,7 +61,7 @@ const safeJSONParse = (value, fallback = null) => {
   }
 };
 
-export async function AuthStore(instanceId = 'default') {
+export async function AuthStore() {
   const writeData = async (key, data) => {
     try {
       const validKey = validateKey(key);
@@ -74,7 +74,7 @@ export async function AuthStore(instanceId = 'default') {
       if (stringified.length > 16 * 1024 * 1024) {
         throw new Error('Data too large');
       }
-      const fullKey = `sessions:${instanceId}:${validKey}`;
+      const fullKey = validKey;
       await BaileysSession.findOneAndUpdate(
         { key: fullKey },
         { value: stringified },
@@ -89,7 +89,7 @@ export async function AuthStore(instanceId = 'default') {
   const readData = async (key) => {
     try {
       const validKey = validateKey(key);
-      const fullKey = `sessions:${instanceId}:${validKey}`;
+      const fullKey = validKey;
       const session = await BaileysSession.findOne({ key: fullKey }).lean();
       if (!session) return null;
       if (!session.value) return null;
@@ -102,7 +102,7 @@ export async function AuthStore(instanceId = 'default') {
   const writeBatch = async (items) => {
     try {
       const operations = Object.entries(items).map(([key, value]) => {
-        const fullKey = `sessions:${instanceId}:${key}`;
+        const fullKey = key;
         const BSONValue = JSON.stringify(value, BufferJSON.replacer);
         return {
           updateOne: {
@@ -122,7 +122,7 @@ export async function AuthStore(instanceId = 'default') {
   const removeBatch = async (keys) => {
     if (keys.length === 0) return true;
     try {
-      const fullKeys = keys.map(key => `sessions:${instanceId}:${key}`);
+      const fullKeys = keys.map(key => key);
       await BaileysSession.deleteMany({ key: { $in: fullKeys } });
       return true;
     } catch (error) {
@@ -201,8 +201,8 @@ export async function AuthStore(instanceId = 'default') {
       const normalizedFrom = fromJid.includes('@') ? fromJid.split('@')[0] : fromJid;
       const normalizedTo = toJid.includes('@') ? toJid.split('@')[0] : toJid;
       const patterns = [
-        new RegExp(`^sessions:${instanceId}:session-${normalizedFrom}$`),
-        new RegExp(`^sessions:${instanceId}:session-${normalizedFrom}[:-_]`)
+        new RegExp(`^session-${normalizedFrom}$`),
+        new RegExp(`^session-${normalizedFrom}[:-_]`)
       ];
       const oldSessions = await BaileysSession.find({
         $or: patterns.map(pattern => ({ key: { $regex: pattern } }))
@@ -213,8 +213,8 @@ export async function AuthStore(instanceId = 'default') {
         return false;
       }
       const bulkOps = oldSessions.map(oldSession => {
-        const suffix = oldSession.key.replace(`sessions:${instanceId}:session-${normalizedFrom}`, '');
-        const newSessionKey = `sessions:${instanceId}:session-${normalizedTo}${suffix}`;
+        const suffix = oldSession.key.replace(`session-${normalizedFrom}`, '');
+        const newSessionKey = `session-${normalizedTo}${suffix}`;
         return {
           updateOne: {
             filter: { key: newSessionKey },
@@ -272,7 +272,7 @@ export async function AuthStore(instanceId = 'default') {
         get: async (type, ids) => {
           try {
             if (type === 'lid-mapping') {
-              const keys = ids.map(id => `sessions:${instanceId}:${type}-${id}`);
+              const keys = ids.map(id => `${type}-${id}`);
               const sessions = await BaileysSession.find({ key: { $in: keys } }).lean();
               const data = {};
               for (const session of sessions) {
@@ -330,7 +330,7 @@ export async function AuthStore(instanceId = 'default') {
               }
               return data;
             }
-            const keys = ids.map(id => `sessions:${instanceId}:${type}-${id}`);
+            const keys = ids.map(id => `${type}-${id}`);
             const sessions = await BaileysSession.find({ key: { $in: keys } }).lean();
             const data = {};
             for (const session of sessions) {
@@ -432,13 +432,13 @@ export async function AuthStore(instanceId = 'default') {
     },
     clearSession: async () => {
       try {
-        await BaileysSession.deleteMany({
-          key: { $regex: `^sessions:${instanceId}:` }
+        const result = await BaileysSession.deleteMany({
+          key: { $regex: /^session-/ }
         });
-        await log(`Session cleared successfully for instance: ${instanceId}`, false);
+        await log(`Session cleared successfully. Deleted ${result.deletedCount} documents`, false);
         return true;
       } catch (error) {
-        await log(`Failed to clear session for instance ${instanceId}: ${error.message}`, true);
+        await log(`Failed to clear session: ${error.message}`, true);
         return false;
       }
     },
@@ -459,7 +459,7 @@ export async function AuthStore(instanceId = 'default') {
           return contact.lid;
         }
         const pnNumber = normalizedPN.split('@')[0];
-        const key = `sessions:${instanceId}:lid-mapping-${pnNumber}`;
+        const key = `lid-mapping-${pnNumber}`;
         const session = await BaileysSession.findOne({ key }).lean();
         if (session?.value) {
           const lid = safeJSONParse(session.value);
@@ -486,7 +486,7 @@ export async function AuthStore(instanceId = 'default') {
         }
         const lidNumber = normalizedLid.split('@')[0];
         const reverseKey = `${lidNumber}_reverse`;
-        const key = `sessions:${instanceId}:lid-mapping-${reverseKey}`;
+        const key = `lid-mapping-${reverseKey}`;
         const session = await BaileysSession.findOne({ key }).lean();
         if (session?.value) {
           const pn = safeJSONParse(session.value);
@@ -506,28 +506,29 @@ export async function AuthStore(instanceId = 'default') {
     getSessionStats: async () => {
       try {
         const stats = await BaileysSession.aggregate([
-          { $match: { key: { $regex: `^sessions:${instanceId}:` } } },
+          {
+            $match: {
+              key: {
+                $regex: /^session-/
+              }
+            }
+          },
           {
             $group: {
               _id: {
-                $substr: [
-                  '$key',
-                  { $add: [{ $strLenCP: `sessions:${instanceId}:` }, 0] },
-                  {
-                    $indexOfCP: [
-                      { $substr: ['$key', { $strLenCP: `sessions:${instanceId}:` }, -1] },
-                      '-'
-                    ]
-                  }
+                $arrayElemAt: [
+                  { $split: ['$key', '-'] },
+                  0
                 ]
               },
               count: { $sum: 1 }
             }
-          }
+          },
+          { $sort: { count: -1 } }
         ]);
         return stats;
       } catch (error) {
-        await log(`Failed to get session stats for instance ${instanceId}: ${error.message}`, true);
+        await log(`Failed to get session stats: ${error.message}`, true);
         return [];
       }
     },

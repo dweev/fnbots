@@ -7,7 +7,10 @@
 // ─── info src/function/function2.js ─────────────
 
 import sharp from 'sharp';
+import axios from 'axios';
 import { delay } from 'baileys';
+import log from '../lib/logger.js';
+import * as cheerio from 'cheerio';
 import { createCanvas, loadImage } from 'canvas';
 import { Downloader } from '@tobyg74/tiktok-api-dl';
 
@@ -144,4 +147,57 @@ export function formatTimestampToHourMinute(ts) {
   const hours = date.getHours().toString().padStart(2, '0');
   const minutes = date.getMinutes().toString().padStart(2, '0');
   return `${hours}.${minutes}`;
+};
+export async function fetchJson(url, options = {}) {
+  try {
+    const { data } = await axios.get(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36'
+      },
+      ...options
+    });
+    return data;
+  } catch (error) {
+    await log(`Error fetchJson: ${url}.\n${error}`, true);
+    throw error;
+  }
+};
+export async function jadwalSholat(kode_daerah) {
+  try {
+    const response = await axios.get('https://jadwalsholat.org/jadwal-sholat/daily.php?id=' + kode_daerah);
+    const html = response.data;
+    const $ = cheerio.load(html);
+    const daerah = $('h1').text().trim();
+    const bulan = $('h2').text().trim();
+    const row = $('tr.table_light, tr.table_dark').find('td');
+    const tanggal = $(row[0]).text().trim();
+    const imsyak = $(row[1]).text().trim();
+    const shubuh = $(row[2]).text().trim();
+    const terbit = $(row[3]).text().trim();
+    const dhuha = $(row[4]).text().trim();
+    const dzuhur = $(row[5]).text().trim();
+    const ashr = $(row[6]).text().trim();
+    const maghrib = $(row[7]).text().trim();
+    const isya = $(row[8]).text().trim();
+    return {
+      daerah,
+      bulan,
+      tanggal,
+      imsyak,
+      shubuh,
+      terbit,
+      dhuha,
+      dzuhur,
+      ashr,
+      maghrib,
+      isya
+    };
+  }
+  catch (error) {
+    await log(`Error jadwalSholat:\n${error}`, true);
+    return {
+      status: 'error',
+      error: error.message
+    };
+  }
 };

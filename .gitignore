@@ -1,33 +1,3 @@
-<<<<<<< HEAD
-.clinic
-database/coms/fnbots.*.json
-database/db/fnbots.*.json
-database/db/*.bak
-downloads/
-har_and_cookies
-node_modules
-simulation_images
-src/session/*.json
-venv
-.env
-a.sh
-b.sh
-cookie.json
-eng.traineddata
-ind.traineddata
-ocr.js
-package-lock.json
-q.js
-t.js
-test.js
-text.jpg
-v.js
-w.js
-x.js
-y.js
-yarn.lock
-z.js
-=======
 logs
 node_modules
 src/session/*.json
@@ -40,4 +10,3 @@ flow2.md
 venv
 fake.js
 server.js
->>>>>>> wabot/master

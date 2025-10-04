@@ -1,0 +1,23 @@
+// ─── Info ────────────────────────────────
+/*
+* Created with ❤️ and 💦 By FN
+* Follow https://github.com/Terror-Machine
+* Feel Free To Use
+*/
+// ─── Info ────────────────────────────────
+
+import { waktu } from '../../function/index.js';
+
+const timeStart = Date.now() / 1000;
+export const command = {
+  name: 'runtime',
+  category: 'owner',
+  description: 'Menampilkan waktu uptime bot.',
+  aliases: ['uptime', 'rt'],
+  isCommandWithoutPayment: true,
+  execute: async ({ sReply }) => {
+    const tms = (Date.now() / 1000) - (timeStart);
+    const cts = waktu(tms);
+    await sReply(cts);
+  }
+};

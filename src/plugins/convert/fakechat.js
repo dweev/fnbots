@@ -1,0 +1,35 @@
+// ─── Info ────────────────────────────────
+/*
+* Created with ❤️ and 💦 By FN
+* Follow https://github.com/Terror-Machine
+* Feel Free To Use
+*/
+// ─── Info ────────────────────────────────
+
+import { tmpDir } from '../../lib/tempManager.js';
+import { generateFakeChatIphone } from 'generator-fake';
+import { formatTimestampToHourMinute } from '../../function/index.js';
+
+export const command = {
+  name: 'fakechat',
+  category: 'convert',
+  description: 'Membuat Fake Chats',
+  isCommandWithoutPayment: true,
+  execute: async ({ fn, toId, arg, sReply, dbSettings, m, quotedMsg }) => {
+    let caption = '';
+    if (quotedMsg && (quotedMsg?.type === 'extendedTextMessage' || quotedMsg?.type === 'conversation')) {
+      caption = quotedMsg?.body;
+    } else {
+      if (!arg) return await sReply(`gunakan perintah seperti ${dbSettings.rname}fakechat teksnya atau balas pesan dengan perintah ${dbSettings.rname}fakechat`);
+      caption = arg;
+    }
+    const resultBuffer = await generateFakeChatIphone({
+      text: caption,
+      chatTime: formatTimestampToHourMinute(m.timestamp),
+      statusBarTime: "11:02"
+    });
+    const tmpImagePath = await tmpDir.createTempFileWithContent(resultBuffer, 'jpg');
+    await fn.sendFilePath(toId, dbSettings.autocommand, tmpImagePath, { quoted: m });
+    await tmpDir.deleteFile(tmpImagePath);
+  }
+};

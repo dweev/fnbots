@@ -1,4 +1,10 @@
-const { chromium } = require('playwright');
+// ─── Info ───────────────────────────────────────
+/*
+* Created with ❤️ and 💦 By FN
+* Follow https://github.com/Terror-Machine
+* Feel Free To Use
+*/
+// ─── Info src/utils/igdocs.js ───────────────────
 
 /*
  *
@@ -9,7 +15,9 @@ const { chromium } = require('playwright');
  * 
 */
 
-async function instagramGetIds(targetUrl) {
+import { chromium } from 'playwright';
+
+export default async function instagramGetIds(targetUrl) {
   if (!targetUrl) {
     throw new Error("URL target tidak diberikan.");
   }
@@ -61,6 +69,3 @@ async function instagramGetIds(targetUrl) {
     }
   }
 }
-module.exports = {
-  instagramGetIds
-};

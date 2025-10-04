@@ -1,158 +1,463 @@
-<h1 align="center">FNBots WhatsApp - Multi-Function Bot</h1>
+-----
 
-![Setup Status](https://img.shields.io/badge/setup-ready-brightgreen) ![Node Version](https://img.shields.io/badge/node-%3E%3D20.x-blue) ![Python Version](https://img.shields.io/badge/python-3.12-blue)
+<h1 align="center"\>FN WHATSAPP BOT</h1\>
 
-FNBots adalah sebuah bot multi-fungsi yang dirancang untuk WhatsApp, menggunakan arsitektur modular dengan tipe kode `If-Else Ladder` dalam bahasa pemrograman `JavaScript` dan `Python`. Bot ini menyediakan berbagai utilitas WhatsApp mulai dari pembuatan sticker, pengaturan user, chat atau group, permainan interaktif, media downloader, hingga integrasi AI generatif.
+-----
 
-## **⚠️ Disclaimer**
+## About The Project
 
-**FNBOTS** merupakan proyek independen yang **TIDAK BERAFILIASI, DISETUJUI, ATAU DIDUKUNG OLEH WhatsApp atau Meta Platforms.**  
+  * **This is an independent project and is NOT affiliated, endorsed, or supported by WhatsApp or Meta Platforms. using [Baileys](https://www.npmjs.com/package/baileys) library from the [WhiskeySockets/Baileys](https://github.com/WhiskeySockets/Baileys) GitHub repository.**
 
-Ini adalah proyek **open-source tidak resmi** yang dikembangkan untuk tujuan:  
-- Edukasi  
-- Eksperimen pengembangan bot  
-- Penelitian teknologi chat automation  
+### Core Philosophies
 
-Proyek ini menggunakan library [Baileys](https://www.npmjs.com/package/baileys) dari repositori GitHub [WhiskeySockets/Baileys](https://github.com/WhiskeySockets/Baileys) sebagai dasar implementasi WhatsApp Web API.
+  * **Performance**: Heavy, blocking tasks (media processing, image generation, web scraping) are offloaded to a separate pool of worker threads, ensuring the main application remains non-blocking and highly responsive.
+  * **Stability**: The application is designed for high uptime with self-healing capabilities, including memory monitoring, connection health checks, and a graceful restart manager that prevents infinite crash loops.
+  * **Modularity**: A file-based plugin system allows for easy addition and hot-reloading of commands without restarting the entire application, streamlining development and maintenance.
 
----
+-----
 
-## **✨ Fitur Utama**
+## Architecture
 
-| Commands | Worked |
-| -------- | ------ |
-| Fuzzy Commands |  ✅  |
-| Archimed Commands |  ✅  |
-| Remote Commands |  ✅  |
-| Multi Commands |  ✅  |
-| AI Commands |  ✅  |
-| Image Manipulation |  ✅  |
-| Audio Manipulation |  ✅  |
-| Text Manipulation |   ✅  |
-| Convert Commands |  ✅  |
-| Fun Commands |  ✅  |
-| Media Downloader |  ✅  |
-| Game Commands |  ✅  |
-| Stateless PVE Game |  ✅  |
-| Statefull PVE Game |  ✅  |
-| Statefull PVP Game |  ✅  |
-| Math Commands |  ✅  |
-| Util Commands |  ✅  |
+### Workflow Diagram
 
----
+```mermaid
+graph TD
+  subgraph "Phase 1: Startup & Initialization"
+    A[Start Application main.js] --> B(1. Load Configuration);
+    B --> C(2. Connect to MongoDB Database);
+    C --> D{DB Connected?};
+    D -- Success --> E(3. Initialize Settings Cache);
+    D -- Error --> ERR1[Exit Process];
+    E --> F(4. Load All Commands to pluginCache);
+    F --> G(5. Initialize Fuzzy Search);
+    G --> H(6. Wrap Socket with Helpers);
+    H --> I(7. Create WA Socket & Start Connection);
+    A --> BG(Initialize Background Processes);
+  end
 
-## **⚠️ Persyaratan Sistem**
+  subgraph "Phase 2: Connection Handling"
+    I --> J{Event: connection.update};
+    J -- connecting --> OD[First Login?];
+    OD -- Yes --> K[Display QR / Pairing Code];
+    K --> J;
+    OD -- No --> OO[Wait Connection];
+    OO --> J;
+    J -- open --> N[Connection Successful];
+    J -- close --> L[Connection Closed];
+    L --> M{Auto Restart?};
+    M -- Yes --> I;
+    M -- No --> ERR2[Shutdown];
+    N --> O[Synchronize Groups];
+    O --> P(BOT READY TO RECEIVE MESSAGES);
+  end
 
-### **Core Stack**
-- **Node.js v20**
-- **Baileys**
-- **Python 3.12**
+  subgraph "Phase 3: Message Processing"
+    P --> Q(Event: messages.upsert);
+    Q --> R[1. Normalize Message];
+    R --> S{2. Security Check};
+    S -- Dangerous --> T[Block & Delete Message];
+    S -- Safe --> U{3. Special Message Type?};
+    
+    U -- Group Event --> V{Welcome/Leave Event?};
+    V -- Yes --> V1[Send Welcome/Goodbye Message];
+    V1 --> AT;
+    V -- No --> P;
+    
+    U -- Status Update --> W{Status Update?};
+    W -- Yes --> W1[Process Status Logic];
+    W1 --> P;
+    W -- No --> P;
+    
+    U -- Deleted Message --> X{Anti-Delete Active?};
+    X -- Yes --> X1[Send Delete Notification];
+    X1 --> AT;
+    X -- No --> P;
+    
+    U -- Regular Message --> Y[Main Handler];
+  end
 
-### **Media Processing**
-- **FFmpeg**
-- **ImageMagick**
-- **Sharp**
-- **yt-dlp**
-- **Pillow**
-- **rembg**
+  subgraph "Phase 4: Logic & Command Execution"
+    Y --> Z(4. Gather Context);
+    Z --> AA{5. Check Bot Mode};
+    AA -- Ignore --> TERM(End Cycle);
+    AA -- Process --> AB{6. Command?};
+    
+    AB -- No --> AC_ROUTER{Group Moderation & Auto Features};
+      AC_ROUTER -- Moderation --> AC_MOD{Run Group Moderation};
+      AC_MOD -- Need Response --> AT;
+      AC_MOD -- No Need --> P;
+      
+      AC_ROUTER -- Check Next --> AC1{AutoSticker?};
+      AC1 -- Yes --> AC2[Process to Sticker];
+      AC2 --> AT;
+      AC1 -- No --> AC3{AutoJoin?};
+      AC3 -- Yes --> AC4[Process Group Join];
+      AC4 --> AT;
+      AC3 -- No --> AC5{Chatbot?};
+      AC5 -- Yes --> AC6[Reply Message from DB];
+      AC6 --> AT;
+      AC5 -- No --> AC7[Auto Changer?];
+      AC7 -- Yes --> AC8[Process Audio Change];
+      AC8 --> AT;
+      AC7 -- No --> AC9[Auto Download?];
+      AC9 -- Yes --> AC10[Process Download];
+      AC10 --> AT;
+      AC9 -- No --> AC11[Other Auto Features];
+      AC11 --> P;
+    
+    AB -- Yes --> AD(7. Parse Command);
+    
+    AD --> AE{Remote Command?};
+    AE -- No --> AF[Continue Normal];
+    AE -- Yes --> AG{SAdmin?};
+    AG -- No --> TERM;
+    AG -- Yes --> AH[Process Remote];
+    AH --> AF;
+    
+    AF --> AI{8. Cooldown?};
+    AI -- Yes --> AJ[Warn User];
+    AJ --> TERM;
+    AI -- No --> AK[Set Cooldown];
+    
+    AK --> AL(9. Search in pluginCache);
+    AL --> AM{Found?};
+    AM -- No --> AN[10. Fuzzy Correction];
+    AN --> AL;
+    AM -- Yes --> AO[11. Check Access & Limit];
+    AO --> AP{Allowed?};
+    AP -- No --> AQ[Send Error];
+    AP -- Yes --> AR[12. EXECUTE];
+    
+    AR --> AS[13. Update Stats & DB];
+    AS --> AT[14. Send Response];
+  end
 
-### **AI & Machine Learning & OCR**
-- **Gemini Google Generative AI**
-- **Hugging Face**
-- **g4f**
+    subgraph "Background Processes"
+        BG --> BA[Cron Jobs];
+        BG --> BB[Cache Sync];
+        BG --> BC[Batch DB Writes];
+        BG --> BD[File Watcher];
+        
+        BA --> BA1[Reset Daily Limits];
+        BA --> BA2[Clean Expired Users];
+        BB --> BB1[Sync Settings];
+        BC --> BC1[Bulk Operations];
+        BD --> BD1[Hot-Reload Plugins];
+    end
 
-### **Utilities**
-- **Canvas**
-- **Cheerio** / **Playwright**
-- **Fuse.js**
-- **Chess.js**
-- **Sudoku**
-
----
-
-## **🚀 Instalasi Lengkap**
-
-### **1. Persiapan Sistem**
-```bash
-git clone https://github.com/Terror-Machine/fnbots
-cd fnbots
-
-chmod +x install.sh
-./install.sh
+  P --> Q;
+  BG --> P;
+  AT --> P;
+  TERM --> P;
+  AQ --> P;
+  
+  ERR1 --> EXIT[Application Exit];
+  ERR2 --> EXIT;
 ```
 
-### **2. Setup Environment**
-1. Salin template environment:
-```bash
-cp .env.example .env
+### Database Schema
+
+```mermaid
+classDiagram
+  direction LR
+
+  class Settings {
+    +String botName
+    +String botNumber (from pairing)
+    +String rname (prefix)
+    +String sname (prefix)
+    +String packName (dataExif)
+    +String packAuthor (dataExif)
+    +String packID (dataExif)
+    +String self (mode)
+    +string pinoLogger
+    +string autocommand
+    +string groupIdentity
+    +string linkIdendity
+    +string restartId
+    +Boolean restartState
+    +Boolean maintenance
+    +Boolean autojoin
+    +Boolean changer
+    +Boolean filter
+    +Boolean chatbot
+    +Boolean autosticker
+    +Boolean antideleted
+    +Boolean verify
+    +Boolean autoreadsw
+    +Boolean autolikestory
+    +Boolean autoread
+    +Boolean autodownload
+    +Boolean anticall
+    +Number autocorrect
+    +Number totalHitCOunt
+    +Number limitCount
+    +Number limitGame
+    +Number limitCountPrem
+    +Number memberLimit
+    +Array~String~ sAdmin
+  }
+  note for Settings "Singleton document for global bot config"
+
+  class User {
+    +String userId
+    +Boolean isMaster
+    +Boolean isVIP
+    +Boolean isPremium
+    +Boolean gacha
+    +Date premiumExpired
+    +String balance (BigInt)
+    +Number xp
+    +Number level
+    +Number userCount
+    +Object limit
+    +Object limitgame
+    +Map inventory
+    +Map commandStats
+    +addBalance(amount)
+    +addXp(amount)
+    +Array~Object~ mutedUser
+  }
+
+  class Group {
+    +String groupId
+    +String groupName
+    +Object welcome
+    +Object leave
+    +Boolean antilink
+    +Boolean antiHidetag
+    +Boolean antiTagStory
+    +Boolean verifyMember
+    +Boolean isActive
+    +Boolean isMuted
+    +Boolean filter
+    +Date lasActivity
+    +number commandCount
+    +Number messageCount
+    +Number memberCount
+    +Map dailyStats
+    +Object warnings
+    +Array afkUsers
+    +Array bannedMembers
+    +Array~String~ filterWords
+  }
+
+  class Command {
+    +String name
+    +Number count
+    +String description
+    +String category
+    +Array~String~ aliases
+    +Boolean isLimitCommand
+    +Boolean isLimitGameCommand
+    +Boolean isCommandWithoutPayment
+  }
+  
+  class DatabaseBot {
+    +String docId
+    +Map~String, String~ chat
+    +Array~String~ bacot
+    +getDatabase()
+  }
+  note for DatabaseBot "Singleton for chatbot & media responses"
+  
+  class Media {
+    +String name
+    +String type
+    +Buffer data
+  }
+  
+  class BaileysSession {
+    +String key
+    +Mixed value
+  }
+  note for BaileysSession "Key-value store for Baileys auth credentials"
+  
+  class StoreContact {
+    +String jid
+    +String lid
+    +String name
+    +String notify
+    +String verifiedName
+  }
+  
+  class StoreGroupMetadata {
+    +String groupId
+    +String subject
+    +String owner
+    +Array~Participant~ participants
+  }
+  note for StoreGroupMetadata "object data same as Baileys"
+  
+  class StoreMessages {
+    +String chatId
+    +Array~Mixed~ messages
+    +Array~Conversation~ conversations
+    +Map presences
+  }
+  
+  class StoreStory {
+    +String userId
+    +Array~Mixed~ statuses
+  }
+
+  class OTPSession {
+    +String userId
+    +String groupId
+    +String otp
+    +Number attempts
+    +Date expireAt
+    +Boolean isBlocked
+  }
+  
+  class Whitelist {
+    +String type ('group' or 'user')
+    +String targetId
+  }
+
+  Settings "1" -- "0" User : Lists memberShip
+  User "1" -- "0" OTPSession : Can have OTP session
+  Group "1" -- "0" OTPSession : Is target for OTP
+  User "1" -- "1" StoreStory : Has status updates
+  Group "1" -- "1" StoreGroupMetadata : Has metadata
+  User "1" -- "0" Group : Implicitly related via afkUsers, bannedMembers, etc.
+  
+  StoreGroupMetadata "1" -- "0" StoreContact : Participants are contacts
+  StoreMessages ..> User : `chatId` can be a User JID
+  StoreMessages ..> Group : `chatId` can be a Group JID
+  
+  DatabaseBot "1" -- "0" Media : Can link to media responses
 ```
-2. Edit file `.env` nya. Pastikan kamu isi dengan benar agak bot bekerja dengan baik.
 
----
+-----
 
-## **🛠️ Cara Penggunaan**
+## Project Structure
 
-### **Menjalankan sebagai Background Process Menggunakan PM2**
-#### **1. Mode Normal**
-```bash
-pm2 start main.js --name bot
+The directory structure is designed for a clear separation of concerns, making the codebase clean and maintainable.
+
 ```
-#### **2. Mode Development**
-```bash
-pm2 start main.js --name bot --watch --ignore-watch="database downloads har_and_cookies node_modules src venv"
+.
+├── core/                  # Core engine & main bot logic flow
+├── database/              # DB connection, session management & cache layer
+├── logs/                  # Activity and error log files
+├── src/
+│   ├── function/          # Collection of feature-specific utility functions
+│   ├── handler/           # Handlers for non-command features (e.g., auto-sticker)
+│   ├── lib/               # Core libraries & business logic (plugin loader, performance)
+│   ├── models/            # MongoDB (Mongoose) schemas & models
+│   ├── plugins/           # All bot commands (highly modular)
+│   ├── sampah/            # Managed temporary file storage
+│   ├── utils/             # General utilities (security, scrapers, external scripts)
+│   └── worker/            # Async worker system for heavy tasks (FFMPEG, Canvas)
+├── .env.example           # Environment variable template
+├── config.js              # Main configuration file
+├── install.sh             # Automated server setup script
+├── update.sh              # Python dependency update script
+├── ecosystem.config.cjs   # PM2 configuration for deployment
+└── package.json           # Project dependencies
 ```
 
----
+-----
 
-## **📜 Lisensi**
+## Requirements
 
-Proyek ini menggunakan lisensi [MIT](LICENSE).
+### Software
 
----
+  * **Node.js**: `v20.x` or higher
+  * **MongoDB**: `v5.0` or higher (local or Atlas)
+  * **Git**
+  * **FFMPEG**: **Required** for all media processing (stickers, audio filters).
+  * **Python**: `v3.12` recommended.
+      * **Python Libraries**: `rembg` (for background removal), `yt-dlp`, `google-generativeai`, and other dependencies listed in `install.sh`.
+  * A valid **WhatsApp** account.
 
-## **🙏 Special Thanks To**
+### Hardware (VPS/Server)
 
-- [Baileys](https://github.com/WhiskeySockets/Baileys) - WhatsApp Web API
-- [@MbahDon](https://github.com/mbahdon16) - Kontributor Ide dan Testing
-- [@FckVeza](https://github.com/fckveza) - Kontributor Ide dan Testing
-- Kamu...
+The resource requirements are higher than a standard bot due to heavy processing features.
 
----
+  * **Recommended (Production)**:
 
-## **🔴 IMPORTANT NOTE!**
+      * **CPU**: **4 vCores** or more
+      * **RAM**: **8 GB** or more
+      * **Storage**: **80 GB+ SSD/NVMe**
+      * **OS**: Ubuntu 22.04 LTS or a similar Linux distribution.
 
-- Gunakan **akun kedua** untuk bot, dan **akun pertama** untuk memerintah
-- Penggunaan Bot berpotensi menyebabkan akun terbanned - gunakan dengan kesadaran penuh akan resiko
-- Untuk pertanyaan/bantuan, buka issue di GitHub
-- Dilarang keras memperjualbelikan script ini
-- Jika seseorang mencoba menjual skrip ini atau membagikan skrip yang bersumber dari skrip ini dalam bentuk terenkripsi, atau sesuatu yang membuat orang lain merasa dirugikan. ITU BUKAN TANGGUNG JAWAB SAYA. 
+  * **Minimal (Testing/Low-Load)**:
 
-**PERINGATAN:** Script ini hanya untuk tujuan edukasi dan pengembangan. Penggunaan adalah tanggung jawab pengguna sepenuhnya.
+      * **CPU**: 2 vCores
+      * **RAM**: 4 GB
+      * **Storage**: 50 GB SSD/NVMe
 
----
+> **Note**: Running features like Instagram scraping (`Playwright`) and parallel media processing (`FFMPEG`, `Canvas`) is very resource-intensive. Using specs below the recommended values may lead to slow response times and instability.
 
-## **Troubleshooting**
+-----
 
-1. **Error Python packages**:
-   Aktifkan virtual environment terlebih dahulu:
-   ```bash
-   source venv/bin/activate
-   ```
+## Quick Start
 
-2. **Error dependensi Node.js**:
-   Hapus dan install ulang:
-   ```bash
-   rm -rf node_modules package-lock.json
-   npm install --legacy-peer-deps
-   ```
+### Installation
 
-3. **Error Playwright**:
-   Jalankan:
-   ```bash
-   npx playwright install-deps
-   npx playwright install
-   ```
+The easiest way to set up is by using the `install.sh` script on a fresh Ubuntu server.
 
----
+1.  **Clone the Repository**
 
-Dibuat dengan ❤️ dan 💦 oleh [Terror-Machine](https://github.com/Terror-Machine)
+    ```bash
+    git clone https://github.com/Terror-Machine/wabot.git
+    cd wabot
+    ```
+
+2.  **Setup Environment Variables**
+
+    ```bash
+    cp .env.example .env
+    ```
+
+    Open and edit the `.env` file, filling in all required values:
+
+      * `MONGODB_URI`: Your MongoDB connection string.
+      * `OWNER_NUMBER`: JSON array of owner numbers (e.g., `["12025550101"]`).
+      * `GEMINI_API_KEY`: For generative AI features. **(Optional)** 
+
+3.  **Run the Automatic Setup Script**
+    Execute the `install.sh` script to automatically install all system dependencies, Node.js, Python, and project dependencies.
+
+    ```bash
+    sudo bash install.sh
+    ```
+
+### Running the Bot
+
+1.  **Start with Pairing Code (Recommended)**
+    Use the `pair` script to log in with a pairing code. The bot will prompt you for your bot's phone number.
+
+    ```bash
+    npm run pair
+    ```
+
+2.  **Start with QR Code**
+    If you prefer to use a QR code, ensure `usePairingCode` is `false` in `config.js` and run:
+
+    ```bash
+    npm start
+    ```
+
+    Scan the QR code that appears in your terminal.
+
+-----
+
+### Production Deployment
+
+For production environments, using PM2 is highly recommended for process management and auto-restarts. The `install.sh` script already installs it globally.
+
+```bash
+# Start the application with PM2
+pm2 start ecosystem.config.cjs
+
+# Monitor logs
+pm2 logs
+```
+
+-----
+
+Made with ❤️ and 💦 by [Terror-Machine](https://github.com/Terror-Machine)
+
+-----

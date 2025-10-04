@@ -1,10 +1,21 @@
 #!/usr/bin/env node
 
-const axios = require('axios');
-const cheerio = require('cheerio');
-const { URL } = require('url');
-const fs = require('fs');
-const path = require('path');
+// ─── Info ────────────────────────────────
+/*
+* Created with ❤️ and 💦 By FN
+* Follow https://github.com/Terror-Machine
+* Feel Free To Use
+*/
+// ─── Info src/utils/get.js ───────────────
+
+import path from 'path';
+import axios from 'axios';
+import fs from 'fs-extra';
+import * as cheerio from 'cheerio';
+import { URL, fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 function parseArgs(args) {
   const options = {

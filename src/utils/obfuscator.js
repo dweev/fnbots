@@ -1,5 +1,13 @@
-const JavaScriptObfuscator = require("javascript-obfuscator");
-const axios = require("axios");
+// ─── Info ───────────────────────────────────────
+/*
+* Created with ❤️ and 💦 By FN
+* Follow https://github.com/Terror-Machine
+* Feel Free To Use
+*/
+// ─── Info src/utils/obfuscator.js ───────────────
+
+import axios from 'axios';
+import JavaScriptObfuscator from 'javascript-obfuscator';
 
 class ObfsMgr {
   constructor() {
@@ -153,7 +161,7 @@ class ObfsMgr {
     const tsHash = Math.abs(this._sH(`${datePart}${timePart}`)).toString(36).substring(0, 5).toUpperCase();
     const hPart = Math.abs(this._sH(effEnc)).toString(36).substring(0, 5).toUpperCase();
     const rHex = Math.floor(Math.random() * 65535).toString(16).toUpperCase();
-    let bPfx = `${this._rUni(2)}${tsHash}_${pfxSEffEnc}_${dayPart}`;
+    const bPfx = `${this._rUni(2)}${tsHash}_${pfxSEffEnc}_${dayPart}`;
 
     let pfx = "";
     switch (level.toLowerCase()) {
@@ -190,4 +198,4 @@ class ObfsMgr {
   }
 }
 
-module.exports = ObfsMgr;
+export default ObfsMgr;

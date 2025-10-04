@@ -421,7 +421,7 @@ export async function clientBot(fn, dbSettings) {
     return data;
   };
   fn.sendGroupInvite = async (jid, participant, inviteCode, inviteExpiration, groupName = 'Unknown Subject', caption = 'Invitation to join my WhatsApp group', jpegThumbnail = null, options = {}) => {
-    const msg = proto.Message.create({
+    const msg = proto.Message.fromObject({
       groupInviteMessage: {
         inviteCode,
         inviteExpiration: parseInt(inviteExpiration) || + new Date(new Date + (config.performance.inviteExpiration)),

@@ -22,7 +22,7 @@ export const command = {
     }
     const groupMetadata = await fn.groupMetadata(toId);
     await fn.sendMessage(toId, {
-      forward: proto.WebMessageInfo.fromObject({
+      forward: proto.WebMessageInfo.create({
         key: m.quoted.key,
         message: m.quoted,
         ...(m.isGroup ? { participant: m.quoted.sender } : {})

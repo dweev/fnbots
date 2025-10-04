@@ -9,7 +9,7 @@
 import util from 'util';
 import log from './logger.js';
 import config from '../../config.js';
-import { isBug } from '../utils/security.js';
+import { analyzeMessage } from 'safety-safe';
 import { arfine } from '../../core/handler.js';
 import { jidNormalizedUser, delay } from 'baileys';
 import serializeMessage from './serializeMessage.js';
@@ -42,20 +42,21 @@ export default async function updateMessageUpsert(fn, message, dbSettings) {
     }
     const m = await serializeMessage(fn, msg);
     if (!m) return;
-    try {
-      const bugType = isBug(m);
-      if (bugType) {
-        if (m.botnumber === m.sender) return;
-        const senderJid = m.sender;
-        await log(`Bug terdeteksi: "${bugType}" dari ${senderJid}.`);
-        if (['Invalid Sender JID', 'TAMA Concuerror Bomb', 'Null-Byte Injection'].includes(bugType)) {
-          await fn.updateBlockStatus(senderJid, 'block');
-        }
+    const { isMalicious, reason, severity } = analyzeMessage(msg.message);
+    if (isMalicious) {
+      if (m.botnumber.includes(m.sender)) return;
+      if (config.ownerNumber.includes(m.sender)) return;
+      const senderJid = m.sender;
+      log(`Ancaman Terdeteksi dari ${m.sender}`);
+      log(`Alasan: ${reason} | Level Bahaya: ${severity}`);
+      try {
+        await fn.updateBlockStatus(senderJid, 'block');
         await fn.deleteBugMessage(m.key, m.messageTimestamp);
-        return;
+        await fn.sendMessage(config.ownerNumber, { text: `User: @${m.sender.split('@')[0]} udah di blokir otomatis.\nAlasan: *${reason}*.` });
+      } catch (err) {
+        log(`Gagal ngambil tindakan blokir/hapus: ${err}`, true);
       }
-    } catch (error) {
-      await log(error, true);
+      return;
     }
     if (m.messageStubType && m.isGroup) {
       await handleGroupStubMessages(fn, m);

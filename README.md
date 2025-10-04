@@ -401,8 +401,8 @@ The easiest way to set up is by using the `install.sh` script on a fresh Ubuntu 
 1.  **Clone the Repository**
 
     ```bash
-    git clone https://github.com/Terror-Machine/wabot.git
-    cd wabot
+    git clone https://github.com/Terror-Machine/fnbots.git
+    cd fnbots
     ```
 
 2.  **Setup Environment Variables**

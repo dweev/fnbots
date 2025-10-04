@@ -16,6 +16,7 @@ for (const variable of requiredVariables) {
 }
 
 const config = {
+  huggigFace: process.env.HUGGINGFACE_API_KEY,
   geminiApikey: process.env.GEMINI_API_KEY,
   mongodbUri: process.env.MONGODB_URI,
   ownerNumber: JSON.parse(process.env.OWNER_NUMBER),
@@ -70,6 +71,7 @@ const config = {
     databaseMedia:          'media',
     logsDir:                'logs',
     pyScript:               'src/utils/chat_bot.py',
+    g4f:                    'src/utils/py-g4f.py',
     rembege:                'src/utils/rembege.py',
     rank:                   'src/media/rank.png',
     avatar:                 'src/media/apatar.png',

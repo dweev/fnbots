@@ -1,16 +1,24 @@
----
+-----
 
-<h1 align="center">FN WHATSAPP BOT</h1> 
+<h1 align="center"\>FN WHATSAPP BOT</h1\>
 
----
+-----
 
-## Architecture & Features
-  * **FNBOTS is an independent project and is NOT AFFILIATED, ENDORSED, OR SUPPORTED by WhatsApp or Meta Platforms.**
+## About The Project
 
-  * FNBOTS is a WhatsApp automation project built using [Baileys](https://www.npmjs.com/package/baileys) library from the [WhiskeySockets/Baileys](https://github.com/WhiskeySockets/Baileys) GitHub repository.
+  * **This is an independent project and is NOT affiliated, endorsed, or supported by WhatsApp or Meta Platforms. using [Baileys](https://www.npmjs.com/package/baileys) library from the [WhiskeySockets/Baileys](https://github.com/WhiskeySockets/Baileys) GitHub repository.**
 
-  * Architect:
+### Core Philosophies
 
+  * **Performance**: Heavy, blocking tasks (media processing, image generation, web scraping) are offloaded to a separate pool of worker threads, ensuring the main application remains non-blocking and highly responsive.
+  * **Stability**: The application is designed for high uptime with self-healing capabilities, including memory monitoring, connection health checks, and a graceful restart manager that prevents infinite crash loops.
+  * **Modularity**: A file-based plugin system allows for easy addition and hot-reloading of commands without restarting the entire application, streamlining development and maintenance.
+
+-----
+
+## Architecture
+
+### Workflow Diagram
 
 ```mermaid
 graph TD
@@ -146,6 +154,8 @@ graph TD
   ERR1 --> EXIT[Application Exit];
   ERR2 --> EXIT;
 ```
+
+### Database Schema
 
 ```mermaid
 classDiagram
@@ -319,178 +329,135 @@ classDiagram
   DatabaseBot "1" -- "0" Media : Can link to media responses
 ```
 
----
+-----
 
 ## Project Structure
 
+The directory structure is designed for a clear separation of concerns, making the codebase clean and maintainable.
+
 ```
 .
-├── core/                 # Core engine & bot logic
-├── database/             # Database connections & session storage
-├── logs/                 # Activity and error logs
+├── core/                  # Core engine & main bot logic flow
+├── database/              # DB connection, session management & cache layer
+├── logs/                  # Activity and error log files
 ├── src/
-│   ├── lib/              # Helper libraries & event handlers
-│   ├── media/            # Media utility
-│   ├── models/           # MongoDB schemas & models
-│   ├── plugins/          # All bot commands (modular plugins)
-│   ├── sampah/           # Temporary media storage
-│   ├── utils/            # Utilities (logger, security, etc.)
-│   └── worker/           # Async Worker for heavy process.
-├── test/                 # Automated testing files
-├── config.js             # Main configuration file
-├── ecosystem.config.cjs  # PM2 configuration (deployment)
-└── package.json          # Project dependencies
+│   ├── function/          # Collection of feature-specific utility functions
+│   ├── handler/           # Handlers for non-command features (e.g., auto-sticker)
+│   ├── lib/               # Core libraries & business logic (plugin loader, performance)
+│   ├── models/            # MongoDB (Mongoose) schemas & models
+│   ├── plugins/           # All bot commands (highly modular)
+│   ├── sampah/            # Managed temporary file storage
+│   ├── utils/             # General utilities (security, scrapers, external scripts)
+│   └── worker/            # Async worker system for heavy tasks (FFMPEG, Canvas)
+├── .env.example           # Environment variable template
+├── config.js              # Main configuration file
+├── install.sh             # Automated server setup script
+├── update.sh              # Python dependency update script
+├── ecosystem.config.cjs   # PM2 configuration for deployment
+└── package.json           # Project dependencies
 ```
 
----
+-----
 
-### Directory Structure
+## Requirements
 
-The directory structure is designed to separate each concern, making the codebase clean and maintainable.
+### Software
 
-* `core/`
-    * **Heart** of the bot that handles application lifecycle and core processing logic.
-    * `main.js`: **Main application entry point.** Initializes all modules and starts connection.
-    * `connection.js`: Handles connection, authentication (QR/Pairing Code), and Baileys connection events.
-    * `handler.js`: **Message processing brain.** Receives normalized messages and routes them to plugins or automatic features.
-    * `client.js`: Collection of wrapper functions to simplify Baileys interactions (e.g., `sendMessage`, `getMediaBuffer`).
+  * **Node.js**: `v20.x` or higher
+  * **MongoDB**: `v5.0` or higher (local or Atlas)
+  * **Git**
+  * **FFMPEG**: **Required** for all media processing (stickers, audio filters).
+  * **Python**: `v3.12` recommended.
+      * **Python Libraries**: `rembg` (for background removal), `yt-dlp`, `google-generativeai`, and other dependencies listed in `install.sh`.
+  * A valid **WhatsApp** account.
 
-* `database/`
-    * Data layer, schemas, and session management.
-    * `connection/index.js`: Manages MongoDB connection with retry logic.
-    * `auth.js`: Schema and logic for storing Baileys login sessions in MongoDB.
-    * `StoreDB.js`: **High-performance caching layer** between bot and database for faster data reads.
-    * `index.js`: Exports all database models and connections for easy imports.
+### Hardware (VPS/Server)
 
-* `logs/`
-    * Stores **application activity logs** (`app_activity.log`) and **internal Baileys logs** (`baileys.log`) for debugging.
+The resource requirements are higher than a standard bot due to heavy processing features.
 
-* `src/lib/`
-    * **Core Libraries & Business Logic.** Contains main helper functions and event handlers.
-    * `function.js`: Collection of global utility functions (media conversion, fuzzy search, etc.).
-    * `plugins.js`: Plugin system manager, responsible for loading, reloading, and caching commands.
-    * `watcherPlugins.js`: Monitors plugin directory for **hot-reloading** feature (reload plugins without restarting bot).
-    * `groupParticipantsUpdate.js`: Specialized handler for group member events (join/leave/promote/demote).
-    * `serializeMessage.js`: Critical module that normalizes various Baileys message formats into one consistent `m` object.
-    * `errorManager.js`: Custom error definitions for better error handling.
-    * etc..
+  * **Recommended (Production)**:
 
-* `src/models/`
-    * **Mongoose** schema and model definitions for each database collection.
+      * **CPU**: **4 vCores** or more
+      * **RAM**: **8 GB** or more
+      * **Storage**: **80 GB+ SSD/NVMe**
+      * **OS**: Ubuntu 22.04 LTS or a similar Linux distribution.
 
-* `src/plugins/`
-    * **Modular command system.** Each subfolder here is a command category, and each `.js` file is a single command.
+  * **Minimal (Testing/Low-Load)**:
 
-* `src/sampah/`
-    * Temporary media storage directory for files downloaded or created before being sent or processed.
+      * **CPU**: 2 vCores
+      * **RAM**: 4 GB
+      * **Storage**: 50 GB SSD/NVMe
 
-* `src/utils/`
-    * Smaller, more specific supporting utility modules.
-    * `dayjs.js`: Custom configuration for date and time management.
-    * `security.js`: Functions to detect dangerous messages or WhatsApp "bugs".
+> **Note**: Running features like Instagram scraping (`Playwright`) and parallel media processing (`FFMPEG`, `Canvas`) is very resource-intensive. Using specs below the recommended values may lead to slow response times and instability.
 
-* `src/worker/`
-    * **Async Workers.** Runs heavy CPU-intensive tasks in separate threads to keep bot responsive.
-    * `sticker_worker.js`: Handles image/video to sticker conversion.
-    * `audio_changer_worker.js`: Processes and modifies audio files.
-    * `groupimage_worker.js`: Handles image from welcome / leave messages.
-
-* `config.js`
-    * Main configuration file that loads environment variables (`.env`), owner numbers, performance parameters, etc.
-
-* `ecosystem.config.cjs`
-    * **PM2** configuration for production deployment, managing restarts and monitoring.
-
----
+-----
 
 ## Quick Start
 
-### Prerequisites
-
-* **Node.js** ≥ 18
-* **npm** or **pnpm** ≥ 8
-* **MongoDB** (local or Atlas)
-* **Git** ≥ 2.30
-* **WhatsApp** account
-
----
-
 ### Installation
 
-1. **Clone the Repository**
+The easiest way to set up is by using the `install.sh` script on a fresh Ubuntu server.
 
-   ```bash
-   git clone https://github.com/Terror-Machine/wabot.git
-   cd wabot
-   ```
+1.  **Clone the Repository**
 
-2. **Install Dependencies**
+    ```bash
+    git clone https://github.com/Terror-Machine/wabot.git
+    cd wabot
+    ```
 
-   ```bash
-   # Using npm
-   npm install
+2.  **Setup Environment Variables**
 
-   # Or using pnpm
-   pnpm install
-   ```
+    ```bash
+    cp .env.example .env
+    ```
 
-3. **Setup Environment Variables**
+    Open and edit the `.env` file, filling in all required values:
 
-   ```bash
-   cp .env.example .env
-   ```
+      * `MONGODB_URI`: Your MongoDB connection string.
+      * `OWNER_NUMBER`: JSON array of owner numbers (e.g., `["12025550101"]`).
+      * `GEMINI_API_KEY`: For generative AI features. **(Optional)** 
 
-   Edit `.env` and provide:
+3.  **Run the Automatic Setup Script**
+    Execute the `install.sh` script to automatically install all system dependencies, Node.js, Python, and project dependencies.
 
-   * `MONGODB_URI` (local or Atlas)
-   * `OWNER_NUMBER` (JSON array of owner number)
-   * `BOT_NUMBER` (your bot's number)
+    ```bash
+    sudo bash install.sh
+    ```
 
-4. **Verify Configuration**
-   Make sure `config.js` correctly reads values from `.env`.
-   
-   * Set `usePairingCode` to `true` if using pairing code login
+### Running the Bot
 
----
+1.  **Start with Pairing Code (Recommended)**
+    Use the `pair` script to log in with a pairing code. The bot will prompt you for your bot's phone number.
 
-### First Run
+    ```bash
+    npm run pair
+    ```
 
-1. **Start the Bot**
+2.  **Start with QR Code**
+    If you prefer to use a QR code, ensure `usePairingCode` is `false` in `config.js` and run:
 
-   ```bash
-   npm start
-   ```
+    ```bash
+    npm start
+    ```
 
-   Or:
+    Scan the QR code that appears in your terminal.
 
-   ```bash
-   pnpm start
-   ```
+-----
 
-2. **Pair or Scan QR Code**
+### Production Deployment
 
-   * If `usePairingCode=false`: Scan the QR code printed in the terminal.
-   * If `usePairingCode=true`: Enter the pairing code displayed.
-
-3. **Start Using the Bot**
-
-   * Add the bot to a group or DM it.
-   * Test commands like `.help`, `.ping`, etc.
-
----
-
-### Deployment with PM2
-
-For production:
+For production environments, using PM2 is highly recommended for process management and auto-restarts. The `install.sh` script already installs it globally.
 
 ```bash
-npm install -g pm2
-pm2 start ecosystem.config.cjs --env production
+# Start the application with PM2
+pm2 start ecosystem.config.cjs
+
+# Monitor logs
 pm2 logs
 ```
 
----
+-----
 
 Made with ❤️ and 💦 by [Terror-Machine](https://github.com/Terror-Machine)
 
----
+-----

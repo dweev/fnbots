@@ -30,7 +30,7 @@ export const command = {
     const genAI = new GoogleGenerativeAI(config.geminiApikey);
     const model = genAI.getGenerativeModel(
       {
-        model: "gemini-1.5-flash",
+        model: "gemini-2.0-flash-lite",
         generationConfig: {
           responseModalities: ['TEXT']
         },

@@ -31,6 +31,7 @@ export const command = {
       { label: 'Auto Like Story',     value: dbSettings.autolikestory   },
       { label: 'Auto Read Story',     value: dbSettings.autoreadsw      },
       { label: 'Auto Read Message',   value: dbSettings.autoread        },
+      { label: 'Auto Respon',         value: dbSettings.chatbot         },
       { label: 'Auto Resend',         value: dbSettings.antideleted     },
       { label: "Auto Reject Call",    value: dbSettings.anticall        },
       { label: "Auto Sticker",        value: dbSettings.autosticker     },

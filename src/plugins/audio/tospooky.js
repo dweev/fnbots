@@ -29,7 +29,7 @@ export const command = {
     await fn.sendMessage(toId, {
       audio: outputBuffer,
       mimetype: 'audio/mpeg',
-      ptt: quotedMsg.message?.audioMessage?.ptt || false
+      ptt: quotedMsg?.audioMessage?.ptt || false
     }, { quoted: m });
   }
 };

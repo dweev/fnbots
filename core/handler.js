@@ -124,6 +124,10 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
   const sPesan = (content) => fn.sendPesan(toId, content, m);
   const sendRawWebpAsSticker = async (_data, options = {}) => { await fn.sendRawWebpAsSticker(toId, _data, m, { ...options }); };
   const isCmd = txt?.startsWith(dbSettings.rname) || txt?.startsWith(dbSettings.sname);
+  const isAllowedByState = (maintenance && (isWhiteList || hakIstimewa)) || (!maintenance && (hakIstimewa || !userData.isMuted));
+  if (isCmd && !isAllowedByState) {
+    return;
+  };
 
   if (user.isUserMuted(serial)) return;
   if (body?.startsWith('>')) {

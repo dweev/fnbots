@@ -18,13 +18,13 @@ export const command = {
     const status = args[0]?.toLowerCase();
     switch (status) {
       case 'on':
-        if (group.isMuted) sReply(`Chat ini sudah dimatikan notifikasinya.\n\nGunakan ${dbSettings.rname}banchat off untuk mengaktifkan kembali notifikasi.`);
+        if (group.isMuted) return sReply(`Chat ini sudah dimatikan notifikasinya.\n\nGunakan ${dbSettings.rname}banchat off untuk mengaktifkan kembali notifikasi.`);
         await group.muteChat();
         await reactDone();
         await sReply(`Chat berhasil dimatikan.`);
         break;
       case 'off':
-        if (!group.isMuted) sReply(`Chat ini belum dimatikan notifikasinya.\n\nGunakan ${dbSettings.rname}banchat on untuk mematikan notifikasi.`);
+        if (!group.isMuted) return sReply(`Chat ini belum dimatikan notifikasinya.\n\nGunakan ${dbSettings.rname}banchat on untuk mematikan notifikasi.`);
         await group.unmuteChat();
         await reactDone();
         await sReply(`Chat berhasil diaktifkan.`);

@@ -234,26 +234,26 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
     try {
       const stats = await performanceManager.getFullStatus();
       let statsText = `*Performance Statistics*\n\n`;
-
-      statsText += `*Cache Statistics:*\n`;
-      statsText += `• User Stats: ${stats.cache.userStats.size} pending\n`;
-      statsText += `• Group Stats: ${stats.cache.groupStats.size} pending\n`;
-      statsText += `• Command Stats: ${stats.cache.commandStats.size} pending\n`;
+      statsText += `*Redis Cache Statistics:*\n`;
+      statsText += `• User Stats: ${stats.cache.redisCacheStats.users} keys\n`;
+      statsText += `• Group Stats: ${stats.cache.redisCacheStats.groups} keys\n`;
+      statsText += `• Command Stats: ${stats.cache.redisCacheStats.commands} keys\n`;
       statsText += `• Global Hits: ${stats.cache.globalStats.pendingHits} pending\n`;
       statsText += `• Whitelist Cache: ${stats.cache.whitelist.size} entries\n`;
       statsText += `• Group Data Cache: ${stats.cache.groupData.size} entries\n\n`;
-
       statsText += `*Performance:*\n`;
       statsText += `• Last Sync: ${stats.cache.performance.lastSync}\n`;
       statsText += `• Sync In Progress: ${stats.cache.performance.syncInProgress ? 'Yes' : 'No'}\n`;
       statsText += `• Uptime: ${Math.floor(stats.performance.uptime / 3600)}h ${Math.floor((stats.performance.uptime % 3600) / 60)}m\n\n`;
-
       statsText += `*Job Scheduler:*\n`;
-      statsText += `• Active Intervals: ${stats.scheduler.intervals.join(', ')}\n`;
-      statsText += `• Cron Jobs: ${stats.scheduler.cronJobs.join(', ')}\n`;
-
+      statsText += `• Active Intervals: ${stats.scheduler.intervals.length > 0 ? stats.scheduler.intervals.join(', ') : 'None'}\n`;
+      statsText += `• Cron Jobs: ${stats.scheduler.cronJobs.length > 0 ? stats.scheduler.cronJobs.join(', ') : 'None'}\n`;
+      statsText += `• Restarting: ${stats.scheduler.restarting ? 'Yes' : 'No'}\n\n`;
+      statsText += `*System:*\n`;
+      statsText += `• Initialized: ${stats.performance.initialized ? 'Yes' : 'No'}\n`;
       await sReply(statsText);
     } catch (error) {
+      console.error('Error getting cache stats:', error);
       await sReply(`Error getting cache stats: ${error.message}`);
     }
   } else if (body?.toLowerCase().trim() === "synccache") {
@@ -279,7 +279,7 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
   } else if (body?.toLowerCase().trim().startsWith("mode")) {
     if (!isSadmin && !isMaster) return;
     const args = body.toLowerCase().trim().split(/\s+/);
-    const modeInput = args[1];
+    const modeInput = args[1]?.toLowerCase().trim();
     const modeMap = {
       'publik': 'false',
       'selfbot': 'true',
@@ -293,16 +293,18 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
       };
       return displayMap[internalMode] || internalMode;
     };
-    if (modeInput) {
-      const internalMode = modeMap[modeInput];
-      await Settings.setSelfMode(internalMode);
-      dbSettings.self = internalMode;
-      await sReply(`Mode berhasil diubah ke: *${modeInput}*`);
-    } else {
+    if (!modeInput || modeInput === '') {
       const currentMode = dbSettings.self;
       const displayMode = getDisplayMode(currentMode);
       return sReply(`Mode saat ini: *${displayMode}*\nGunakan: mode <mode>\n • publik\n • selfbot\n • auto`);
     }
+    if (!Object.prototype.hasOwnProperty.call(modeMap, modeInput)) {
+      return sReply(`Mode tidak valid!\n\nMode yang tersedia:\n • publik\n • selfbot\n • auto\n\nMode saat ini: *${getDisplayMode(dbSettings.self)}*`);
+    }
+    const internalMode = modeMap[modeInput];
+    await Settings.setSelfMode(internalMode);
+    dbSettings.self = internalMode;
+    await sReply(`Mode berhasil diubah ke: *${modeInput}*`);
   }
 
   const selfMode = dbSettings.self;

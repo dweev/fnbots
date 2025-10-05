@@ -43,6 +43,34 @@ sudo systemctl start redis-server
 sudo systemctl enable redis-server
 
 echo ""
+echo "⚙️ Mengkonfigurasi persistensi Redis..."
+REDIS_CONF="/etc/redis/redis.conf"
+
+if [ -f "$REDIS_CONF" ]; then
+  if grep -q "^appendonly no" "$REDIS_CONF"; then
+    sudo sed -i 's/^appendonly no/appendonly yes/' "$REDIS_CONF"
+    echo "✅ AOF diaktifkan di Redis."
+  else
+    echo "⚠️ Pengaturan 'appendonly' tidak ditemukan atau sudah 'yes', melewati."
+  fi
+
+  sudo sed -i '/^save [0-9]/d' "$REDIS_CONF"
+  sudo sed -i '/^# save [0-9]/d' "$REDIS_CONF"
+  
+  echo "" | sudo tee -a "$REDIS_CONF"
+  echo "# Standard RDB snapshotting configuration" | sudo tee -a "$REDIS_CONF"
+  echo "save 900 1" | sudo tee -a "$REDIS_CONF"
+  echo "save 300 10" | sudo tee -a "$REDIS_CONF"
+  echo "save 60 10000" | sudo tee -a "$REDIS_CONF"
+  echo "✅ Aturan RDB snapshotting standar telah diterapkan."
+
+  echo "🔄 Merestart layanan Redis untuk menerapkan konfigurasi..."
+  sudo systemctl restart redis-server
+else
+  echo "⚠️ File $REDIS_CONF tidak ditemukan, melewati konfigurasi persistensi Redis."
+fi
+
+echo ""
 echo "🐍 Menambahkan PPA deadsnakes untuk versi Python modern..."
 sudo apt-get install -y software-properties-common
 

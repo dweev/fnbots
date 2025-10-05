@@ -322,6 +322,7 @@ class DBStore {
       return;
     }
     await this.setRedis(redisKey, updated, REDIS_TTL.CONTACT);
+    delete updated._id;
     this.updateQueues.contacts.set(jid, updated);
     if (updated.lid) {
       await this.cacheLidMapping(updated.lid, jid);
@@ -415,6 +416,7 @@ class DBStore {
       return;
     }
     await this.setRedis(redisKey, updated, REDIS_TTL.GROUP);
+    delete updated._id;
     this.updateQueues.groups.set(groupId, updated);
   }
   async syncGroupMetadata(fn, groupId) {

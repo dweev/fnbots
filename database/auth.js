@@ -170,43 +170,29 @@ const backupLIDMapping = async (id, value) => {
         phoneNumber = id.includes('@') ? id : `${id}@s.whatsapp.net`;
         lid = value ? (value.includes('@') ? value : `${value}@lid`) : null;
       }
-      if (phoneNumber && lid) {
-        const existing = await StoreContact.findOne({ jid: phoneNumber }).lean();
-        if (existing) {
-          await StoreContact.updateOne(
-            { jid: phoneNumber },
-            { $set: { lid: lid, lastUpdated: new Date() } }
-          );
-        } else {
-          const existingByLid = await StoreContact.findOne({ lid: lid }).lean();
-          if (existingByLid) {
-            await StoreContact.updateOne(
-              { lid: lid },
-              { $set: { jid: phoneNumber, lastUpdated: new Date() } }
-            );
-          } else {
-            try {
-              await StoreContact.create({
-                jid: phoneNumber,
-                lid: lid,
-                lastUpdated: new Date()
-              });
-            } catch (dupError) {
-              if (dupError.code === 11000) {
-                await StoreContact.updateOne(
-                  { $or: [{ jid: phoneNumber }, { lid: lid }] },
-                  { $set: { jid: phoneNumber, lid: lid, lastUpdated: new Date() } }
-                );
-              } else {
-                throw dupError;
-              }
-            }
-          }
-        }
-        await log(`LID Mapping backed up to StoreContact: ${phoneNumber} <-> ${lid}`);
-        return true;
+      if (!phoneNumber || !lid) {
+        return false;
       }
-      return false;
+      const existingByJid = await StoreContact.findOne({ jid: phoneNumber }).lean();
+      const existingByLid = lid ? await StoreContact.findOne({ lid: lid }).lean() : null;
+      if (existingByJid && existingByLid && existingByJid._id.toString() !== existingByLid._id.toString()) {
+        await StoreContact.deleteOne({ _id: existingByLid._id });
+      }
+      await StoreContact.findOneAndUpdate(
+        { jid: phoneNumber },
+        {
+          $set: {
+            lid: lid,
+            lastUpdated: new Date()
+          }
+        },
+        {
+          upsert: true,
+          new: true
+        }
+      );
+      await log(`LID Mapping backed up to StoreContact: ${phoneNumber} <-> ${lid}`);
+      return true;
     } catch (error) {
       await log(`Failed to backup LID mapping: ${error.message}`, true);
       return false;
@@ -264,10 +250,23 @@ const storeLIDMapping = async (lid, phoneNumber, autoMigrate = true) => {
     try {
       const normalizedLid = lid.includes('@') ? lid : `${lid}@lid`;
       const normalizedPN = phoneNumber.includes('@') ? phoneNumber : `${phoneNumber}@s.whatsapp.net`;
+      const existingByJid = await StoreContact.findOne({ jid: normalizedPN }).lean();
+      const existingByLid = await StoreContact.findOne({ lid: normalizedLid }).lean();
+      if (existingByJid && existingByLid && existingByJid._id.toString() !== existingByLid._id.toString()) {
+        await StoreContact.deleteOne({ _id: existingByLid._id });
+      }
       await StoreContact.findOneAndUpdate(
-        { $or: [{ jid: normalizedPN }, { lid: normalizedLid }] },
-        { $set: { jid: normalizedPN, lid: normalizedLid, lastUpdated: new Date() } },
-        { upsert: true }
+        { jid: normalizedPN },
+        {
+          $set: {
+            lid: normalizedLid,
+            lastUpdated: new Date()
+          }
+        },
+        {
+          upsert: true,
+          new: true
+        }
       );
       await log(`LID Mapping stored: ${normalizedPN} <-> ${normalizedLid}`);
       if (autoMigrate) {

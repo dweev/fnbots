@@ -391,7 +391,6 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
               await fn.sendMessage(toId, { delete: { remoteJid: toId, fromMe: false, id: id, participant: serial } });
               await fn.removeParticipant(toId, serial);
             } catch (error) {
-              await log(`Gagal mengeluarkan ${serial} karena anti tag story: ${error}`, true);
               await log(error, true);
             }
           }
@@ -504,7 +503,7 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
                 }
               );
             } catch (error) {
-              await log(`Gagal mengirim notifikasi ke ${user.jid}: ${error}`);
+              await log(error, true);
             }
           }
         }
@@ -665,7 +664,6 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
     const gameHandled = await handleGameBotResponse({ m, toId, body, user, sReply, sPesan, fn, serial, isCmd, reactFail, tmpDir, dbSettings, config, gameStates });
     if (gameHandled) return;
   } catch (error) {
-    await log(`Error in main handler: ${error}`, true);
     await log(error, true);
   }
 };

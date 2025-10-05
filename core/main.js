@@ -43,7 +43,6 @@ async function initializeDatabases() {
     pinoLogger.level = dbSettings.pinoLogger || 'silent';
     await log('Database & MongoStore berhasil diinisialisasi.');
   } catch (error) {
-    await log(`Database initialization error: ${error}`);
     await log(error, true);
     throw error;
   }
@@ -164,7 +163,6 @@ async function starts() {
     setupWhatsAppEventHandlers(fn);
     await performanceManager.initialize(fn, config, dbSettings);
   } catch (error) {
-    await log(`Startup error: ${error}`, true);
     await log(error, true);
     await restartManager.restart("Gagal memuat database store", performanceManager);
   }
@@ -188,7 +186,6 @@ signalHandler.register('database', async (signal) => {
     }
     await log(`Database cleanup completed.`);
   } catch (error) {
-    await log(`Cleanup error: ${error}`);
     await log(error, true);
   }
 }, 100);
@@ -206,7 +203,6 @@ process.on('uncaughtException', async (error) => {
 try {
   await starts();
 } catch (error) {
-  await log(`Fatal startup error: ${error}`);
   await log(error, true);
   process.exit(1);
 }

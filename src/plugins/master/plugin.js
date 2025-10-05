@@ -1,5 +1,13 @@
-import { Command } from '../../../database/index.js';
+// ─── Info ────────────────────────────────
+/*
+* Created with ❤️ and 💦 By FN
+* Follow https://github.com/Terror-Machine
+* Feel Free To Use
+*/
+// ─── Info ────────────────────────────────
+
 import { pluginCache } from '../../lib/plugins.js';
+import { Command } from '../../../database/index.js';
 
 async function findCommandInDb(identifier) {
   const target = identifier.toLowerCase();
@@ -28,25 +36,21 @@ export const command = {
     const state = subCmd.toLowerCase();
     if (state !== 'on' && state !== 'off') return sReply(`Sub-perintah tidak valid. Gunakan 'on' atau 'off'.`);
     const newState = state === 'on';
-    try {
-      const commandDoc = await findCommandInDb(targetIdentifier);
-      if (!commandDoc) return sReply(`Perintah atau alias '${targetIdentifier}' tidak ditemukan di database.`);
-      await Command.updateOne({ _id: commandDoc._id }, { $set: { isEnabled: newState } });
-      const cachedCommand = pluginCache.commands.get(commandDoc.name);
-      if (cachedCommand) {
-        cachedCommand.isEnabled = newState;
-        const allIdentifiers = [commandDoc.name, ...(commandDoc.aliases || [])];
-        allIdentifiers.forEach(id => {
-          const cmd = pluginCache.commands.get(id);
-          if (cmd) {
-            cmd.isEnabled = newState;
-          }
-        });
-      }
-      const statusText = newState ? 'diaktifkan' : 'dinonaktifkan';
-      await sReply(`Berhasil, perintah *${commandDoc.name}* telah ${statusText}.`);
-    } catch (error) {
-      await sReply(`Terjadi kesalahan: ${error.message}`);
+    const commandDoc = await findCommandInDb(targetIdentifier);
+    if (!commandDoc) return sReply(`Perintah atau alias '${targetIdentifier}' tidak ditemukan di database.`);
+    await Command.updateOne({ _id: commandDoc._id }, { $set: { isEnabled: newState } });
+    const cachedCommand = pluginCache.commands.get(commandDoc.name);
+    if (cachedCommand) {
+      cachedCommand.isEnabled = newState;
+      const allIdentifiers = [commandDoc.name, ...(commandDoc.aliases || [])];
+      allIdentifiers.forEach(id => {
+        const cmd = pluginCache.commands.get(id);
+        if (cmd) {
+          cmd.isEnabled = newState;
+        }
+      });
     }
+    const statusText = newState ? 'diaktifkan' : 'dinonaktifkan';
+    await sReply(`Berhasil, perintah *${commandDoc.name}* telah ${statusText}.`);
   }
 };

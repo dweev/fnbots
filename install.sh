@@ -17,7 +17,6 @@ else
 fi
 
 ORIGINAL_USER=$(logname)
-USER_HOME=$(getent passwd "$ORIGINAL_USER" | cut -d: -f6)
 UBUNTU_VERSION=$(grep ^VERSION= /etc/os-release | cut -d= -f2 | tr -d '"')
 UBUNTU_CODENAME=$(grep ^UBUNTU_CODENAME= /etc/os-release | cut -d= -f2)
 
@@ -30,6 +29,18 @@ echo "🔧 Memperbaiki broken packages..."
 sudo apt-get install -f -y
 sudo dpkg --configure -a
 sudo apt-get autoremove -y
+
+echo ""
+echo "💾 Menginstall MongoDB..."
+sudo apt-get install -y mongodb
+sudo systemctl start mongodb
+sudo systemctl enable mongodb
+
+echo ""
+echo "⚡ Menginstall Redis..."
+sudo apt-get install -y redis-server
+sudo systemctl start redis-server
+sudo systemctl enable redis-server
 
 echo ""
 echo "🐍 Menambahkan PPA deadsnakes untuk versi Python modern..."

@@ -1,16 +1,16 @@
 -----
 
-<h1 align="center"\>FN WHATSAPP BOT</h1\>
+<h1 align="center">FN WHATSAPP BOT</h1>
 
 -----
 
 ## About The Project
 
-  * **This is an independent project and is NOT affiliated, endorsed, or supported by WhatsApp or Meta Platforms. using [Baileys](https://www.npmjs.com/package/baileys) library from the [WhiskeySockets/Baileys](https://github.com/WhiskeySockets/Baileys) GitHub repository.**
+  * **This is an independent project and is NOT affiliated, endorsed, or supported by WhatsApp or Meta Platforms.** It is built using the [Baileys](https://www.npmjs.com/package/baileys) library from the [WhiskeySockets/Baileys](https://github.com/WhiskeySockets/Baileys) GitHub repository.
 
 ### Core Philosophies
 
-  * **Performance**: Heavy, blocking tasks (media processing, image generation, web scraping) are offloaded to a separate pool of worker threads, ensuring the main application remains non-blocking and highly responsive.
+  * **Performance**: Heavy, blocking tasks (media processing, image generation, web scraping) are offloaded to a separate pool of worker threads, ensuring the main application remains non-blocking and highly responsive. Caching is handled by an in-memory Redis database for maximum speed.
   * **Stability**: The application is designed for high uptime with self-healing capabilities, including memory monitoring, connection health checks, and a graceful restart manager that prevents infinite crash loops.
   * **Modularity**: A file-based plugin system allows for easy addition and hot-reloading of commands without restarting the entire application, streamlining development and maintenance.
 
@@ -24,11 +24,11 @@
 graph TD
   subgraph "Phase 1: Startup & Initialization"
     A[Start Application main.js] --> B(1. Load Configuration);
-    B --> C(2. Connect to MongoDB Database);
-    C --> D{DB Connected?};
+    B --> C(2. Connect to MongoDB & Redis);
+    C --> D{DBs Connected?};
     D -- Success --> E(3. Initialize Settings Cache);
     D -- Error --> ERR1[Exit Process];
-    E --> F(4. Load All Commands to pluginCache);
+    E --> F(4. Load Commands into pluginCache);
     F --> G(5. Initialize Fuzzy Search);
     G --> H(6. Wrap Socket with Helpers);
     H --> I(7. Create WA Socket & Start Connection);
@@ -267,11 +267,13 @@ classDiagram
     +Buffer data
   }
   
-  class BaileysSession {
-    +String key
-    +Mixed value
+  class Redis {
+    <<In-Memory>>
+    +BaileysSession
+    +PerformanceStats
+    +DataCache (Contacts, Groups)
+    +GameState
   }
-  note for BaileysSession "Key-value store for Baileys auth credentials"
   
   class StoreContact {
     +String jid
@@ -327,6 +329,9 @@ classDiagram
   StoreMessages ..> Group : `chatId` can be a Group JID
   
   DatabaseBot "1" -- "0" Media : Can link to media responses
+
+  MongoDB ..> Redis : MongoDB is the source of truth
+  Redis ..> MongoDB : Write-behind caching syncs data to MongoDB
 ```
 
 -----
@@ -365,10 +370,11 @@ The directory structure is designed for a clear separation of concerns, making t
 
   * **Node.js**: `v20.x` or higher
   * **MongoDB**: `v5.0` or higher (local or Atlas)
+  * **Redis**: `v6.x` or higher
   * **Git**
   * **FFMPEG**: **Required** for all media processing (stickers, audio filters).
   * **Python**: `v3.12` recommended.
-      * **Python Libraries**: `rembg` (for background removal), `yt-dlp`, `google-generativeai`, and other dependencies listed in `install.sh`.
+    * **Python Libraries**: `rembg`, `yt-dlp`, `google-generativeai`, and other dependencies listed in `install.sh`.
   * A valid **WhatsApp** account.
 
 ### Hardware (VPS/Server)
@@ -377,16 +383,16 @@ The resource requirements are higher than a standard bot due to heavy processing
 
   * **Recommended (Production)**:
 
-      * **CPU**: **4 vCores** or more
-      * **RAM**: **8 GB** or more
-      * **Storage**: **80 GB+ SSD/NVMe**
-      * **OS**: Ubuntu 22.04 LTS or a similar Linux distribution.
+    * **CPU**: **4 vCores** or more
+    * **RAM**: **8 GB** or more
+    * **Storage**: **80 GB+ SSD/NVMe**
+    * **OS**: Ubuntu 22.04 LTS or a similar Linux distribution.
 
   * **Minimal (Testing/Low-Load)**:
 
-      * **CPU**: 2 vCores
-      * **RAM**: 4 GB
-      * **Storage**: 50 GB SSD/NVMe
+    * **CPU**: 2 vCores
+    * **RAM**: 4 GB
+    * **Storage**: 50 GB SSD/NVMe
 
 > **Note**: Running features like Instagram scraping (`Playwright`) and parallel media processing (`FFMPEG`, `Canvas`) is very resource-intensive. Using specs below the recommended values may lead to slow response times and instability.
 
@@ -396,51 +402,51 @@ The resource requirements are higher than a standard bot due to heavy processing
 
 ### Installation
 
-The easiest way to set up is by using the `install.sh` script on a fresh Ubuntu server.
+The easiest way to set up is by using the `install.sh` script on a fresh Ubuntu server. This will install Node.js, MongoDB, Redis, Python, and all project dependencies.
 
 1.  **Clone the Repository**
 
-    ```bash
-    git clone https://github.com/Terror-Machine/fnbots.git
-    cd fnbots
-    ```
+  ```bash
+  git clone https://github.com/Terror-Machine/fnbots.git
+  cd fnbots
+  ```
 
 2.  **Setup Environment Variables**
 
-    ```bash
-    cp .env.example .env
-    ```
+  ```bash
+  cp .env.example .env
+  ```
 
-    Open and edit the `.env` file, filling in all required values:
+  Open and edit the `.env` file, filling in all required values:
 
-      * `MONGODB_URI`: Your MongoDB connection string.
-      * `OWNER_NUMBER`: JSON array of owner numbers (e.g., `["12025550101"]`).
-      * `GEMINI_API_KEY`: For generative AI features. **(Optional)** 
+    * `MONGODB_URI`: Your MongoDB connection string.
+    * `OWNER_NUMBER`: JSON array of owner numbers.
+    * `GEMINI_API_KEY`: For generative AI features. (Optional) 
 
 3.  **Run the Automatic Setup Script**
-    Execute the `install.sh` script to automatically install all system dependencies, Node.js, Python, and project dependencies.
+  Execute the `install.sh` script to automatically install all system dependencies.
 
-    ```bash
-    sudo bash install.sh
-    ```
+  ```bash
+  sudo bash install.sh
+  ```
 
 ### Running the Bot
 
 1.  **Start with Pairing Code (Recommended)**
-    Use the `pair` script to log in with a pairing code. The bot will prompt you for your bot's phone number.
+  Use the `pair` script to log in with a pairing code. The bot will prompt you for your bot's phone number.
 
-    ```bash
-    npm run pair
-    ```
+  ```bash
+  npm run pair
+  ```
 
 2.  **Start with QR Code**
-    If you prefer to use a QR code, ensure `usePairingCode` is `false` in `config.js` and run:
+  If you prefer to use a QR code, ensure `usePairingCode` is `false` in `config.js` and run:
 
-    ```bash
-    npm start
-    ```
+  ```bash
+  npm start
+  ```
 
-    Scan the QR code that appears in your terminal.
+  Scan the QR code that appears in your terminal.
 
 -----
 

@@ -539,6 +539,9 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
           const commandName = currentCommand.split(' ')[0].toLowerCase();
           const command = pluginCache.commands.get(commandName);
           if (command) {
+            if (!command.isEnabled && !userData.isSadmin) {
+              continue;
+            }
             try {
               const hasAccess = await checkCommandAccess(command, userData, user, maintenance);
               if (hasAccess) {

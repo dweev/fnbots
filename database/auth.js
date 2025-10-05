@@ -191,7 +191,6 @@ const backupLIDMapping = async (id, value) => {
           new: true
         }
       );
-      await log(`LID Mapping backed up to StoreContact: ${phoneNumber} <-> ${lid}`);
       return true;
     } catch (error) {
       await log(`Failed to backup LID mapping: ${error.message}`, true);

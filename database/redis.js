@@ -12,11 +12,11 @@ import log from '../src/lib/logger.js';
 const redis = new Redis();
 
 redis.on('connect', () => {
-  log('Berhasil terhubung ke server Redis.');
+  log('Redis connected successfully');
 });
 
 redis.on('error', (error) => {
-  log(`Koneksi Redis Error: ${error}`, true);
+  log(`Error connecting to Redis: ${error}`, true);
 });
 
 export default redis;

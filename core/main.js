@@ -41,7 +41,7 @@ async function initializeDatabases() {
     await mongoStore.connect();
     dbSettings = await initializeDbSettings();
     pinoLogger.level = dbSettings.pinoLogger || 'silent';
-    await log('Database & MongoStore berhasil diinisialisasi.');
+    await log('Databases initialized successfully');
   } catch (error) {
     await log(error, true);
     throw error;
@@ -159,12 +159,12 @@ async function starts() {
     fn = result.fn;
     authStore = result.authStore;
     mongoStore.setAuthStore(authStore);
-    await log('AuthStore successfully injected into MongoStore');
+    await log('AuthStore injected into DBStore successfully');
     setupWhatsAppEventHandlers(fn);
     await performanceManager.initialize(fn, config, dbSettings);
   } catch (error) {
     await log(error, true);
-    await restartManager.restart("Gagal memuat database store", performanceManager);
+    await restartManager.restart("Failed to load database store", performanceManager);
   }
 };
 

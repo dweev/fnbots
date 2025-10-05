@@ -13,7 +13,7 @@ export const statics = {
     try {
       let db = await this.findOne({ docId: 'DATABASE_BOT_SINGLETON' });
       if (!db) {
-        log("Membuat dokumen DatabaseBot baru karena belum ada...");
+        log("Creating new database instance...");
         db = new this();
         await db.save();
       }

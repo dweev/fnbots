@@ -68,7 +68,7 @@ class DBStore {
     this.isConnected = true;
     log("Warming up Redis cache...");
     await this.warmRedisCache();
-    log('Pure Redis + DB store ready');
+    log('Redis + MongoDB ready');
     return this;
   }
   async disconnect() {

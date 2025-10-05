@@ -149,15 +149,15 @@ export async function createWASocket(dbSettings) {
           dbSettings.dataM = {};
           await Settings.updateSettings(dbSettings);
         }
-        await log(`Menghubungkan ke WhatsApp...`);
+        await log(`Connecting to WhatsApp...`);
         const participatingGroups = await fn.groupFetchAllParticipating();
-        await log('Memulai sinkronisasi data grup...');
+        await log('Starting group data synchronization...');
         try {
           const groupsToUpdate = Object.values(participatingGroups);
           if (groupsToUpdate.length > 0) {
             await StoreGroupMetadata.bulkUpsert(groupsToUpdate);
           }
-          await log('Memeriksa grup usang untuk dibersihkan...');
+          await log('Group metadata synchronization complete. Checking for stale groups...');
           const currentGroupIds = new Set(Object.keys(participatingGroups));
           const storedMetadatas = await StoreGroupMetadata.find({}, { groupId: 1, _id: 0 }).lean();
           const storedGroupIds = storedMetadatas.map(g => g.groupId);
@@ -171,7 +171,7 @@ export async function createWASocket(dbSettings) {
             }
             await log(`Cache Redis untuk ${staleGroupIds.length} grup usang telah dibersihkan...`);
           } else {
-            await log('Sinkronisasi selesai...');
+            await log('Synchronization completed. No stale groups found.');
           }
         } catch (error) {
           await log(`Error during group sync: ${error}`, true);
@@ -179,7 +179,7 @@ export async function createWASocket(dbSettings) {
         }
         await log(`WA Version: ${global.version.join('.')}`);
         await log(`BOT Number: ${jidNormalizedUser(fn.user.id).split('@')[0]}`);
-        await log(`${dbSettings.botName} Berhasil tersambung ke whatsapp...`);
+        await log(`${dbSettings.botName} Success Connected to whatsapp...`);
         setInterval(cleanupExpiredOTPSessions, config.performance.defaultInterval);
       }
       if (connection === 'close') {

@@ -546,13 +546,26 @@ export async function writeExif(media, data) {
   };
 };
 export async function convertAudio(inputPath) {
+  const detected = await FileType.fromFile(inputPath);
   return new Promise((resolve, reject) => {
-    const outputPath = tmpDir.createTempFile('ogg');
-    ffmpeg(inputPath)
-      .setFfmpegPath(config.paths.ffmpeg)
-      .setFfprobePath(config.paths.ffprobe)
-      .inputOptions(['-f', 'mp3'])
-      .outputOptions([
+    try {
+      const outputPath = tmpDir.createTempFile('ogg');
+      const mime = detected?.mime || '';
+      const ext = path.extname(inputPath).replace('.', '');
+      let inputFormat = null;
+      if (mime.startsWith('audio/')) {
+        if (mime.includes('mpeg')) inputFormat = 'mp3';
+        else if (mime.includes('ogg')) inputFormat = 'ogg';
+        else if (mime.includes('wav')) inputFormat = 'wav';
+        else if (mime.includes('webm')) inputFormat = 'webm';
+        else if (mime.includes('mp4') || ext === 'm4a') inputFormat = 'mp4';
+        else if (mime.includes('opus')) inputFormat = 'ogg';
+      }
+      const cmd = ffmpeg(inputPath)
+        .setFfmpegPath(config.paths?.ffmpeg)
+        .setFfprobePath(config.paths?.ffprobe);
+      if (inputFormat) cmd.inputOptions(['-f', inputFormat]);
+      cmd.outputOptions([
         '-f', 'ogg',
         '-c:a', 'libopus',
         '-ac', '1',
@@ -562,9 +575,12 @@ export async function convertAudio(inputPath) {
         '-map', '0:a',
         '-avoid_negative_ts', 'make_zero'
       ])
-      .on('error', reject)
-      .on('end', () => resolve(outputPath))
-      .save(outputPath);
+        .on('error', reject)
+        .on('end', () => resolve(outputPath))
+        .save(outputPath);
+    } catch (err) {
+      reject(err);
+    }
   });
 };
 export async function sendAndCleanupFile(fn, toId, localPath, m, dbSettings) {

@@ -122,7 +122,7 @@ export async function clientBot(fn, dbSettings) {
         data
       };
     } catch (error) {
-      log(`Error: ${error.message}`, true); throw error;
+      throw error;
     }
   };
   fn.sendMediaBufferOrURL = async (jid, path, fileName = '', caption = '', quoted = '', options = {}) => {
@@ -200,7 +200,7 @@ export async function clientBot(fn, dbSettings) {
       });
       await fn.sendMessage(jid, { audio: { stream: fs.createReadStream(tempFilePath) }, mimetype: 'audio/mpeg' }, createQuotedOptions(quoted));
     } catch (error) {
-      log(`Error: ${error.message}`, true); throw error;
+      throw error;
     } finally {
       await tmpDir.deleteFile(tempFilePath);
     }
@@ -249,7 +249,7 @@ export async function clientBot(fn, dbSettings) {
       if (buffer.length === 0) throw new MediaProcessingError('Hasil download kosong');
       return buffer;
     } catch (error) {
-      log(`Error: ${error.message}`, true); throw error;
+      throw error;
     }
   };
   fn.removeParticipant = async (jid, target) => {
@@ -279,7 +279,7 @@ export async function clientBot(fn, dbSettings) {
       const mime = await detectMimeType(res.data, res.headers);
       return await fn.sendMediaByType(jid, mime, res.data, caption, quoted, options);
     } catch (error) {
-      log(`Error: ${error.message}`, true); throw error;
+      throw error;
     }
   };
   fn.sendFileUrl2 = async (jid, url, caption, quoted, options = {}) => {
@@ -309,7 +309,7 @@ export async function clientBot(fn, dbSettings) {
       const mimeType = await detectMimeType(dataResponse.data, dataResponse.headers);
       return await fn.sendMediaByType(jid, mimeType, dataResponse.data, caption, quoted, options);
     } catch (error) {
-      log(`Error: ${error.message}`, true); throw error;
+      throw error;
     }
   };
   fn.sendFilePath = async (jid, caption, localPath, options = {}) => {
@@ -339,7 +339,6 @@ export async function clientBot(fn, dbSettings) {
       }
       return await fn.sendMessage(jid, messageContent, quotedOptions);
     } catch (error) {
-      log(`Error in sendFilePath: ${error.message}`, true);
       throw error;
     } finally {
       if (convertedPath) await tmpDir.deleteFile(convertedPath);

@@ -50,7 +50,8 @@ const commandSchema = new mongoose.Schema({
   },
   isLimitCommand: { type: Boolean, default: true },
   isLimitGameCommand: { type: Boolean, default: false },
-  isCommandWithoutPayment: { type: Boolean, default: false }
+  isCommandWithoutPayment: { type: Boolean, default: false },
+  isEnabled: { type: Boolean, default: true, index: true },
 }, { timestamps: true });
 
 commandSchema.pre('save', function (next) {

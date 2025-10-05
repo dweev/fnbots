@@ -138,7 +138,7 @@ export const loadPlugins = async (pluginPath) => {
               cmdName,
               cmd.displayName || cmdName,
               categoryName,
-              cmd.description || 'belum terdefinisikan...',
+              cmd.description,
               cmd.aliases || [],
               flags
             );

@@ -15,13 +15,16 @@ import log from '../src/lib/logger.js';
 import dayjs from '../src/utils/dayjs.js';
 import { exec as cp_exec } from 'child_process';
 import { tmpDir } from '../src/lib/tempManager.js';
+import { pluginCache } from '../src/lib/plugins.js';
 import { runJob } from '../src/worker/worker_manager.js';
 import { restartManager } from '../src/lib/restartManager.js';
-import { pluginCache } from '../src/lib/plugins.js';
 import { performanceManager } from '../src/lib/performanceManager.js';
 import { User, Group, Settings, StoreGroupMetadata, OTPSession, Media, DatabaseBot, StoreMessages } from '../database/index.js';
 import { handleAntiDeleted, handleAutoJoin, handleAudioChanger, handleAutoSticker, handleChatbot, handleAutoDownload, handleGameBotResponse } from '../src/handler/index.js';
 import { color, msgs, mycmd, safeStringify, sendAndCleanupFile, waktu, checkCommandAccess, isUserVerified, textMatch1, textMatch2, expiredVIPcheck, expiredCheck, getSerial, getTxt } from '../src/function/index.js';
+
+// eslint-disable-next-line import/no-unresolved
+import PQueue from 'p-queue';
 
 const exec = util.promisify(cp_exec);
 const localFilePrefix = config.localPrefix;
@@ -30,15 +33,17 @@ const groupAfkCooldowns = new LRUCache({
   ttl: config.performance.groupCooldownMS,
   updateAgeOnGet: false
 });
+const cooldownQueue = new PQueue({
+  interval: 1000,
+  intervalCap: config.performance.commandCooldown,
+  autoStart: true
+});
 
-const recentcmd                   = new Set();
+const userCooldowns               = new Map();
 const fspamm                      = new Set();
 const sban                        = new Set();
 const stp                         = new Set();
 const stickerspam                 = new Set();
-let mygroup                       = [];
-let mygroupMembers                = {};
-let chainingCommands              = [];
 const yts                         = [];
 const tebaklirik                  = {};
 const tekateki                    = {};
@@ -68,10 +73,12 @@ const tebakkalimat                = {};
 const siapakahaku                 = {};
 const ulartangga                  = {};
 const tebakgame                   = {};
-let counter                       = 0;
-let suggested                     = false;
 const interactiveHandled          = false;
+let suggested                     = false;
 let groupData                     = null;
+let mygroupMembers                = {};
+let mygroup                       = [];
+let chainingCommands              = [];
 
 export const updateMyGroup = (newGroupList, newMemberlist) => {
   mygroup = newGroupList;
@@ -416,103 +423,103 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
         const isVerified = await isUserVerified(m, dbSettings, StoreGroupMetadata, fn, sReply, hakIstimewa);
         if (!isVerified) return;
       }
-      const commandText = await getTxt(txt, dbSettings);
-      const remoteCommandMatch = commandText.match(/^r:(\d+)\s+(.*)/s);
-      if (remoteCommandMatch && (isSadmin || isMaster)) {
-        const index = parseInt(remoteCommandMatch[1]) - 1;
-        const remainingText = remoteCommandMatch[2];
-        if (mygroup[index]) {
-          toId = mygroup[index];
-          chainingCommands = await mycmd(remainingText);
-        } else {
-          return sReply(`Grup dengan nomor urut ${index + 1} tidak ditemukan.`);
+      const now = Date.now();
+      const lastExec = userCooldowns.get(serial) || 0;
+      const cooldownTime = 1000;
+      if (now - lastExec < cooldownTime && !isSadmin) {
+        if (!fspamm.has(serial)) {
+          fspamm.add(serial);
+          setTimeout(() => { fspamm.delete(serial); }, config.performance.spamDuration);
+          return sReply(`*Hei @${serial.split('@')[0]}, tunggu ${Math.ceil((cooldownTime - (now - lastExec)) / 1000)}s!*`);
+        } else if (!sban.has(serial)) {
+          sban.add(serial);
+          setTimeout(() => { sban.delete(serial); }, config.performance.banDuration);
+          const durationText = waktu(config.performance.banDuration / 1000);
+          return sReply(`*Hei @${serial.split('@')[0]}*\n*COMMAND SPAM DETECTED*\n*Command banned for ${durationText}*`);
         }
-      } else {
-        chainingCommands = await mycmd(commandText);
+        return;
       }
-      async function executeCommandChain(commandList) {
-        const failedCommands = [];
-        for (const currentCommand of commandList) {
-          let commandFound = false;
-          const commandName = currentCommand.split(' ')[0].toLowerCase();
-          const command = pluginCache.commands.get(commandName);
-          if (command) {
-            if (!command.isEnabled && !userData.isSadmin) {
-              continue;
-            }
-            try {
-              const hasAccess = await checkCommandAccess(command, userData, user, maintenance);
-              if (hasAccess) {
-                const args = currentCommand.split(' ').slice(1);
-                const fullArgs = args.join(' ');
-                const commandArgs = {
-                  fn, m, dbSettings, ownerNumber, version, isSadmin, isMaster, isVIP, isPremium, isWhiteList, hakIstimewa, isBotGroupAdmins,
-                  sPesan, sReply, reactDone, reactFail, toId, quotedMsg, quotedParticipant, mentionedJidList, body, args, arg: fullArgs, ar: args,
-                  serial, user, groupData, botNumber, mygroupMembers, mygroup, isPrivileged, pushname, yts, tebaklirik, tekateki, tebakkata, susunkata, 
-                  tebakkimia, tebaknegara, tebakbendera, tebakgambar, caklontong, sudokuGame, family100, hangman, chatBots, sessions, chessGame, othelloGame, 
-                  ludoSessions, game41Sessions, gamematematika, werewolfSessions, minesweeperSessions, ularTanggaSessions, tictactoeSessions, samgongSessions, 
-                  tebakkalimat, siapakahaku, ulartangga, tebakgame, sendRawWebpAsSticker, StoreMessages
-                };
-                await command.execute(commandArgs);
-                commandFound = true;
-                const userUpdates = {
-                  $inc: {
-                    userCount: 1,
-                    [`commandStats.${commandName}`]: 1
-                  }
-                };
-                if (!isSadmin && !isMaster && !isVIP) {
-                  if (command.isLimitGameCommand) {
-                    userUpdates.$inc['limitgame.current'] = -1;
-                  } else if (command.isLimitCommand) {
-                    if (!isPremium) {
-                      userUpdates.$inc['limit.current'] = -20;
-                    } else {
-                      userUpdates.$inc['limit.current'] = -1;
+      cooldownQueue.add(async () => {
+        userCooldowns.set(serial, now);
+        const commandText = await getTxt(txt, dbSettings);
+        const remoteCommandMatch = commandText.match(/^r:(\d+)\s+(.*)/s);
+        if (remoteCommandMatch && (isSadmin || isMaster)) {
+          const index = parseInt(remoteCommandMatch[1]) - 1;
+          const remainingText = remoteCommandMatch[2];
+          if (mygroup[index]) {
+            toId = mygroup[index];
+            chainingCommands = await mycmd(remainingText);
+          } else {
+            return sReply(`Grup dengan nomor urut ${index + 1} tidak ditemukan.`);
+          }
+        } else {
+          chainingCommands = await mycmd(commandText);
+        }
+        async function executeCommandChain(commandList) {
+          const failedCommands = [];
+          for (const currentCommand of commandList) {
+            let commandFound = false;
+            const commandName = currentCommand.split(' ')[0].toLowerCase();
+            const command = pluginCache.commands.get(commandName);
+            if (command) {
+              if (!command.isEnabled && !userData.isSadmin) {
+                continue;
+              }
+              try {
+                const hasAccess = await checkCommandAccess(command, userData, user, maintenance);
+                if (hasAccess) {
+                  const args = currentCommand.split(' ').slice(1);
+                  const fullArgs = args.join(' ');
+                  const commandArgs = {
+                    fn, m, dbSettings, ownerNumber, version, isSadmin, isMaster, isVIP, isPremium, isWhiteList, hakIstimewa, isBotGroupAdmins,
+                    sPesan, sReply, reactDone, reactFail, toId, quotedMsg, quotedParticipant, mentionedJidList, body, args, arg: fullArgs, ar: args,
+                    serial, user, groupData, botNumber, mygroupMembers, mygroup, isPrivileged, pushname, yts, tebaklirik, tekateki, tebakkata, susunkata,
+                    tebakkimia, tebaknegara, tebakbendera, tebakgambar, caklontong, sudokuGame, family100, hangman, chatBots, sessions, chessGame, othelloGame,
+                    ludoSessions, game41Sessions, gamematematika, werewolfSessions, minesweeperSessions, ularTanggaSessions, tictactoeSessions, samgongSessions,
+                    tebakkalimat, siapakahaku, ulartangga, tebakgame, sendRawWebpAsSticker, StoreMessages
+                  };
+                  await command.execute(commandArgs);
+                  commandFound = true;
+                  const userUpdates = {
+                    $inc: {
+                      userCount: 1,
+                      [`commandStats.${commandName}`]: 1
+                    }
+                  };
+                  if (!isSadmin && !isMaster && !isVIP) {
+                    if (command.isLimitGameCommand) {
+                      userUpdates.$inc['limitgame.current'] = -1;
+                    } else if (command.isLimitCommand) {
+                      if (!isPremium) {
+                        userUpdates.$inc['limit.current'] = -20;
+                      } else {
+                        userUpdates.$inc['limit.current'] = -1;
+                      }
                     }
                   }
+                  await performanceManager.cache.updateUserStats(user.userId, userUpdates);
+                  await performanceManager.cache.updateCommandStats(command.name, 1);
+                  performanceManager.cache.incrementGlobalStats();
                 }
-                await performanceManager.cache.updateUserStats(user.userId, userUpdates);
-                await performanceManager.cache.updateCommandStats(command.name, 1);
-                performanceManager.cache.incrementGlobalStats();
+              } catch (error) {
+                await sReply(`Terjadi kesalahan saat menjalankan perintah "${command.name}": \n${error.message}`);
+                log(error, true);
+                failedCommands.push(currentCommand);
               }
-            } catch (error) {
-              await sReply(`Terjadi kesalahan saat menjalankan perintah "${command.name}": \n${error.message}`);
-              log(error, true);
+            } else {
               failedCommands.push(currentCommand);
             }
-          } else {
-            failedCommands.push(currentCommand);
+            if (commandFound) {
+              const msgPreview = msgs(currentCommand);
+              if (msgPreview === undefined) continue;
+              const parts = [color(msgPreview, "#32CD32"), color('from', "#a8dffb"), color(pushname, '#FFA500'), ...(m.isGroup ? [color('in', '#a8dffb'), color(m.metadata?.subject, "#00FFFF")] : [])];
+              const formatted = parts.join(' ');
+              log(formatted);
+            }
           }
-          if (commandFound) {
-            const msgPreview = msgs(currentCommand);
-            if (msgPreview === undefined) continue;
-            const parts = [color(msgPreview, "#32CD32"), color('from', "#a8dffb"), color(pushname, '#FFA500'), ...(m.isGroup ? [color('in', '#a8dffb'), color(m.metadata?.subject, "#00FFFF")] : [])];
-            const formatted = parts.join(' ');
-            log(formatted);
-          }
+          return failedCommands;
         }
-        return failedCommands;
-      }
-      if (counter <= config.performance.commandCooldown) {
-        counter++;
-        if (botNumber === serial) return;
-        const usr = serial;
-        if ((recentcmd.has(usr) || sban.has(usr)) && !isSadmin) {
-          if (!(fspamm.has(usr) || sban.has(usr))) {
-            await sReply(`*Hei @${usr.split('@')[0]} you are on cooldown!*`);
-            fspamm.add(usr);
-          } else if (!sban.has(usr)) {
-            const durationText = waktu(config.performance.banDuration / 1000);
-            await sReply(`*Hei @${usr.split('@')[0]}*\n*COMMAND SPAM DETECTED*\n*Command banned for ${durationText}*`);
-            sban.add(usr);
-          }
-        } else {
-          setTimeout(() => { counter--; }, 1000);
-          recentcmd.add(usr);
-          setTimeout(() => { recentcmd.delete(usr); }, 1000);
-          setTimeout(() => { fspamm.delete(usr); }, config.performance.spamDuration);
-          setTimeout(() => { sban.delete(usr); }, config.performance.banDuration);
+        try {
           const failedCommands = await executeCommandChain(chainingCommands);
           if (failedCommands.length > 0 && dbSettings.autocorrect === 2 && !suggested) {
             const correctedCommands = [];
@@ -533,11 +540,10 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
             await textMatch1(fn, m, failedCommands, toId);
             m._textmatch_done = true;
           }
+        } catch {
+          await sReply("🏃💨 Bot sedang sibuk, coba lagi dalam beberapa saat...");
         }
-      } else {
-        await sReply("🏃💨 Bot sedang sibuk, coba lagi dalam beberapa saat...");
-        setTimeout(() => { counter = 0; }, config.performance.cooldownReset);
-      }
+      });
     } else {
       if (dbSettings.antideleted === true) {
         await handleAntiDeleted({ fn, m, toId, mongoStore });

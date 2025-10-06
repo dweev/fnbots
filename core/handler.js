@@ -17,14 +17,12 @@ import { exec as cp_exec } from 'child_process';
 import { tmpDir } from '../src/lib/tempManager.js';
 import { pluginCache } from '../src/lib/plugins.js';
 import { runJob } from '../src/worker/worker_manager.js';
+import cooldownManager from '../src/lib/cooldownManager.js';
 import { restartManager } from '../src/lib/restartManager.js';
 import { performanceManager } from '../src/lib/performanceManager.js';
 import { User, Group, Settings, StoreGroupMetadata, OTPSession, Media, DatabaseBot, StoreMessages } from '../database/index.js';
 import { handleAntiDeleted, handleAutoJoin, handleAudioChanger, handleAutoSticker, handleChatbot, handleAutoDownload, handleGameBotResponse } from '../src/handler/index.js';
 import { color, msgs, mycmd, safeStringify, sendAndCleanupFile, waktu, checkCommandAccess, isUserVerified, textMatch1, textMatch2, expiredVIPcheck, expiredCheck, getSerial, getTxt } from '../src/function/index.js';
-
-// eslint-disable-next-line import/no-unresolved
-import PQueue from 'p-queue';
 
 const exec = util.promisify(cp_exec);
 const localFilePrefix = config.localPrefix;
@@ -33,52 +31,42 @@ const groupAfkCooldowns = new LRUCache({
   ttl: config.performance.groupCooldownMS,
   updateAgeOnGet: false
 });
-const cooldownQueue = new PQueue({
-  interval: 1000,
-  intervalCap: config.performance.commandCooldown,
-  autoStart: true
-});
 
-const userCooldowns               = new Map();
-const fspamm                      = new Set();
-const sban                        = new Set();
-const stp                         = new Set();
-const stickerspam                 = new Set();
-const yts                         = [];
-const tebaklirik                  = {};
-const tekateki                    = {};
-const tebakkata                   = {};
-const susunkata                   = {};
-const tebakkimia                  = {};
-const tebaknegara                 = {};
-const tebakgambar                 = {};
-const caklontong                  = {};
-const tebakbendera                = {};
-const sudokuGame                  = {};
-const family100                   = {};
-const hangman                     = {};
-const chatBots                    = {};
-const sessions                    = {};
-const chessGame                   = {};
-const othelloGame                 = {};
-const ludoSessions                = {};
-const game41Sessions              = {};
-const gamematematika              = {};
-const werewolfSessions            = {};
-const minesweeperSessions         = {};
-const ularTanggaSessions          = {};
-const tictactoeSessions           = {};
-const samgongSessions             = {};
-const tebakkalimat                = {};
-const siapakahaku                 = {};
-const ulartangga                  = {};
-const tebakgame                   = {};
-const interactiveHandled          = false;
-let suggested                     = false;
-let groupData                     = null;
-let mygroupMembers                = {};
-let mygroup                       = [];
-let chainingCommands              = [];
+const yts                     = [];
+const tebaklirik              = {};
+const tekateki                = {};
+const tebakkata               = {};
+const susunkata               = {};
+const tebakkimia              = {};
+const tebaknegara             = {};
+const tebakgambar             = {};
+const caklontong              = {};
+const tebakbendera            = {};
+const sudokuGame              = {};
+const family100               = {};
+const hangman                 = {};
+const chatBots                = {};
+const sessions                = {};
+const chessGame               = {};
+const othelloGame             = {};
+const ludoSessions            = {};
+const game41Sessions          = {};
+const gamematematika          = {};
+const werewolfSessions        = {};
+const minesweeperSessions     = {};
+const ularTanggaSessions      = {};
+const tictactoeSessions       = {};
+const samgongSessions         = {};
+const tebakkalimat            = {};
+const siapakahaku             = {};
+const ulartangga              = {};
+const tebakgame               = {};
+const interactiveHandled      = false;
+let suggested                 = false;
+let groupData                 = null;
+let mygroupMembers            = {};
+let mygroup                   = [];
+let chainingCommands          = [];
 
 export const updateMyGroup = (newGroupList, newMemberlist) => {
   mygroup = newGroupList;
@@ -336,8 +324,9 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
         }
         const mediaTypes = new Set(['stickerMessage', 'imageMessage', 'videoMessage', 'audioMessage']);
         if (mediaTypes.has(type)) {
-          if (stickerspam.has(serial) && !stp.has(serial) && m.isGroup && isBotGroupAdmins) {
-            stp.add(serial);
+          const spamCheck = cooldownManager.checkMediaSpam(serial);
+          if (spamCheck.isSpamming && !spamCheck.alreadyProcessed && m.isGroup && isBotGroupAdmins) {
+            cooldownManager.markMediaSpamProcessed(serial);
             const mention = '@' + serial.split('@')[0];
             if (isSadmin) {
               await fn.sendPesan(toId, `creatorku yang ganteng ${mention}\ngaboleh spam ya...`, m);
@@ -352,16 +341,11 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
             } else {
               await fn.sendPesan(toId, `member bangsat ya ${mention}\nspam anjeng! 😡😡😡😡`, m);
               setTimeout(async () => {
-                fn.removeParticipant(toId, serial);
+                await fn.removeParticipant(toId, serial);
               }, 1000);
             }
           }
         }
-        stickerspam.add(serial);
-        setTimeout(() => {
-          stickerspam.delete(serial);
-          stp.delete(serial);
-        }, 1000);
       }
       if (!lastResponseTimeInGroup || (currentTime - lastResponseTimeInGroup >= config.performance.groupCooldownMS)) {
         const afkUsersToSend = [];
@@ -423,24 +407,22 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
         const isVerified = await isUserVerified(m, dbSettings, StoreGroupMetadata, fn, sReply, hakIstimewa);
         if (!isVerified) return;
       }
-      const now = Date.now();
-      const lastExec = userCooldowns.get(serial) || 0;
-      const cooldownTime = 1000;
-      if (now - lastExec < cooldownTime && !isSadmin) {
-        if (!fspamm.has(serial)) {
-          fspamm.add(serial);
-          setTimeout(() => { fspamm.delete(serial); }, config.performance.spamDuration);
-          return sReply(`*Hei @${serial.split('@')[0]}, tunggu ${Math.ceil((cooldownTime - (now - lastExec)) / 1000)}s!*`);
-        } else if (!sban.has(serial)) {
-          sban.add(serial);
-          setTimeout(() => { sban.delete(serial); }, config.performance.banDuration);
+      const cooldownTime = config.performance.commandCooldown;
+      if (cooldownManager.isSpamming(serial)) return;
+      if (cooldownManager.isBanned(serial)) return;
+      if (!cooldownManager.trySetCooldown(serial, cooldownTime) && !isSadmin) {
+        if (!cooldownManager.isSpamming(serial)) {
+          cooldownManager.addToSpamSet(serial);
+          const remaining = Math.ceil((cooldownTime - (Date.now() - cooldownManager.getUserCooldown(serial))) / 1000);
+          return sReply(`*Hei @${serial.split('@')[0]}, tunggu ${remaining}s!*`);
+        } else if (!cooldownManager.isBanned(serial)) {
+          cooldownManager.addToBanSet(serial);
           const durationText = waktu(config.performance.banDuration / 1000);
           return sReply(`*Hei @${serial.split('@')[0]}*\n*COMMAND SPAM DETECTED*\n*Command banned for ${durationText}*`);
         }
         return;
       }
-      cooldownQueue.add(async () => {
-        userCooldowns.set(serial, now);
+      cooldownManager.addToQueue(async () => {
         const commandText = await getTxt(txt, dbSettings);
         const remoteCommandMatch = commandText.match(/^r:(\d+)\s+(.*)/s);
         if (remoteCommandMatch && (isSadmin || isMaster)) {
@@ -576,6 +558,9 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
     if (gameHandled) return;
   } catch (error) {
     await log(error, true);
+  } finally {
+    chainingCommands = [];
+    suggested = false;
   }
 };
 

@@ -1,3 +1,11 @@
+// ─── Info ────────────────────────────────
+/*
+* Created with ❤️ and 💦 By FN
+* Follow https://github.com/Terror-Machine
+* Feel Free To Use
+*/
+// ─── Info ────────────────────────────────
+
 import { performanceManager } from '../../lib/performanceManager.js';
 
 export const command = {

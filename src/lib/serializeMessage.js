@@ -48,9 +48,12 @@ function unwrapMessage(msg) {
   if (msg.viewOnceMessageV2Extension?.message) return unwrapMessage(msg.viewOnceMessageV2Extension.message);
   if (msg.viewOnceMessage?.message) return unwrapMessage(msg.viewOnceMessage.message);
   if (msg.ephemeralMessage?.message) return unwrapMessage(msg.ephemeralMessage.message);
-  if (msg.protocolMessage?.type === 14) {
-    const contentType = getContentType(msg.protocolMessage);
-    if (contentType && msg.protocolMessage[contentType]) return unwrapMessage(msg.protocolMessage[contentType]);
+  if (msg.editedMessage?.message) {
+    const innerMsg = msg.editedMessage.message;
+    if (innerMsg.protocolMessage?.type === 14 && innerMsg.protocolMessage?.editedMessage) {
+      return unwrapMessage(innerMsg.protocolMessage.editedMessage);
+    }
+    return unwrapMessage(innerMsg);
   }
   if (msg.contextInfo?.quotedMessage) msg.contextInfo.quotedMessage = unwrapMessage(msg.contextInfo.quotedMessage);
   if (msg.message) {

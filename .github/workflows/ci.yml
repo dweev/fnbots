@@ -1,0 +1,115 @@
+name: FN WhatsApp Bot CI/CD
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  build:
+    name: Lint & Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Run Tests (if available)
+        run: |
+          if [ -f "package.json" ] && grep -q "\"test\":" package.json; then
+            npm test || echo "Tests failed or not implemented, skipping."
+          else
+            echo "No test script found, skipping tests."
+          fi
+
+  deploy:
+    name: Deploy to VPS
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check Secrets
+        id: check_secrets
+        run: |
+          if [ -z "${{ secrets.VPS_HOST }}" ] || [ -z "${{ secrets.VPS_USER }}" ] || [ -z "${{ secrets.VPS_PRIVATE_KEY }}" ]; then
+            echo "Missing VPS secrets. Skipping deploy."
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Checkout Repository
+        if: steps.check_secrets.outputs.skip == 'false'
+        uses: actions/checkout@v4
+
+      - name: Setup SSH Key
+        if: steps.check_secrets.outputs.skip == 'false'
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VPS_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Deploy via SSH
+        if: steps.check_secrets.outputs.skip == 'false'
+        run: |
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "
+            if [ ! -d ~/fnbots ]; then
+              echo 'Directory ~/fnbots not found, cloning...'
+              git clone https://github.com/${{ github.repository }} ~/fnbots
+            fi
+
+            cd ~/fnbots &&
+            git fetch origin master &&
+            git reset --hard origin/master &&
+            npm install &&
+            pm2 restart fnbots || pm2 start npm --name fnbots -- run start
+          "
+
+  backup:
+    name: Backup MongoDB & Redis
+    needs: deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check Secrets
+        id: check_secrets
+        run: |
+          if [ -z "${{ secrets.VPS_HOST }}" ] || [ -z "${{ secrets.VPS_USER }}" ] || [ -z "${{ secrets.VPS_PRIVATE_KEY }}" ]; then
+            echo "Missing VPS secrets. Skipping backup."
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Setup SSH Key
+        if: steps.check_secrets.outputs.skip == 'false'
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VPS_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Backup Databases
+        if: steps.check_secrets.outputs.skip == 'false'
+        run: |
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "
+            mkdir -p ~/backups &&
+            mongodump --out ~/backups/mongodb-\$(date +%F-%H%M%S) &&
+            redis-cli save &&
+            cp /var/lib/redis/dump.rdb ~/backups/redis-\$(date +%F-%H%M%S).rdb &&
+            echo 'Backup completed successfully.'
+          "

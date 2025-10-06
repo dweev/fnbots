@@ -14,33 +14,62 @@ export const command = {
   category: 'manage',
   description: 'Matikan/aktifkan bot di group',
   isCommandWithoutPayment: true,
-  execute: async ({ args, sReply, toId, dbSettings, reactDone, isSadmin, isMaster }) => {
+  execute: async ({ fn, args, sReply, toId, dbSettings, reactDone, isSadmin, isMaster }) => {
     const group = await Group.ensureGroup(toId);
     const status = args[0]?.toLowerCase();
     switch (status) {
       case 'on':
-        if (group.isMuted) {
-          return sReply(`Chat ini sudah dimatikan notifikasinya.\n\nGunakan ${dbSettings.rname}banchat off untuk mengaktifkan kembali notifikasi.`);
-        }
+        if (group.isMuted) return sReply(`Chat ini sudah dimatikan notifikasinya.\n\nGunakan ${dbSettings.rname}banchat off untuk mengaktifkan kembali notifikasi.`);
         await group.muteChat();
         performanceManager.cache.groupDataCache.delete(toId);
         await reactDone();
         await sReply(`Chat berhasil dimatikan.`);
         break;
       case 'off':
-        if (!group.isMuted) {
-          return sReply(`Chat ini belum dimatikan notifikasinya.\n\nGunakan ${dbSettings.rname}banchat on untuk mematikan notifikasi.`);
-        }
+        if (!group.isMuted) return sReply(`Chat ini belum dimatikan notifikasinya.\n\nGunakan ${dbSettings.rname}banchat on untuk mematikan notifikasi.`);
         await group.unmuteChat();
         performanceManager.cache.groupDataCache.delete(toId);
         await reactDone();
         await sReply(`Chat berhasil diaktifkan.`);
         break;
-      case 'reset': {
-        if (!isSadmin && !isMaster) {
-          return sReply('Perintah ini hanya untuk admin/master.');
+      case 'list': {
+        if (!isSadmin && !isMaster) return;
+        const mutedGroups = await Group.find({ isMuted: true }).select('groupId groupName memberCount');
+        if (mutedGroups.length === 0) return sReply('Tidak ada group yang dimatikan saat ini.');
+        let message = `*LIST GROUP YANG DIMATIKAN*\n`;
+        message += `Total: ${mutedGroups.length} group\n\n`;
+        for (let i = 0; i < mutedGroups.length; i++) {
+          const groupId = mutedGroups[i].groupId;
+          let groupInfo = {
+            name: mutedGroups[i].groupName || 'Unknown',
+            memberCount: mutedGroups[i].memberCount || 0,
+            isAnnounce: false,
+            isRestrict: false
+          };
+          const metadata = await fn.groupMetadata(groupId);
+          groupInfo = {
+            name: metadata.subject || groupInfo.name,
+            memberCount: metadata.size || groupInfo.memberCount,
+            isAnnounce: metadata.announce || false,
+            isRestrict: metadata.restrict || false
+          };
+          message += `${i + 1}. *${groupInfo.name}*\n`;
+          message += `   👥 Members: ${groupInfo.memberCount}\n`;
+          const status = [];
+          if (groupInfo.isAnnounce) status.push('Only Admin');
+          if (groupInfo.isRestrict) status.push('Locked');
+          if (status.length > 0) {
+            message += `   Status: ${status.join(', ')}\n`;
+          }
+          message += `\n`;
         }
-        const mutedGroups = await Group.findMutedGroups();
+        message += `\nGunakan ${dbSettings.rname}banchat reset untuk mereset semua.`;
+        await sReply(message);
+        break;
+      }
+      case 'reset': {
+        if (!isSadmin && !isMaster) return;
+        const mutedGroups = await Group.find({ isMuted: true });
         for (const mutedGroup of mutedGroups) {
           await mutedGroup.unmuteChat();
           performanceManager.cache.groupDataCache.delete(mutedGroup.groupId);
@@ -50,11 +79,16 @@ export const command = {
         break;
       }
       default: {
-        let message = `Gunakan:\n`;
-        message += `${dbSettings.rname}banchat on untuk menonaktifkan bot di group ini.\n`;
-        message += `${dbSettings.rname}banchat off untuk mengaktifkan bot di group ini.\n`;
+        let message = `*BANCHAT COMMANDS*\n\n`;
+        message += `${dbSettings.rname}banchat on\n`;
+        message += `└ Menonaktifkan bot di group ini\n\n`;
+        message += `${dbSettings.rname}banchat off\n`;
+        message += `└ Mengaktifkan bot di group ini\n\n`;
+        message += `${dbSettings.rname}banchat list\n`;
+        message += `└ Lihat daftar group yang dimatikan\n\n`;
         if (isSadmin || isMaster) {
-          message += `${dbSettings.rname}banchat reset untuk mereset semua pengaturan keaktifan bot di semua group.`;
+          message += `${dbSettings.rname}banchat reset\n`;
+          message += `└ Reset semua pengaturan banchat`;
         }
         await sReply(message);
       }

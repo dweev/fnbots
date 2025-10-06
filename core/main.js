@@ -7,11 +7,10 @@
 // ─── Info core/main.js ────────────────────────
 
 import process from 'process';
+import config from '../config.js';
 import { fileURLToPath } from 'url';
 import path, { dirname } from 'path';
 import { jidNormalizedUser } from 'baileys';
-
-import config from '../config.js';
 import { createWASocket } from './connection.js';
 import { tmpDir } from '../src/lib/tempManager.js';
 import { loadPlugins } from '../src/lib/plugins.js';

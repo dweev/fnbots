@@ -7,6 +7,7 @@
 // ─── Info ────────────────────────────────
 
 import { Group } from '../../../database/index.js';
+import { performanceManager } from '../../lib/performanceManager.js';
 
 export const command = {
   name: 'banchat',
@@ -18,32 +19,43 @@ export const command = {
     const status = args[0]?.toLowerCase();
     switch (status) {
       case 'on':
-        if (group.isMuted) return sReply(`Chat ini sudah dimatikan notifikasinya.\n\nGunakan ${dbSettings.rname}banchat off untuk mengaktifkan kembali notifikasi.`);
+        if (group.isMuted) {
+          return sReply(`Chat ini sudah dimatikan notifikasinya.\n\nGunakan ${dbSettings.rname}banchat off untuk mengaktifkan kembali notifikasi.`);
+        }
         await group.muteChat();
+        performanceManager.cache.groupDataCache.delete(toId);
         await reactDone();
         await sReply(`Chat berhasil dimatikan.`);
         break;
       case 'off':
-        if (!group.isMuted) return sReply(`Chat ini belum dimatikan notifikasinya.\n\nGunakan ${dbSettings.rname}banchat on untuk mematikan notifikasi.`);
+        if (!group.isMuted) {
+          return sReply(`Chat ini belum dimatikan notifikasinya.\n\nGunakan ${dbSettings.rname}banchat on untuk mematikan notifikasi.`);
+        }
         await group.unmuteChat();
+        performanceManager.cache.groupDataCache.delete(toId);
         await reactDone();
         await sReply(`Chat berhasil diaktifkan.`);
         break;
       case 'reset': {
-        if (isSadmin || isMaster) return;
+        if (!isSadmin && !isMaster) {
+          return sReply('Perintah ini hanya untuk admin/master.');
+        }
         const mutedGroups = await Group.findMutedGroups();
         for (const mutedGroup of mutedGroups) {
           await mutedGroup.unmuteChat();
+          performanceManager.cache.groupDataCache.delete(mutedGroup.groupId);
         }
         await reactDone();
-        await sReply(`Semua chat yang dimatikan telah direset.`);
+        await sReply(`Semua chat yang dimatikan telah direset (${mutedGroups.length} group).`);
         break;
       }
       default: {
         let message = `Gunakan:\n`;
-        message += `${dbSettings.rname}banchat on untuk monaktifkan bot di group ini.\n`;
+        message += `${dbSettings.rname}banchat on untuk menonaktifkan bot di group ini.\n`;
         message += `${dbSettings.rname}banchat off untuk mengaktifkan bot di group ini.\n`;
-        message += `${dbSettings.rname}banchat reset untuk mereset semua pengaturan keaktifan bot di semua group..`;
+        if (isSadmin || isMaster) {
+          message += `${dbSettings.rname}banchat reset untuk mereset semua pengaturan keaktifan bot di semua group.`;
+        }
         await sReply(message);
       }
     }

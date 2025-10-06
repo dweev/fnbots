@@ -563,7 +563,3 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
     suggested = false;
   }
 };
-
-export {
-  performanceManager
-};

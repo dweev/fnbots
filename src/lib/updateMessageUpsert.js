@@ -13,6 +13,7 @@ import { isBug } from '../utils/security.js';
 import { arfine } from '../../core/handler.js';
 import { jidNormalizedUser, delay } from 'baileys';
 import serializeMessage from './serializeMessage.js';
+import { handleAntiEdit } from '../handler/index.js';
 import handleGroupStubMessages from './handleGroupStubMessages.js';
 import { mongoStore, StoreMessages, StoreStory } from '../../database/index.js';
 
@@ -85,6 +86,9 @@ export default async function updateMessageUpsert(fn, message, dbSettings) {
         await log(error, true);
       }
       return;
+    }
+    if (m.isEditedMessage && dbSettings.antiEditMessage) {
+      await handleAntiEdit({ mongoStore, fn, m, dbSettings });
     }
     try {
       if (dbSettings.autoread) {

@@ -143,6 +143,10 @@ const settingsSchema = new mongoose.Schema({
     type: Number,
     default: 50
   },
+  antiEditMessage: {
+    type: Boolean,
+    default: false
+  },
   self: {
     type: String,
     default: 'auto',

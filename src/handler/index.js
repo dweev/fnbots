@@ -14,6 +14,7 @@ import { handleAutoSticker } from './autosticker.js';
 import { handleGameBotResponse } from './gameBot.js';
 import { handleAudioChanger } from './autochanger.js';
 import { handleAutoDownload } from './autodownload.js';
+import { handleAntiEdit } from './antiedit.js';
 
 export {
   handleAntiDeleted,
@@ -22,5 +23,6 @@ export {
   handleAutoSticker,
   handleChatbot,
   handleAutoDownload,
-  handleGameBotResponse
+  handleGameBotResponse,
+  handleAntiEdit
 };

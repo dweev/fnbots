@@ -42,6 +42,7 @@ export const command = {
       { label: "Auto Reject Call",   value: dbSettings.anticall        },
       { label: "Auto Sticker",       value: dbSettings.autosticker     },
       { label: 'Anti Delete',        value: dbSettings.antideleted     },
+      { label: 'Anti Edit Message',  value: dbSettings.antiEditMessage },
       { label: 'Pack Name',          value: dbSettings.packName        },
       { label: 'Pack Author',        value: dbSettings.packAuthor      },
     ];

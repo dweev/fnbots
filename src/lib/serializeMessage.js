@@ -94,6 +94,56 @@ export default async function serializeMessage(fn, msg) {
       return m;
     }
     if (!msg || !msg.message) return null;
+    m.isEditedMessage = false;
+    m.editInfo = null;
+    if (msg.message.editedMessage?.message?.protocolMessage) {
+      const protocolMsg = msg.message.editedMessage.message.protocolMessage;
+      if (protocolMsg.type === 14 && protocolMsg.editedMessage) {
+        m.isEditedMessage = true;
+        const editedContent = protocolMsg.editedMessage;
+        let newText = '';
+        let mediaType = null;
+        let isMediaEdit = false;
+        if (editedContent.conversation) {
+          newText = editedContent.conversation;
+          mediaType = 'text';
+        } else if (editedContent.extendedTextMessage?.text) {
+          newText = editedContent.extendedTextMessage.text;
+          mediaType = 'extendedText';
+        } else if (editedContent.imageMessage) {
+          newText = editedContent.imageMessage.caption || '';
+          mediaType = 'image';
+          isMediaEdit = true;
+        } else if (editedContent.videoMessage) {
+          newText = editedContent.videoMessage.caption || '';
+          mediaType = 'video';
+          isMediaEdit = true;
+        } else if (editedContent.documentMessage) {
+          newText = editedContent.documentMessage.caption || editedContent.documentMessage.fileName || '';
+          mediaType = 'document';
+          isMediaEdit = true;
+        } else {
+          newText = '[Unknown Message Type]';
+          mediaType = 'unknown';
+        }
+        const originalKey = {
+          remoteJid: protocolMsg.key.remoteJid,
+          id: protocolMsg.key.id,
+          fromMe: protocolMsg.key.fromMe,
+          participant: protocolMsg.key.participant
+        };
+        const editTimestamp = protocolMsg.timestampMs?.low || protocolMsg.timestampMs?.high || Date.now();
+        m.editInfo = {
+          originalMessageId: protocolMsg.key.id,
+          originalKey: originalKey,
+          newText: newText,
+          editTimestamp: editTimestamp,
+          oldText: null,
+          mediaType: mediaType,
+          isMediaEdit: isMediaEdit
+        };
+      }
+    }
     m.message = unwrapMessage(msg.message);
     let senderJid, senderLid;
     if (isStatus) {

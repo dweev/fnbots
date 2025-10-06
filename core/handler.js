@@ -17,11 +17,11 @@ import { exec as cp_exec } from 'child_process';
 import { tmpDir } from '../src/lib/tempManager.js';
 import { runJob } from '../src/worker/worker_manager.js';
 import { restartManager } from '../src/lib/restartManager.js';
-import { cleanupPlugins, pluginCache } from '../src/lib/plugins.js';
+import { pluginCache } from '../src/lib/plugins.js';
 import { performanceManager } from '../src/lib/performanceManager.js';
-import { User, Group, Settings, Command, StoreGroupMetadata, OTPSession, Media, DatabaseBot, StoreMessages } from '../database/index.js';
+import { User, Group, Settings, StoreGroupMetadata, OTPSession, Media, DatabaseBot, StoreMessages } from '../database/index.js';
 import { handleAntiDeleted, handleAutoJoin, handleAudioChanger, handleAutoSticker, handleChatbot, handleAutoDownload, handleGameBotResponse } from '../src/handler/index.js';
-import { color, msgs, mycmd, safeStringify, sendAndCleanupFile, waktu, checkCommandAccess, isUserVerified, textMatch1, textMatch2, expiredVIPcheck, expiredCheck, getSerial, getTxt, initializeFuse } from '../src/function/index.js';
+import { color, msgs, mycmd, safeStringify, sendAndCleanupFile, waktu, checkCommandAccess, isUserVerified, textMatch1, textMatch2, expiredVIPcheck, expiredCheck, getSerial, getTxt } from '../src/function/index.js';
 
 const exec = util.promisify(cp_exec);
 const localFilePrefix = config.localPrefix;
@@ -201,110 +201,6 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
     if (!isSadmin && !isMaster) return;
     await reactDone();
     await restartManager.shutdown(performanceManager);
-  } else if (body?.toLowerCase().trim() === "resetcommands") {
-    if (!isSadmin && !isMaster) return;
-    const result = await Command.resetAll();
-    await sReply(`Berhasil! Sebanyak ${result.deletedCount} data perintah telah dihapus dari database. Silakan restart bot untuk menyegarkan cache menu.`);
-  } else if (body?.toLowerCase().trim() === "reloadplugins") {
-    if (!isSadmin && !isMaster) return;
-    try {
-      const { loadPlugins, getPluginStats } = await import('../src/lib/plugins.js');
-      const pluginPath = path.join(process.cwd(), 'src', 'plugins');
-      cleanupPlugins();
-      await loadPlugins(pluginPath);
-      await initializeFuse();
-      const stats = getPluginStats();
-      let statsText = `Plugin Cache Reloaded Successfully!\n\n`;
-      statsText += `Statistics:\n`;
-      statsText += `• Total commands: ${stats.totalCommands}\n`;
-      statsText += `• Categories: ${stats.categories}\n\n`;
-      statsText += `Commands by Category:\n`;
-      for (const [category, count] of Object.entries(stats.commandsByCategory)) {
-        statsText += `• ${category}: ${count} commands\n`;
-      }
-      await sReply(statsText);
-      await reactDone();
-    } catch (error) {
-      await sReply(`Failed to reload plugins: ${error.message}`);
-      await reactFail();
-      log(`Plugin reload error: ${error}`, true);
-    }
-  } else if (body?.toLowerCase().trim() === "cachestats") {
-    if (!isSadmin && !isMaster) return;
-    try {
-      const stats = await performanceManager.getFullStatus();
-      let statsText = `*Performance Statistics*\n\n`;
-      statsText += `*Redis Cache Statistics:*\n`;
-      statsText += `• User Stats: ${stats.cache.redisCacheStats.users} keys\n`;
-      statsText += `• Group Stats: ${stats.cache.redisCacheStats.groups} keys\n`;
-      statsText += `• Command Stats: ${stats.cache.redisCacheStats.commands} keys\n`;
-      statsText += `• Global Hits: ${stats.cache.globalStats.pendingHits} pending\n`;
-      statsText += `• Whitelist Cache: ${stats.cache.whitelist.size} entries\n`;
-      statsText += `• Group Data Cache: ${stats.cache.groupData.size} entries\n\n`;
-      statsText += `*Performance:*\n`;
-      statsText += `• Last Sync: ${stats.cache.performance.lastSync}\n`;
-      statsText += `• Sync In Progress: ${stats.cache.performance.syncInProgress ? 'Yes' : 'No'}\n`;
-      statsText += `• Uptime: ${Math.floor(stats.performance.uptime / 3600)}h ${Math.floor((stats.performance.uptime % 3600) / 60)}m\n\n`;
-      statsText += `*Job Scheduler:*\n`;
-      statsText += `• Active Intervals: ${stats.scheduler.intervals.length > 0 ? stats.scheduler.intervals.join(', ') : 'None'}\n`;
-      statsText += `• Cron Jobs: ${stats.scheduler.cronJobs.length > 0 ? stats.scheduler.cronJobs.join(', ') : 'None'}\n`;
-      statsText += `• Restarting: ${stats.scheduler.restarting ? 'Yes' : 'No'}\n\n`;
-      statsText += `*System:*\n`;
-      statsText += `• Initialized: ${stats.performance.initialized ? 'Yes' : 'No'}\n`;
-      await sReply(statsText);
-    } catch (error) {
-      console.error('Error getting cache stats:', error);
-      await sReply(`Error getting cache stats: ${error.message}`);
-    }
-  } else if (body?.toLowerCase().trim() === "synccache") {
-    if (!isSadmin && !isMaster) return;
-    try {
-      await performanceManager.cache.forceSync();
-      await sReply("Cache sync completed successfully!");
-      await reactDone();
-    } catch (error) {
-      await sReply(`Cache sync failed: ${error.message}`);
-      await reactFail();
-    }
-  } else if (body?.toLowerCase().trim() === "clearcache") {
-    if (!isSadmin && !isMaster) return;
-    try {
-      await performanceManager.cache.clearAllCaches();
-      await sReply("All caches cleared successfully!");
-      await reactDone();
-    } catch (error) {
-      await sReply(`Cache clear failed: ${error.message}`);
-      await reactFail();
-    }
-  } else if (body?.toLowerCase().trim().startsWith("mode")) {
-    if (!isSadmin && !isMaster) return;
-    const args = body.toLowerCase().trim().split(/\s+/);
-    const modeInput = args[1]?.toLowerCase().trim();
-    const modeMap = {
-      'publik': 'false',
-      'selfbot': 'true',
-      'auto': 'auto'
-    };
-    const getDisplayMode = (internalMode) => {
-      const displayMap = {
-        'false': 'publik',
-        'true': 'selfbot',
-        'auto': 'auto'
-      };
-      return displayMap[internalMode] || internalMode;
-    };
-    if (!modeInput || modeInput === '') {
-      const currentMode = dbSettings.self;
-      const displayMode = getDisplayMode(currentMode);
-      return sReply(`Mode saat ini: *${displayMode}*\nGunakan: mode <mode>\n • publik\n • selfbot\n • auto`);
-    }
-    if (!Object.prototype.hasOwnProperty.call(modeMap, modeInput)) {
-      return sReply(`Mode tidak valid!\n\nMode yang tersedia:\n • publik\n • selfbot\n • auto\n\nMode saat ini: *${getDisplayMode(dbSettings.self)}*`);
-    }
-    const internalMode = modeMap[modeInput];
-    await Settings.setSelfMode(internalMode);
-    dbSettings.self = internalMode;
-    await sReply(`Mode berhasil diubah ke: *${modeInput}*`);
   }
 
   const selfMode = dbSettings.self;

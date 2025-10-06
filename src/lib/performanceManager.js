@@ -8,6 +8,7 @@
 
 import cron from 'node-cron';
 import process from 'process';
+import log from './logger.js';
 import { LRUCache } from 'lru-cache';
 import { redis } from '../../database/index.js';
 import { signalHandler } from './signalHandler.js';
@@ -35,9 +36,22 @@ class UnifiedCacheManager {
       totalHits: 0,
       lastSync: Date.now()
     };
+    this.memorySettings = {
+      checkInterval: PERFORMANCE_CONFIG.MEMORY_CHECK_INTERVAL,
+      rssThreshold: PERFORMANCE_CONFIG.HIGH_MEMORY_LIMIT,
+      warningThreshold: PERFORMANCE_CONFIG.MEMORY_THRESHOLD,
+      consecutiveWarningsBeforeRestart: 3,
+      enableAutoRestart: true
+    };
+    this.memoryStats = {
+      warnings: 0,
+      lastCheck: Date.now(),
+      lastUsage: { rss: 0, heapUsed: 0, heapTotal: 0 }
+    };
     this.lastSyncTime = Date.now();
     this.syncInProgress = false;
     this.syncTimer = null;
+    this.memoryMonitorInterval = null;
     this.startSyncTimer();
   }
   async updateUserStats(userId, updates) {
@@ -304,21 +318,92 @@ class UnifiedCacheManager {
       this.syncTimer = null;
     }
   }
+  startMemoryMonitoring() {
+    if (this.memoryMonitorInterval) {
+      clearInterval(this.memoryMonitorInterval);
+    }
+
+    this.memoryMonitorInterval = setInterval(() => {
+      this.checkMemoryUsage();
+    }, this.memorySettings.checkInterval);
+
+    log(`Memory monitoring started: Check interval: ${this.memorySettings.checkInterval / 1000}s, RSS threshold: ${this.memorySettings.rssThreshold}MB`);
+  }
+  stopMemoryMonitoring() {
+    if (this.memoryMonitorInterval) {
+      clearInterval(this.memoryMonitorInterval);
+      this.memoryMonitorInterval = null;
+      log('Memory monitoring stopped');
+    }
+  }
   checkMemoryUsage() {
     const memUsage = process.memoryUsage();
-    const heapUsedMB = Math.round(memUsage.heapUsed / 1024 / 1024);
-    const heapTotalMB = Math.round(memUsage.heapTotal / 1024 / 1024);
-    const rssMB = Math.round(memUsage.rss / 1024 / 1024);
-    console.log(`Memory Usage: Heap ${heapUsedMB}MB/${heapTotalMB}MB | RSS ${rssMB}MB`);
-    if (heapUsedMB > heapTotalMB * PERFORMANCE_CONFIG.MEMORY_THRESHOLD) {
-      this.whitelistCache.clear();
-      this.groupDataCache.clear();
+    const rssInMB = Math.round(memUsage.rss / 1024 / 1024);
+    const heapUsedInMB = Math.round(memUsage.heapUsed / 1024 / 1024);
+    const heapTotalInMB = Math.round(memUsage.heapTotal / 1024 / 1024);
+    this.memoryStats.lastCheck = Date.now();
+    this.memoryStats.lastUsage = {
+      rss: rssInMB,
+      heapUsed: heapUsedInMB,
+      heapTotal: heapTotalInMB
+    };
+    log(`Memory usage: RSS: ${rssInMB}MB | Heap: ${heapUsedInMB}MB/${heapTotalInMB}MB`);
+    const rssRatio = rssInMB / this.memorySettings.rssThreshold;
+    if (rssRatio >= this.memorySettings.warningThreshold) {
+      this.memoryStats.warnings++;
+      log(`Memory warning #${this.memoryStats.warnings}: RSS at ${Math.round(rssRatio * 100)}% threshold (${rssInMB}MB / ${this.memorySettings.rssThreshold}MB)`, true);
       if (global.gc) {
+        log('Forcing garbage collection');
         global.gc();
-        console.log('Garbage collection triggered');
+      }
+      if (this.memorySettings.enableAutoRestart &&
+        this.memoryStats.warnings >= this.memorySettings.consecutiveWarningsBeforeRestart) {
+        log(`${this.memoryStats.warnings} consecutive memory warnings, initiating restart`, true);
+        this.restartDueToMemory('Consecutive memory warnings');
+        return { rssMB: rssInMB, heapUsedMB: heapUsedInMB, heapTotalMB: heapTotalInMB };
+      }
+    } else {
+      if (this.memoryStats.warnings > 0) {
+        log('Memory usage returned to normal levels');
+        this.memoryStats.warnings = 0;
       }
     }
-    return { heapUsedMB, heapTotalMB, rssMB };
+    if (this.memorySettings.enableAutoRestart && rssInMB >= this.memorySettings.rssThreshold) {
+      log(`RSS threshold exceeded: ${rssInMB}MB >= ${this.memorySettings.rssThreshold}MB`, true);
+      this.restartDueToMemory('RSS threshold exceeded');
+    }
+    return {
+      rssMB: rssInMB,
+      heapUsedMB: heapUsedInMB,
+      heapTotalMB: heapTotalInMB
+    };
+  }
+  updateMemorySettings(newSettings) {
+    let restart = false;
+    if (newSettings.checkInterval && newSettings.checkInterval !== this.memorySettings.checkInterval) {
+      this.memorySettings.checkInterval = newSettings.checkInterval;
+      restart = true;
+    }
+    if (newSettings.rssThreshold) this.memorySettings.rssThreshold = newSettings.rssThreshold;
+    if (newSettings.warningThreshold) this.memorySettings.warningThreshold = newSettings.warningThreshold;
+    if (newSettings.consecutiveWarningsBeforeRestart) this.memorySettings.consecutiveWarningsBeforeRestart = newSettings.consecutiveWarningsBeforeRestart;
+    if (typeof newSettings.enableAutoRestart !== 'undefined') this.memorySettings.enableAutoRestart = newSettings.enableAutoRestart;
+    if (restart && this.memoryMonitorInterval) {
+      this.startMemoryMonitoring();
+    }
+    log(`Memory monitor settings updated: RSS threshold: ${this.memorySettings.rssThreshold}MB, Check interval: ${this.memorySettings.checkInterval / 1000}s`);
+    return this.getMemorySettings();
+  }
+  getMemorySettings() {
+    return {
+      ...this.memorySettings,
+      currentStats: this.memoryStats,
+      isMonitoring: !!this.memoryMonitorInterval
+    };
+  }
+  async restartDueToMemory(reason) {
+    this.stopMemoryMonitoring();
+    await restartManager.restart(`Memory monitor: ${reason}`);
   }
   async getStats() {
     try {
@@ -413,6 +498,7 @@ class UnifiedCacheManager {
   async shutdown() {
     console.log('Cache manager shutting down...');
     this.stopSyncTimer();
+    this.stopMemoryMonitoring();
     await this.syncToDatabase();
   }
 };
@@ -464,16 +550,6 @@ class UnifiedJobScheduler {
       const { gameStateManager } = await import('./gameManager.js');
       gameStateManager.cleanupStaleGames();
     }, PERFORMANCE_CONFIG.COOLDOWN_RESET);
-    this.addInterval('memoryMonitor', () => {
-      const stats = this.cacheManager.checkMemoryUsage();
-      if (stats.rssMB > PERFORMANCE_CONFIG.HIGH_MEMORY_LIMIT && !this.restarting) {
-        console.log(`High RSS memory usage (${stats.rssMB}MB) detected, restarting...`);
-        this.restarting = true;
-        restartManager.restart('Memory overload', {
-          cache: this.cacheManager
-        }).catch(console.error);
-      }
-    }, PERFORMANCE_CONFIG.MEMORY_CHECK_INTERVAL);
     this.addInterval('aliveCheck', async () => {
       try {
         await fn.query({
@@ -592,14 +668,27 @@ class UnifiedPerformanceManager {
     if (this.initialized) return;
     this.jobScheduler.setupStandardJobs(fn, config, dbSettings);
     this.setupGracefulShutdown();
+    this.cacheManager.startMemoryMonitoring();
     this.initialized = true;
   }
   setupGracefulShutdown() {
     signalHandler.register('performance-manager', async (signal) => {
-      console.log(`${signal}: Performance manager cleanup...`);
+      log(`${signal}: Performance manager cleanup...`);
       await this.jobScheduler.shutdown();
       await this.cacheManager.shutdown();
     }, 60);
+  }
+  getMemorySettings() {
+    return this.cacheManager.getMemorySettings();
+  }
+  updateMemorySettings(newSettings) {
+    return this.cacheManager.updateMemorySettings(newSettings);
+  }
+  startMemoryMonitoring() {
+    return this.cacheManager.startMemoryMonitoring();
+  }
+  stopMemoryMonitoring() {
+    return this.cacheManager.stopMemoryMonitoring();
   }
   get cache() {
     return this.cacheManager;
@@ -611,6 +700,7 @@ class UnifiedPerformanceManager {
     return {
       cache: await this.cacheManager.getStats(),
       scheduler: this.jobScheduler.getStatus(),
+      memory: this.cacheManager.getMemorySettings(),
       performance: {
         config: PERFORMANCE_CONFIG,
         initialized: this.initialized,
@@ -618,7 +708,7 @@ class UnifiedPerformanceManager {
       }
     };
   }
-};
+}
 
 export const performanceManager = new UnifiedPerformanceManager();
 export default performanceManager;

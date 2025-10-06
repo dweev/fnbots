@@ -15,7 +15,7 @@ module.exports = {
     {
       name: 'fnbots',
       script: './core/main.js',
-      node_args: '--max-old-space-size=4096',
+      node_args: '--max-old-space-size=4096 --expose-gc',
       max_memory_restart: '3G',
       watch: watchMode,
       ignore_watch: [

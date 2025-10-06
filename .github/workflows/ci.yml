@@ -38,6 +38,7 @@ jobs:
   deploy:
     name: Deploy to VPS
     needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
 
     steps:
@@ -63,25 +64,31 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts
 
+      - name: Create .env file
+        if: steps.check_secrets.outputs.skip == 'false'
+        run: |
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "
+            echo '${{ secrets.ENV_FILE }}' > ~/fnbots/.env
+          "
+
       - name: Deploy via SSH
         if: steps.check_secrets.outputs.skip == 'false'
         run: |
           ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "
-            if [ ! -d ~/fnbots ]; then
-              echo 'Directory ~/fnbots not found, cloning...'
-              git clone https://github.com/${{ github.repository }} ~/fnbots
-            fi
+            cd ~/fnbots || exit 1
 
-            cd ~/fnbots &&
-            git fetch origin master &&
-            git reset --hard origin/master &&
-            npm install &&
+            git stash
+            git pull origin master
+            git stash pop || true
+            
+            npm install --production
             pm2 restart fnbots || pm2 start npm --name fnbots -- run start
           "
 
   backup:
     name: Backup MongoDB & Redis
     needs: deploy
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
 
     steps:

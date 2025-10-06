@@ -1,7 +1,6 @@
 logs
 node_modules
 src/session/*.json
-package-lock.json
 .env
 oldmain.js
 *.yaml
@@ -10,3 +9,4 @@ flow2.md
 venv
 fake.js
 server.js
+bench.sh

@@ -61,7 +61,7 @@ export class AudioChangerHandler {
         await sReply(`Invalid final buffer: ${typeof finalBuffer}, length: ${finalBuffer?.length}`);
         return;
       }
-      await fn.sendMediaByType(toId, 'audio/mpeg', finalBuffer, '', m, { ptt: true });
+      await fn.sendMediaFromBuffer(toId, 'audio/mpeg', finalBuffer, '', m, { ptt: true });
     } catch (error) {
       log(`Error processing audio message: ${error}`, true);
       await sReply('Gagal memproses pesan audio.');

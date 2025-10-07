@@ -8,7 +8,7 @@
 
 import fs from 'fs-extra';
 import config from '../../../config.js';
-import { saveFile, getMyBalance } from '../../function/index.js';
+import { getMyBalance } from '../../function/index.js';
 
 export const command = {
   name: 'gameshop',
@@ -43,7 +43,6 @@ export const command = {
     text += `> limit hanya berlaku 1 hari sampai jam 21.00 serta tunduk kepada syarat dan ketentuan penggunaan bot!\n\n`;
     text += `ketik ${prefix}rules untuk syarat dan ketentuan penggunaan bot`;
     const buffer = await getMyBalance(user, pushname, datax);
-    const tempFilePath = await saveFile(buffer, "gameshop", 'jpg');
-    await fn.sendFilePath(toId, text, tempFilePath, { quoted: m });
+    await fn.sendMediaFromBuffer(toId, 'image/jpeg', buffer, text, m);
   }
 };

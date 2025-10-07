@@ -8,7 +8,6 @@
 
 import fs from 'fs-extra';
 import { createCanvas, loadImage } from 'canvas';
-import { saveFile } from '../../function/index.js';
 
 export const command = {
   name: 'nowplaying',
@@ -38,8 +37,6 @@ export const command = {
     ctx.fillText(artist, base.width / 2, 720);
     ctx.fillText('FNBot\'s Picks', base.width / 2, 65);
     const resBuffer = canvas.toBuffer();
-    const tempFilePath = await saveFile(resBuffer, "nowplaying-in", 'jpg');
-    await fn.sendFilePath(toId, dbSettings.autocommand, tempFilePath, { quoted: m });
-    await fs.unlink(tempFilePath);
+    await fn.sendMediaFromBuffer(toId, 'image/jpeg', resBuffer, dbSettings.autocommand, m);
   }
 };

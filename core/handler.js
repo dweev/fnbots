@@ -14,7 +14,6 @@ import { LRUCache } from 'lru-cache';
 import log from '../src/lib/logger.js';
 import dayjs from '../src/utils/dayjs.js';
 import { exec as cp_exec } from 'child_process';
-import { tmpDir } from '../src/lib/tempManager.js';
 import { pluginCache } from '../src/lib/plugins.js';
 import { runJob } from '../src/worker/worker_manager.js';
 import cooldownManager from '../src/lib/cooldownManager.js';
@@ -537,7 +536,7 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
         await handleAudioChanger({ m, toId, fn, selfMode, fromBot, runJob, sReply });
       };
       if (dbSettings.autosticker === true) {
-        await handleAutoSticker({ m, toId, fn, runJob, sendRawWebpAsSticker, reactDone });
+        await handleAutoSticker({ m, toId, fn, runJob, reactDone });
       };
       if (dbSettings.chatbot === true) {
         await handleChatbot({ m, toId, fn, dbSettings, body, Media, DatabaseBot, sReply });
@@ -554,7 +553,7 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
       minesweeperSessions, ularTanggaSessions, tictactoeSessions,
       samgongSessions, tebakkalimat, siapakahaku, ulartangga, tebakgame, interactiveHandled
     };
-    const gameHandled = await handleGameBotResponse({ m, toId, body, user, sReply, sPesan, fn, serial, isCmd, reactFail, tmpDir, dbSettings, config, gameStates });
+    const gameHandled = await handleGameBotResponse({ m, toId, body, user, sReply, sPesan, fn, serial, isCmd, reactFail, dbSettings, config, gameStates });
     if (gameHandled) return;
   } catch (error) {
     await log(error, true);

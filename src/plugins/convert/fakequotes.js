@@ -9,7 +9,6 @@
 import fs from 'fs-extra';
 import { loadImage } from 'canvas';
 import { generateQuote } from 'generator-fake';
-import { tmpDir } from '../../lib/tempManager.js';
 
 export const command = {
   name: 'fakequotes',
@@ -44,8 +43,6 @@ export const command = {
       fontSize,
       maxWidth,
     });
-    const tmpImagePath = await tmpDir.createTempFileWithContent(resBuffer, 'jpg');
-    await fn.sendFilePath(toId, dbSettings.autocommand, tmpImagePath, { quoted: m });
-    await tmpDir.deleteFile(tmpImagePath);
+    await fn.sendMediaFromBuffer(toId, 'image/jpeg', resBuffer, dbSettings.autocommand, m);
   }
 };

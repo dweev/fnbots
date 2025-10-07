@@ -21,7 +21,7 @@ export async function initializeDbSettings() {
         const latestSettings = await Settings.getSettings();
         if (JSON.stringify(settingsCache) !== JSON.stringify(latestSettings)) {
           if (settingsCache.pinoLogger !== latestSettings.pinoLogger) {
-              pinoLogger.level = latestSettings.pinoLogger;
+            pinoLogger.level = latestSettings.pinoLogger;
           }
           settingsCache = latestSettings;
         }
@@ -34,10 +34,4 @@ export async function initializeDbSettings() {
     log(error, true);
     process.exit(1);
   }
-};
-export function getDbSettings() {
-  if (!settingsCache) {
-    throw new Error("Gagal memanggil initializeDbSettings() saat startup.");
-  }
-  return settingsCache;
 };

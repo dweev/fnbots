@@ -12,7 +12,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { performanceManager } from '../lib/performanceManager.js';
 import {
   rollDice, generateUlarTanggaImage, runBotUlarTanggaTurnV2, runBotUlarTanggaTurn,
-  generateBoardImage, saveFile, PLAYER_BLACK, PLAYER_WHITE, fileLabels, rankLabels,
+  generateBoardImage, PLAYER_BLACK, PLAYER_WHITE, fileLabels, rankLabels,
   parseOthelloMove, makeOthelloMove, getValidOthelloMoves, calculateOthelloScore,
   generateOthelloBoardImage, runBotLudoTurns, calculateNewPosition, HOME_POSITIONS,
   checkForCapture, generateLudoBoard, startLudoTimeout, formatKartu, runBotTurn41,
@@ -22,7 +22,7 @@ import {
 } from '../function/index.js';
 
 export async function handleGameBotResponse(params) {
-  const { m, toId, body, user, sReply, sPesan, fn, serial, isCmd, reactFail, tmpDir, dbSettings, config, gameStates } = params;
+  const { m, toId, body, user, sReply, sPesan, fn, serial, isCmd, reactFail, dbSettings, config, gameStates } = params;
   const {
     hangman, family100, tebaklirik, tekateki, tebakkata, susunkata, tebakkimia, tebaknegara,
     tebakgambar, caklontong, tebakbendera, sudokuGame, chatBots, sessions, chessGame, othelloGame,
@@ -213,9 +213,7 @@ export async function handleGameBotResponse(params) {
         clearTimeout(gameState.timeoutId);
         const boardBuffer = await generateBoardImage(gameState.game.fen(), 'w');
         const caption = `🎉 *SKAKMAT!* 🎉\n\nSelamat, Kamu memenangkan permainan melawan Bot!`;
-        const outputPath = await saveFile(boardBuffer, "output-checkmate", 'jpg');
-        await fn.sendFilePath(toId, caption, outputPath, { quoted: m });
-        await tmpDir.deleteFile(outputPath);
+        await fn.sendMediaFromBuffer(toId, 'image/jpeg', boardBuffer, caption, m);
         delete chessGame[toId];
         await user.addXp();
         await performanceManager.cache.updateUserStats(user.userId, counthits);
@@ -240,14 +238,12 @@ export async function handleGameBotResponse(params) {
       gameState.game.move(botMove);
       const finalFen = gameState.game.fen();
       const boardBuffer = await generateBoardImage(finalFen, 'w');
-      const outputPath = await saveFile(boardBuffer, "output-chess", 'jpg');
       let caption = `Langkah Kamu: *${from.toUpperCase()} → ${to.toUpperCase()}*\n`;
       caption += `Langkah Bot: *${botMove.from.toUpperCase()} → ${botMove.to.toUpperCase()}*\n\n`;
       if (gameState.game.isCheckmate()) {
         clearTimeout(gameState.timeoutId);
         caption += `🤖 *SKAKMAT!* 🤖\n\nBot memenangkan permainan.`;
-        await fn.sendFilePath(toId, caption, outputPath, { quoted: m });
-        await tmpDir.deleteFile(outputPath);
+        await fn.sendMediaFromBuffer(toId, 'image/jpeg', boardBuffer, caption, m);
         delete chessGame[toId];
         await user.addXp();
         await performanceManager.cache.updateUserStats(user.userId, counthits);
@@ -256,8 +252,7 @@ export async function handleGameBotResponse(params) {
       if (gameState.game.isDraw()) {
         clearTimeout(gameState.timeoutId);
         caption += `🤝 *REMIS!* Permainan berakhir seri.`;
-        await fn.sendFilePath(toId, caption, outputPath, { quoted: m });
-        await tmpDir.deleteFile(outputPath);
+        await fn.sendMediaFromBuffer(toId, 'image/jpeg', boardBuffer, caption, m);
         delete chessGame[toId];
         await user.addXp();
         await performanceManager.cache.updateUserStats(user.userId, counthits);
@@ -267,8 +262,7 @@ export async function handleGameBotResponse(params) {
       if (gameState.game.isCheck()) {
         caption += `\n\n*ANDA SEDANG DI-SKAK!*`;
       }
-      await fn.sendFilePath(toId, caption, outputPath, { quoted: m });
-      await tmpDir.deleteFile(outputPath);
+      await fn.sendMediaFromBuffer(toId, 'image/jpeg', boardBuffer, caption, m);
       await user.addXp();
       await performanceManager.cache.updateUserStats(user.userId, counthits);
       return true;
@@ -1131,9 +1125,7 @@ export async function handleGameBotResponse(params) {
       let imageGenerated = false;
       for (const part of parts) {
         if (part.inlineData) {
-          const filePath = await saveFile(Buffer.from(part.inlineData.data, 'base64'), 'gemini-img2img', 'jpg');
-          await fn.sendFilePath(toId, dbSettings.autocommand, filePath, { quoted: m });
-          await tmpDir.deleteFile(filePath);
+          await fn.sendMediaFromBuffer(toId, 'image/jpeg', Buffer.from(part.inlineData.data, 'base64'), dbSettings.autocommand, m);
           imageGenerated = true;
           break;
         }

@@ -7,7 +7,6 @@
 // ─── Info ────────────────────────────────
 
 import fs from 'fs-extra';
-import { tmpDir } from '../../lib/tempManager.js';
 import { generateFakeTweet } from 'generator-fake';
 import { colorNameMap } from '../../function/index.js';
 
@@ -66,8 +65,6 @@ export const command = {
       backgroundColor: bgColor
     });
     if (!resultBuffer) return await sReply("Gagal membuat gambar tweet (modul mengembalikan null).");
-    const tmpImagePath = await tmpDir.createTempFileWithContent(resultBuffer, 'jpg');
-    await fn.sendFilePath(toId, dbSettings.autocommand, tmpImagePath, { quoted: m });
-    await tmpDir.deleteFile(tmpImagePath);
+    await fn.sendMediaFromBuffer(toId, 'image/jpeg', resultBuffer, dbSettings.autocommand, m);
   }
 };

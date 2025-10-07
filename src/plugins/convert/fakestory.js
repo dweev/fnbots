@@ -9,7 +9,6 @@
 import axios from 'axios';
 import fs from 'fs-extra';
 import config from '../../../config.js';
-import { tmpDir } from '../../lib/tempManager.js';
 import { generateFakeStory } from 'generator-fake';
 
 export const command = {
@@ -35,8 +34,6 @@ export const command = {
       username: username,
       profilePicBuffer: ppBuffer
     });
-    const tmpImagePath = await tmpDir.createTempFileWithContent(resultBuffer, 'jpg');
-    await fn.sendFilePath(toId, dbSettings.autocommand, tmpImagePath, { quoted: m });
-    await tmpDir.deleteFile(tmpImagePath);
+    await fn.sendMediaFromBuffer(toId, 'image/jpeg', resultBuffer, dbSettings.autocommand, m);
   }
 };

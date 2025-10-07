@@ -7,7 +7,6 @@
 // ─── Info ────────────────────────────────
 
 import sharp from 'sharp';
-import { tmpDir } from '../../lib/tempManager.js';
 import { QuoteGenerator } from 'qc-generator-whatsapp';
 import { processAllTextFormatting } from '../../function/index.js';
 
@@ -49,8 +48,7 @@ export const command = {
       }]
     };
     const result = await QuoteGenerator(params);
-    const finalImagePath = await tmpDir.createTempFileWithContent(result.image, 'jpg');
-    await fn.sendFilePath(toId, dbSettings.autocommand, finalImagePath, { quoted: m });
-    await tmpDir.deleteFile(finalImagePath);
+    const resultBuffer = Buffer.from(result.image, 'base64');
+    await fn.sendMediaFromBuffer(toId, 'image/jpeg', resultBuffer, dbSettings.autocommand, m);
   }
 };

@@ -48,9 +48,7 @@ export const command = {
       signatureText: signatureText
     });
     if (!imageResultBuffer) return await sReply("Gagal membuat gambar kartu (modul mengembalikan null).");
-    const finalCardPath = await tmpDir.createTempFileWithContent(imageResultBuffer, 'png');
-    await fn.sendFilePath(toId, dbSettings.autocommand, finalCardPath, { quoted: m });
+    await fn.sendMediaFromBuffer(toId, 'image/jpeg', imageResultBuffer, dbSettings.autocommand, m);
     await tmpDir.deleteFile(tempProfilePicPath);
-    await tmpDir.deleteFile(finalCardPath);
   }
 };

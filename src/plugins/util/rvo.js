@@ -6,9 +6,6 @@
 */
 // ─── Info ────────────────────────────────
 
-import fs from 'fs-extra';
-import { tmpDir } from '../../lib/tempManager.js';
-
 export const command = {
   name: 'rvo',
   category: 'util',
@@ -20,22 +17,8 @@ export const command = {
       const akuCrot = m.quoted[m.quoted.type] || m.quoted;
       if (akuCrot.viewOnce) {
         if (quotedMsg?.imageMessage || quotedMsg?.videoMessage || quotedMsg?.audioMessage) {
-          let extension;
-          if (quotedMsg.imageMessage) {
-            extension = 'png';
-          } else if (quotedMsg.videoMessage) {
-            extension = 'mp4';
-          } else if (quotedMsg.audioMessage) {
-            extension = 'mp3';
-          }
           const buffer = await fn.getMediaBuffer(quotedMsg);
-          const tempPath = tmpDir.createTempFile(extension);
-          try {
-            await fs.writeFile(tempPath, buffer);
-            await fn.sendFilePath(toId, dbSettings.autocommand, tempPath, { quoted: m });
-          } finally {
-            await tmpDir.deleteFile(tempPath);
-          }
+          await fn.sendMediaFromBuffer(toId, quotedMsg.mime, buffer, quotedMsg.body || dbSettings.autocommand, m);
         }
       }
     }

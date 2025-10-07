@@ -7,7 +7,7 @@
 // ─── Info ────────────────────────────────
 
 import config from '../../../../config.js';
-import { getDbSettings } from '../../../lib/settingsManager.js';
+import { Settings } from '../../../../database/index.js';
 
 export const methods = {
   async isLimit() {
@@ -33,7 +33,7 @@ export const methods = {
     return false;
   },
   resetLimits() {
-    const dbSettings = getDbSettings();
+    const dbSettings = Settings.getSettings();
     const now = new Date();
     const lastReset = new Date(this.limit.lastReset);
     if (now.getDate() !== lastReset.getDate() || now.getMonth() !== lastReset.getMonth()) {

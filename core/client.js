@@ -15,8 +15,9 @@ import log from '../src/lib/logger.js';
 import { mongoStore } from '../database/index.js';
 import { tmpDir } from '../src/lib/tempManager.js';
 import { runJob } from '../src/worker/worker_manager.js';
+import { convert as convertNative } from '../src/addon/bridge.js';
+import { randomByte, getBuffer, getSizeMedia } from '../src/function/index.js';
 import { MediaValidationError, MediaProcessingError, MediaSizeError } from '../src/lib/errorManager.js';
-import { randomByte, getBuffer, getSizeMedia, writeExif, convertAudio } from '../src/function/index.js';
 import { jidNormalizedUser, generateWAMessage, generateWAMessageFromContent, downloadContentFromMessage, jidDecode, jidEncode, getBinaryNodeChildString, getBinaryNodeChildren, getBinaryNodeChild, proto } from 'baileys';
 
 import { createRequire } from 'node:module';
@@ -125,34 +126,6 @@ export async function clientBot(fn, dbSettings) {
       throw error;
     }
   };
-  fn.sendMediaBufferOrURL = async (jid, path, fileName = '', caption = '', quoted = '', options = {}) => {
-    const { mime, data, filename } = await fn.getFile(path, true);
-    const isWebpSticker = options.asSticker || /webp/.test(mime);
-    let pathFile = filename;
-    let messageContent;
-    if (isWebpSticker) {
-      pathFile = await writeExif(data, {
-        packname: options.packname || dbSettings.packName,
-        author: options.author || dbSettings.packAuthor,
-        categories: options.categories || [''],
-      });
-      await tmpDir.deleteFile(filename);
-      messageContent = { sticker: { url: pathFile }, ...options };
-    } else {
-      const mediaType = mime.startsWith('image') ? 'image' : mime.startsWith('video') ? 'video' : mime.startsWith('audio') ? 'audio' : 'document';
-      const mimetype = mediaType === 'video' ? 'video/mp4' : mediaType === 'audio' ? 'audio/mpeg' : mime;
-      messageContent = {
-        [mediaType]: { url: pathFile },
-        caption,
-        mimetype,
-        fileName,
-        ...options
-      };
-    }
-    const result = await fn.sendMessage(jid, messageContent, createQuotedOptions(quoted, options));
-    await tmpDir.deleteFile(pathFile);
-    return result;
-  };
   async function _internalSendMessage(chat, content, options = {}) {
     const { quoted, ...restOptions } = options;
     let mentions = [];
@@ -160,17 +133,26 @@ export async function clientBot(fn, dbSettings) {
       const textToParse = content.text || content.caption || content;
       mentions = extractMentions(textToParse);
     }
-    const opts = typeof content === 'object' ? { ...restOptions, ...content } : { ...restOptions, mentions };
+    const opts = typeof content === 'object' ? { mentions, ...restOptions, ...content } : { mentions, ...restOptions };
     if (typeof content === 'object') {
       return await fn.sendMessage(chat, content, createQuotedOptions(quoted, opts));
-    } else if (typeof content === 'string') {
+    }
+    if (typeof content === 'string') {
       try {
         if (/^https?:\/\//.test(content)) {
           const data = await axios.get(content, { responseType: 'arraybuffer' });
           const mime = await detectMimeType(data.data, data.headers);
           const finalCaption = opts.caption || '';
-          if (/gif|image|video|audio|pdf|stream/i.test(mime)) {
-            return await fn.sendMediaBufferOrURL(chat, data.data, '', finalCaption, quoted, opts);
+          const isWebpSticker = opts.asSticker || /webp/.test(mime);
+          if (isWebpSticker) {
+            const stickerBuffer = await runJob('stickerNative', {
+              mediaBuffer: data.data,
+              packname: opts.packname || dbSettings.packName,
+              author: opts.author || dbSettings.packAuthor,
+            });
+            return await fn.sendMessage(chat, { sticker: stickerBuffer }, createQuotedOptions(quoted, opts));
+          } else if (/gif|image|video|audio|pdf|stream/i.test(mime)) {
+            return await fn.sendMediaFromBuffer(chat, mime, data.data, finalCaption, quoted, opts);
           }
         }
         return await fn.sendMessage(chat, { text: content, ...opts }, createQuotedOptions(quoted));
@@ -180,13 +162,11 @@ export async function clientBot(fn, dbSettings) {
       }
     }
   };
-  fn.sendPesan = async (chat, content, crot = {}) => {
-    const isMessageObject = crot && (crot.expiration !== undefined || crot.chat !== undefined);
-    const options = isMessageObject ? {} : crot || {};
+  fn.sendPesan = async (chat, content, options = {}) => {
     return _internalSendMessage(chat, content, options);
   };
   fn.sendReply = async (chat, content, options = {}) => {
-    const quoted = options.quoted || options.m || null;
+    const quoted = options.quoted || options.m;
     return _internalSendMessage(chat, content, { ...options, quoted });
   };
   fn.sendAudioTts = async (jid, audioURL, quoted) => {
@@ -209,11 +189,26 @@ export async function clientBot(fn, dbSettings) {
     const vcard = `BEGIN:VCARD\nVERSION:3.0\nN:${displayName}\nFN:${contactName}\nORG:${contactName}\nTEL;type=CELL;type=VOICE;waid=${nomor}:+${nomor}\nEND:VCARD`;
     await fn.sendMessage(jid, { contacts: { displayName: displayName, contacts: [{ vcard }] } }, createQuotedOptions(quoted));
   };
-  fn.sendMediaByType = async (jid, mime, dataBuffer, caption, quoted, options = {}) => {
-    if (!mime) {
-      return await fn.sendMessage(jid, { document: dataBuffer, mimetype: 'application/octet-stream', fileName: 'file', caption, ...options }, createQuotedOptions(quoted, options));
+  fn.sendMediaFromBuffer = async (jid, mime, dataBuffer, caption, quoted, options = {}) => {
+    let imageBuffer;
+    if (typeof dataBuffer === 'string' && dataBuffer.startsWith('data:image')) {
+      const base64Data = dataBuffer.split(';base64,').pop();
+      imageBuffer = Buffer.from(base64Data, 'base64');
+    } else if (Buffer.isBuffer(dataBuffer)) {
+      imageBuffer = dataBuffer;
+    } else {
+      throw new Error('Input tidak valid. Harap berikan Buffer atau string Base64.');
     }
-    const messageContent = createMediaMessage(mime, dataBuffer, caption, options);
+    if (!mime) {
+      return await fn.sendMessage(jid, {
+        document: imageBuffer,
+        mimetype: 'application/octet-stream',
+        fileName: 'file',
+        caption,
+        ...options
+      }, createQuotedOptions(quoted, options));
+    }
+    const messageContent = createMediaMessage(mime, imageBuffer, caption, options);
     return await fn.sendMessage(jid, messageContent, createQuotedOptions(quoted, options));
   };
   fn.getMediaBuffer = async (message) => {
@@ -262,10 +257,20 @@ export async function clientBot(fn, dbSettings) {
     await fn.groupParticipantsUpdate(jid, [target], "demote");
   };
   fn.sendRawWebpAsSticker = async (jid, path, quoted, options = {}) => {
-    const buff = await handleBufferInput(path);
-    const result = await writeExif(buff, options);
-    await fn.sendMessage(jid, { sticker: { url: result }, ...options }, createQuotedOptions(quoted, options));
-    await tmpDir.deleteFile(result);
+    try {
+      const inputBuffer = await handleBufferInput(path);
+      if (!inputBuffer || inputBuffer.length === 0) {
+        throw new Error('Gagal mendapatkan buffer dari input yang diberikan');
+      }
+      const stickerBuffer = await runJob('stickerNative', {
+        mediaBuffer: inputBuffer,
+        ...options
+      });
+      await fn.sendMessage(jid, { sticker: stickerBuffer }, createQuotedOptions(quoted, options));
+    } catch (error) {
+      log(`Error in sendRawWebpAsSticker: ${error.message}`, true);
+      await fn.sendReply(jid, 'Gagal memproses stiker.', { quoted: options.m || quoted });
+    }
   };
   fn.sendFileUrl = async (jid, url, caption, quoted, options = {}) => {
     try {
@@ -277,7 +282,7 @@ export async function clientBot(fn, dbSettings) {
         headers: { 'User-Agent': config.security.userAgent }
       });
       const mime = await detectMimeType(res.data, res.headers);
-      return await fn.sendMediaByType(jid, mime, res.data, caption, quoted, options);
+      return await fn.sendMediaFromBuffer(jid, mime, res.data, caption, quoted, options);
     } catch (error) {
       throw error;
     }
@@ -288,7 +293,7 @@ export async function clientBot(fn, dbSettings) {
         const [meta, data] = url.split(',');
         const mime = meta.match(/:(.*?);/)[1];
         const buffer = Buffer.from(data, 'base64');
-        return await fn.sendMediaByType(jid, mime, buffer, caption, quoted, options);
+        return await fn.sendMediaFromBuffer(jid, mime, buffer, caption, quoted, options);
       }
       const MAX_FILE_SIZE_BYTES = config.performance.maxFileSize;
       const headResponse = await axios({
@@ -307,7 +312,7 @@ export async function clientBot(fn, dbSettings) {
         headers: { 'User-Agent': config.security.userAgent }
       });
       const mimeType = await detectMimeType(dataResponse.data, dataResponse.headers);
-      return await fn.sendMediaByType(jid, mimeType, dataResponse.data, caption, quoted, options);
+      return await fn.sendMediaFromBuffer(jid, mimeType, dataResponse.data, caption, quoted, options);
     } catch (error) {
       throw error;
     }
@@ -331,8 +336,21 @@ export async function clientBot(fn, dbSettings) {
       if (fileSizeInMB > 200) {
         messageContent = { document: { stream: fs.createReadStream(localPath) }, mimetype: mime, fileName, mentions, ...options };
       } else if (mime.startsWith('audio/')) {
-        convertedPath = await convertAudio(localPath);
-        messageContent = { audio: { stream: fs.createReadStream(convertedPath) }, mimetype: options?.ptt ? 'audio/ogg; codecs=opus' : 'audio/mpeg', ptt: options?.ptt || true, mentions, ...options };
+        const inputBuffer = await fs.readFile(localPath);
+        const outputBuffer = convertNative(inputBuffer, {
+          format: 'opus',
+          ptt: options?.ptt
+        });
+        if (!Buffer.isBuffer(outputBuffer) || outputBuffer.length === 0) {
+          throw new Error('Native audio conversion failed to produce a valid buffer.');
+        }
+        messageContent = {
+          audio: outputBuffer,
+          mimetype: 'audio/ogg; codecs=opus',
+          ptt: options?.ptt || true,
+          mentions,
+          ...options
+        };
       } else {
         const streamContent = { stream: fs.createReadStream(localPath) };
         messageContent = createMediaMessage(mime, streamContent, caption, { mentions, fileName, ...options });

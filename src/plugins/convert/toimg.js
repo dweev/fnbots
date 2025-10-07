@@ -47,9 +47,7 @@ export const command = {
           await tmpDir.deleteFile(outputMp4Path);
         }
       } else {
-        const tmpPath = await tmpDir.createTempFileWithContent(mediaData, 'webp');
-        await fn.sendFilePath(toId, dbSettings.autocommand, tmpPath, { quoted: m });
-        await tmpDir.deleteFile(tmpPath);
+        await fn.sendMediaFromBuffer(toId, 'image/webp', mediaData, dbSettings.autocommand, m);
       }
     } else {
       let inputText;
@@ -62,9 +60,8 @@ export const command = {
       }
       if (inputText.length > 200) return await sReply("Teks terlalu panjang! Maksimal 200 karakter.");
       const buffer = await bratGenerator(inputText);
-      const tmpImagePath = await tmpDir.createTempFileWithContent(buffer, 'jpg');
-      await fn.sendFilePath(toId, dbSettings.autocommand, tmpImagePath, { quoted: m });
-      await tmpDir.deleteFile(tmpImagePath);
+      const resultBuffer = Buffer.from(buffer, 'base64');
+      await fn.sendMediaFromBuffer(toId, 'image/jpeg', resultBuffer, dbSettings.autocommand, m);
     }
   }
 };

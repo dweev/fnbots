@@ -7,7 +7,6 @@
 // ─── Info ────────────────────────────────
 
 import config from '../../../config.js';
-import { tmpDir } from '../../lib/tempManager.js';
 import { safetySettings } from '../../function/index.js';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
@@ -36,9 +35,8 @@ export const command = {
     let imageGenerated = false;
     for (const part of parts) {
       if (part.inlineData) {
-        const filePath = await tmpDir.createTempFileWithContent(Buffer.from(part.inlineData.data, 'base64'), 'jpg');
-        await fn.sendFilePath(toId, dbSettings.autocommand, filePath, { quoted: m });
-        await tmpDir.deleteFile(filePath);
+        const filePath = Buffer.from(part.inlineData.data, 'base64');
+        await fn.sendMediaFromBuffer(toId, 'image/jpeg', filePath, dbSettings.autocommand, m);
         imageGenerated = true;
         break;
       }

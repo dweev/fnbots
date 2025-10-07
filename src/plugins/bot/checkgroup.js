@@ -91,7 +91,7 @@ export const command = {
             }
           }
           const caption = `*MEMBER INFO #${nomorMember}*\n\nName: ${name || 'Unknown'}\nNumber: ${user.id.split('@')[0]}\nStatus: ${user.admin ? 'Admin' : 'Member'}\nID: ${user.id}`;
-          await fn.sendMediaByType(toId, mime, mediaBuffer, caption, m);
+          await fn.sendMediaFromBuffer(toId, mime, mediaBuffer, caption, m);
         }
         break;
       }

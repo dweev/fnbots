@@ -6,8 +6,7 @@
 */
 // ─── Info ────────────────────────────────
 
-import fs from 'fs-extra';
-import { saveFile, makeCircleSticker } from '../../function/index.js';
+import { makeCircleSticker } from '../../function/index.js';
 
 export const command = {
   name: 'makecircle',
@@ -20,8 +19,6 @@ export const command = {
     const mime = targetMsg?.imageMessage?.mimetype;
     if (!mime) return await sReply("Kirim atau balas gambar untuk dijadikan lingkaran.");
     const resBuffer = await makeCircleSticker(await fn.getMediaBuffer(targetMsg));
-    const patH = await saveFile(resBuffer, "makecircle", 'jpg');
-    await fn.sendFilePath(toId, dbSettings.autocommand, patH, { quoted: m });
-    await fs.unlink(patH);
+    await fn.sendMediaFromBuffer(toId, 'image/jpeg', resBuffer, dbSettings.autocommand, m);
   }
 };

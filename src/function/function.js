@@ -9,20 +9,14 @@
 import os from 'os';
 import path from 'path';
 import sharp from 'sharp';
-import fs from 'fs-extra';
 import axios from 'axios';
 import Fuse from 'fuse.js';
-import webp from 'node-webpmux';
-import FileType from 'file-type';
 import log from '../lib/logger.js';
 import config from '../../config.js';
 import speedTest from 'speedtest-net';
 import dayjs from '../utils/dayjs.js';
-import ffmpeg from '@ts-ffmpeg/fluent-ffmpeg';
 import { tmpDir } from '../lib/tempManager.js';
 import { pluginCache } from '../lib/plugins.js';
-import { runJob } from '../worker/worker_manager.js';
-import { getDbSettings } from '../lib/settingsManager.js';
 import { StoreMessages, User, StoreGroupMetadata, mongoStore } from '../../database/index.js';
 
 let fuse;
@@ -41,18 +35,6 @@ function isJID(str) {
   return str.includes('@') && (str.endsWith('@s.whatsapp.net') || str.endsWith('@lid'));
 };
 
-export async function imageToWebp(media) {
-  const stickerBuffer = await runJob('sticker', { mediaBuffer: media, type: 'image' });
-  return stickerBuffer;
-};
-export async function gifToWebp(media) {
-  const stickerBuffer = await runJob('sticker', { mediaBuffer: media, type: 'video' });
-  return stickerBuffer;
-};
-export async function videoToWebp(media) {
-  const stickerBuffer = await runJob('sticker', { mediaBuffer: media, type: 'video' });
-  return stickerBuffer;
-};
 export async function initializeFuse() {
   allCmds = Array.from(pluginCache.commands.keys());
   fuse = new Fuse(allCmds, fuseOptions);
@@ -494,94 +476,6 @@ export async function getBuffer(url, options = {}) {
   } catch (error) {
     log(`Error: ${error.message}`, true); throw error;
   }
-};
-export async function writeExif(media, data) {
-  const dbSettings = getDbSettings();
-  const fileType = await FileType.fromBuffer(media);
-  if (!fileType) throw new Error('Error_writeExif_FileType');
-  let wMedia;
-  if (/webp/.test(fileType.mime)) {
-    wMedia = media;
-  } else if (/image\/gif/.test(fileType.mime)) {
-    wMedia = await gifToWebp(media);
-  } else if (/jpeg|jpg|png/.test(fileType.mime)) {
-    wMedia = await imageToWebp(media);
-  } else if (/video/.test(fileType.mime)) {
-    wMedia = await videoToWebp(media);
-  } else {
-    throw new Error('Error_writeExif');
-  }
-  const tmpFileIn = tmpDir.createTempFile('webp');
-  const tmpFileOut = tmpDir.createTempFile('webp', 'tempIk');
-  await fs.writeFile(tmpFileIn, wMedia);
-  if (data) {
-    const img = new webp.Image();
-    const {
-      wra = data.pack_id || dbSettings.packID,
-      wrb = data.packname || dbSettings.packName,
-      wrc = data.author || dbSettings.packAuthor,
-      wrd = data.categories || [''],
-      wre = data.isAvatar || 0,
-      ...wrf
-    } = data;
-    const json = {
-      'sticker-pack-id': wra,
-      'sticker-pack-name': wrb,
-      'sticker-pack-publisher': wrc,
-      'emojis': wrd,
-      'is-avatar-sticker': wre,
-      ...wrf
-    };
-    const exifAttr = Buffer.from([0x49, 0x49, 0x2A, 0x00, 0x08, 0x00, 0x00, 0x00, 0x01, 0x00, 0x41, 0x57, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x16, 0x00, 0x00, 0x00]);
-    const jsonBuff = Buffer.from(JSON.stringify(json), 'utf-8');
-    const exif = Buffer.concat([exifAttr, jsonBuff]);
-    exif.writeUIntLE(jsonBuff.length, 14, 4);
-    await img.load(tmpFileIn);
-    await tmpDir.deleteFile(tmpFileIn);
-    img.exif = exif;
-    await img.save(tmpFileOut);
-    return tmpFileOut;
-  } else {
-    return tmpFileIn;
-  };
-};
-export async function convertAudio(inputPath) {
-  const detected = await FileType.fromFile(inputPath);
-  return new Promise((resolve, reject) => {
-    try {
-      const outputPath = tmpDir.createTempFile('ogg');
-      const mime = detected?.mime || '';
-      const ext = path.extname(inputPath).replace('.', '');
-      let inputFormat = null;
-      if (mime.startsWith('audio/')) {
-        if (mime.includes('mpeg')) inputFormat = 'mp3';
-        else if (mime.includes('ogg')) inputFormat = 'ogg';
-        else if (mime.includes('wav')) inputFormat = 'wav';
-        else if (mime.includes('webm')) inputFormat = 'webm';
-        else if (mime.includes('mp4') || ext === 'm4a') inputFormat = 'mp4';
-        else if (mime.includes('opus')) inputFormat = 'ogg';
-      }
-      const cmd = ffmpeg(inputPath)
-        .setFfmpegPath(config.paths?.ffmpeg)
-        .setFfprobePath(config.paths?.ffprobe);
-      if (inputFormat) cmd.inputOptions(['-f', inputFormat]);
-      cmd.outputOptions([
-        '-f', 'ogg',
-        '-c:a', 'libopus',
-        '-ac', '1',
-        '-ar', '16000',
-        '-b:a', '48k',
-        '-vn',
-        '-map', '0:a',
-        '-avoid_negative_ts', 'make_zero'
-      ])
-        .on('error', reject)
-        .on('end', () => resolve(outputPath))
-        .save(outputPath);
-    } catch (err) {
-      reject(err);
-    }
-  });
 };
 export async function sendAndCleanupFile(fn, toId, localPath, m, dbSettings) {
   try {

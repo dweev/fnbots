@@ -18,10 +18,10 @@ import log from '../lib/logger.js';
 import config from '../../config.js';
 import speedTest from 'speedtest-net';
 import dayjs from '../utils/dayjs.js';
-import ffmpeg from '@ts-ffmpeg/fluent-ffmpeg';
 import { tmpDir } from '../lib/tempManager.js';
 import { pluginCache } from '../lib/plugins.js';
 import { runJob } from '../worker/worker_manager.js';
+import { convert as convertNative } from '../addon/bridge.js';
 import { StoreMessages, User, StoreGroupMetadata, mongoStore, Settings } from '../../database/index.js';
 
 let fuse;
@@ -544,43 +544,15 @@ export async function writeExif(media, data) {
     return tmpFileIn;
   };
 };
-export async function convertAudio(inputPath) {
-  const detected = await FileType.fromFile(inputPath);
-  return new Promise((resolve, reject) => {
-    try {
-      const outputPath = tmpDir.createTempFile('ogg');
-      const mime = detected?.mime || '';
-      const ext = path.extname(inputPath).replace('.', '');
-      let inputFormat = null;
-      if (mime.startsWith('audio/')) {
-        if (mime.includes('mpeg')) inputFormat = 'mp3';
-        else if (mime.includes('ogg')) inputFormat = 'ogg';
-        else if (mime.includes('wav')) inputFormat = 'wav';
-        else if (mime.includes('webm')) inputFormat = 'webm';
-        else if (mime.includes('mp4') || ext === 'm4a') inputFormat = 'mp4';
-        else if (mime.includes('opus')) inputFormat = 'ogg';
-      }
-      const cmd = ffmpeg(inputPath)
-        .setFfmpegPath(config.paths?.ffmpeg)
-        .setFfprobePath(config.paths?.ffprobe);
-      if (inputFormat) cmd.inputOptions(['-f', inputFormat]);
-      cmd.outputOptions([
-        '-f', 'ogg',
-        '-c:a', 'libopus',
-        '-ac', '1',
-        '-ar', '16000',
-        '-b:a', '48k',
-        '-vn',
-        '-map', '0:a',
-        '-avoid_negative_ts', 'make_zero'
-      ])
-        .on('error', reject)
-        .on('end', () => resolve(outputPath))
-        .save(outputPath);
-    } catch (err) {
-      reject(err);
-    }
+export function convertAudio(inputBuffer, options = {}) {
+  const outputBuffer = convertNative(inputBuffer, {
+    format: 'opus',
+    ptt: options.ptt,
   });
+  if (!Buffer.isBuffer(outputBuffer) || outputBuffer.length === 0) {
+    throw new Error('Native audio conversion failed to produce a valid buffer.');
+  }
+  return outputBuffer;
 };
 export async function sendAndCleanupFile(fn, toId, localPath, m, dbSettings) {
   try {

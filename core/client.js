@@ -331,8 +331,9 @@ export async function clientBot(fn, dbSettings) {
       if (fileSizeInMB > 200) {
         messageContent = { document: { stream: fs.createReadStream(localPath) }, mimetype: mime, fileName, mentions, ...options };
       } else if (mime.startsWith('audio/')) {
-        convertedPath = await convertAudio(localPath);
-        messageContent = { audio: { stream: fs.createReadStream(convertedPath) }, mimetype: options?.ptt ? 'audio/ogg; codecs=opus' : 'audio/mpeg', ptt: options?.ptt || true, mentions, ...options };
+        const inputBuffer = await fs.readFile(localPath);
+        const outputBuffer = convertAudio(inputBuffer, { ptt: options?.ptt });
+        messageContent = { audio: outputBuffer, mimetype: 'audio/ogg; codecs=opus', ptt: options?.ptt || true, mentions, ...options };
       } else {
         const streamContent = { stream: fs.createReadStream(localPath) };
         messageContent = createMediaMessage(mime, streamContent, caption, { mentions, fileName, ...options });

@@ -1,71 +1,222 @@
 #!/usr/bin/env bash
 
+#==============================================================================
+# Python Package Update Script
+# Mengupdate pip dan semua package Python di virtual environment
+# Kompatibel dengan setup.sh
+#==============================================================================
+
 set -e
 
-if [ "$EUID" -eq 0 ]; then
-  echo "✅ Menjalankan script sebagai root"
-elif command -v sudo >/dev/null 2>&1; then
-  if sudo -n true 2>/dev/null; then
-    echo "✅ Menjalankan script sebagai user dengan akses sudo"
-  else
-    echo "❌ User '$USER' tidak memiliki akses sudo passwordless. Jalankan dengan 'sudo' atau sebagai root."
-    exit 1
-  fi
-else
-  echo "❌ Script harus dijalankan sebagai root atau user dengan sudo."
-  exit 1
-fi
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
 
-ORIGINAL_USER=$(logname)
-USER_HOME=$(getent passwd "$ORIGINAL_USER" | cut -d: -f6)
+print_success() { echo -e "${GREEN}✅ $1${NC}"; }
+print_error() { echo -e "${RED}❌ $1${NC}"; }
+print_warning() { echo -e "${YELLOW}⚠️  $1${NC}"; }
+print_info() { echo -e "${BLUE}ℹ️  $1${NC}"; }
+print_step() { echo -e "${BLUE}🔧 $1${NC}"; }
 
-echo ""
-echo "🐍 Memulai update pip dan package Python..."
+setup_privileges() {
+    if [ "$EUID" -eq 0 ]; then
+        print_success "Menjalankan script sebagai root"
+        SUDO_CMD=""
+        ORIGINAL_USER="${SUDO_USER:-root}"
+    elif command -v sudo >/dev/null 2>&1; then
+        if sudo -n true 2>/dev/null; then
+            print_success "Menjalankan script dengan sudo passwordless"
+            SUDO_CMD="sudo"
+            ORIGINAL_USER="$USER"
+        else
+            print_info "Memerlukan password sudo untuk melanjutkan..."
+            if sudo -v; then
+                print_success "Akses sudo berhasil diverifikasi"
+                SUDO_CMD="sudo"
+                ORIGINAL_USER="$USER"
+            else
+                print_error "Gagal mendapatkan akses sudo"
+                exit 1
+            fi
+        fi
+    else
+        print_error "Script harus dijalankan sebagai root atau user dengan sudo"
+        exit 1
+    fi
+}
 
-if [ ! -d "venv" ]; then
-  echo "❌ Virtual environment 'venv' tidak ditemukan!"
-  echo "💡 Pastikan Anda sudah menjalankan setup.sh terlebih dahulu atau virtual environment sudah dibuat."
-  exit 1
-fi
+check_venv() {
+    print_step "Memeriksa virtual environment..."
+    
+    if [ ! -d "venv" ]; then
+        print_error "Virtual environment 'venv' tidak ditemukan!"
+        print_info "Pastikan Anda sudah menjalankan setup.sh terlebih dahulu"
+        print_info "Atau buat virtual environment dengan: python3.12 -m venv venv"
+        exit 1
+    fi
+    
+    if [ ! -f "venv/bin/pip" ]; then
+        print_error "Pip tidak ditemukan di virtual environment!"
+        print_info "Virtual environment mungkin rusak, coba buat ulang dengan setup.sh"
+        exit 1
+    fi
+    
+    print_success "Virtual environment ditemukan dan valid"
+}
 
-if [ ! -f "venv/bin/pip" ]; then
-  echo "❌ Pip tidak ditemukan di virtual environment!"
-  exit 1
-fi
+upgrade_pip_tools() {
+    print_step "Mengupgrade pip, setuptools, dan wheel..."
+    
+    if venv/bin/pip install --upgrade pip setuptools wheel; then
+        print_success "Pip tools berhasil diupgrade"
+    else
+        print_error "Gagal mengupgrade pip tools"
+        exit 1
+    fi
+}
 
-echo ""
-echo "📦 Mengupdate pip, setuptools, dan wheel..."
-venv/bin/pip install --upgrade pip setuptools wheel
+update_python_packages() {
+    print_step "Mengupdate package Python yang penting..."
+    
+    PACKAGES=(
+        "yt-dlp"
+        "google-generativeai"
+        "python-dotenv"
+        "ffmpeg-python"
+        "g4f[all]"
+        "rembg"
+        "Pillow"
+        "sticker-convert"
+    )
+    
+    if venv/bin/pip install --upgrade "${PACKAGES[@]}"; then
+        print_success "Package Python berhasil diupdate"
+    else
+        print_warning "Beberapa package mungkin gagal diupdate"
+    fi
+}
 
-echo ""
-echo "📦 Mengupdate package Python yang penting..."
-venv/bin/pip install --upgrade \
-  yt-dlp \
-  google-generativeai \
-  python-dotenv \
-  ffmpeg-python \
-  "g4f[all]" \
-  rembg \
-  Pillow \
-  sticker-convert
+update_ytdlp_from_github() {
+    print_step "Mengupdate yt-dlp versi terbaru dari GitHub..."
+    
+    if venv/bin/pip install -U "yt-dlp @ git+https://github.com/yt-dlp/yt-dlp.git"; then
+        print_success "yt-dlp dari GitHub berhasil diupdate"
+    else
+        print_warning "Gagal mengupdate yt-dlp dari GitHub, menggunakan versi PyPI"
+    fi
+}
 
-echo ""
-echo "📦 Mengupdate yt-dlp versi terbaru dari GitHub..."
-venv/bin/pip install -U "yt-dlp @ git+https://github.com/yt-dlp/yt-dlp.git"
+update_from_requirements() {
+    if [ -f "requirements.txt" ]; then
+        print_step "Mengupdate package dari requirements.txt..."
+        
+        if venv/bin/pip install --upgrade -r requirements.txt; then
+            print_success "Package dari requirements.txt berhasil diupdate"
+        else
+            print_warning "Beberapa package dari requirements.txt gagal diupdate"
+        fi
+    else
+        print_info "requirements.txt tidak ditemukan, melewati update dari file"
+    fi
+}
 
-echo ""
-echo "📋 Menampilkan versi package yang terinstall..."
-echo "=== Versi Package Terinstall ==="
-venv/bin/pip list | grep -E "(yt-dlp|google-generativeai|python-dotenv|ffmpeg-python|g4f|rembg|Pillow|sticker-convert)"
+show_installed_versions() {
+    print_step "Menampilkan versi package yang terinstall..."
+    echo ""
+    echo "═══════════════════════════════════════════════════════════════"
+    echo "📦 Versi Package Terinstall"
+    echo "═══════════════════════════════════════════════════════════════"
+    
+    venv/bin/pip list | grep -E "(yt-dlp|google-generativeai|python-dotenv|ffmpeg-python|g4f|rembg|Pillow|sticker-convert|pip|setuptools|wheel)" || true
+    
+    echo "═══════════════════════════════════════════════════════════════"
+    echo ""
+}
 
-echo ""
-echo "🧹 Membersihkan cache pip..."
-venv/bin/pip cache purge
+cleanup_pip_cache() {
+    print_step "Membersihkan cache pip..."
+    
+    if venv/bin/pip cache purge; then
+        print_success "Cache pip berhasil dibersihkan"
+    else
+        print_warning "Gagal membersihkan cache pip"
+    fi
+}
 
-echo ""
-echo "🔐 Mengembalikan kepemilikan folder ke semula..."
-sudo chown -R $(logname) .
+fix_permissions() {
+    print_step "Memperbaiki permissions folder..."
+    
+    if [ "$ORIGINAL_USER" != "root" ] && [ -n "$ORIGINAL_USER" ]; then
+        $SUDO_CMD chown -R "$ORIGINAL_USER:$ORIGINAL_USER" .
+        print_success "Permissions berhasil diperbaiki untuk user: $ORIGINAL_USER"
+    fi
+}
 
-echo ""
-echo "✅ Update pip dan package Python selesai!"
-echo "💡 Jalankan 'source venv/bin/activate' untuk mulai menggunakan virtual environment Python yang sudah diupdate."
+print_summary() {
+    echo ""
+    echo "═══════════════════════════════════════════════════════════════"
+    print_success "UPDATE SELESAI!"
+    echo "═══════════════════════════════════════════════════════════════"
+    echo ""
+    echo "🐍 Python Virtual Environment:"
+    echo "   • Lokasi: $(pwd)/venv"
+    echo "   • Pip:    $(venv/bin/pip --version | awk '{print $2}')"
+    echo "   • Python: $(venv/bin/python --version | awk '{print $2}')"
+    echo ""
+    echo "💡 Langkah Selanjutnya:"
+    echo "   • Aktifkan virtual environment:"
+    echo "     $ source venv/bin/activate"
+    echo ""
+    echo "   • Untuk melihat semua package:"
+    echo "     $ venv/bin/pip list"
+    echo ""
+    echo "   • Untuk mengupdate package spesifik:"
+    echo "     $ venv/bin/pip install --upgrade <package-name>"
+    echo ""
+    echo "═══════════════════════════════════════════════════════════════"
+}
+
+main() {
+    clear
+    echo "═══════════════════════════════════════════════════════════════"
+    echo "         Python Package Update Script"
+    echo "═══════════════════════════════════════════════════════════════"
+    echo ""
+    
+    setup_privileges
+    echo ""
+    
+    check_venv
+    echo ""
+    
+    print_info "Update akan dimulai dalam 3 detik..."
+    print_warning "Tekan Ctrl+C untuk membatalkan"
+    sleep 3
+    echo ""
+    
+    upgrade_pip_tools
+    echo ""
+    
+    update_python_packages
+    echo ""
+    
+    update_ytdlp_from_github
+    echo ""
+    
+    update_from_requirements
+    echo ""
+    
+    show_installed_versions
+    
+    cleanup_pip_cache
+    echo ""
+    
+    fix_permissions
+    echo ""
+    
+    print_summary
+}
+
+main "$@"

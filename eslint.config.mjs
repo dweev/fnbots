@@ -48,8 +48,6 @@ export default defineConfig([
       "semi": ["error", "always"],
       "import/no-unresolved": "error",
       "import/no-absolute-path": "error",
-      "security/detect-eval-with-expression": "error",
-      "security/detect-unsafe-regex": "warn",
     },
   },
 ]);

@@ -125,34 +125,6 @@ export async function clientBot(fn, dbSettings) {
       throw error;
     }
   };
-  fn.sendMediaBufferOrURL = async (jid, path, fileName = '', caption = '', quoted = '', options = {}) => {
-    const { mime, data, filename } = await fn.getFile(path, true);
-    const isWebpSticker = options.asSticker || /webp/.test(mime);
-    let pathFile = filename;
-    let messageContent;
-    if (isWebpSticker) {
-      pathFile = await writeExif(data, {
-        packname: options.packname || dbSettings.packName,
-        author: options.author || dbSettings.packAuthor,
-        categories: options.categories || [''],
-      });
-      await tmpDir.deleteFile(filename);
-      messageContent = { sticker: { url: pathFile }, ...options };
-    } else {
-      const mediaType = mime.startsWith('image') ? 'image' : mime.startsWith('video') ? 'video' : mime.startsWith('audio') ? 'audio' : 'document';
-      const mimetype = mediaType === 'video' ? 'video/mp4' : mediaType === 'audio' ? 'audio/mpeg' : mime;
-      messageContent = {
-        [mediaType]: { url: pathFile },
-        caption,
-        mimetype,
-        fileName,
-        ...options
-      };
-    }
-    const result = await fn.sendMessage(jid, messageContent, createQuotedOptions(quoted, options));
-    await tmpDir.deleteFile(pathFile);
-    return result;
-  };
   async function _internalSendMessage(chat, content, options = {}) {
     const { quoted, ...restOptions } = options;
     let mentions = [];
@@ -160,17 +132,26 @@ export async function clientBot(fn, dbSettings) {
       const textToParse = content.text || content.caption || content;
       mentions = extractMentions(textToParse);
     }
-    const opts = typeof content === 'object' ? { ...restOptions, ...content } : { ...restOptions, mentions };
+    const opts = typeof content === 'object' ? { mentions, ...restOptions, ...content } : { mentions, ...restOptions };
     if (typeof content === 'object') {
       return await fn.sendMessage(chat, content, createQuotedOptions(quoted, opts));
-    } else if (typeof content === 'string') {
+    }
+    if (typeof content === 'string') {
       try {
         if (/^https?:\/\//.test(content)) {
           const data = await axios.get(content, { responseType: 'arraybuffer' });
           const mime = await detectMimeType(data.data, data.headers);
           const finalCaption = opts.caption || '';
-          if (/gif|image|video|audio|pdf|stream/i.test(mime)) {
-            return await fn.sendMediaBufferOrURL(chat, data.data, '', finalCaption, quoted, opts);
+          const isWebpSticker = opts.asSticker || /webp/.test(mime);
+          if (isWebpSticker) {
+            const stickerBuffer = await runJob('stickerNative', {
+              mediaBuffer: data.data,
+              packname: opts.packname || dbSettings.packName,
+              author: opts.author || dbSettings.packAuthor,
+            });
+            return await fn.sendMessage(chat, { sticker: stickerBuffer }, createQuotedOptions(quoted, opts));
+          } else if (/gif|image|video|audio|pdf|stream/i.test(mime)) {
+            return await fn.sendMediaFromBuffer(chat, mime, data.data, finalCaption, quoted, opts);
           }
         }
         return await fn.sendMessage(chat, { text: content, ...opts }, createQuotedOptions(quoted));
@@ -180,13 +161,11 @@ export async function clientBot(fn, dbSettings) {
       }
     }
   };
-  fn.sendPesan = async (chat, content, crot = {}) => {
-    const isMessageObject = crot && (crot.expiration !== undefined || crot.chat !== undefined);
-    const options = isMessageObject ? {} : crot || {};
+  fn.sendPesan = async (chat, content, options = {}) => {
     return _internalSendMessage(chat, content, options);
   };
   fn.sendReply = async (chat, content, options = {}) => {
-    const quoted = options.quoted || options.m || null;
+    const quoted = options.quoted || options.m;
     return _internalSendMessage(chat, content, { ...options, quoted });
   };
   fn.sendAudioTts = async (jid, audioURL, quoted) => {

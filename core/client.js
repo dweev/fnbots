@@ -15,8 +15,8 @@ import log from '../src/lib/logger.js';
 import { mongoStore } from '../database/index.js';
 import { tmpDir } from '../src/lib/tempManager.js';
 import { runJob } from '../src/worker/worker_manager.js';
+import { randomByte, getBuffer, getSizeMedia, convertAudio } from '../src/function/index.js';
 import { MediaValidationError, MediaProcessingError, MediaSizeError } from '../src/lib/errorManager.js';
-import { randomByte, getBuffer, getSizeMedia, writeExif, convertAudio } from '../src/function/index.js';
 import { jidNormalizedUser, generateWAMessage, generateWAMessageFromContent, downloadContentFromMessage, jidDecode, jidEncode, getBinaryNodeChildString, getBinaryNodeChildren, getBinaryNodeChild, proto } from 'baileys';
 
 import { createRequire } from 'node:module';
@@ -256,10 +256,20 @@ export async function clientBot(fn, dbSettings) {
     await fn.groupParticipantsUpdate(jid, [target], "demote");
   };
   fn.sendRawWebpAsSticker = async (jid, path, quoted, options = {}) => {
-    const buff = await handleBufferInput(path);
-    const result = await writeExif(buff, options);
-    await fn.sendMessage(jid, { sticker: { url: result }, ...options }, createQuotedOptions(quoted, options));
-    await tmpDir.deleteFile(result);
+    try {
+      const inputBuffer = await handleBufferInput(path);
+      if (!inputBuffer || inputBuffer.length === 0) {
+        throw new Error('Gagal mendapatkan buffer dari input yang diberikan');
+      }
+      const stickerBuffer = await runJob('stickerNative', {
+        mediaBuffer: inputBuffer,
+        ...options
+      });
+      await fn.sendMessage(jid, { sticker: stickerBuffer }, createQuotedOptions(quoted, options));
+    } catch (error) {
+      log(`Error in sendRawWebpAsSticker: ${error.message}`, true);
+      await fn.sendReply(jid, 'Gagal memproses stiker.', { quoted: options.m || quoted });
+    }
   };
   fn.sendFileUrl = async (jid, url, caption, quoted, options = {}) => {
     try {

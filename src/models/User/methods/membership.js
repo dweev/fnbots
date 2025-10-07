@@ -6,7 +6,7 @@
 */
 // ─── Info ────────────────────────────────
 
-import { getDbSettings } from '../../../lib/settingsManager.js';
+import { Settings } from '../../../../database/index.js';
 
 async function addMembership(user, type, durationMs) {
   const fieldMap = {
@@ -47,7 +47,7 @@ export const statics = {
     return this.findOneAndUpdate({ userId }, { $set: { isMaster: false } }, { new: true });
   },
   removePremium(userId) {
-    const dbSettings = getDbSettings();
+    const dbSettings = Settings.getSettings();
     return this.updateOne({ userId }, {
       $set: {
         isPremium: false,

@@ -7,7 +7,7 @@
 // ─── Info src/models/User/schema.js ──────────────────────────────────
 
 import mongoose from 'mongoose';
-import { getDbSettings } from '../../lib/settingsManager.js';
+import { Settings } from '../../../database/index.js';
 
 const userSchema = new mongoose.Schema({
   userId: {
@@ -116,7 +116,7 @@ const userSchema = new mongoose.Schema({
 
 userSchema.pre('save', function (next) {
   if (this.isNew || this.isModified('isPremium')) {
-    const dbSettings = getDbSettings();
+    const dbSettings = Settings.getSettings();
     this.limit.current = this.isPremium ? dbSettings.limitCountPrem : dbSettings.limitCount;
     this.limitgame.current = this.isPremium ? dbSettings.limitCountPrem : dbSettings.limitGame;
   }

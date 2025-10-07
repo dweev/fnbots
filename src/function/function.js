@@ -22,8 +22,7 @@ import ffmpeg from '@ts-ffmpeg/fluent-ffmpeg';
 import { tmpDir } from '../lib/tempManager.js';
 import { pluginCache } from '../lib/plugins.js';
 import { runJob } from '../worker/worker_manager.js';
-import { getDbSettings } from '../lib/settingsManager.js';
-import { StoreMessages, User, StoreGroupMetadata, mongoStore } from '../../database/index.js';
+import { StoreMessages, User, StoreGroupMetadata, mongoStore, Settings } from '../../database/index.js';
 
 let fuse;
 let allCmds           = [];
@@ -496,7 +495,7 @@ export async function getBuffer(url, options = {}) {
   }
 };
 export async function writeExif(media, data) {
-  const dbSettings = getDbSettings();
+  const dbSettings = Settings.getSettings();
   const fileType = await FileType.fromBuffer(media);
   if (!fileType) throw new Error('Error_writeExif_FileType');
   let wMedia;

@@ -64,12 +64,12 @@ export const command = {
             for (let i = start; i <= end; i++) taruhanList.push(i.toString());
           }
         } else if (cleanedItem.includes('>')) {
-          const min = parseInt(cleanedItem.replace('>', ''), 10);
+          const min = parseInt(cleanedItem.replace(/>/g, ''), 10);
           if (!isNaN(min) && min < 12) {
             for (let i = min + 1; i <= 12; i++) taruhanList.push(i.toString());
           }
         } else if (cleanedItem.includes('<')) {
-          const max = parseInt(cleanedItem.replace('<', ''), 10);
+          const max = parseInt(cleanedItem.replace(/</g, ''), 10);
           if (!isNaN(max) && max > 1) {
             for (let i = 1; i < max; i++) taruhanList.push(i.toString());
           }

@@ -293,7 +293,7 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
         }
       }
       if (groupData.antilink) {
-        if (body?.includes('chat.whatsapp.com') && !isPrivileged) {
+        if (body?.match(/(chat\.whatsapp\.com)/gi) && !isPrivileged) {
           await fn.sendMessage(toId, { delete: { remoteJid: toId, fromMe: false, id: id, participant: serial } });
           await fn.removeParticipant(toId, serial);
         }

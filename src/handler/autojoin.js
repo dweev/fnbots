@@ -16,7 +16,7 @@ class AutoJoinHandler {
   async handle(params) {
     const { m, fn, dbSettings, body, isSadmin, isMaster, isVIP, user, sReply, User } = params;
     try {
-      if (!body?.match(/(chat.whatsapp.com)/gi)) {
+      if (!body?.match(/(chat\.whatsapp\.com)/gi)) {
         return;
       }
       const inviteCode = this.extractInviteCode(body);

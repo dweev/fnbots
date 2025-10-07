@@ -1,12 +1,10 @@
-logs
-node_modules
-src/session/*.json
+# folder
+build/
+dist/
+logs/
+node_modules/
+venv/
+
+# files
 .env
-oldmain.js
-*.yaml
-flow1.md
-flow2.md
-venv
-fake.js
-server.js
 bench.sh

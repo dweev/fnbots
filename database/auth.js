@@ -159,44 +159,42 @@ const removeBatch = async (keys) => {
 };
 
 const backupLIDMapping = async (id, value) => {
-  return executeWithDedup(`backup:${id}:${value}`, async () => {
-    try {
-      let phoneNumber, lid;
-      if (id.endsWith('_reverse')) {
-        const lidNumber = id.replace('_reverse', '');
-        lid = lidNumber.includes('@') ? lidNumber : `${lidNumber}@lid`;
-        phoneNumber = value ? (value.includes('@') ? value : `${value}@s.whatsapp.net`) : null;
-      } else {
-        phoneNumber = id.includes('@') ? id : `${id}@s.whatsapp.net`;
-        lid = value ? (value.includes('@') ? value : `${value}@lid`) : null;
-      }
-      if (!phoneNumber || !lid) {
-        return false;
-      }
-      const existingByJid = await StoreContact.findOne({ jid: phoneNumber }).lean();
-      const existingByLid = lid ? await StoreContact.findOne({ lid: lid }).lean() : null;
-      if (existingByJid && existingByLid && existingByJid._id.toString() !== existingByLid._id.toString()) {
-        await StoreContact.deleteOne({ _id: existingByLid._id });
-      }
-      await StoreContact.findOneAndUpdate(
-        { jid: phoneNumber },
-        {
-          $set: {
-            lid: lid,
-            lastUpdated: new Date()
-          }
-        },
-        {
-          upsert: true,
-          new: true
-        }
-      );
-      return true;
-    } catch (error) {
-      await log(`Failed to backup LID mapping: ${error.message}`, true);
+  try {
+    let phoneNumber, lid;
+    if (id.endsWith('_reverse')) {
+      const lidNumber = id.replace('_reverse', '');
+      lid = lidNumber.includes('@') ? lidNumber : `${lidNumber}@lid`;
+      phoneNumber = value ? (value.includes('@') ? value : `${value}@s.whatsapp.net`) : null;
+    } else {
+      phoneNumber = id.includes('@') ? id : `${id}@s.whatsapp.net`;
+      lid = value ? (value.includes('@') ? value : `${value}@lid`) : null;
+    }
+    if (!phoneNumber || !lid) {
       return false;
     }
-  });
+    const existingByJid = await StoreContact.findOne({ jid: phoneNumber }).lean();
+    const existingByLid = lid ? await StoreContact.findOne({ lid: lid }).lean() : null;
+    if (existingByJid && existingByLid && existingByJid._id.toString() !== existingByLid._id.toString()) {
+      await StoreContact.deleteOne({ _id: existingByLid._id });
+    }
+    await StoreContact.findOneAndUpdate(
+      { jid: phoneNumber },
+      {
+        $set: {
+          lid: lid,
+          lastUpdated: new Date()
+        }
+      },
+      {
+        upsert: true,
+        new: true
+      }
+    );
+    return true;
+  } catch (error) {
+    await log(`Failed to backup LID mapping: ${error.message}`, true);
+    return false;
+  }
 };
 
 const validateAndMigrateSession = async (fromJid, toJid) => {
@@ -280,15 +278,10 @@ const storeLIDMapping = async (lid, phoneNumber, autoMigrate = true) => {
 };
 
 export default async function AuthStore() {
-  let credsCache = (await readData(REDIS_PREFIX.CREDS)) || initAuthCreds();
+  const creds = (await readData(REDIS_PREFIX.CREDS)) || initAuthCreds();
   return {
     state: {
-      get creds() {
-        return credsCache;
-      },
-      set creds(newCreds) {
-        credsCache = newCreds;
-      },
+      creds,
       keys: {
         get: async (type, ids) => {
           try {
@@ -367,17 +360,9 @@ export default async function AuthStore() {
           }
         },
         set: async (data) => {
-          const locks = [];
           const writeItems = {};
           const removeKeys = [];
           try {
-            for (const category in data) {
-              for (const id in data[category]) {
-                const key = `${category}-${id}`;
-                const releaseLock = await acquireRedisLock(key);
-                locks.push({ key, release: releaseLock });
-              }
-            }
             for (const category in data) {
               for (const id in data[category]) {
                 const value = data[category][id];
@@ -409,26 +394,18 @@ export default async function AuthStore() {
           } catch (error) {
             await log(`Failed to set keys in Redis: ${error.message}`, true);
             throw error;
-          } finally {
-            for (const { key, release } of locks) {
-              try {
-                await release();
-              } catch (releaseError) {
-                await log(`Failed to release lock for ${key}: ${releaseError.message}`, true);
-              }
-            }
           }
         },
       },
     },
     saveCreds: async () => {
-      const releaseLock = await acquireRedisLock('creds');
+      const releaseLock = await acquireRedisLock('creds', 10);
       try {
-        const success = await writeData(REDIS_PREFIX.CREDS, credsCache);
-        if (!success) {
-          throw new Error('Failed to save credentials');
-        }
+        const success = await writeData(REDIS_PREFIX.CREDS, creds);
         return success;
+      } catch (error) {
+        await log(`Failed to save credentials: ${error.message}`, true);
+        return false;
       } finally {
         await releaseLock();
       }
@@ -452,8 +429,9 @@ export default async function AuthStore() {
           }
         }
         await log(`Session cleared from Redis. Deleted ${keysToDelete.length} keys.`);
-        credsCache = initAuthCreds();
-        await writeData(REDIS_PREFIX.CREDS, credsCache);
+        Object.keys(creds).forEach(key => delete creds[key]);
+        Object.assign(creds, initAuthCreds());
+        await writeData(REDIS_PREFIX.CREDS, creds);
         return true;
       } catch (error) {
         await log(`Failed to clear session from Redis: ${error.message}`, true);

@@ -21,7 +21,7 @@ export const command = {
       await Whitelist.clearAll();
       await reactDone();
     } else if (subcmd === "add") {
-      if (target.match(/(chat.whatsapp.com)/gi)) {
+      if (target.match(/(chat\.whatsapp\.com)/gi)) {
         const inviteCode = target.split("https://chat.whatsapp.com/")[1];
         const { id } = await fn.groupGetInviteInfo(inviteCode);
         await Whitelist.addToWhitelist(id, 'group');

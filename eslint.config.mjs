@@ -8,8 +8,9 @@
 
 import js from "@eslint/js";
 import globals from "globals";
-import pluginImport from "eslint-plugin-import";
 import { defineConfig } from "eslint/config";
+import pluginImport from "eslint-plugin-import";
+import pluginSecurity from "eslint-plugin-security";
 
 export default defineConfig([
   {
@@ -17,10 +18,15 @@ export default defineConfig([
     ignores: [
       "node_modules/**",
       "venv/**",
-      "eslint.config.{js,mjs}"
+      "eslint.config.{js,mjs}",
     ],
-    plugins: { import: pluginImport },
-    extends: [js.configs.recommended],
+    plugins: {
+      import: pluginImport,
+      security: pluginSecurity,
+    },
+    extends: [
+      js.configs.recommended,
+    ],
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "module",
@@ -42,6 +48,8 @@ export default defineConfig([
       "semi": ["error", "always"],
       "import/no-unresolved": "error",
       "import/no-absolute-path": "error",
+      "security/detect-eval-with-expression": "error",
+      "security/detect-unsafe-regex": "warn",
     },
   },
 ]);

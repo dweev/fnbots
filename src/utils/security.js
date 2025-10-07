@@ -11,7 +11,7 @@ import { getContentType } from 'baileys';
 const RLO_RE = /\u202E/;
 const NULL_RE = /\\u0000/;
 const EMOJI_UNICODE_RE = /\p{Emoji}/u;
-const EMOJI_RE = /[\u{1F000}-\u{1FAFF}]/u;
+const EMOJI_RE = /[\uD800-\uDBFF][\uDC00-\uDFFF]/;
 const ZW_RE = /[\u200B-\u200D\u2060\u3164]/;
 
 export function isBug(protoMsg) {

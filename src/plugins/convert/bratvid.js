@@ -24,7 +24,7 @@ export const command = {
       let bgColor = "#FFFFFF";
       let inputText = '';
       const stickerOptions = { packname: dbSettings.packName, author: dbSettings.packAuthor };
-      const hexColorRegex = /^#([0-9A-F]{3,4}){1,2}$/i;
+      const hexColorRegex = /^#([0-9A-F]{3}|[0-9A-F]{4}|[0-9A-F]{6}|[0-9A-F]{8})$/i;
       if (arg.includes('|')) {
         const parts = arg.split('|');
         const colorArg = parts[0].trim().toLowerCase();

@@ -28,7 +28,7 @@ export const command = {
         bid = saldoAwal;
       } else if (bi0.endsWith('%')) {
         const sanitizedPercent = bi0.replace(',', '.');
-        const percentValue = parseFloat(sanitizedPercent.replace('%', ''));
+        const percentValue = parseFloat(sanitizedPercent.replace(/%/g, ''));
         if (isNaN(percentValue) || percentValue <= 0 || percentValue > 100) return await sReply("Input persen tidak valid (1-100).");
         bid = (saldoAwal * BigInt(Math.floor(percentValue * 100))) / 10000n;
       } else {

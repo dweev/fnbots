@@ -11,6 +11,7 @@ import path from 'path';
 import sharp from 'sharp';
 import axios from 'axios';
 import Fuse from 'fuse.js';
+import crypto from 'crypto';
 import log from '../lib/logger.js';
 import config from '../../config.js';
 import speedTest from 'speedtest-net';
@@ -421,14 +422,9 @@ export function arrayRemove(arr, value) {
   });
 };
 export function randomByte(length = 32) {
-  const chars = '0123456789ABCDEF';
-  let result = '';
-  for (let i = 0; i < length; i++) {
-    const randomIndex = Math.floor(Math.random() * chars.length);
-    result += chars[randomIndex];
-  }
-  return result;
-};
+  const bytes = crypto.randomBytes(Math.ceil(length / 2));
+  return bytes.toString('hex').slice(0, length).toUpperCase();
+}
 export function msgs(a) {
   if (!a) return;
   return a.length >= 10 ? a.slice(0, 40) : a;

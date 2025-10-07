@@ -97,7 +97,7 @@ export const command = {
         tot = saldoAwal;
       } else if (isPercent) {
         const sanitizedPercent = bi0.replace(',', '.');
-        const percentValue = parseFloat(sanitizedPercent.replace('%', ''));
+        const percentValue = parseFloat(sanitizedPercent.replace(/%/g, ''));
         if (isNaN(percentValue) || percentValue <= 0 || percentValue > 100) return await sReply("Input persen tidak valid (1-100).");
         const totalPercent = (saldoAwal * BigInt(Math.floor(percentValue * 100))) / 10000n;
         if (totalPercent === 0n) return await sReply("Jumlah taruhan dari persentase terlalu kecil.");

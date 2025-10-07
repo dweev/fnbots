@@ -346,6 +346,7 @@ The directory structure is designed for a clear separation of concerns, making t
 ├── database/              # DB connection, session management & cache layer
 ├── logs/                  # Activity and error log files
 ├── src/
+│   ├── addon/             # Collection of native adddons built with C/C++ (e.g., ffmpeg processing)
 │   ├── function/          # Collection of feature-specific utility functions
 │   ├── handler/           # Handlers for non-command features (e.g., auto-sticker)
 │   ├── lib/               # Core libraries & business logic (plugin loader, performance)
@@ -422,6 +423,7 @@ The easiest way to set up is by using the `install.sh` script on a fresh Ubuntu 
     * `MONGODB_URI`: Your MongoDB connection string.
     * `OWNER_NUMBER`: JSON array of owner numbers.
     * `GEMINI_API_KEY`: For generative AI features. (Optional) 
+    * `HUGGINGFACE_API_KEY`: For generative AI features. (Optional) 
 
 3.  **Run the Automatic Setup Script**
   Execute the `install.sh` script to automatically install all system dependencies.
@@ -461,6 +463,13 @@ pm2 start ecosystem.config.cjs
 # Monitor logs
 pm2 logs
 ```
+
+-----
+
+### Special Thanks and Credits
+
+- [Baileys](https://github.com/WhiskeySockets/Baileys) — for providing the foundation for WhatsApp Web API implementation.
+- [Liora](https://github.com/naruyaizumi) — for valuable work on native C++ addon integration.
 
 -----
 

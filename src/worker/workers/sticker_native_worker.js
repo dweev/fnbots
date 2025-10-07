@@ -1,3 +1,11 @@
+// ─── Info ────────────────────────────────────────────────────────────
+/*
+* Created with ❤️ and 💦 By FN
+* Follow https://github.com/Terror-Machine
+* Feel Free To Use
+*/
+// ─── Info src/worker/workers/sticker_native_worker.js ────────────────
+
 import { sticker as stickerNative, addExif as addExifNative } from '../../addon/bridge.js';
 import webp from 'node-webpmux';
 

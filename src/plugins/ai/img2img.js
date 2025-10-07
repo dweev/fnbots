@@ -8,7 +8,6 @@
 
 import FileType from 'file-type';
 import config from '../../../config.js';
-import { tmpDir } from '../../lib/tempManager.js';
 import { safetySettings } from '../../function/index.js';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
@@ -56,16 +55,15 @@ export const command = {
         generatedText += part.text;
       }
       if (part.inlineData) {
-        finalImagePath = await tmpDir.createTempFileWithContent(Buffer.from(part.inlineData.data, 'base64'), 'jpg');
+        finalImagePath = Buffer.from(part.inlineData.data, 'base64');
         imageGenerated = true;
       }
     }
     if (!imageGenerated && !generatedText) return await sReply('AI tidak menghasilkan gambar atau teks yang dapat ditampilkan.');
     if (finalImagePath) {
-      await fn.sendFilePath(toId, dbSettings.autocommand, finalImagePath, { quoted: m });
+      await fn.sendMediaFromBuffer(toId, 'image/jpeg', finalImagePath, dbSettings.autocommand, m);
     } else if (generatedText) {
       await sReply(generatedText);
     }
-    await tmpDir.deleteFile(finalImagePath);
   }
 };

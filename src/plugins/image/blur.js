@@ -7,7 +7,7 @@
 // ─── Info ────────────────────────────────
 
 import fs from 'fs-extra';
-import { saveFile, blur } from '../../function/index.js';
+import { blur } from '../../function/index.js';
 
 export const command = {
   name: 'blur',
@@ -22,7 +22,6 @@ export const command = {
       return num;
     })();
     let bufferMedia;
-    const caption = dbSettings.autocommand;
     if (m.message?.imageMessage) {
       bufferMedia = await fn.getMediaBuffer(m.message);
     } else if (quotedMsg?.imageMessage) {
@@ -41,8 +40,6 @@ export const command = {
     }
     if (!bufferMedia) return await sReply(`Gagal mendapatkan media.`);
     const resBuffer = await blur(bufferMedia, kontol);
-    const tempFilePath = await saveFile(resBuffer, "blur-in", 'jpg');
-    await fn.sendFilePath(toId, caption, tempFilePath, { quoted: m });
-    await fs.unlink(tempFilePath);
+    await fn.sendMediaFromBuffer(toId, 'image/jpeg', resBuffer, dbSettings.autocommand, m);
   }
 };

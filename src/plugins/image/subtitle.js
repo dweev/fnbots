@@ -7,7 +7,7 @@
 // ─── Info ────────────────────────────────
 
 import fs from 'fs-extra';
-import { subtitle, saveFile } from '../../function/index.js';
+import { subtitle } from '../../function/index.js';
 
 export const command = {
   name: 'subtitle',
@@ -33,8 +33,6 @@ export const command = {
     }
     if (!bufferMedia) return await sReply(`Gagal mendapatkan media.`);
     const resBuffer = await subtitle(bufferMedia, arg);
-    const tempFilePath = await saveFile(resBuffer, "subtitle-in", 'jpg');
-    await fn.sendFilePath(toId, dbSettings.autocommand, tempFilePath, { quoted: m });
-    await fs.unlink(tempFilePath);
+    await fn.sendMediaFromBuffer(toId, 'image/jpeg', resBuffer, dbSettings.autocommand, m);
   }
 };

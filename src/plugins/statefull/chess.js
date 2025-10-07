@@ -8,8 +8,7 @@
 
 
 import { Chess } from 'chess.js';
-import { tmpDir } from '../../lib/tempManager.js';
-import { generateBoardImage, saveFile } from '../../function/index.js';
+import { generateBoardImage } from '../../function/index.js';
 
 export const command = {
   name: 'chess',
@@ -46,9 +45,7 @@ export const command = {
     caption += `Giliran Kamu untuk bergerak. Sesi ini akan berakhir otomatis dalam 15 menit.\n`;
     caption += `Ketik gerakan Kamu langsung di chat.\n`;
     caption += `Format: <dari> <ke> (Contoh: e2 e4)`;
-    const outputPath = await saveFile(boardBuffer, "g-chess", 'jpg');
-    await fn.sendFilePath(toId, caption, outputPath, { quoted: m });
-    await tmpDir.deleteFile(outputPath);
+    await fn.sendMediaFromBuffer(toId, 'image/jpeg', boardBuffer, caption, m);
     await user.addXp();
   }
 };

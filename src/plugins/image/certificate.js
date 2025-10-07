@@ -9,7 +9,6 @@
 import fs from 'fs-extra';
 import dayjs from '../../utils/dayjs.js';
 import { createCanvas, loadImage } from 'canvas';
-import { saveFile } from '../../function/index.js';
 
 export const command = {
   name: 'certificate',
@@ -31,8 +30,6 @@ export const command = {
     ctx.fillText(name, 518, 419);
     ctx.fillText(dayjs().format('MM/DD/YYYY'), 309, 503);
     const resBuffer = canvas.toBuffer();
-    const tempFilePath = await saveFile(resBuffer, "certificate-in", 'jpg');
-    await fn.sendFilePath(toId, dbSettings.autocommand, tempFilePath, { quoted: m });
-    await fs.unlink(tempFilePath);
+    await fn.sendMediaFromBuffer(toId, 'image/jpeg', resBuffer, dbSettings.autocommand, m);
   }
 };

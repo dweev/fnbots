@@ -6,7 +6,6 @@
 */
 // ─── Info ────────────────────────────────
 
-import { tmpDir } from '../../lib/tempManager.js';
 import { generateFakeChatIphone } from 'generator-fake';
 import { formatTimestampToHourMinute } from '../../function/index.js';
 
@@ -28,8 +27,6 @@ export const command = {
       chatTime: formatTimestampToHourMinute(m.timestamp),
       statusBarTime: "11:02"
     });
-    const tmpImagePath = await tmpDir.createTempFileWithContent(resultBuffer, 'jpg');
-    await fn.sendFilePath(toId, dbSettings.autocommand, tmpImagePath, { quoted: m });
-    await tmpDir.deleteFile(tmpImagePath);
+    await fn.sendMediaFromBuffer(toId, 'image/jpeg', resultBuffer, dbSettings.autocommand, m);
   }
 };

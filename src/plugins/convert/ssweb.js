@@ -6,7 +6,6 @@
 */
 // ─── Info ────────────────────────────────
 
-import { tmpDir } from '../../lib/tempManager.js';
 import { screenshotWeb } from '../../utils/screenshots.js';
 
 export const command = {
@@ -28,8 +27,6 @@ export const command = {
       }
       const buffer = await screenshotWeb(url, options);
       if (!buffer) return await sReply(`Error! silakan coba lagi beberapa tahun lagi?`);
-      const outputPath = await tmpDir.createTempFileWithContent(buffer, 'jpg');
-      await fn.sendFilePath(toId, dbSettings.autocommand, outputPath, { quoted: m });
-      await tmpDir.deleteFile(outputPath);
+      await fn.sendMediaFromBuffer(toId, 'image/jpeg', buffer, dbSettings.autocommand, m);
   }
 };

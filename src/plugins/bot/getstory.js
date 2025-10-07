@@ -9,10 +9,9 @@
 import fs from 'fs-extra';
 import { delay } from 'baileys';
 import config from '../../../config.js';
-import { tmpDir } from '../../lib/tempManager.js';
 import { generateFakeStory } from 'generator-fake';
+import { archimed } from '../../function/index.js';
 import { StoreStory } from '../../../database/index.js';
-import { archimed, saveFile } from '../../function/index.js';
 
 export const command = {
   name: 'getstory',
@@ -52,13 +51,11 @@ export const command = {
           username: authorName,
           profilePicBuffer: profilePicBuffer.data
         });
-        const tempImagePath = await saveFile(resBuffer, "getstory", 'jpg');
-        await fn.sendFilePath(toId, '', tempImagePath, { quoted: m });
-        await tmpDir.deleteFile(tempImagePath);
+        await fn.sendMediaFromBuffer(toId, story.mime, resBuffer, story.body || '', m);
       } else if (['imageMessage', 'videoMessage', 'audioMessage'].includes(story.type)) {
         const asu = JSON.parse(JSON.stringify(story));
         const mediaBuffer = await fn.getMediaBuffer(asu.message);
-        await fn.sendMediaByType(toId, story.mime, mediaBuffer, story.body || '', m);
+        await fn.sendMediaFromBuffer(toId, story.mime, mediaBuffer, story.body || '', m);
       }
       await StoreStory.updateOne(
         { userId: targetJid },

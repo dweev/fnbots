@@ -7,7 +7,7 @@
 // ─── Info ────────────────────────────────
 
 import fs from 'fs-extra';
-import { saveFile, approved } from '../../function/index.js';
+import { approved } from '../../function/index.js';
 
 export const command = {
   name: 'approved',
@@ -35,8 +35,6 @@ export const command = {
     }
     if (!bufferMedia) return await sReply(`Gagal mendapatkan media.`);
     const resBuffer = await approved(bufferMedia);
-    const tempFilePath = await saveFile(resBuffer, "approve-in", 'jpg');
-    await fn.sendFilePath(toId, caption, tempFilePath, { quoted: m });
-    await fs.unlink(tempFilePath);
+    await fn.sendMediaFromBuffer(toId, 'image/jpeg', resBuffer, caption, m);
   }
 };

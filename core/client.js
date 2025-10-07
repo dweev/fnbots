@@ -209,11 +209,26 @@ export async function clientBot(fn, dbSettings) {
     const vcard = `BEGIN:VCARD\nVERSION:3.0\nN:${displayName}\nFN:${contactName}\nORG:${contactName}\nTEL;type=CELL;type=VOICE;waid=${nomor}:+${nomor}\nEND:VCARD`;
     await fn.sendMessage(jid, { contacts: { displayName: displayName, contacts: [{ vcard }] } }, createQuotedOptions(quoted));
   };
-  fn.sendMediaByType = async (jid, mime, dataBuffer, caption, quoted, options = {}) => {
-    if (!mime) {
-      return await fn.sendMessage(jid, { document: dataBuffer, mimetype: 'application/octet-stream', fileName: 'file', caption, ...options }, createQuotedOptions(quoted, options));
+  fn.sendMediaFromBuffer = async (jid, mime, dataBuffer, caption, quoted, options = {}) => {
+    let imageBuffer;
+    if (typeof dataBuffer === 'string' && dataBuffer.startsWith('data:image')) {
+      const base64Data = dataBuffer.split(';base64,').pop();
+      imageBuffer = Buffer.from(base64Data, 'base64');
+    } else if (Buffer.isBuffer(dataBuffer)) {
+      imageBuffer = dataBuffer;
+    } else {
+      throw new Error('Input tidak valid. Harap berikan Buffer atau string Base64.');
     }
-    const messageContent = createMediaMessage(mime, dataBuffer, caption, options);
+    if (!mime) {
+      return await fn.sendMessage(jid, {
+        document: imageBuffer,
+        mimetype: 'application/octet-stream',
+        fileName: 'file',
+        caption,
+        ...options
+      }, createQuotedOptions(quoted, options));
+    }
+    const messageContent = createMediaMessage(mime, imageBuffer, caption, options);
     return await fn.sendMessage(jid, messageContent, createQuotedOptions(quoted, options));
   };
   fn.getMediaBuffer = async (message) => {
@@ -277,7 +292,7 @@ export async function clientBot(fn, dbSettings) {
         headers: { 'User-Agent': config.security.userAgent }
       });
       const mime = await detectMimeType(res.data, res.headers);
-      return await fn.sendMediaByType(jid, mime, res.data, caption, quoted, options);
+      return await fn.sendMediaFromBuffer(jid, mime, res.data, caption, quoted, options);
     } catch (error) {
       throw error;
     }
@@ -288,7 +303,7 @@ export async function clientBot(fn, dbSettings) {
         const [meta, data] = url.split(',');
         const mime = meta.match(/:(.*?);/)[1];
         const buffer = Buffer.from(data, 'base64');
-        return await fn.sendMediaByType(jid, mime, buffer, caption, quoted, options);
+        return await fn.sendMediaFromBuffer(jid, mime, buffer, caption, quoted, options);
       }
       const MAX_FILE_SIZE_BYTES = config.performance.maxFileSize;
       const headResponse = await axios({
@@ -307,7 +322,7 @@ export async function clientBot(fn, dbSettings) {
         headers: { 'User-Agent': config.security.userAgent }
       });
       const mimeType = await detectMimeType(dataResponse.data, dataResponse.headers);
-      return await fn.sendMediaByType(jid, mimeType, dataResponse.data, caption, quoted, options);
+      return await fn.sendMediaFromBuffer(jid, mimeType, dataResponse.data, caption, quoted, options);
     } catch (error) {
       throw error;
     }

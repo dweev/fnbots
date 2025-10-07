@@ -7,7 +7,7 @@
 // ─── Info ────────────────────────────────
 
 import fs from 'fs-extra';
-import { saveFile, glitch } from '../../function/index.js';
+import { glitch } from '../../function/index.js';
 
 export const command = {
   name: 'glitch',
@@ -16,7 +16,6 @@ export const command = {
   isCommandWithoutPayment: true,
   execute: async ({ fn, m, toId, dbSettings, quotedMsg, mentionedJidList, sReply }) => {
     let bufferMedia;
-    const caption = dbSettings.autocommand;
     if (m.message?.imageMessage) {
       bufferMedia = await fn.getMediaBuffer(m.message);
     } else if (quotedMsg?.imageMessage) {
@@ -35,8 +34,6 @@ export const command = {
     }
     if (!bufferMedia) return await sReply(`Gagal mendapatkan media.`);
     const resBuffer = await glitch(bufferMedia);
-    const tempFilePath = await saveFile(resBuffer, "glitch-in", 'jpg');
-    await fn.sendFilePath(toId, caption, tempFilePath, { quoted: m });
-    await fs.unlink(tempFilePath);
+    await fn.sendMediaFromBuffer(toId, 'image/jpeg', resBuffer, dbSettings.autocommand, m);
   }
 };

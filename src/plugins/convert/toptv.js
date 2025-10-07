@@ -6,8 +6,6 @@
 */
 // ─── Info ────────────────────────────────
 
-import { tmpDir } from '../../lib/tempManager.js';
-
 export const command = {
   name: 'toptv',
   category: 'convert',
@@ -18,8 +16,6 @@ export const command = {
     const mimeType = targetMsg?.videoMessage?.mimetype;
     if (!mimeType) return await sReply('Balas sebuah video, atau kirim video dengan caption perintah ini.');
     const mediaData = await fn.getMediaBuffer(targetMsg);
-    const tmpPath = await tmpDir.createTempFileWithContent(mediaData, 'mp4');
-    await fn.sendFilePath(toId, dbSettings.autocommand, tmpPath, { quoted: m, ptv: true });
-    await tmpDir.deleteFile(tmpPath);
+    await fn.sendMediaFromBuffer(toId, 'video/mp4', mediaData, dbSettings.autocommand, m);
   }
 };

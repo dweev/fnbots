@@ -8,7 +8,6 @@
 
 import fs from 'fs-extra';
 import { createCanvas, loadImage } from 'canvas';
-import { saveFile } from '../../function/index.js';
 
 export const command = {
   name: 'license',
@@ -27,8 +26,6 @@ export const command = {
     ctx.font = '180px License Plate';
     ctx.fillText(text.toUpperCase(), base.width / 2, base.height / 2, 700);
     const resBuffer = canvas.toBuffer();
-    const tempFilePath = await saveFile(resBuffer, "license-in", 'jpg');
-    await fn.sendFilePath(toId, dbSettings.autocommand, tempFilePath, { quoted: m });
-    await fs.unlink(tempFilePath);
+    await fn.sendMediaFromBuffer(toId, 'image/jpeg', resBuffer, dbSettings.autocommand, m);
   }
 };

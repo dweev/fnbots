@@ -8,7 +8,7 @@
 
 import fs from 'fs-extra';
 import { createCanvas, loadImage } from 'canvas';
-import { saveFile, wrapText } from '../../function/index.js';
+import { wrapText } from '../../function/index.js';
 
 export const command = {
   name: 'alert',
@@ -28,8 +28,6 @@ export const command = {
     text = text.length > 3 ? `${text.slice(0, 3).join('\n')}...` : text.join('\n');
     ctx.fillText(text, 48, 178);
     const resBuffer = canvas.toBuffer();
-    const tempFilePath = await saveFile(resBuffer, "alert-in", 'jpg');
-    await fn.sendFilePath(toId, dbSettings.autocommand, tempFilePath, { quoted: m });
-    await fs.unlink(tempFilePath);
+    await fn.sendMediaFromBuffer(toId, 'image/jpeg', resBuffer, dbSettings.autocommand, m);
   }
 };

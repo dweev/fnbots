@@ -15,10 +15,17 @@ export default async function groupParticipantsUpdate({ id, participants, action
   log(`Event: group-participants.update | Aksi: ${action} | Grup: ${id}`);
   try {
     const botJid = jidNormalizedUser(fn.user.id);
+    const getUserId = (participant) => {
+      if (typeof participant === 'string') {
+        return participant;
+      }
+      return participant.id || participant.phoneNumber;
+    };
     switch (action) {
       case 'add': {
         let isBotAdded = false;
-        for (const userId of participants) {
+        for (const participant of participants) {
+          const userId = getUserId(participant);
           const addedMemberJid = userId.endsWith('@lid') ?
             await mongoStore.findJidByLid(userId) : jidNormalizedUser(userId);
           if (addedMemberJid && addedMemberJid === botJid) {
@@ -40,7 +47,8 @@ export default async function groupParticipantsUpdate({ id, participants, action
           const groupData = await Group.findOne({ groupId: id }).lean();
           if (groupData?.welcome?.state) {
             const metadata = await mongoStore.getGroupMetadata(id);
-            for (const userId of participants) {
+            for (const participant of participants) {
+              const userId = getUserId(participant);
               let newMemberJid;
               if (userId.endsWith('@lid')) {
                 newMemberJid = await mongoStore.findJidByLid(userId);
@@ -65,7 +73,8 @@ export default async function groupParticipantsUpdate({ id, participants, action
       }
       case 'remove': {
         let isBotRemoved = false;
-        for (const userId of participants) {
+        for (const participant of participants) {
+          const userId = getUserId(participant);
           const leaveMemberJid = userId.endsWith('@lid') ? await mongoStore.findJidByLid(userId) : jidNormalizedUser(userId);
           if (leaveMemberJid && leaveMemberJid === botJid) {
             isBotRemoved = true;
@@ -81,7 +90,8 @@ export default async function groupParticipantsUpdate({ id, participants, action
           const groupData = await Group.findOne({ groupId: id }).lean();
           if (groupData?.leave?.state) {
             const metadata = await mongoStore.getGroupMetadata(id);
-            for (const userId of participants) {
+            for (const participant of participants) {
+              const userId = getUserId(participant);
               let leaveMemberJid;
               if (userId.endsWith('@lid')) {
                 leaveMemberJid = await mongoStore.findJidByLid(userId);
@@ -108,7 +118,8 @@ export default async function groupParticipantsUpdate({ id, participants, action
       case 'promote':
       case 'demote': {
         let isBotAffected = false;
-        for (const userId of participants) {
+        for (const participant of participants) {
+          const userId = getUserId(participant);
           const affectedMemberJid = userId.endsWith('@lid') ? await mongoStore.findJidByLid(userId) : jidNormalizedUser(userId);
           if (affectedMemberJid && affectedMemberJid === botJid) {
             isBotAffected = true;
@@ -123,7 +134,8 @@ export default async function groupParticipantsUpdate({ id, participants, action
           if (currentMetadata && currentMetadata.participants) {
             let metadataChanged = false;
             currentMetadata.participants.forEach(p => {
-              if (participants.includes(p.id)) {
+              const participantIds = participants.map(getUserId);
+              if (participantIds.includes(p.id)) {
                 p.admin = newStatus;
                 metadataChanged = true;
               }

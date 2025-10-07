@@ -2,7 +2,7 @@
   "targets": [
     {
       "target_name": "sticker",
-      "sources": [ "src/sticker.cpp" ],
+      "sources": [ "src/addon/sticker.cpp" ],
       "include_dirs": [
         "<!@(node -p \"require('node-addon-api').include\")"
       ],
@@ -33,7 +33,7 @@
     },
     {
       "target_name": "converter",
-      "sources": [ "src/converter.cpp" ],
+      "sources": [ "src/addon/converter.cpp" ],
       "include_dirs": [
         "<!@(node -p \"require('node-addon-api').include\")"
       ],

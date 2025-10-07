@@ -1,16 +1,17 @@
 import path from "path";
 import { fileURLToPath } from "url";
 import { createRequire } from "module";
+import { Settings } from '../../database/index.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
 
 function loadAddon(name) {
   try {
-    return require(path.join(__dirname, `../build/Release/${name}.node`));
+    return require(path.join(__dirname, `../../build/Release/${name}.node`));
   } catch {
     try {
-      return require(path.join(__dirname, `../build/Debug/${name}.node`));
+      return require(path.join(__dirname, `../../build/Debug/${name}.node`));
     } catch {
       throw new Error(
         `${name} addon belum terbuild. Jalankan 'npm run build'.`,
@@ -41,6 +42,7 @@ export function addExif(buffer, meta = {}) {
 }
 
 export function sticker(buffer, options = {}) {
+  const dbSettings = Settings.getSettings();
   if (!Buffer.isBuffer(buffer)) {
     throw new Error("sticker() input harus Buffer");
   }
@@ -50,8 +52,8 @@ export function sticker(buffer, options = {}) {
     quality: options.quality ?? 80,
     fps: options.fps ?? 15,
     maxDuration: options.maxDuration ?? 15,
-    packName: options.packName || "",
-    authorName: options.authorName || "",
+    packName: options.packName || dbSettings.packName,
+    authorName: options.authorName || dbSettings.packAuthor,
     emojis: options.emojis || [],
   };
 

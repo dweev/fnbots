@@ -537,7 +537,7 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
         await handleAudioChanger({ m, toId, fn, selfMode, fromBot, runJob, sReply });
       };
       if (dbSettings.autosticker === true) {
-        await handleAutoSticker({ m, toId, fn, runJob, sendRawWebpAsSticker, reactDone });
+        await handleAutoSticker({ m, toId, fn, runJob, reactDone });
       };
       if (dbSettings.chatbot === true) {
         await handleChatbot({ m, toId, fn, dbSettings, body, Media, DatabaseBot, sReply });

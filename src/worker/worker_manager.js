@@ -32,6 +32,29 @@ function createPool() {
   return jobPool;
 }
 
+function deserializeBuffer(data) {
+  if (Buffer.isBuffer(data)) {
+    return data;
+  }
+  if (data && data.type === 'Buffer' && Array.isArray(data.data)) {
+    return Buffer.from(data.data);
+  }
+  if (data instanceof Uint8Array) {
+    return Buffer.from(data);
+  }
+  if (data instanceof ArrayBuffer) {
+    return Buffer.from(data);
+  }
+  if (data && typeof data === 'object') {
+    const keys = Object.keys(data);
+    if (keys.length > 0 && keys.every(k => !isNaN(k))) {
+      console.log('[Worker Manager] Converting object with numeric keys to Buffer');
+      return Buffer.from(Object.values(data));
+    }
+  }
+  return data;
+}
+
 export async function runJob(type, data, options = {}) {
   const { timeout = 30000, retries = 2 } = options;
   if (isShuttingDown) {
@@ -49,7 +72,8 @@ export async function runJob(type, data, options = {}) {
           { signal: controller.signal }
         );
         clearTimeout(timeoutId);
-        return result;
+        const deserializedResult = deserializeBuffer(result);
+        return deserializedResult;
       } finally {
         clearTimeout(timeoutId);
       }

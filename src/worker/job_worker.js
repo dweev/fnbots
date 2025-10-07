@@ -6,21 +6,21 @@
 */
 // ─── Info src/worker/job_worker.js ────────────────
 
-import stickerJob from './jobs/sticker.js';
 import groupImageJob from './jobs/group_image.js';
 import audioChangerJob from './jobs/audio_changer.js';
 import mediaProcessorJob from './jobs/media_processor.js';
 import imageGeneratorJob from './jobs/image_generator.js';
+import stickerNativeJob from './jobs/sticker_native.js';
 
 const jobMap = {
-  sticker: stickerJob,
   groupImage: groupImageJob,
   audioChanger: audioChangerJob,
   mediaProcessor: mediaProcessorJob,
   imageGenerator: imageGeneratorJob,
+  stickerNative: stickerNativeJob,
 };
 
-export default async function(job) {
+export default async function (job) {
   const { type, data } = job;
   const handler = jobMap[type];
   if (!handler) {

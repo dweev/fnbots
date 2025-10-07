@@ -17,7 +17,6 @@ import speedTest from 'speedtest-net';
 import dayjs from '../utils/dayjs.js';
 import { tmpDir } from '../lib/tempManager.js';
 import { pluginCache } from '../lib/plugins.js';
-import { convert as convertNative } from '../addon/bridge.js';
 import { StoreMessages, User, StoreGroupMetadata, mongoStore } from '../../database/index.js';
 
 let fuse;
@@ -477,16 +476,6 @@ export async function getBuffer(url, options = {}) {
   } catch (error) {
     log(`Error: ${error.message}`, true); throw error;
   }
-};
-export function convertAudio(inputBuffer, options = {}) {
-  const outputBuffer = convertNative(inputBuffer, {
-    format: 'opus',
-    ptt: options.ptt,
-  });
-  if (!Buffer.isBuffer(outputBuffer) || outputBuffer.length === 0) {
-    throw new Error('Native audio conversion failed to produce a valid buffer.');
-  }
-  return outputBuffer;
 };
 export async function sendAndCleanupFile(fn, toId, localPath, m, dbSettings) {
   try {

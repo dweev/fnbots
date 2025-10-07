@@ -15,7 +15,8 @@ import log from '../src/lib/logger.js';
 import { mongoStore } from '../database/index.js';
 import { tmpDir } from '../src/lib/tempManager.js';
 import { runJob } from '../src/worker/worker_manager.js';
-import { randomByte, getBuffer, getSizeMedia, convertAudio } from '../src/function/index.js';
+import { convert as convertNative } from '../src/addon/bridge.js';
+import { randomByte, getBuffer, getSizeMedia } from '../src/function/index.js';
 import { MediaValidationError, MediaProcessingError, MediaSizeError } from '../src/lib/errorManager.js';
 import { jidNormalizedUser, generateWAMessage, generateWAMessageFromContent, downloadContentFromMessage, jidDecode, jidEncode, getBinaryNodeChildString, getBinaryNodeChildren, getBinaryNodeChild, proto } from 'baileys';
 
@@ -336,8 +337,20 @@ export async function clientBot(fn, dbSettings) {
         messageContent = { document: { stream: fs.createReadStream(localPath) }, mimetype: mime, fileName, mentions, ...options };
       } else if (mime.startsWith('audio/')) {
         const inputBuffer = await fs.readFile(localPath);
-        const outputBuffer = convertAudio(inputBuffer, { ptt: options?.ptt });
-        messageContent = { audio: outputBuffer, mimetype: 'audio/ogg; codecs=opus', ptt: options?.ptt || true, mentions, ...options };
+        const outputBuffer = convertNative(inputBuffer, {
+          format: 'opus',
+          ptt: options?.ptt
+        });
+        if (!Buffer.isBuffer(outputBuffer) || outputBuffer.length === 0) {
+          throw new Error('Native audio conversion failed to produce a valid buffer.');
+        }
+        messageContent = {
+          audio: outputBuffer,
+          mimetype: 'audio/ogg; codecs=opus',
+          ptt: options?.ptt || true,
+          mentions,
+          ...options
+        };
       } else {
         const streamContent = { stream: fs.createReadStream(localPath) };
         messageContent = createMediaMessage(mime, streamContent, caption, { mentions, fileName, ...options });

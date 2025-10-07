@@ -89,9 +89,6 @@ export class AutoStickerHandler {
       }
     }
   }
-  getMediaType(mime) {
-    return mime.startsWith('image/') ? 'image' : 'video';
-  }
 }
 
 export const handleAutoSticker = async (params) => {

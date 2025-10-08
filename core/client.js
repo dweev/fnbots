@@ -524,8 +524,8 @@ export async function clientBot(fn, dbSettings) {
       profileImagePath: profilePictureUrl
     });
     const outputPath = await tmpDir.createTempFileWithContent(imageBuffer, 'png');
-    const caption = `@${memberNum}\n\n${messageText}`;
-    await fn.sendFilePath(idGroup, caption, outputPath);
+    const formattedMessage = messageText.replace(/@user/g, `@${memberNum}`);
+    await fn.sendFilePath(idGroup, formattedMessage, outputPath);
     await tmpDir.deleteFile(outputPath);
   };
   return fn;

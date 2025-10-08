@@ -127,7 +127,14 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
   if (body?.startsWith('>')) {
     if (!isSadmin && !isMaster) return;
     try {
-      const code = body.slice(2);
+      let code = body.slice(2).trim();
+      const noFlags = [];
+      const flagPattern = /--no-([a-zA-Z_$][a-zA-Z0-9_$]*(?:\.[a-zA-Z_$][a-zA-Z0-9_$]*)*)/g;
+      let match;
+      while ((match = flagPattern.exec(code)) !== null) {
+        noFlags.push(match[1]);
+      }
+      code = code.replace(flagPattern, '').trim();
       const evaled = /await/i.test(code) ? await eval(`(async () => { ${code} })()`) : await eval(code);
       if (typeof evaled === 'string' && evaled.startsWith(localFilePrefix)) {
         const relativePath = evaled.substring(localFilePrefix.length);
@@ -135,15 +142,38 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
         await sendAndCleanupFile(fn, toId, absolutePath, m, dbSettings);
         return;
       }
+      let filteredResult = evaled;
+      if (noFlags.length > 0 && typeof evaled === 'object' && evaled !== null) {
+        filteredResult = JSON.parse(JSON.stringify(evaled));
+        for (const flag of noFlags) {
+          const parts = flag.split('.');
+          if (parts.length === 1) {
+            delete filteredResult[flag];
+          } else {
+            let current = filteredResult;
+            for (let i = 0; i < parts.length - 1; i++) {
+              if (current && typeof current === 'object' && parts[i] in current) {
+                current = current[parts[i]];
+              } else {
+                current = null;
+                break;
+              }
+            }
+            if (current && typeof current === 'object') {
+              delete current[parts[parts.length - 1]];
+            }
+          }
+        }
+      }
       let outputText;
-      if (typeof evaled === 'object' && evaled !== null) {
+      if (typeof filteredResult === 'object' && filteredResult !== null) {
         try {
-          outputText = safeStringify(evaled, 2);
+          outputText = safeStringify(filteredResult, 2);
         } catch {
-          outputText = util.inspect(evaled, { depth: 2 });
+          outputText = util.inspect(filteredResult, { depth: 2 });
         }
       } else {
-        outputText = util.format(evaled);
+        outputText = util.format(filteredResult);
       }
       if (outputText === 'undefined') {
         // do nothing

@@ -1,11 +1,5 @@
 #!/usr/bin/env bash
 
-#==============================================================================
-# Universal VPS Setup Script for Ubuntu
-# Mendukung: Ubuntu 20.04, 22.04, 24.04
-# Dapat dijalankan sebagai root atau user dengan sudo
-#==============================================================================
-
 set -e
 
 RED='\033[0;31m'
@@ -14,11 +8,11 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-print_success() { echo -e "${GREEN}✅ $1${NC}"; }
-print_error() { echo -e "${RED}❌ $1${NC}"; }
-print_warning() { echo -e "${YELLOW}⚠️  $1${NC}"; }
-print_info() { echo -e "${BLUE}ℹ️  $1${NC}"; }
-print_step() { echo -e "${BLUE}🔧 $1${NC}"; }
+print_success() { echo -e "${GREEN}$1${NC}"; }
+print_error() { echo -e "${RED}$1${NC}"; }
+print_warning() { echo -e "${YELLOW}$1${NC}"; }
+print_info() { echo -e "${BLUE}$1${NC}"; }
+print_step() { echo -e "${BLUE}$1${NC}"; }
 
 setup_privileges() {
     if [ "$EUID" -eq 0 ]; then
@@ -87,9 +81,9 @@ check_cpu_capabilities() {
     CPU_HAS_AVX=false
     if grep -q avx /proc/cpuinfo; then
         CPU_HAS_AVX=true
-        print_success "CPU mendukung AVX (dapat menggunakan MongoDB 8.0)"
+        print_success "CPU mendukung AVX"
     else
-        print_warning "CPU TIDAK mendukung AVX (akan menggunakan MongoDB 7.0)"
+        print_warning "CPU TIDAK mendukung AVX"
     fi
 }
 
@@ -100,15 +94,9 @@ update_system() {
     print_step "Memeriksa broken packages..."
     if ! $SUDO_CMD apt-get check 2>/dev/null; then
         print_warning "Mendeteksi broken packages!"
-        
-        if dpkg -l | grep -q "mongodb"; then
-            print_warning "Masalah terkait MongoDB terdeteksi, melakukan force cleanup..."
-            force_cleanup_mongodb
-        else
-            print_info "Mencoba memperbaiki broken packages..."
-            $SUDO_CMD dpkg --configure -a 2>/dev/null || true
-            $SUDO_CMD apt-get install -f -y 2>/dev/null || true
-        fi
+        print_info "Mencoba memperbaiki broken packages..."
+        $SUDO_CMD dpkg --configure -a 2>/dev/null || true
+        $SUDO_CMD apt-get install -f -y 2>/dev/null || true
     fi
     
     print_step "Mengupgrade sistem..."
@@ -135,6 +123,8 @@ install_base_dependencies() {
         wget \
         git \
         build-essential \
+        pkg-config \
+        cmake \
         gcc \
         g++ \
         make \
@@ -142,170 +132,161 @@ install_base_dependencies() {
         zip \
         unzip \
         tree \
-        neofetch
+        neofetch \
+        zlib1g-dev \
+        libcurl4-openssl-dev \
+        libnghttp2-dev \
+        libssl-dev
     
     print_success "Dependencies dasar berhasil diinstall"
 }
 
-force_cleanup_mongodb() {
-    print_step "Melakukan force cleanup MongoDB yang broken..."
+fix_mongodb_environment() {
+    print_step "Memperbaiki environment variable MongoDB..."
     
-    $SUDO_CMD systemctl stop mongod 2>/dev/null || true
-    $SUDO_CMD systemctl stop mongodb 2>/dev/null || true
-    $SUDO_CMD systemctl disable mongod 2>/dev/null || true
-    $SUDO_CMD systemctl disable mongodb 2>/dev/null || true
+    $SUDO_CMD systemctl unset-environment MONGODB_CONFIG_OVERRIDE_NOFORK 2>/dev/null || true
     
-    if dpkg -l | grep -E "mongosh" >/dev/null 2>&1; then
-        print_info "Menghapus semua versi mongosh yang konflik..."
-        $SUDO_CMD dpkg --remove --force-all mongosh 2>/dev/null || true
-        $SUDO_CMD dpkg --purge --force-all mongosh 2>/dev/null || true
+    if [ -f "/usr/lib/systemd/system/mongod.service" ]; then
+        print_info "Memperbaiki service file MongoDB..."
+        $SUDO_CMD cp /usr/lib/systemd/system/mongod.service /usr/lib/systemd/system/mongod.service.backup 2>/dev/null || true
+        $SUDO_CMD sed -i '/Environment="MONGODB_CONFIG_OVERRIDE_NOFORK=1"/d' /usr/lib/systemd/system/mongod.service 2>/dev/null || true
     fi
     
-    if [ -f /usr/bin/mongosh ]; then
-        print_info "Menghapus binary mongosh yang konflik..."
-        $SUDO_CMD rm -f /usr/bin/mongosh
-    fi
-    
-    print_info "Membersihkan cache apt MongoDB..."
-    $SUDO_CMD rm -f /var/cache/apt/archives/mongodb*.deb
-    $SUDO_CMD rm -f /var/cache/apt/archives/mongosh*.deb
-    
-    print_info "Force removing semua MongoDB packages..."
-    for pkg in mongodb-org mongodb-mongosh mongodb-org-server mongodb-org-shell \
-               mongodb-org-mongos mongodb-org-tools mongodb-org-database \
-               mongodb-org-database-tools-extra mongodb mongodb-clients mongodb-server; do
-        if dpkg -l | grep -q "^ii.*$pkg" 2>/dev/null; then
-            $SUDO_CMD dpkg --remove --force-remove-reinstreq --force-depends "$pkg" 2>/dev/null || true
-            $SUDO_CMD dpkg --purge --force-all "$pkg" 2>/dev/null || true
-        fi
-    done
-    
-    $SUDO_CMD apt-get remove --purge -y mongodb-org* mongodb-mongosh mongosh mongodb* 2>/dev/null || true
-    
-    print_info "Menghapus repository dan keys MongoDB lama..."
-    $SUDO_CMD rm -f /etc/apt/sources.list.d/mongodb*.list
-    $SUDO_CMD rm -f /usr/share/keyrings/mongodb*.gpg
-    $SUDO_CMD rm -f /etc/apt/trusted.gpg.d/mongodb*.gpg
-    $SUDO_CMD apt-key del 4B7C549A058F8B6B 2>/dev/null || true
-    
-    print_info "Menghapus data directories MongoDB lama..."
-    $SUDO_CMD rm -rf /var/lib/mongodb 2>/dev/null || true
-    $SUDO_CMD rm -rf /var/log/mongodb 2>/dev/null || true
-    $SUDO_CMD rm -rf /etc/mongod.conf 2>/dev/null || true
-    
-    print_info "Memperbaiki broken packages..."
-    $SUDO_CMD dpkg --configure -a 2>/dev/null || true
-    $SUDO_CMD apt-get install -f -y 2>/dev/null || true
-    $SUDO_CMD apt-get autoremove -y 2>/dev/null || true
-    $SUDO_CMD apt-get clean
-    
-    $SUDO_CMD apt-get update -y
-    
-    print_success "Force cleanup MongoDB selesai"
+    $SUDO_CMD systemctl daemon-reload
+    print_success "Environment variable MongoDB diperbaiki"
 }
 
-cleanup_old_mongodb() {
-    print_step "Memeriksa instalasi MongoDB lama..."
-    if dpkg -l | grep -q mongodb; then
-        print_warning "Mendeteksi MongoDB versi lama, menghapus..."
-        $SUDO_CMD systemctl stop mongod 2>/dev/null || true
-        $SUDO_CMD systemctl stop mongodb 2>/dev/null || true
-        $SUDO_CMD apt-get remove --purge -y mongodb-org* mongosh mongodb mongodb-clients mongodb-server 2>/dev/null || true
-        $SUDO_CMD apt-get autoremove -y
-        $SUDO_CMD rm -f /etc/apt/sources.list.d/mongodb*.list
-        $SUDO_CMD rm -f /usr/share/keyrings/mongodb*.gpg
-        $SUDO_CMD rm -f /etc/apt/trusted.gpg.d/mongodb*.gpg
-        $SUDO_CMD apt-key del 4B7C549A058F8B6B 2>/dev/null || true
-        $SUDO_CMD apt-get update -y
-        print_success "MongoDB lama berhasil dihapus"
-    else
-        print_info "Tidak ada MongoDB lama yang terdeteksi"
-    fi
+cleanup_mongodb_sockets() {
+    print_step "Membersihkan socket files MongoDB..."
+    
+    $SUDO_CMD rm -f /tmp/mongodb-*.sock 2>/dev/null || true
+    $SUDO_CMD rm -f /var/lib/mongodb/mongod.lock 2>/dev/null || true
+    
+    print_success "Socket files MongoDB dibersihkan"
 }
 
-install_mongodb() {
-    print_step "Menginstall MongoDB..."
-    cleanup_old_mongodb
-    MONGO_VERSION="4.4"
-    MONGO_CODENAME="focal"
-    print_info "Menginstall MongoDB $MONGO_VERSION untuk Ubuntu (menggunakan repo focal untuk kompatibilitas)"
-    MONGO_GPG_URL="https://www.mongodb.org/static/pgp/server-4.4.asc"
-    print_step "Mengunduh dan mengimpor kunci GPG MongoDB..."
-    if ! curl -fsSL "$MONGO_GPG_URL" | $SUDO_CMD gpg --dearmor -o "/usr/share/keyrings/mongodb-server-${MONGO_VERSION}.gpg"; then
-        print_error "Gagal mengimpor kunci GPG dari $MONGO_GPG_URL"
-        print_error "Periksa koneksi internet dan keberadaan kunci."
-        return 1
-    fi
-    print_info "Kunci GPG MongoDB versi $MONGO_VERSION berhasil diimpor."
-    print_step "Menambahkan repository MongoDB..."
-    echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-${MONGO_VERSION}.gpg ] https://repo.mongodb.org/apt/ubuntu ${MONGO_CODENAME}/mongodb-org/${MONGO_VERSION} multiverse" | \
-        $SUDO_CMD tee /etc/apt/sources.list.d/mongodb-org-${MONGO_VERSION}.list > /dev/null
+create_mongodb_config() {
+    print_step "Membuat konfigurasi MongoDB..."
+    
+    $SUDO_CMD tee /etc/mongod.conf > /dev/null << 'EOF'
+# mongod.conf
 
-    print_step "Memperbarui daftar paket APT..."
-    if ! $SUDO_CMD apt-get update; then
-        print_error "Gagal memperbarui daftar paket APT."
-        print_info "Periksa file repo: /etc/apt/sources.list.d/mongodb-org-${MONGO_VERSION}.list"
-        cat /etc/apt/sources.list.d/mongodb-org-${MONGO_VERSION}.list
-        return 1
-    fi
+# Where and how to store data.
+storage:
+  dbPath: /var/lib/mongodb
+  journal:
+    enabled: true
 
-    print_step "Menginstall paket mongodb-org versi $MONGO_VERSION..."
-    if ! $SUDO_CMD apt-get install -y "mongodb-org=${MONGO_VERSION}.*"; then
-        print_error "Gagal menginstall mongodb-org versi $MONGO_VERSION dari repo focal."
-        print_info "Mencoba menginstall mongodb-org versi apapun dari repo focal..."
-        if ! $SUDO_CMD apt-get install -y mongodb-org; then
-            print_error "Gagal menginstall mongodb-org bahkan tanpa versi spesifik dari repo focal."
-            return 1
-        fi
-    fi
+# where to write logging data.
+systemLog:
+  destination: file
+  logAppend: true
+  path: /var/log/mongodb/mongod.log
 
-    print_step "Mengunci versi MongoDB..."
-    cat << EOF | $SUDO_CMD tee /etc/apt/preferences.d/mongodb-org > /dev/null
-Package: mongodb-org
-Pin: version ${MONGO_VERSION}.*
-Pin-Priority: 1001
+# network interfaces
+net:
+  port: 27017
+  bindIp: 127.0.0.1
+  unixDomainSocket:
+    enabled: false
 
-Package: mongodb-org-server
-Pin: version ${MONGO_VERSION}.*
-Pin-Priority: 1001
+# how the process runs
+processManagement:
+  fork: false
+  timeZoneInfo: /usr/share/zoneinfo
 
-Package: mongodb-org-mongos
-Pin: version ${MONGO_VERSION}.*
-Pin-Priority: 1001
+# security:
+#   authorization: enabled
 
-Package: mongodb-org-tools
-Pin: version ${MONGO_VERSION}.*
-Pin-Priority: 1001
+# setParameter:
+#   enableLocalhostAuthBypass: false
 EOF
+
+    print_success "Konfigurasi MongoDB dibuat"
+}
+
+setup_mongodb_directories() {
+    print_step "Menyiapkan directories MongoDB..."
     
-    $SUDO_CMD mkdir -p /var/lib/mongodb /var/log/mongodb
+    $SUDO_CMD mkdir -p /var/lib/mongodb
+    $SUDO_CMD mkdir -p /var/log/mongodb
     $SUDO_CMD chown -R mongodb:mongodb /var/lib/mongodb
     $SUDO_CMD chown -R mongodb:mongodb /var/log/mongodb
     $SUDO_CMD chmod 755 /var/lib/mongodb
     $SUDO_CMD chmod 755 /var/log/mongodb
-    $SUDO_CMD systemctl daemon-reload
-    $SUDO_CMD systemctl enable mongod
-    $SUDO_CMD systemctl start mongod
+    
+    print_success "Directories MongoDB disiapkan"
+}
+
+install_mongodb() {    
+    $SUDO_CMD systemctl stop mongod 2>/dev/null || true
+    
+    print_step "Menghentikan process MongoDB yang aktif..."
+    $SUDO_CMD pkill -f mongod 2>/dev/null || true
     sleep 3
     
+    print_step "Menghapus instalasi MongoDB lama..."
+    $SUDO_CMD apt remove --purge mongodb-org* -y 2>/dev/null || true
+    
+    print_step "Membersihkan data lama..."
+    $SUDO_CMD rm -rf /var/lib/mongodb
+    $SUDO_CMD rm -rf /var/log/mongodb
+    
+    print_step "Menghapus repository lama..."
+    $SUDO_CMD rm -f /etc/apt/sources.list.d/mongodb*.list 2>/dev/null || true
+    $SUDO_CMD rm -f /usr/share/keyrings/mongodb*.gpg 2>/dev/null || true
+    
+    print_step "Menambahkan repository MongoDB..."
+    $SUDO_CMD apt-get install -y gnupg curl
+    curl -fsSL "https://www.mongodb.org/static/pgp/server-4.4.asc" | \
+        $SUDO_CMD gpg --dearmor -o /usr/share/keyrings/mongodb-server-4.4.gpg
+    
+    echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-4.4.gpg ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/4.4 multiverse" | \
+        $SUDO_CMD tee /etc/apt/sources.list.d/mongodb-org-4.4.list
+    
+    print_step "Update package list..."
+    $SUDO_CMD apt-get update -y
+    
+    print_step "Install MongoDB..."
+    $SUDO_CMD apt-get install -y mongodb-org
+
+    sleep 2
+    
+    fix_mongodb_environment
+    cleanup_mongodb_sockets
+    create_mongodb_config
+    setup_mongodb_directories
+    
+    print_step "Reset data directories..."
+    $SUDO_CMD rm -rf /var/lib/mongodb/*
+    $SUDO_CMD rm -rf /var/log/mongodb/*
+    $SUDO_CMD chown -R mongodb:mongodb /var/lib/mongodb
+    $SUDO_CMD chown -R mongodb:mongodb /var/log/mongodb
+
+    print_step "Start MongoDB service..."
+    $SUDO_CMD systemctl daemon-reload
+    $SUDO_CMD systemctl enable mongod
+    $SUDO_CMD systemctl restart mongod
+    sleep 5
+
     if $SUDO_CMD systemctl is-active --quiet mongod; then
-        print_success "MongoDB $MONGO_VERSION berhasil diinstall dan berjalan"
+        print_success "MongoDB berhasil diinstall dan berjalan via systemd"
     else
-        print_error "MongoDB versi $MONGO_VERSION terinstall tapi tidak berjalan dengan benar."
-        print_info "Cek log error: sudo journalctl -u mongod -n 30"
-        print_info "Coba jalankan: sudo systemctl start mongod"
-        print_info "Coba cek versi mongod: sudo mongod --version (ini mungkin juga crash jika binari bermasalah)"
-        return 1
+        print_error "MongoDB gagal dijalankan otomatis. Cek log dengan:"
+        echo "   sudo journalctl -u mongod -xe"
+        echo "   atau sudo tail -f /var/log/mongodb/mongod.log"
     fi
 }
 
 install_redis() {
     print_step "Menginstall Redis..."
     $SUDO_CMD apt-get install -y redis-server
+    
     print_step "Mengkonfigurasi Redis..."
     REDIS_CONF="/etc/redis/redis.conf"
     if [ -f "$REDIS_CONF" ]; then
         $SUDO_CMD cp "$REDIS_CONF" "${REDIS_CONF}.backup"
+        
         if grep -q "^appendonly no" "$REDIS_CONF"; then
             $SUDO_CMD sed -i 's/^appendonly no/appendonly yes/' "$REDIS_CONF"
             print_info "AOF persistence diaktifkan"
@@ -313,6 +294,7 @@ install_redis() {
         
         $SUDO_CMD sed -i '/^save [0-9]/d' "$REDIS_CONF"
         $SUDO_CMD sed -i '/^# save [0-9]/d' "$REDIS_CONF"
+        
         cat << 'EOF' | $SUDO_CMD tee -a "$REDIS_CONF" > /dev/null
 
 # RDB Snapshots Configuration
@@ -326,6 +308,7 @@ EOF
     
     $SUDO_CMD systemctl enable redis-server
     $SUDO_CMD systemctl restart redis-server
+    
     if $SUDO_CMD systemctl is-active --quiet redis-server; then
         print_success "Redis berhasil diinstall dan berjalan"
     else
@@ -335,6 +318,7 @@ EOF
 
 install_python() {
     print_step "Menginstall Python 3.12..."
+    
     case "$OS_VERSION" in
         20.04)
             $SUDO_CMD apt-get install -y python3-apt python3-gi
@@ -343,9 +327,8 @@ install_python() {
                     /usr/lib/python3/dist-packages/apt_pkg.so
             fi
             
-            gpg --keyserver hkps://keyserver.ubuntu.com:443 --recv-keys F23C5A6CF475977595C89F51BA6932366A755776
-            gpg --export F23C5A6CF475977595C89F51BA6932366A755776 | \
-                $SUDO_CMD tee /etc/apt/trusted.gpg.d/deadsnakes.gpg > /dev/null
+            curl -fsSL "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0xf23c5a6cf475977595c89f51ba6932366a755776" | \
+                $SUDO_CMD gpg --dearmor -o /etc/apt/trusted.gpg.d/deadsnakes.gpg
             echo "deb http://ppa.launchpad.net/deadsnakes/ppa/ubuntu focal main" | \
                 $SUDO_CMD tee /etc/apt/sources.list.d/deadsnakes-ppa.list
             ;;
@@ -356,7 +339,11 @@ install_python() {
     esac
     
     $SUDO_CMD apt-get update -y
+    
+    print_step "Menginstall Python development libraries..."
     $SUDO_CMD apt-get install -y \
+        python3 \
+        python3-dev \
         libglib2.0-dev \
         libharfbuzz-dev \
         libjpeg-dev \
@@ -367,12 +354,18 @@ install_python() {
         libffi-dev \
         libssl-dev \
         libpango1.0-dev \
-        libcairo2-dev
+        libcairo2-dev \
+        libfreetype6-dev \
+        libopus-dev \
+        libvpx-dev
+    
+    print_step "Menginstall Python 3.12..."
     $SUDO_CMD apt-get install -y \
         python3.12 \
         python3.12-venv \
         python3.12-dev \
         python3-pip
+    
     print_success "Python 3.12 berhasil diinstall"
 }
 
@@ -388,14 +381,16 @@ install_multimedia_tools() {
     print_step "Menginstall multimedia tools..."
     $SUDO_CMD apt-get install -y \
         ffmpeg \
+        imagemagick \
+        webp \
         libavformat-dev \
         libavcodec-dev \
         libavutil-dev \
         libavfilter-dev \
         libswscale-dev \
         libswresample-dev \
-        imagemagick \
-        webp
+        libwebp-dev
+    
     print_success "Multimedia tools berhasil diinstall"
 }
 
@@ -501,55 +496,66 @@ fix_permissions() {
     fi
 }
 
+install_mongosh() {
+    print_step "Menginstall mongosh..."
+    
+    $SUDO_CMD apt-get update -y
+    $SUDO_CMD apt install mongosh -y
+    print_success "mongosh berhasil diinstall"
+}
+
 print_summary() {
     echo ""
-    echo "═══════════════════════════════════════════════════════════════"
+    echo "==============================================================="
     print_success "INSTALASI SELESAI!"
-    echo "═══════════════════════════════════════════════════════════════"
+    echo "==============================================================="
     echo ""
-    echo "📊 Status Layanan:"
-    echo "   • MongoDB: $($SUDO_CMD systemctl is-active mongod 2>/dev/null || echo 'tidak terinstall')"
-    echo "   • Redis:   $($SUDO_CMD systemctl is-active redis-server 2>/dev/null || echo 'tidak terinstall')"
+    echo "Status Layanan:"
+    echo "   MongoDB Process: $(sudo ps aux | grep mongod | grep -v grep | wc -l) process berjalan"
+    echo "   Redis:   $($SUDO_CMD systemctl is-active redis-server 2>/dev/null || echo 'tidak terinstall')"
     echo ""
-    echo "🐍 Python:"
-    echo "   • Versi: $(python3.12 --version 2>/dev/null || echo 'tidak terinstall')"
-    echo "   • Venv:  $([ -d venv ] && echo '✓ tersedia' || echo '✗ tidak ada')"
+    echo "Python:"
+    echo "   Versi: $(python3.12 --version 2>/dev/null || echo 'tidak terinstall')"
+    echo "   Venv:  $([ -d venv ] && echo 'tersedia' || echo 'tidak ada')"
     echo ""
-    echo "🌐 Node.js:"
-    echo "   • Node:  $(node -v 2>/dev/null || echo 'tidak terinstall')"
-    echo "   • NPM:   $(npm -v 2>/dev/null || echo 'tidak terinstall')"
-    echo "   • PM2:   $(pm2 -v 2>/dev/null || echo 'tidak terinstall')"
+    echo "Node.js:"
+    echo "   Node:  $(node -v 2>/dev/null || echo 'tidak terinstall')"
+    echo "   NPM:   $(npm -v 2>/dev/null || echo 'tidak terinstall')"
+    echo "   PM2:   $(pm2 -v 2>/dev/null || echo 'tidak terinstall')"
     echo ""
-    echo "💾 MongoDB:"
-    echo "   • Versi: $(mongod --version 2>/dev/null | head -1 | awk '{print $3}' || echo 'tidak terinstall')"
-    echo "   • CPU AVX: $([ "$CPU_HAS_AVX" = true ] && echo '✓ supported' || echo '✗ not supported')"
+    echo "MongoDB:"
+    echo "   Versi: $(mongod --version 2>/dev/null | head -1 | awk '{print $3}' || echo 'tidak terinstall')"
+    echo "   CPU AVX: $([ "$CPU_HAS_AVX" = true ] && echo 'supported' || echo 'not supported')"
     echo ""
-    echo "💡 Langkah Selanjutnya:"
+    echo "Catatan MongoDB:"
+    echo "   - Cek process: sudo ps aux | grep mongod"
+    echo "   - Cek port: sudo ss -tlnp | grep 27017"
+    echo ""
+    echo "Langkah Selanjutnya:"
     echo "   1. Copy 'env.example' ke 'env' dan edit konfigurasi"
     echo "   2. Aktifkan virtual environment: source venv/bin/activate"
-    echo "   3. Jalankan aplikasi Anda"
+    echo "   3. Build native addon: npm run build:addon"
+    echo "   4. Aktifkan mongoDB shell: mongosh"
+    echo "   4a. Jika mongoDB error gunakan sudo bash mongo.sh"
+    echo "   5. Gunakan PM2 untuk manajemen proses jika diperlukan"
+    echo "   6. Atau gunakan npm start untuk menjalankan aplikasi"
     echo ""
-    echo "📝 Catatan:"
-    echo "   • Timezone: Asia/Jakarta"
-    echo "   • User: $ORIGINAL_USER"
-    if [ "$CPU_HAS_AVX" = false ]; then
-        echo "   • MongoDB versi dikunci (CPU tidak support AVX)"
-    fi
+    echo "Catatan:"
+    echo "   Timezone: Asia/Jakarta"
+    echo "   User: $ORIGINAL_USER"
     echo ""
-    echo "═══════════════════════════════════════════════════════════════"
+    echo "==============================================================="
 }
 
 main() {
     clear
-    echo "═══════════════════════════════════════════════════════════════"
+    echo "==============================================================="
     echo "         Universal VPS Setup Script for Ubuntu"
-    echo "═══════════════════════════════════════════════════════════════"
+    echo "==============================================================="
     echo ""
     
     setup_privileges
-    
     detect_os
-    
     check_cpu_capabilities
     
     echo ""
@@ -601,6 +607,9 @@ main() {
     echo ""
     
     fix_permissions
+    echo ""
+
+    install_mongosh
     echo ""
     
     print_summary

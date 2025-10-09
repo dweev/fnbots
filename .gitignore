@@ -7,4 +7,5 @@ venv/
 
 # files
 .env
+.vscode/settings.json
 bench.sh

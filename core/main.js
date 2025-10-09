@@ -34,6 +34,30 @@ let authStore;
 global.randomSuffix = randomByte(16);
 global.debugs = false;
 
+async function ensureMongoDBRunning() {
+  const { execSync } = await import('child_process');
+  const { default: waitPort } = await import('wait-port');
+  try {
+    execSync('pgrep mongod', { stdio: 'pipe' });
+    log('MongoDB process is running');
+    await waitPort({ host: 'localhost', port: 27017, timeout: 10000 });
+    log('MongoDB port is ready');
+    return true;
+  } catch {
+    log('Starting MongoDB...');
+    try {
+      execSync('sudo systemctl start mongod', { stdio: 'inherit' });
+    } catch {
+      log('Systemd failed, starting MongoDB manually...');
+      execSync('sudo /root/mongo.sh', { stdio: 'inherit' });
+    }
+    log('Waiting for MongoDB...');
+    await waitPort({ host: 'localhost', port: 27017, timeout: 15000 });
+    log('MongoDB started successfully');
+    return true;
+  }
+}
+
 async function initializeDatabases() {
   try {
     await database.connect();
@@ -148,6 +172,7 @@ function setupWhatsAppEventHandlers(fn) {
 
 async function starts() {
   try {
+    await ensureMongoDBRunning();
     await tmpDir.ensureDirectory();
     await initializeDatabases();
     await loadPlugins(path.join(__dirname, '..', 'src', 'plugins'));

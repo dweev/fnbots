@@ -12,7 +12,7 @@ import { spawn } from 'child_process';
 
 const MAX_RESTART_ATTEMPTS = 5;
 const RESTART_DELAY_MS = 6000;
-const isPm2 = process.env.pm_id !== undefined || process.env.NODE_APP_INSTANCE !== undefined;
+const isPm2 = 'PM2_HOME' in process.env || 'pm_id' in process.env || 'NODE_APP_INSTANCE' in process.env;
 const isSelfRestarted = process.env.RESTARTED_BY_SELF === '1';
 
 function logRestartInfo() {

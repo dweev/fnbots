@@ -6,9 +6,9 @@
 */
 // ─── Info ────────────────────────────────
 
-import axios from 'axios';
 import config from '../../../config.js';
 import { runJob } from '../../worker/worker_manager.js';
+import { fetch as nativeFetch } from '../../addon/bridge.js';
 
 export const command = {
   name: 'sticker',
@@ -21,11 +21,13 @@ export const command = {
     const pack = { packName: name || dbSettings.packName, authorName: author || dbSettings.packAuthor };
     let buffer;
     if (args[0]?.match(/^https?:\/\//)) {
-      const response = await axios.get(args[0], {
-        responseType: 'arraybuffer',
+      const response = await nativeFetch(args[0], {
         timeout: config.performance.axiosTimeout
       });
-      buffer = response.data;
+      if (!response.ok) {
+        return await sReply(`Gagal mengunduh dari URL: ${response.status} ${response.statusText}`);
+      }
+      buffer = await response.arrayBuffer();
     } else {
       const targetMsg = quotedMsg ? m.quoted || m : m.message;
       if (!targetMsg) return await sReply("Balas gambar/video atau kirim media dengan caption .sticker");
@@ -43,8 +45,8 @@ export const command = {
       mediaBuffer: buffer,
       ...pack
     });
-    if (!Buffer.isBuffer(stickerBuffer)) {
-      return await sReply(`Expected Buffer from worker, got ${typeof stickerBuffer}`);
+    if (!Buffer.isBuffer(stickerBuffer) || stickerBuffer.length === 0) {
+      return await sReply('Worker gagal menghasilkan buffer stiker yang valid.');
     }
     await fn.sendMessage(toId, { sticker: stickerBuffer }, { quoted: m });
   }

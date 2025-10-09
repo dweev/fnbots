@@ -6,7 +6,7 @@
 */
 // ─── Info src/utils/obfuscator.js ───────────────
 
-import axios from 'axios';
+import { fetch as nativeFetch } from '../addon/bridge.js';
 import JavaScriptObfuscator from 'javascript-obfuscator';
 
 class ObfsMgr {
@@ -130,21 +130,19 @@ class ObfsMgr {
     let actualCode = code;
     if (typeof code === "string" && code.startsWith("https://")) {
       try {
-        const response = await axios.get(code, {
+        const response = await nativeFetch(code, {
           headers: {
-            Accept: "text/plain, application/javascript, application/json",
-          },
-          validateStatus: (status) => status >= 200 && status < 300,
+            'Accept': 'text/plain, application/javascript, application/json',
+          }
         });
-
-        const contentType = response.headers["content-type"];
+        if (!response.ok) throw new Error(`Failed to fetch code: ${response.status} ${response.statusText}`);
+        const contentType = response.headers.get('content-type');
         if (!contentType || (!contentType.includes("text/") && !contentType.includes("application/javascript") && !contentType.includes("application/json"))) {
           throw new Error(`Invalid Content-Type for ${code}: '${contentType}'. Expected a JavaScript or text file.`);
         }
-        actualCode = response.data;
+        actualCode = await response.text();
       } catch (error) {
-        console.error(`Error fetching code from URL: ${code}`, error.message);
-        throw new Error(`Failed to fetch code from URL: ${error.message}`);
+        throw error;
       }
     }
 

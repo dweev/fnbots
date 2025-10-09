@@ -7,8 +7,6 @@
 // ─── Info core/connection.js ──────────────────
 
 import 'dotenv/config.js';
-import axios from 'axios';
-import process from 'process';
 import readline from 'readline';
 import config from '../config.js';
 import { Boom } from '@hapi/boom';
@@ -17,6 +15,7 @@ import { clientBot } from './client.js';
 import AuthStore from '../database/auth.js';
 import { parsePhoneNumber } from 'awesome-phonenumber';
 import log, { pinoLogger } from '../src/lib/logger.js';
+import { fetch as nativeFetch } from '../src/addon/bridge.js';
 import { restartManager } from '../src/lib/restartManager.js';
 import { Settings, mongoStore, StoreGroupMetadata, OTPSession } from '../database/index.js';
 import { default as makeWASocket, jidNormalizedUser, Browsers, makeCacheableSignalKeyStore, isJidBroadcast, fetchLatestWaWebVersion } from 'baileys';
@@ -44,16 +43,17 @@ async function getBaileysVersion() {
     const { version } = await fetchLatestWaWebVersion();
     return version;
   } catch (error) {
-    await log(`Failed to fetch Baileys version:\n${error}`, true);
-    const { data } = await axios.get("https://raw.githubusercontent.com/wppconnect-team/wa-version/main/versions.json");
+    await log(`Failed to fetch latest Baileys version, using fallback:\n${error.message}`, true);
+    const response = await nativeFetch("https://raw.githubusercontent.com/wppconnect-team/wa-version/main/versions.json");
+    if (!response.ok) throw new Error(`Fallback failed with status: ${response.status}`);
+    const data = await response.json();
     const currentVersion = data.currentVersion;
-    if (!currentVersion) throw new Error("Versi saat ini tidak ditemukan dalam data");
+    if (!currentVersion) throw new Error("Versi saat ini tidak ditemukan dalam data fallback");
     const versionParts = currentVersion.split('.');
-    if (versionParts.length < 3) throw new Error("Format versi tidak valid");
-    const major = parseInt(versionParts[0]);
-    const minor = parseInt(versionParts[1]);
+    if (versionParts.length < 3) throw new Error("Format versi fallback tidak valid");
+    const [major, minor] = versionParts.map(p => parseInt(p));
     const build = parseInt(versionParts[2].split('-')[0]);
-    if (isNaN(major) || isNaN(minor) || isNaN(build)) throw new Error("Komponen versi tidak valid");
+    if (isNaN(major) || isNaN(minor) || isNaN(build)) throw new Error("Komponen versi fallback tidak valid");
     return [major, minor, build];
   }
 };
@@ -90,18 +90,6 @@ export async function createWASocket(dbSettings) {
   fn.storeLIDMapping = authStore.storeLIDMapping;
   fn.getPNForLID = authStore.getPNForLID;
   fn.getLIDForPN = authStore.getLIDForPN;
-
-  fn.ev.on('lid-mapping.update', async ({ lid, pn }) => {
-    try {
-      await log(`LID mapping update received: ${pn} <-> ${lid}`);
-      const success = await fn.storeLIDMapping(lid, pn, true);
-      if (success) {
-        await log(`LID mapping stored and session migrated successfully`);
-      }
-    } catch (error) {
-      await log(`Failed to handle LID mapping update: ${error.message}`, true);
-    }
-  });
 
   if (pairingCode && !phoneNumber && !fn.authState.creds.registered) {
     let numberToValidate = config.botNumber ? config.botNumber : dbSettings.botNumber;

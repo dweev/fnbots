@@ -7,20 +7,24 @@
 // ─── Info src/utils/igdl.js ─────────────────────
 
 import qs from 'qs';
-import axios from 'axios';
 import * as cheerio from 'cheerio';
+import { fetch as nativeFetch } from '../addon/bridge.js';
 
 const ssig = process.env.SESSION_IG_COOKIE;
 
 async function instagramDl(url) {
   try {
-    const { data } = await axios.post('https://yt1s.io/api/ajaxSearch', new URLSearchParams({ q: url, vt: 'instagram' }), {
+    const response = await nativeFetch('https://yt1s.io/api/ajaxSearch', {
+      method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
         'Referer': 'https://yt1s.io/en/instagram-downloader'
-      }
+      },
+      body: new URLSearchParams({ q: url, vt: 'instagram' })
     });
+    if (!response.ok) throw new Error(`yt1s service failed with status: ${response.status}`);
+    const data = await response.json();
     if (data.status !== 'ok' || !data.data) throw new Error('Gagal mengambil data dari layanan.');
     const $ = cheerio.load(data.data);
     const results = [];
@@ -47,12 +51,13 @@ async function instagramDl(url) {
 }
 async function getMediaType(url) {
   try {
-    const response = await axios.head(url, {
+    const response = await nativeFetch(url, {
+      method: 'HEAD',
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36'
       }
     });
-    const contentType = response.headers['content-type'];
+    const contentType = response.headers.get('content-type');
     if (contentType && contentType.includes('video')) return 'video';
     return 'image';
   } catch (error) {
@@ -74,8 +79,8 @@ async function instagramPost(url_media, config = { retries: 5, delay: 1000 }) {
 }
 async function checkRedirect(url) {
   if (url.includes('/share')) {
-    const res = await axios.get(url, { maxRedirects: 5 });
-    return res.request.res.responseUrl;
+    const res = await nativeFetch(url, { method: 'GET' });
+    return res.url;
   }
   return url;
 }
@@ -119,8 +124,11 @@ function getShortcode(url) {
   throw new Error('Shortcode tidak dapat ditemukan dari URL.');
 }
 async function getCSRFToken() {
-  const { headers } = await axios.get('https://www.instagram.com/');
-  const csrfCookie = headers['set-cookie'].find(cookie => cookie.startsWith('csrftoken='));
+  const response = await nativeFetch('https://www.instagram.com/');
+  const setCookieHeader = response.headers.get('set-cookie');
+  if (!setCookieHeader) throw new Error('Header set-cookie tidak ditemukan.');
+  const cookies = Array.isArray(setCookieHeader) ? setCookieHeader : [setCookieHeader];
+  const csrfCookie = cookies.find(cookie => cookie.startsWith('csrftoken='));
   if (!csrfCookie) throw new Error('Token CSRF tidak ditemukan.');
   return csrfCookie.split(';')[0].split('=')[1];
 }
@@ -136,18 +144,27 @@ async function instagramRequest(shortcode, retries, delay) {
       'doc_id': INSTAGRAM_DOCUMENT_ID
     });
     const token = await getCSRFToken();
-    const config = {
-      method: 'post',
-      url: BASE_URL,
+    const response = await nativeFetch(BASE_URL, {
+      method: 'POST',
       headers: {
         'X-CSRFToken': token,
         'Content-Type': 'application/x-www-form-urlencoded',
         'Cookie': `csrftoken=${token};${ssig ? ` sessionid=${ssig};` : ''}`,
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36'
       },
-      data: dataBody
-    };
-    const { data } = await axios.request(config);
+      body: dataBody
+    });
+    if (!response.ok) {
+      const errorCodes = [429, 403];
+      if (errorCodes.includes(response.status) && retries > 0) {
+        const waitTime = parseInt(response.headers.get('retry-after') || delay, 10);
+        await new Promise(res => setTimeout(res, waitTime));
+        return instagramRequest(shortcode, retries - 1, delay * 2);
+      }
+      if (response.status === 404) throw new Error(`Gagal melakukan permintaan: Konten tidak ditemukan (404).`);
+      throw new Error(`Gagal melakukan permintaan Instagram: ${response.statusText}`);
+    }
+    const data = await response.json();
     if (!data.data?.xdt_shortcode_media) {
       throw new Error("Konten tidak ditemukan atau link tidak valid. Pastikan ini adalah link Post/Reel.");
     }

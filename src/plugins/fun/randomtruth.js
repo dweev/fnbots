@@ -6,7 +6,7 @@
 */
 // ─── Info ────────────────────────────────
 
-import axios from 'axios';
+import { fetch as nativeFetch } from '../../addon/bridge.js';
 
 export const command = {
   name: 'randomtruth',
@@ -16,7 +16,9 @@ export const command = {
   aliases: ['random-truth'],
   isCommandWithoutPayment: true,
   execute: async ({ sReply }) => {
-    const { data: body } = await axios.get('https://raw.githubusercontent.com/Terror-Machine/random/master/truth.txt');
+    const response = await nativeFetch('https://raw.githubusercontent.com/Terror-Machine/random/master/truth.txt');
+    if (!response.ok) return await sReply('Gagal mengambil data truth.');
+    const body = await response.text();
     const lines = body.split('\n').filter(x => x.trim());
     const quote = lines[Math.floor(Math.random() * lines.length)];
     await sReply(quote);

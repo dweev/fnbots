@@ -9,9 +9,9 @@
 import os from 'os';
 import util from 'util';
 import fs from 'fs-extra';
-import axios from 'axios';
 import config from '../../../config.js';
 import { exec as cp_exec } from 'child_process';
+import { fetch as nativeFetch } from '../../addon/bridge.js';
 import { waktu, bytesToSize } from '../../function/index.js';
 import { Command, Settings, User } from '../../../database/index.js';
 
@@ -45,9 +45,12 @@ export const command = {
           return cache.get(cacheKey);
         }
         try {
-          const response = await axios.get('https://ipinfo.io/json', { timeout: config.performance.defaultTimeoutMs });
-          cache.set(cacheKey, response, config.performance.maxAgeHours);
-          return response;
+          const response = await nativeFetch('https://ipinfo.io/json', { timeout: config.performance.defaultTimeoutMs });
+          if (!response.ok) throw new Error('Failed to fetch ipinfo');
+          const data = await response.json();
+          const result = { data };
+          cache.set(cacheKey, result);
+          return result;
         } catch {
           return { data: {} };
         }

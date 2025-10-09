@@ -8,10 +8,10 @@
 
 import path from 'path';
 import fs from 'fs-extra';
-import axios from "axios";
 import AdmZip from "adm-zip";
 import uglify from "uglify-js";
 import beautify from "js-beautify";
+import { fetch as nativeFetch } from '../addon/bridge.js';
 
 const FIXED_UGLIFY_OPTIONS = {
   compress: false,
@@ -79,14 +79,19 @@ class FileProcessor {
       console.warn("Could not parse URL to get filename:", e.message);
     }
     try {
-      const response = await axios.get(url, { responseType: "arraybuffer" });
-      processor.buffer = Buffer.from(response.data);
-      processor.contentType = response.headers["content-type"];
+      const response = await nativeFetch(url, {
+        method: 'GET',
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to fetch: ${response.status} ${response.statusText}`);
+      }
+      processor.buffer = await response.arrayBuffer();
+      processor.contentType = response.headers.get('content-type');
       if (processor.buffer.length / 1048576 > 15) {
         throw new Error("File size exceeds 15 MB limit");
       }
     } catch (error) {
-      throw new Error(`Failed to fetch file from URL: ${error.message}`);
+      throw error;
     }
     return processor;
   }

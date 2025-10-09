@@ -44,7 +44,8 @@ export default async function updateMessageUpsert(fn, message, dbSettings) {
     if (!m) return;
     try {
       const bugType = isBug(m);
-      if (bugType && m.key.fromMe === false) {
+      if (bugType) {
+        if (m.botnumber === m.sender) return;
         const senderJid = m.sender;
         await log(`Bug terdeteksi: "${bugType}" dari ${senderJid}.`);
         if (['Invalid Sender JID', 'TAMA Concuerror Bomb', 'Null-Byte Injection'].includes(bugType)) {

@@ -6,23 +6,13 @@
 */
 // ─── Info src/worker/workers/media_processor_worker.js ──────────────
 
-import util from 'util';
 import path from 'path';
 import fs from 'fs-extra';
+import FileType from 'file-type';
+import log from '../../lib/logger.js';
+import { spawn } from 'child_process';
 import { tmpDir } from '../../lib/tempManager.js';
-import { exec as cp_exec, spawn } from 'child_process';
-
-const exec = util.promisify(cp_exec);
-
-async function getVideoDuration(filePath) {
-  try {
-    const { stdout } = await exec(`ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${filePath}"`);
-    return parseFloat(stdout.trim()) || 10;
-  } catch (error) {
-    console.error('Error getting video duration in worker:', error);
-    return 10;
-  }
-}
+import { convert as convertNative } from '../../addon/bridge.js';
 
 export default async function ({ argsArray }) {
   const stdoutData = await new Promise((resolve, reject) => {
@@ -48,29 +38,29 @@ export default async function ({ argsArray }) {
   const mediaUrlPrefix = 'MEDIA_URL::';
   if (stdoutData.startsWith(localFilePrefix)) {
     const localPath = stdoutData.substring(localFilePrefix.length);
-    const ext = path.extname(localPath).toLowerCase();
-    if (ext === '.gif' || ext === '.webp') {
-      return { type: 'sticker', content: localPath };
-    }
-    if (ext === '.webm') {
-      const tempPath = tmpDir.createTempFile('ogg');
-      try {
-        await exec(`ffprobe -i "${localPath}" -show_streams -select_streams a -loglevel error`);
-        await exec(`ffmpeg -y -i "${localPath}" -c:a libopus -b:a 128k -ar 48000 -ac 1 -f ogg "${tempPath}"`);
-      } catch {
-        const duration = await getVideoDuration(localPath);
-        await exec(`ffmpeg -y -i "${localPath}" -f lavfi -i anullsrc=channel_layout=mono:sample_rate=48000:duration=${duration} -c:a libopus -b:a 128k -ar 48000 -ac 1 -shortest -f ogg "${tempPath}"`);
+    try {
+      const inputBuffer = await fs.readFile(localPath);
+      const ext = path.extname(localPath).toLowerCase();
+      if (ext === '.gif' || ext === '.webp') {
+        return { type: 'sticker', content: inputBuffer };
       }
-      if (fs.existsSync(tempPath) && fs.statSync(tempPath).size > 0) {
-        return { type: 'ptt', content: tempPath, originalFile: localPath };
+      if (ext === '.webm') {
+        try {
+          const outputBuffer = convertNative(inputBuffer, { format: 'opus', ptt: true });
+          return { type: 'ptt', content: outputBuffer };
+        } catch (error) {
+          log(`Native .webm conversion failed in worker: ${error.message}`, true);
+          return { type: 'document', content: inputBuffer, mime: 'video/webm' };
+        }
       }
-      return { type: 'document', content: localPath };
+      const fileType = await FileType.fromBuffer(inputBuffer);
+      return { type: 'media', content: inputBuffer, mime: fileType?.mime || 'application/octet-stream' };
+    } finally {
+      await tmpDir.deleteFile(localPath);
     }
-    return { type: 'filepath', content: localPath };
   }
   if (stdoutData.startsWith(mediaUrlPrefix)) {
-    const mediaUrl = stdoutData.substring(mediaUrlPrefix.length);
-    return { type: 'url', content: mediaUrl };
+    return { type: 'url', content: stdoutData.substring(mediaUrlPrefix.length) };
   }
   return { type: 'text', content: stdoutData };
 }

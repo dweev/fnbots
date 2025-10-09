@@ -650,7 +650,11 @@ export async function clientBot(fn, dbSettings) {
       const mime = await detectMimeType(res.data, res.headers);
       return await fn.sendMediaFromBuffer(jid, mime, res.data, caption, quoted, options);
     } catch (error) {
-      throw error;
+      if (error.message.includes('ECONNRESET')) {
+        throw new Error('Gagal mengunduh dari TikTok: Koneksi direset. Coba lagi nanti.');
+      } else {
+        throw error;
+      }
     }
   };
   return fn;

@@ -6,8 +6,6 @@
 */
 // ─── Info ────────────────────────────────
 
-import fs from 'fs-extra';
-import { tmpDir } from '../../lib/tempManager.js';
 import { runJob } from '../../worker/worker_manager.js';
 
 export const command = {
@@ -28,20 +26,15 @@ export const command = {
         break;
       case 'sticker':
         await fn.sendRawWebpAsSticker(toId, result.content, m, { packname: dbSettings.packName, author: dbSettings.packAuthor });
-        await tmpDir.deleteFile(result.content);
         break;
       case 'ptt':
-        await fn.sendMessage(m.chat, { audio: { stream: fs.createReadStream(result.content) }, mimetype: 'audio/ogg; codecs=opus', ptt: true }, { quoted: m });
-        await tmpDir.deleteFile(result.content);
-        await tmpDir.deleteFile(result.originalFile);
+        await fn.sendMessage(m.chat, { audio: result.content, mimetype: 'audio/ogg; codecs=opus', ptt: true }, { quoted: m });
         break;
-      case 'filepath':
-        await fn.sendFilePath(toId, dbSettings.autocommand, result.content, { quoted: m });
-        await tmpDir.deleteFile(result.content);
+      case 'media':
+        await fn.sendMediaFromBuffer(toId, result.mime, result.content, dbSettings.autocommand, m);
         break;
       case 'document':
-        await fn.sendMessage(m.chat, { document: fs.createReadStream(result.content), mimetype: 'video/webm' }, { quoted: m });
-        await tmpDir.deleteFile(result.content);
+        await fn.sendMessage(m.chat, { document: result.content, mimetype: result.mime }, { quoted: m });
         break;
       default:
         await sReply("Tipe hasil tidak dikenali dari worker.");

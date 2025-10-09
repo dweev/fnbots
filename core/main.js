@@ -21,9 +21,10 @@ import startPluginWatcher from '../src/lib/watcherPlugins.js';
 import updateMessageUpsert from '../src/lib/updateMessageUpsert.js';
 import { initializeDbSettings } from '../src/lib/settingsManager.js';
 import { performanceManager } from '../src/lib/performanceManager.js';
+import { randomByte, initializeFuse } from '../src/function/index.js';
 import groupParticipantsUpdate from '../src/lib/groupParticipantsUpdate.js';
+import { updateContact, processContactUpdate } from '../src/lib/contactManager.js';
 import { database, Settings, mongoStore, StoreMessages } from '../database/index.js';
-import { randomByte, updateContact, processContactUpdate, initializeFuse } from '../src/function/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -87,6 +88,17 @@ function setupWhatsAppEventHandlers(fn) {
       await processContactUpdate(contact);
     }
   });
+  fn.ev.on('lid-mapping.update', async ({ lid, pn }) => {
+    try {
+      await log(`LID mapping update received: ${pn} <-> ${lid}`);
+      const success = await fn.storeLIDMapping(lid, pn, true);
+      if (success) {
+        await log(`LID mapping stored and session migrated successfully`);
+      }
+    } catch (error) {
+      await log(`Failed to handle LID mapping update: ${error.message}`, true);
+    }
+  });
   fn.ev.on('messages.upsert', async (message) => {
     await updateMessageUpsert(fn, message, dbSettings);
   });
@@ -108,6 +120,23 @@ function setupWhatsAppEventHandlers(fn) {
             const contactName = contact?.name || contact?.notify || 'Unknown';
             await updateContact(contactJid, { lid: participant.lid, name: contactName });
           }
+        }
+      }
+    }
+  });
+  fn.ev.on('groups.update', async (updates) => {
+    for (const newMeta of updates) {
+      const id = jidNormalizedUser(newMeta.id);
+      await mongoStore.updateGroupMetadata(id, newMeta);
+      if (newMeta.participants?.length) {
+        const participantJids = newMeta.participants.map(p => jidNormalizedUser(p.id));
+        const existingContacts = await mongoStore.getArrayContacts(participantJids);
+        const contactMap = new Map(existingContacts.map(c => [c.jid, c]));
+        for (const participant of newMeta.participants) {
+          const contactJid = jidNormalizedUser(participant.id);
+          const existingContact = contactMap.get(contactJid);
+          const contactName = existingContact?.name || existingContact?.notify || 'Unknown';
+          await updateContact(contactJid, { lid: participant.lid, name: contactName });
         }
       }
     }

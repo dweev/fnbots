@@ -6,7 +6,6 @@
 */
 // ─── Info ────────────────────────────────
 
-import axios from 'axios';
 import { QuoteGenerator } from 'qc-generator-whatsapp';
 import { processAllTextFormatting, formatTimestampToHourMinute } from '../../function/index.js';
 
@@ -17,11 +16,10 @@ export const command = {
   isCommandWithoutPayment: true,
   execute: async ({ fn, m, quotedMsg, serial, arg, sReply, pushname, quotedParticipant, sendRawWebpAsSticker, StoreMessages }) => {
     const isQuotedText = quotedMsg && (quotedMsg?.type === 'extendedTextMessage' || quotedMsg?.type === 'conversation');
-    const getProfilePic = async (fine) => {
+    const getProfilePic = async (jid) => {
       try {
-        const imageUrl = await fn.profilePictureUrl(fine, 'image');
-        const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
-        return Buffer.from(response.data);
+        const imageBuffer = await fn.profileImageBuffer(jid, 'image');
+        return imageBuffer;
       } catch {
         return null;
       }

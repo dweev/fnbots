@@ -24,7 +24,7 @@ export const command = {
       const targetJid = mentionedJidList[0];
       let profilePicBuffer;
       try {
-        profilePicBuffer = await fn.profilePictureUrl(targetJid, "image");
+        profilePicBuffer = await fn.profileImageBuffer(targetJid, "image");
       } catch {
         profilePicBuffer = await fs.readFile('./src/image/default-dp.jpeg');
       }

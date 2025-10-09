@@ -37,13 +37,11 @@ export const command = {
     if (!inputText) return await sReply(`Format salah.\n\nContoh:\n.faketweet [warna] | [teks]\n\nAnda juga bisa membalas pesan.`);
     if (inputText.length > 2048) return await sReply("Teks terlalu panjang!");
     let ppBuffer;
-    let userPP;
     try {
       if (quotedMsg) {
-        userPP = quotedParticipant;
-        ppBuffer = await fn.profilePictureUrl(userPP, 'image');
+        ppBuffer = await fn.profileImageBuffer(quotedParticipant, 'image');
       } else {
-        ppBuffer = await fn.profilePictureUrl(serial, 'image');
+        ppBuffer = await fn.profileImageBuffer(serial, 'image');
       }
     } catch {
       ppBuffer = await fs.readFile('./src/media/fotobot.jpeg');

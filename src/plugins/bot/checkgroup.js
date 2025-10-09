@@ -7,7 +7,6 @@
 // ─── Info ────────────────────────────────
 
 import fs from 'fs-extra';
-import FileType from 'file-type';
 import config from '../../../config.js';
 
 const defaultAvatar = config.paths.avatar;
@@ -73,22 +72,12 @@ export const command = {
           }
           const user = members[nomorMember - 1];
           const name = await fn.getName(user.id);
+          const mime = 'image/jpeg';
           let mediaBuffer;
-          let mime = 'image/jpeg';
           try {
-            const ppUrl = await fn.profilePictureUrl(user.id, 'image');
-            const response = await fetch(ppUrl);
-            mediaBuffer = Buffer.from(await response.arrayBuffer());
-            const fileType = await FileType.fromBuffer(mediaBuffer);
-            if (fileType) {
-              mime = fileType.mime;
-            }
+            mediaBuffer = await fn.profileImageBuffer(user.id, 'image');
           } catch {
             mediaBuffer = await fs.readFile(defaultAvatar);
-            const fileType = await FileType.fromFile(defaultAvatar);
-            if (fileType) {
-              mime = fileType.mime;
-            }
           }
           const caption = `*MEMBER INFO #${nomorMember}*\n\nName: ${name || 'Unknown'}\nNumber: ${user.id.split('@')[0]}\nStatus: ${user.admin ? 'Admin' : 'Member'}\nID: ${user.id}`;
           await fn.sendMediaFromBuffer(toId, mime, mediaBuffer, caption, m);

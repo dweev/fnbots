@@ -25,11 +25,11 @@ export const command = {
     const bufferMedia = await sharp(buffer).png().toBuffer();
     let profilePicUrl = null;
     try {
-      profilePicUrl = await fn.profilePictureUrl(serial, 'image');
+      profilePicUrl = await fn.profileImageBuffer(serial, 'image');
     } catch {
       // log("lanjut");
     }
-    const { text: finalCleanText, entities: allEntities } = processAllTextFormatting(arg, StoreMessages, fn);
+    const { text: finalCleanText, entities: allEntities } = await processAllTextFormatting(arg, StoreMessages, fn);
     const params = {
       type: 'stories',
       format: 'png',

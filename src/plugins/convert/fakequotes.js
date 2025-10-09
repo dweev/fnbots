@@ -17,6 +17,9 @@ export const command = {
   isCommandWithoutPayment: true,
   execute: async ({ fn, toId, arg, sReply, dbSettings, m, quotedMsg, mentionedJidList }) => {
     if (!arg) return await sReply(`Mohon berikan teks yang ingin dibuatkan quotes..`);
+    if (mentionedJidList && mentionedJidList.length > 0) {
+      arg = arg.replace(`@${mentionedJidList[0].split('@')[0]}`, '').trim();
+    }
     let bufferMedia;
     if (m.message?.imageMessage) {
       bufferMedia = await fn.getMediaBuffer(m.message);
@@ -25,7 +28,7 @@ export const command = {
     } else if (mentionedJidList && mentionedJidList.length > 0) {
       const targetJid = mentionedJidList[0];
       try {
-        bufferMedia = await fn.profilePictureUrl(targetJid, 'image');
+        bufferMedia = await fn.profileImageBuffer(targetJid, 'image');
       } catch {
         bufferMedia = await fs.readFile('./src/image/default-dp.jpeg');
       }

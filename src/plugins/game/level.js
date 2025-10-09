@@ -18,7 +18,7 @@ export const command = {
   execute: async ({ fn, user, dbSettings, toId, m, pushname, serial }) => {
     let datax;
     try {
-      datax = await fn.profilePictureUrl(serial, 'image');
+      datax = await fn.profileImageBuffer(serial, 'image');
     } catch {
       datax = await fs.readFile(config.paths.avatar);
     }

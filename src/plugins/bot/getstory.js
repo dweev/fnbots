@@ -40,16 +40,14 @@ export const command = {
         const textContent = story.body;
         let profilePicBuffer;
         try {
-          const profilePicUrl = await fn.profilePictureUrl(story.sender, 'image');
-          profilePicBuffer = await fn.getFile(profilePicUrl);
+          profilePicBuffer = await fn.profileImageBuffer(story.sender, 'image');
         } catch {
-          const defaultPic = await fs.readFile(config.paths.avatar);
-          profilePicBuffer = { data: defaultPic };
+          profilePicBuffer = await fs.readFile(config.paths.avatar);
         }
         const resBuffer = await generateFakeStory({
           caption: textContent,
           username: authorName,
-          profilePicBuffer: profilePicBuffer.data
+          profilePicBuffer: profilePicBuffer
         });
         await fn.sendMediaFromBuffer(toId, story.mime, resBuffer, story.body || '', m);
       } else if (['imageMessage', 'videoMessage', 'audioMessage'].includes(story.type)) {

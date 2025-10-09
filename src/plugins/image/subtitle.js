@@ -24,7 +24,7 @@ export const command = {
     } else if (mentionedJidList && mentionedJidList.length > 0) {
       const targetJid = mentionedJidList[0];
       try {
-        bufferMedia = await fn.profilePictureUrl(targetJid, 'image');
+        bufferMedia = await fn.profileImageBuffer(targetJid, 'image');
       } catch {
         bufferMedia = await fs.readFile('./src/image/default-dp.jpeg');
       }

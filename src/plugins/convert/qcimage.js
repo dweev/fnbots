@@ -25,7 +25,7 @@ export const command = {
     const bufferMedia = await sharp(buffer).png().toBuffer();
     let profilePicUrl = null;
     try {
-      profilePicUrl = await fn.profilePictureUrl(serial, 'image');
+      profilePicUrl = await fn.profileImageBuffer(serial, 'image');
     } catch {
       // log("lanjut");
     }

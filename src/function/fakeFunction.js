@@ -117,7 +117,7 @@ export async function generateFakeChatWithQCGenerator(m, count, fn, StoreMessage
       const senderName = senderContact?.name || msg.name || fallbackName || "Mukidi Slamet";
       let avatarBuffer;
       try {
-        avatarBuffer = await fn.profilePictureUrl(senderJid, 'image');
+        avatarBuffer = await fn.profileImageBuffer(senderJid, 'image');
       } catch {
         avatarBuffer = defaultAvatar;
       }

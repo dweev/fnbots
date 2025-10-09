@@ -6,7 +6,6 @@
 */
 // ─── Info ────────────────────────────────
 
-import axios from 'axios';
 import fs from 'fs-extra';
 import config from '../../../config.js';
 import { generateFakeStory } from 'generator-fake';
@@ -23,9 +22,7 @@ export const command = {
     const username = pushname;
     let ppBuffer;
     try {
-      const ppUrl = await fn.profilePictureUrl(serial, 'image');
-      const response = await axios.get(ppUrl, { responseType: 'arraybuffer' });
-      ppBuffer = response.data;
+      ppBuffer = await fn.profileImageBuffer(serial, 'image');
     } catch {
       ppBuffer = await fs.readFile(config.paths.avatar);
     }

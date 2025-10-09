@@ -31,17 +31,6 @@ const validateKey = (key) => {
   return key.trim();
 };
 
-const validateJID = (jid) => {
-  if (typeof jid !== 'string') {
-    throw new Error('JID must be a string');
-  }
-  const cleanJid = jid.split('@')[0];
-  if (!/^\d+$/.test(cleanJid)) {
-    throw new Error('Invalid JID format');
-  }
-  return jid;
-};
-
 const safeJSONParse = (value, fallback = null) => {
   try {
     if (value === null) return fallback;
@@ -172,12 +161,11 @@ const backupLIDMapping = async (id, value) => {
     if (!phoneNumber || !lid) {
       return false;
     }
-    const existingByJid = await StoreContact.findOne({ jid: phoneNumber }).lean();
-    const existingByLid = lid ? await StoreContact.findOne({ lid: lid }).lean() : null;
-    if (existingByJid && existingByLid && existingByJid._id.toString() !== existingByLid._id.toString()) {
-      await StoreContact.deleteOne({ _id: existingByLid._id });
+    const existing = await StoreContact.findOne({ jid: phoneNumber }).lean();
+    if (existing && existing.lid) {
+      return true;
     }
-    await StoreContact.findOneAndUpdate(
+    await StoreContact.updateOne(
       { jid: phoneNumber },
       {
         $set: {
@@ -185,64 +173,19 @@ const backupLIDMapping = async (id, value) => {
           lastUpdated: new Date()
         }
       },
-      {
-        upsert: true,
-        new: true
-      }
+      { upsert: true }
     );
     return true;
   } catch (error) {
-    await log(`Failed to backup LID mapping: ${error.message}`, true);
+    if (error.code === 11000) {
+      return true;
+    }
+    await log(`Failed to backup LID mapping for ${id}: ${error.message}`, true);
     return false;
   }
 };
 
-const validateAndMigrateSession = async (fromJid, toJid) => {
-  return executeWithDedup(`migrate:${fromJid}:${toJid}`, async () => {
-    try {
-      validateJID(fromJid);
-      validateJID(toJid);
-      const normalizedFrom = fromJid.includes('@') ? fromJid.split('@')[0] : fromJid;
-      const normalizedTo = toJid.includes('@') ? toJid.split('@')[0] : toJid;
-      const stream = redis.scanStream({
-        match: `*${normalizedFrom}*`,
-        count: 100
-      });
-      const keysToMigrate = [];
-      stream.on('data', (keys) => {
-        keys.forEach(key => {
-          if (key.includes(`session-${normalizedFrom}`) ||
-            key.includes(`${normalizedFrom}-`) ||
-            key.includes(`-${normalizedFrom}`)) {
-            keysToMigrate.push(key);
-          }
-        });
-      });
-      await new Promise(resolve => stream.on('end', resolve));
-      if (keysToMigrate.length === 0) {
-        return false;
-      }
-      const values = await redis.mget(keysToMigrate);
-      const pipeline = redis.pipeline();
-      for (let i = 0; i < keysToMigrate.length; i++) {
-        const oldKey = keysToMigrate[i];
-        const value = values[i];
-        if (value) {
-          const newKey = oldKey.replace(normalizedFrom, normalizedTo);
-          pipeline.set(newKey, value);
-        }
-      }
-      await pipeline.exec();
-      await log(`Migrated ${keysToMigrate.length} session(s) from ${fromJid} to ${toJid}`);
-      return true;
-    } catch (error) {
-      await log(`Failed to migrate session from ${fromJid} to ${toJid}: ${error.message}`, true);
-      return false;
-    }
-  });
-};
-
-const storeLIDMapping = async (lid, phoneNumber, autoMigrate = true) => {
+const storeLIDMapping = async (lid, phoneNumber) => {
   return executeWithDedup(`store:${lid}:${phoneNumber}`, async () => {
     try {
       const normalizedLid = lid.includes('@') ? lid : `${lid}@lid`;
@@ -266,9 +209,6 @@ const storeLIDMapping = async (lid, phoneNumber, autoMigrate = true) => {
         }
       );
       await log(`LID Mapping stored: ${normalizedPN} <-> ${normalizedLid}`);
-      if (autoMigrate) {
-        await validateAndMigrateSession(normalizedPN, normalizedLid);
-      }
       return true;
     } catch (error) {
       await log(`Failed to store LID mapping: ${error.message}`, true);
@@ -516,7 +456,6 @@ export default async function AuthStore() {
         }
       }, 5);
     },
-    validateAndMigrateSession,
     storeLIDMapping,
   };
 };

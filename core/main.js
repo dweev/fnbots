@@ -91,7 +91,7 @@ function setupWhatsAppEventHandlers(fn) {
   fn.ev.on('lid-mapping.update', async ({ lid, pn }) => {
     try {
       await log(`LID mapping update received: ${pn} <-> ${lid}`);
-      const success = await fn.storeLIDMapping(lid, pn, true);
+      const success = await fn.storeLIDMapping(lid, pn);
       if (success) {
         await log(`LID mapping stored and session migrated successfully`);
       }

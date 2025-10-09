@@ -118,10 +118,6 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
   const sPesan = (content) => fn.sendPesan(toId, content, m);
   const sendRawWebpAsSticker = async (_data, options = {}) => { await fn.sendRawWebpAsSticker(toId, _data, m, { ...options }); };
   const isCmd = txt?.startsWith(dbSettings.rname) || txt?.startsWith(dbSettings.sname);
-  const isAllowedByState = (maintenance && (isWhiteList || hakIstimewa)) || (!maintenance && (hakIstimewa || !userData.isMuted));
-  if (isCmd && !isAllowedByState) {
-    return;
-  };
 
   if (user.isUserMuted(serial)) return;
   if (body?.startsWith('>')) {
@@ -354,24 +350,26 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
         const mediaTypes = new Set(['stickerMessage', 'imageMessage', 'videoMessage', 'audioMessage']);
         if (mediaTypes.has(type)) {
           const spamCheck = cooldownManager.checkMediaSpam(serial);
-          if (spamCheck.isSpamming && !spamCheck.alreadyProcessed && m.isGroup && isBotGroupAdmins) {
-            cooldownManager.markMediaSpamProcessed(serial);
-            const mention = '@' + serial.split('@')[0];
-            if (isSadmin) {
-              await fn.sendPesan(toId, `creatorku yang ganteng ${mention}\ngaboleh spam ya...`, m);
-            } else if (isMaster) {
-              await fn.sendPesan(toId, `wah ini nih! ${mention}\nHei Owner, jangan ngajarin membernya buat spam! 🤦‍♂️🤦‍♂️😤🧐`, m);
-            } else if (isVIP) {
-              await fn.sendPesan(toId, `hmmmmm gitu ya ${mention}\nvip bebas spam. 😒🙃😏`, m);
-            } else if (isPremium) {
-              await fn.sendPesan(toId, `wadooooh si ${mention}\nasik nih premium bisa spam. 😒🙃😏`, m);
-            } else if (isGroupAdmins) {
-              await fn.sendPesan(toId, `yaela ${mention}\njangan mentang-mentang jadi admin spam terus terusan ya!`, m);
-            } else {
-              await fn.sendPesan(toId, `member bangsat ya ${mention}\nspam anjeng! 😡😡😡😡`, m);
-              setTimeout(async () => {
-                await fn.removeParticipant(toId, serial);
-              }, 1000);
+          if (spamCheck.isSpamming && !spamCheck.alreadyProcessed) {
+            if (m.isGroup && isBotGroupAdmins) {
+              cooldownManager.markMediaSpamProcessed(serial);
+              const mention = '@' + serial.split('@')[0];
+              if (isSadmin) {
+                await fn.sendPesan(toId, `creatorku yang ganteng ${mention}\ngaboleh spam ya...`, m);
+              } else if (isMaster) {
+                await fn.sendPesan(toId, `wah ini nih! ${mention}\nHei Owner, jangan ngajarin membernya buat spam! 🤦‍♂️🤦‍♂️😤🧐`, m);
+              } else if (isVIP) {
+                await fn.sendPesan(toId, `hmmmmm gitu ya ${mention}\nvip bebas spam. 😒🙃😏`, m);
+              } else if (isPremium) {
+                await fn.sendPesan(toId, `wadooooh si ${mention}\nasik nih premium bisa spam. 😒🙃😏`, m);
+              } else if (isGroupAdmins) {
+                await fn.sendPesan(toId, `yaela ${mention}\njangan mentang-mentang jadi admin spam terus terusan ya!`, m);
+              } else {
+                await fn.sendPesan(toId, `member bangsat ya ${mention}\nspam anjeng! 😡😡😡😡`, m);
+                setTimeout(async () => {
+                  await fn.removeParticipant(toId, serial);
+                }, 1000);
+              }
             }
           }
         }
@@ -432,26 +430,30 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
       }
     }
     if (isCmd) {
+      const isAllowedByState = (maintenance && (isWhiteList || hakIstimewa)) || (!maintenance && (hakIstimewa || !userData.isMuted));
+      if (!isAllowedByState) return;
       if (dbSettings.verify === true) {
         const isVerified = await isUserVerified(m, dbSettings, StoreGroupMetadata, fn, sReply, hakIstimewa);
         if (!isVerified) return;
       }
-      const cooldownTime = config.performance.commandCooldown;
       if (cooldownManager.isSpamming(serial)) return;
       if (cooldownManager.isBanned(serial)) return;
-      if (!cooldownManager.trySetCooldown(serial, cooldownTime) && !isSadmin) {
-        if (!cooldownManager.isSpamming(serial)) {
-          cooldownManager.addToSpamSet(serial);
-          const remaining = Math.ceil((cooldownTime - (Date.now() - cooldownManager.getUserCooldown(serial))) / 1000);
-          return sReply(`*Hei @${serial.split('@')[0]}, tunggu ${remaining}s!*`);
-        } else if (!cooldownManager.isBanned(serial)) {
-          cooldownManager.addToBanSet(serial);
-          const durationText = waktu(config.performance.banDuration / 1000);
-          return sReply(`*Hei @${serial.split('@')[0]}*\n*COMMAND SPAM DETECTED*\n*Command banned for ${durationText}*`);
+      const cooldownTime = config.performance.commandCooldown;
+      if (!isSadmin) {
+        const cooldownResult = cooldownManager.trySetCooldown(serial, cooldownTime);
+        if (!cooldownResult.allowed) {
+          if (!cooldownManager.isSpamming(serial)) {
+            cooldownManager.addToSpamSet(serial);
+            return sReply(`*Hei @${serial.split('@')[0]}, tunggu ${cooldownResult.remaining}s!*`);
+          } else if (!cooldownManager.isBanned(serial)) {
+            cooldownManager.addToBanSet(serial);
+            const durationText = waktu(config.performance.banDuration / 1000);
+            return sReply(`*Hei @${serial.split('@')[0]}*\n*COMMAND SPAM DETECTED*\n*Command banned for ${durationText}*`);
+          }
+          return;
         }
-        return;
       }
-      cooldownManager.addToQueue(async () => {
+      try {
         const commandText = await getTxt(txt, dbSettings);
         const remoteCommandMatch = commandText.match(/^r:(\d+)\s+(.*)/s);
         if (remoteCommandMatch && (isSadmin || isMaster)) {
@@ -482,12 +484,16 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
                   const args = currentCommand.split(' ').slice(1);
                   const fullArgs = args.join(' ');
                   const commandArgs = {
-                    fn, m, dbSettings, ownerNumber, version, isSadmin, isMaster, isVIP, isPremium, isWhiteList, hakIstimewa, isBotGroupAdmins,
-                    sPesan, sReply, reactDone, reactFail, toId, quotedMsg, quotedParticipant, mentionedJidList, body, args, arg: fullArgs, ar: args,
-                    serial, user, groupData, botNumber, mygroupMembers, mygroup, isPrivileged, pushname, yts, tebaklirik, tekateki, tebakkata, susunkata,
-                    tebakkimia, tebaknegara, tebakbendera, tebakgambar, caklontong, sudokuGame, family100, hangman, chatBots, sessions, chessGame, othelloGame,
-                    ludoSessions, game41Sessions, gamematematika, werewolfSessions, minesweeperSessions, ularTanggaSessions, tictactoeSessions, samgongSessions,
-                    tebakkalimat, siapakahaku, ulartangga, tebakgame, sendRawWebpAsSticker, StoreMessages
+                    fn, m, dbSettings, ownerNumber, version, isSadmin, isMaster, isVIP, isPremium,
+                    isWhiteList, hakIstimewa, isBotGroupAdmins, sPesan, sReply, reactDone, reactFail,
+                    toId, quotedMsg, quotedParticipant, mentionedJidList, body, args, arg: fullArgs,
+                    ar: args, serial, user, groupData, botNumber, mygroupMembers, mygroup, isPrivileged,
+                    pushname, yts, tebaklirik, tekateki, tebakkata, susunkata, tebakkimia, tebaknegara,
+                    tebakbendera, tebakgambar, caklontong, sudokuGame, family100, hangman, chatBots,
+                    sessions, chessGame, othelloGame, ludoSessions, game41Sessions, gamematematika,
+                    werewolfSessions, minesweeperSessions, ularTanggaSessions, tictactoeSessions,
+                    samgongSessions, tebakkalimat, siapakahaku, ulartangga, tebakgame,
+                    sendRawWebpAsSticker, StoreMessages
                   };
                   await command.execute(commandArgs);
                   commandFound = true;
@@ -522,20 +528,30 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
             }
             if (commandFound) {
               const msgPreview = msgs(currentCommand);
-              if (msgPreview === undefined) continue;
-              const parts = [color(msgPreview, "#32CD32"), color('from', "#a8dffb"), color(pushname, '#FFA500'), ...(m.isGroup ? [color('in', '#a8dffb'), color(m.metadata?.subject, "#00FFFF")] : [])];
-              const formatted = parts.join(' ');
-              log(formatted);
+              if (msgPreview !== undefined) {
+                const parts = [
+                  color(msgPreview, "#32CD32"),
+                  color('from', "#a8dffb"),
+                  color(pushname, '#FFA500'),
+                  ...(m.isGroup ? [color('in', '#a8dffb'), color(m.metadata?.subject, "#00FFFF")] : [])
+                ];
+                log(parts.join(' '));
+              }
             }
           }
-          return failedCommands;
+          return {
+            failedCommands,
+            hasTimeout: false
+          };
         }
-        try {
-          const failedCommands = await executeCommandChain(chainingCommands);
-          if (failedCommands.length > 0 && dbSettings.autocorrect === 2 && !suggested) {
+        const result = await cooldownManager.addToQueue(async () => {
+          return await executeCommandChain(chainingCommands);
+        }, serial);
+        if (result.failedCommands.length > 0 && !result.hasTimeout) {
+          if (dbSettings.autocorrect === 2 && !suggested) {
             const correctedCommands = [];
             let hasCorrections = false;
-            for (const failedCommand of failedCommands) {
+            for (const failedCommand of result.failedCommands) {
               const corrected = await textMatch2(failedCommand);
               if (corrected && Array.isArray(corrected)) {
                 correctedCommands.push(...corrected);
@@ -545,16 +561,20 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
               }
             }
             if (hasCorrections) {
-              await executeCommandChain(correctedCommands);
+              await cooldownManager.addToQueue(async () => {
+                return await executeCommandChain(correctedCommands);
+              }, serial);
             }
-          } else if (failedCommands.length > 0 && dbSettings.autocorrect === 1 && !m._textmatch_done) {
-            await textMatch1(fn, m, failedCommands, toId);
+          } else if (dbSettings.autocorrect === 1 && !m._textmatch_done) {
+            await textMatch1(fn, m, result.failedCommands, toId);
             m._textmatch_done = true;
           }
-        } catch {
-          await sReply("🏃💨 Bot sedang sibuk, coba lagi dalam beberapa saat...");
         }
-      });
+      } catch {
+        if (!isSadmin) {
+          cooldownManager.userCooldowns.delete(serial);
+        }
+      }
     } else {
       if (dbSettings.antideleted === true) {
         await handleAntiDeleted({ fn, m, toId, mongoStore });

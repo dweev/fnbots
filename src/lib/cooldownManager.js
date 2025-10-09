@@ -24,14 +24,14 @@ class CooldownManager {
     });
     this.spamSet = new Set();
     this.banSet = new Set();
-    this.mediaSpamSet = new Set();
-    this.mediaSpamProcessedSet = new Set();
+    this.mediaSpamTracking = new Map();
+    this.userQueues = new Map();
     this.commandQueue = new PQueue({
       interval: 1000,
-      intervalCap: 10,
-      concurrency: 5,
-      timeout: 30000,
-      throwOnTimeout: false,
+      intervalCap: 50,
+      concurrency: 10,
+      timeout: 180000,
+      throwOnTimeout: true,
       autoStart: true
     });
     this.cleanupIntervalId = null;
@@ -41,37 +41,119 @@ class CooldownManager {
   trySetCooldown(userId, cooldownMs) {
     const now = Date.now();
     const lastExec = this.userCooldowns.get(userId) || 0;
-    if (now - lastExec < cooldownMs) {
-      return false;
+    const elapsed = now - lastExec;
+    if (elapsed < cooldownMs) {
+      return {
+        allowed: false,
+        remaining: Math.ceil((cooldownMs - elapsed) / 1000)
+      };
     }
     this.userCooldowns.set(userId, now);
-    return true;
+    return { allowed: true, remaining: 0 };
+  }
+  getUserQueue(userId) {
+    if (!this.userQueues.has(userId)) {
+      this.userQueues.set(userId, new PQueue({
+        concurrency: 1,
+        timeout: 120000,
+        throwOnTimeout: true,
+        autoStart: true
+      }));
+    }
+    return this.userQueues.get(userId);
+  }
+
+  checkMediaSpam(userId) {
+    const now = Date.now();
+    const tracking = this.mediaSpamTracking.get(userId);
+    if (!tracking) {
+      this.mediaSpamTracking.set(userId, {
+        count: 1,
+        firstSeen: now,
+        processed: false
+      });
+      setTimeout(() => {
+        this.mediaSpamTracking.delete(userId);
+      }, 1000);
+      return {
+        isSpamming: false,
+        alreadyProcessed: false,
+        count: 1
+      };
+    }
+    if (now - tracking.firstSeen < 1000) {
+      tracking.count++;
+      const isSpamming = tracking.count >= 2;
+      const alreadyProcessed = tracking.processed;
+      return {
+        isSpamming,
+        alreadyProcessed,
+        count: tracking.count
+      };
+    }
+    this.mediaSpamTracking.set(userId, {
+      count: 1,
+      firstSeen: now,
+      processed: false
+    });
+    setTimeout(() => {
+      this.mediaSpamTracking.delete(userId);
+    }, 1000);
+    return {
+      isSpamming: false,
+      alreadyProcessed: false,
+      count: 1
+    };
+  }
+  markMediaSpamProcessed(userId) {
+    const tracking = this.mediaSpamTracking.get(userId);
+    if (tracking) {
+      tracking.processed = true;
+    }
+  }
+  async addToQueue(task, userId = null) {
+    try {
+      if (userId) {
+        const userQueue = this.getUserQueue(userId);
+        return await userQueue.add(async () => {
+          try {
+            return await task();
+          } catch (error) {
+            if (error.name === 'TimeoutError') {
+              log(`User queue timeout for ${userId}: ${error.message}`);
+              throw new Error(`Command timeout - silakan coba lagi`);
+            }
+            throw error;
+          }
+        });
+      }
+      return await this.commandQueue.add(async () => {
+        try {
+          return await task();
+        } catch (error) {
+          if (error.name === 'TimeoutError') {
+            log(`Global queue timeout: ${error.message}`);
+            throw new Error(`Command timeout - silakan coba lagi`);
+          }
+          throw error;
+        }
+      });
+    } catch (error) {
+      throw error;
+    }
   }
   setupCleanupInterval() {
     this.cleanupIntervalId = setInterval(() => {
       this.cleanupUserCooldowns();
+      this.cleanupUserQueues();
     }, 5 * 60 * 1000);
-  }
-  registerShutdownHandler() {
-    signalHandler.register('cooldownCleanup', () => {
-      clearInterval(this.cleanupIntervalId);
-      this.commandQueue.pause();
-      this.commandQueue.clear();
-      this.userCooldowns.clear();
-      this.spamSet.clear();
-      this.banSet.clear();
-      this.mediaSpamSet.clear();
-      this.mediaSpamProcessedSet.clear();
-      log('Cooldown manager cleanup completed');
-      return Promise.resolve();
-    }, 40);
   }
   cleanupUserCooldowns() {
     const now = Date.now();
-    const cooldownTime = config.performance.commandCooldown || 5000;
+    const cooldownTime = config.performance.commandCooldown || 25;
     let removedCount = 0;
     this.userCooldowns.forEach((timestamp, userId) => {
-      if (now - timestamp > cooldownTime * 2) {
+      if (now - timestamp > cooldownTime * 10) {
         this.userCooldowns.delete(userId);
         removedCount++;
       }
@@ -80,16 +162,52 @@ class CooldownManager {
       log(`Cleaned up ${removedCount} expired user cooldowns`);
     }
   }
-  setUserCooldown(userId) {
-    this.userCooldowns.set(userId, Date.now());
+  cleanupUserQueues() {
+    let removedCount = 0;
+    this.userQueues.forEach((queue, userId) => {
+      if (queue.size === 0 && queue.pending === 0) {
+        queue.pause();
+        queue.clear();
+        this.userQueues.delete(userId);
+        removedCount++;
+      }
+    });
+    if (removedCount > 0) {
+      log(`Cleaned up ${removedCount} idle user queues`);
+    }
   }
-  getUserCooldown(userId) {
-    return this.userCooldowns.get(userId) || 0;
-  }
-  checkCooldown(userId, cooldownMs) {
-    const now = Date.now();
-    const lastExec = this.userCooldowns.get(userId) || 0;
-    return now - lastExec < cooldownMs;
+  registerShutdownHandler() {
+    signalHandler.register('cooldownCleanup', async () => {
+      clearInterval(this.cleanupIntervalId);
+      this.commandQueue.pause();
+      this.userQueues.forEach(queue => queue.pause());
+      const globalIdleTimeout = new Promise((resolve) => {
+        setTimeout(() => {
+          log('Global queue idle timeout - forcing cleanup');
+          resolve();
+        }, 30000);
+      });
+      await Promise.race([
+        this.commandQueue.onIdle(),
+        globalIdleTimeout
+      ]);
+      const userQueuesIdle = Array.from(this.userQueues.values()).map(q =>
+        Promise.race([
+          q.onIdle(),
+          new Promise(resolve => setTimeout(resolve, 10000))
+        ])
+      );
+      await Promise.all(userQueuesIdle);
+      this.commandQueue.clear();
+      this.userQueues.forEach(queue => queue.clear());
+      this.userQueues.clear();
+      this.userCooldowns.clear();
+      this.spamSet.clear();
+      this.banSet.clear();
+      this.mediaSpamTracking.clear();
+      log('Cooldown manager cleanup completed');
+      return Promise.resolve();
+    }, 40);
   }
   addToSpamSet(userId) {
     this.spamSet.add(userId);
@@ -103,47 +221,36 @@ class CooldownManager {
       this.banSet.delete(userId);
     }, config.performance.banDuration);
   }
-  checkMediaSpam(userId) {
-    const isSpamming = this.mediaSpamSet.has(userId);
-    const alreadyProcessed = this.mediaSpamProcessedSet.has(userId);
-    this.mediaSpamSet.add(userId);
-    setTimeout(() => {
-      this.mediaSpamSet.delete(userId);
-      this.mediaSpamProcessedSet.delete(userId);
-    }, 1000);
-    return {
-      isSpamming: isSpamming,
-      alreadyProcessed: alreadyProcessed
-    };
-  }
-  markMediaSpamProcessed(userId) {
-    this.mediaSpamProcessedSet.add(userId);
-  }
-  async addToQueue(task) {
-    return this.commandQueue.add(task);
-  }
-  getQueueSize() {
-    return this.commandQueue.size;
-  }
   isSpamming(userId) {
     return this.spamSet.has(userId);
   }
   isBanned(userId) {
     return this.banSet.has(userId);
   }
+  getUserCooldown(userId) {
+    return this.userCooldowns.get(userId) || 0;
+  }
   getStats() {
     return {
-      queueSize: this.commandQueue.size,
-      queuePending: this.commandQueue.pending,
-      activeCooldowns: this.userCooldowns.size,
-      spammedUsers: this.spamSet.size,
-      bannedUsers: this.banSet.size,
-      mediaSpamTracked: this.mediaSpamSet.size,
-      mediaSpamProcessed: this.mediaSpamProcessedSet.size,
-      queueCapacity: {
-        interval: 1000,
-        intervalCap: 10,
-        concurrency: 5
+      globalQueue: {
+        size: this.commandQueue.size,
+        pending: this.commandQueue.pending,
+        capacity: {
+          interval: 1000,
+          intervalCap: 50,
+          concurrency: 10,
+          timeout: 180000
+        }
+      },
+      userQueues: {
+        total: this.userQueues.size,
+        active: Array.from(this.userQueues.values()).filter(q => q.size > 0 || q.pending > 0).length
+      },
+      tracking: {
+        activeCooldowns: this.userCooldowns.size,
+        spammedUsers: this.spamSet.size,
+        bannedUsers: this.banSet.size,
+        mediaSpamTracked: this.mediaSpamTracking.size
       }
     };
   }

@@ -9,7 +9,6 @@
 import os from 'os';
 import path from 'path';
 import sharp from 'sharp';
-import axios from 'axios';
 import Fuse from 'fuse.js';
 import crypto from 'crypto';
 import log from '../lib/logger.js';
@@ -18,12 +17,20 @@ import speedTest from 'speedtest-net';
 import dayjs from '../utils/dayjs.js';
 import { tmpDir } from '../lib/tempManager.js';
 import { pluginCache } from '../lib/plugins.js';
-import { StoreMessages, User, StoreGroupMetadata, mongoStore } from '../../database/index.js';
+import { fetch as nativeFetch } from '../addon/bridge.js';
+import { StoreMessages, User, StoreGroupMetadata } from '../../database/index.js';
 
 let fuse;
 let allCmds           = [];
 let _checkVIP         = false;
 let _checkPremium     = false;
+
+const wil_cache = {
+  provinces: null,
+  regencies: null,
+  districts: null,
+  villages: null
+};
 
 const fuseOptions = {
   includeScore: true,
@@ -147,29 +154,6 @@ export async function isUserVerified(m, dbSettings, StoreGroupMetadata, fn, sRep
     return false;
   }
 };
-export async function updateContact(jid, data = {}) {
-  if (!jid || !jid.endsWith('@s.whatsapp.net')) return;
-  try {
-    await mongoStore.updateContact(jid, data);
-  } catch (error) {
-    await log(error, true);
-  }
-};
-export async function processContactUpdate(contact) {
-  const idFromEvent = contact.id;
-  const trueJid = await mongoStore.resolveJid(idFromEvent);
-  if (!trueJid) return;
-  const dataToUpdate = {};
-  const nameToUpdate = contact.notify || contact.name;
-  if (idFromEvent.endsWith('@lid')) {
-    dataToUpdate.lid = idFromEvent;
-  }
-  if (nameToUpdate) {
-    dataToUpdate.name = nameToUpdate;
-  }
-  if (Object.keys(dataToUpdate).length === 0) return;
-  await updateContact(trueJid, dataToUpdate);
-};
 export function checkDepth(currentObj, currentDepth = 0) {
   if (typeof currentObj !== 'object' || currentObj === null) return currentDepth;
   let maxDepth = currentDepth;
@@ -205,20 +189,33 @@ export function safeStringify(obj, space = 2) {
     return value;
   }, space);
 };
-export function getSizeMedia(crots) {
-  return new Promise((resolve, reject) => {
+export async function getSizeMedia(crots) {
+  try {
     if (typeof crots === 'string' && /http/.test(crots)) {
-      axios.get(crots).then((res) => {
-        const length = parseInt(res.headers['content-length']);
-        if (!isNaN(length)) resolve(bytesToSize(length, 3));
-      }).catch(reject);
+      const response = await nativeFetch(crots, { method: 'HEAD' });
+      if (!response.ok) {
+        const getResponse = await nativeFetch(crots);
+        const buffer = await getResponse.arrayBuffer();
+        return bytesToSize(buffer.length, 3);
+      }
+      const length = response.headers.get('content-length');
+      if (length && !isNaN(Number(length))) {
+        return bytesToSize(Number(length), 3);
+      } else {
+        const getResponse = await nativeFetch(crots);
+        const buffer = await getResponse.arrayBuffer();
+        return bytesToSize(buffer.length, 3);
+      }
     } else if (Buffer.isBuffer(crots)) {
       const length = Buffer.byteLength(crots);
-      if (!isNaN(length)) resolve(bytesToSize(length, 3));
+      return bytesToSize(length, 3);
     } else {
-      reject(0);
-    };
-  });
+      return '0 Bytes';
+    }
+  } catch (error) {
+    log(`Error in getSizeMedia: ${error.message}`, true);
+    return '0 Bytes';
+  }
 };
 export function randomChoice(arr) {
   try {
@@ -460,17 +457,20 @@ export async function mycmd(input) {
 };
 export async function getBuffer(url, options = {}) {
   try {
-    const response = await axios.get(url, {
+    const { headers: optionHeaders, ...restOptions } = options;
+    const response = await nativeFetch(url, {
       headers: {
-        'DNT': 1,
-        'Upgrade-Insecure-Request': 1
+        'DNT': '1',
+        'Upgrade-Insecure-Request': '1',
+        ...optionHeaders
       },
-      responseType: 'arraybuffer',
-      ...options
+      ...restOptions
     });
-    return response.data;
+    if (!response.ok) throw new Error(`Failed to get buffer with status: ${response.status} ${response.statusText}`);
+    return await response.arrayBuffer();
   } catch (error) {
-    log(`Error: ${error.message}`, true); throw error;
+    log(`Error in getBuffer: ${error.message}`, true);
+    throw error;
   }
 };
 export async function sendAndCleanupFile(fn, toId, localPath, m, dbSettings) {
@@ -650,20 +650,34 @@ export async function parseNIK(nik) {
   try {
     const nikString = nik.toString();
     if (nikString.length !== 16) throw new Error('NIK tidak valid: Panjang NIK harus 16 digit.');
+    if (!wil_cache.provinces) {
+      const res = await nativeFetch('https://raw.githubusercontent.com/Terror-Machine/random/master/data/provinsi.json');
+      const data = await res.json();
+      wil_cache.provinces = Object.fromEntries(data.map(p => [p.code, p.name.toUpperCase()]));
+    }
+    if (!wil_cache.regencies) {
+      const res = await nativeFetch('https://raw.githubusercontent.com/Terror-Machine/random/master/data/kabupaten.json');
+      const data = await res.json();
+      wil_cache.regencies = Object.fromEntries(data.map(r => [r.full_code, r.name.toUpperCase()]));
+    }
+    if (!wil_cache.districts) {
+      const res = await nativeFetch('https://raw.githubusercontent.com/Terror-Machine/random/master/data/kecamatan.json');
+      const data = await res.json();
+      wil_cache.districts = Object.fromEntries(data.map(d => [d.full_code, d.name.toUpperCase()]));
+    }
+    if (!wil_cache.villages) {
+      const res = await nativeFetch('https://raw.githubusercontent.com/Terror-Machine/random/master/data/kelurahan.json');
+      wil_cache.villages = await res.json();
+    }
     const KODE_PROVINSI = nikString.slice(0, 2);
     const KODE_KABKOT = nikString.slice(0, 4);
     const KODE_KECAMATAN = nikString.slice(0, 6);
-    const provincesRes = await axios.get('https://raw.githubusercontent.com/Terror-Machine/random/master/data/provinsi.json');
-    const provinces = Object.fromEntries(provincesRes.data.map(p => [p.code, p.name.toUpperCase()]));
-    if (!provinces[KODE_PROVINSI]) throw new Error('NIK tidak valid: Kode Provinsi tidak ditemukan.');
-    const regenciesRes = await axios.get(`https://raw.githubusercontent.com/Terror-Machine/random/master/data/kabupaten.json`);
-    const regencies = Object.fromEntries(regenciesRes.data.map(r => [r.full_code, r.name.toUpperCase()]));
-    if (!regencies[KODE_KABKOT]) throw new Error('NIK tidak valid: Kode Kabupaten/Kota tidak ditemukan.');
-    const districtsRes = await axios.get(`https://raw.githubusercontent.com/Terror-Machine/random/master/data/kecamatan.json`);
-    const districts = Object.fromEntries(districtsRes.data.map(d => [d.full_code, d.name.toUpperCase()]));
-    if (!districts[KODE_KECAMATAN]) throw new Error('NIK tidak valid: Kode Kecamatan tidak ditemukan.');
-    const villagesRes = await axios.get(`https://raw.githubusercontent.com/Terror-Machine/random/master/data/kelurahan.json`);
-    const daftarKelurahan = villagesRes.data
+
+    if (!wil_cache.provinces[KODE_PROVINSI]) throw new Error('NIK tidak valid: Kode Provinsi tidak ditemukan.');
+    if (!wil_cache.regencies[KODE_KABKOT]) throw new Error('NIK tidak valid: Kode Kabupaten/Kota tidak ditemukan.');
+    if (!wil_cache.districts[KODE_KECAMATAN]) throw new Error('NIK tidak valid: Kode Kecamatan tidak ditemukan.');
+
+    const daftarKelurahan = wil_cache.villages
       .filter(village => village.full_code.startsWith(KODE_KECAMATAN))
       .map(village => ({
         nama: village.name.toUpperCase(),
@@ -757,9 +771,9 @@ export async function parseNIK(nik) {
         ultah: hitungMundurTeks
       },
       lokasi: {
-        provinsi: provinces[KODE_PROVINSI],
-        kabupatenKota: regencies[KODE_KABKOT],
-        kecamatan: districts[KODE_KECAMATAN],
+        provinsi: wil_cache.provinces[KODE_PROVINSI],
+        kabupatenKota: wil_cache.regencies[KODE_KABKOT],
+        kecamatan: wil_cache.districts[KODE_KECAMATAN],
         kelurahan: kelurahanTerpilih?.nama || 'Data Tidak Ditemukan',
         kodePos: kelurahanTerpilih?.kodePos || 'Tidak Ditemukan',
         kodeWilayah: `${KODE_PROVINSI}.${KODE_KABKOT.slice(2)}.${KODE_KECAMATAN.slice(4)}`

@@ -7,12 +7,12 @@
 // ─── info src/function/function2.js ─────────────
 
 import sharp from 'sharp';
-import axios from 'axios';
 import { delay } from 'baileys';
 import log from '../lib/logger.js';
 import * as cheerio from 'cheerio';
 import { createCanvas, loadImage } from 'canvas';
 import { Downloader } from '@tobyg74/tiktok-api-dl';
+import { fetch as nativeFetch } from '../addon/bridge.js';
 
 export function cleanYoutubeUrl(url) {
   return url.replace(/(&|\?)list=[^&]*/i, '$1').replace(/(&|\?)index=[^&]*/i, '$1').replace(/[&?]$/, '');
@@ -64,32 +64,77 @@ export async function fetchTikTokData(url, version = 'v1') {
 };
 export async function sendImages(fn, result, args, toId, m, baseCaption) {
   const imageSelection = args[1];
-  let mediaToSend;
+  let imagesToSend;
   if (imageSelection) {
     const indicesToDownload = parseImageSelection(imageSelection, result.images.length);
     if (indicesToDownload.length === 0) {
-      throw new Error(`Format pemilihan gambar salah!\nTotal: ${result.images.length}\nContoh: \`.tt [url] 1,3,5\` atau \`.tt [url] 2-5\``);
+      throw new Error(
+        `Format pemilihan gambar salah!\n` +
+        `Total: ${result.images.length}\n` +
+        `Contoh: \`.tt [url] 1,3,5\` atau \`.tt [url] 2-5\``
+      );
     }
-    mediaToSend = indicesToDownload.map(index => ({
-      image: { url: result.images[index] },
-      caption: `${baseCaption}\n\n📌 *Gambar Pilihan ${index + 1} dari ${result.images.length}*`
+    imagesToSend = indicesToDownload.map(index => ({
+      url: result.images[index],
+      index: index
     }));
   } else {
-    mediaToSend = result.images.map((url, index) => ({
-      image: { url },
-      caption: `${baseCaption}\n\n🖼️ *Gambar ${index + 1} dari ${result.images.length}*`
-    }));
+    imagesToSend = result.images.map((url, index) => ({ url, index }));
   }
-  if (mediaToSend.length <= 1) {
-    await fn.sendFileUrl(toId, mediaToSend[0].image.url, mediaToSend[0].caption, m);
-  } else {
-    const chunks = chunkArray(mediaToSend, 15);
-    for (const [index, chunk] of chunks.entries()) {
+  if (imagesToSend.length === 1) {
+    const caption = `${baseCaption}\n\n*Gambar ${imagesToSend[0].index + 1} dari ${result.images.length}*`;
+    return await fn.sendFileUrl(toId, imagesToSend[0].url, caption, m);
+  }
+  try {
+    const downloadedImages = [];
+    const errors = [];
+    const totalImages = imagesToSend.length;
+    for (let i = 0; i < totalImages; i++) {
+      try {
+        const { url, index } = imagesToSend[i];
+        const response = await nativeFetch(url, {
+          method: 'GET',
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Referer': 'https://www.tiktok.com/'
+          }
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const buffer = await response.arrayBuffer();
+        if (!buffer || buffer.byteLength === 0) throw new Error('Empty buffer');
+        downloadedImages.push({
+          image: Buffer.from(buffer),
+          caption: `${baseCaption}\n\n*Gambar ${index + 1} dari ${result.images.length}*`
+        });
+      } catch (downloadError) {
+        const errorMsg = downloadError?.message || String(downloadError);
+        errors.push(`Image ${i + 1}: ${errorMsg}`);
+      }
+    }
+    if (downloadedImages.length === 0) {
+      throw new Error(
+        `Gagal mendownload semua gambar!\n\n` +
+        `Errors:\n${errors.join('\n')}`
+      );
+    }
+    const chunks = chunkArray(downloadedImages, 15);
+    for (const [chunkIndex, chunk] of chunks.entries()) {
       await fn.sendAlbum(toId, chunk, { quoted: m });
-      if (chunks.length > 1 && index < chunks.length - 1) {
+      if (chunks.length > 1 && chunkIndex < chunks.length - 1) {
         await delay(1000);
       }
     }
+    if (errors.length > 0) {
+      await fn.sendReply(
+        toId,
+        `*Berhasil:* ${downloadedImages.length}/${totalImages} gambar\n\n` +
+        `*Gagal:*\n${errors.slice(0, 5).join('\n')}` +
+        (errors.length > 5 ? `\n... dan ${errors.length - 5} lainnya` : ''),
+        { quoted: m }
+      );
+    }
+  } catch (error) {
+    throw error;
   }
 };
 export async function makeCircleSticker(buffer) {
@@ -150,13 +195,18 @@ export function formatTimestampToHourMinute(ts) {
 };
 export async function fetchJson(url, options = {}) {
   try {
-    const { data } = await axios.get(url, {
+    const { headers: optionHeaders, ...restOptions } = options;
+    const response = await nativeFetch(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36',
+        ...optionHeaders
       },
-      ...options
+      ...restOptions
     });
-    return data;
+    if (!response.ok) {
+      throw new Error(`Failed to fetch JSON: ${response.status} ${response.statusText}`);
+    }
+    return await response.json();
   } catch (error) {
     await log(`Error fetchJson: ${url}.\n${error}`, true);
     throw error;
@@ -164,12 +214,14 @@ export async function fetchJson(url, options = {}) {
 };
 export async function jadwalSholat(kode_daerah) {
   try {
-    const response = await axios.get('https://jadwalsholat.org/jadwal-sholat/daily.php?id=' + kode_daerah);
-    const html = response.data;
+    const response = await nativeFetch('https://jadwalsholat.org/jadwal-sholat/daily.php?id=' + kode_daerah);
+    if (!response.ok) throw new Error(`Gagal mengambil data jadwal sholat: ${response.status} ${response.statusText}`);
+    const html = await response.text();
     const $ = cheerio.load(html);
     const daerah = $('h1').text().trim();
     const bulan = $('h2').text().trim();
     const row = $('tr.table_light, tr.table_dark').find('td');
+    if (row.length < 9) throw new Error('Gagal mem-parsing tabel jadwal sholat. Strukturnya mungkin berubah.');
     const tanggal = $(row[0]).text().trim();
     const imsyak = $(row[1]).text().trim();
     const shubuh = $(row[2]).text().trim();
@@ -180,32 +232,26 @@ export async function jadwalSholat(kode_daerah) {
     const maghrib = $(row[7]).text().trim();
     const isya = $(row[8]).text().trim();
     return {
-      daerah,
-      bulan,
-      tanggal,
-      imsyak,
-      shubuh,
-      terbit,
-      dhuha,
-      dzuhur,
-      ashr,
-      maghrib,
-      isya
+      daerah, bulan, tanggal, imsyak, shubuh, terbit, dhuha, dzuhur, ashr, maghrib, isya
     };
-  }
-  catch (error) {
+  } catch (error) {
     await log(`Error jadwalSholat:\n${error}`, true);
     return {
       status: 'error',
-      error: error.message
+      message: error.message
     };
   }
 };
 export async function getZodiak(nama, tgl) {
   try {
-    const url = `https://script.google.com/macros/exec?service=AKfycbw7gKzP-WYV2F5mc9RaR7yE3Ve1yN91Tjs91hp_jHSE02dSv9w&nama=${nama}&tanggal=${tgl}`;
-    const response = await axios.get(url);
-    const { lahir, usia, ultah, zodiak } = response.data.data;
+    const encodedNama = encodeURIComponent(nama);
+    const encodedTgl = encodeURIComponent(tgl);
+    const url = `https://script.google.com/macros/exec?service=AKfycbw7gKzP-WYV2F5mc9RaR7yE3Ve1yN91Tjs91hp_jHSE02dSv9w&nama=${encodedNama}&tanggal=${encodedTgl}`;
+    const response = await nativeFetch(url);
+    if (!response.ok) {
+      throw new Error(`Gagal mengambil data zodiak: ${response.status} ${response.statusText}`);
+    }
+    const { lahir, usia, ultah, zodiak } = await response.json();
     let text = `*Nama*: ${nama}\n`;
     text += `*Lahir*: ${lahir}\n`;
     text += `*Usia*: ${usia}\n`;

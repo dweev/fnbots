@@ -15,8 +15,8 @@ import log from '../src/lib/logger.js';
 import { mongoStore } from '../database/index.js';
 import { tmpDir } from '../src/lib/tempManager.js';
 import { runJob } from '../src/worker/worker_manager.js';
-import { convert as convertNative } from '../src/addon/bridge.js';
 import { randomByte, getBuffer, getSizeMedia } from '../src/function/index.js';
+import { convert as convertNative, fetch as nativeFetch } from '../src/addon/bridge.js';
 import { MediaValidationError, MediaProcessingError, MediaSizeError } from '../src/lib/errorManager.js';
 import { jidNormalizedUser, generateWAMessage, generateWAMessageFromContent, downloadContentFromMessage, jidDecode, jidEncode, getBinaryNodeChildString, getBinaryNodeChildren, getBinaryNodeChild, proto } from 'baileys';
 
@@ -45,13 +45,46 @@ const detectMimeType = async (data, headers = {}) => {
 const handleBufferInput = async (input) => {
   if (Buffer.isBuffer(input)) {
     return input;
-  } else if (/^data:.*?\/.*?;base64,/i.test(input)) {
-    return Buffer.from(input.split(',')[1], 'base64');
-  } else if (/^https?:\/\//.test(input)) {
-    return await getBuffer(input);
-  } else {
-    return await fs.readFile(input);
   }
+  if (typeof input === 'string') {
+    if (/^data:.*?\/.*?;base64,/i.test(input)) {
+      return Buffer.from(input.split(',')[1], 'base64');
+    }
+    if (/^https?:\/\//.test(input)) {
+      return await getBuffer(input);
+    }
+    try {
+      const stats = await fs.stat(input);
+      if (stats.isFile()) {
+        return await fs.readFile(input);
+      }
+    } catch {
+      // dont do anything if it fails
+    }
+    try {
+      const buffer = Buffer.from(input, 'base64');
+      if (buffer.toString('base64') === input) {
+        return buffer;
+      }
+    } catch {
+      // dont do anything if it fails
+    }
+  }
+  if (input instanceof Uint8Array || input instanceof ArrayBuffer || ArrayBuffer.isView(input)) {
+    return Buffer.from(input);
+  }
+  if (Array.isArray(input) && typeof input[0] === 'number') {
+    return Buffer.from(input);
+  }
+  if (typeof input === 'object' && input !== null) {
+    if (input.data) {
+      return Buffer.from(input.data);
+    }
+    if (input.buffer) {
+      return Buffer.from(input.buffer);
+    }
+  }
+  throw new Error(`Tipe input tidak didukung untuk diubah menjadi Buffer: ${typeof input}`);
 };
 const createMediaMessage = (mime, data, caption, options = {}) => {
   if (mime.includes('gif')) {
@@ -140,19 +173,23 @@ export async function clientBot(fn, dbSettings) {
     if (typeof content === 'string') {
       try {
         if (/^https?:\/\//.test(content)) {
-          const data = await axios.get(content, { responseType: 'arraybuffer' });
-          const mime = await detectMimeType(data.data, data.headers);
+          const response = await nativeFetch(content);
+          if (!response.ok) throw new Error(`Download failed with status: ${response.status} ${response.statusText}`);
+          const buffer = await response.arrayBuffer();
+          const headers = {};
+          response.headers.forEach((value, key) => headers[key] = value);
+          const mime = await detectMimeType(buffer, headers);
           const finalCaption = opts.caption || '';
           const isWebpSticker = opts.asSticker || /webp/.test(mime);
           if (isWebpSticker) {
             const stickerBuffer = await runJob('stickerNative', {
-              mediaBuffer: data.data,
+              mediaBuffer: buffer,
               packname: opts.packname || dbSettings.packName,
               author: opts.author || dbSettings.packAuthor,
             });
             return await fn.sendMessage(chat, { sticker: stickerBuffer }, createQuotedOptions(quoted, opts));
           } else if (/gif|image|video|audio|pdf|stream/i.test(mime)) {
-            return await fn.sendMediaFromBuffer(chat, mime, data.data, finalCaption, quoted, opts);
+            return await fn.sendMediaFromBuffer(chat, mime, buffer, finalCaption, quoted, opts);
           }
         }
         return await fn.sendMessage(chat, { text: content, ...opts }, createQuotedOptions(quoted));
@@ -191,25 +228,71 @@ export async function clientBot(fn, dbSettings) {
   };
   fn.sendMediaFromBuffer = async (jid, mime, dataBuffer, caption, quoted, options = {}) => {
     let imageBuffer;
-    if (typeof dataBuffer === 'string' && dataBuffer.startsWith('data:image')) {
-      const base64Data = dataBuffer.split(';base64,').pop();
-      imageBuffer = Buffer.from(base64Data, 'base64');
-    } else if (Buffer.isBuffer(dataBuffer)) {
-      imageBuffer = dataBuffer;
-    } else {
-      throw new Error('Input tidak valid. Harap berikan Buffer atau string Base64.');
+    try {
+      if (typeof dataBuffer === 'string') {
+        if (dataBuffer.startsWith('data:')) {
+          const base64Data = dataBuffer.split(';base64,').pop();
+          imageBuffer = Buffer.from(base64Data, 'base64');
+        } else {
+          imageBuffer = Buffer.from(dataBuffer, 'base64');
+        }
+      } else if (Buffer.isBuffer(dataBuffer)) {
+        imageBuffer = dataBuffer;
+      } else if (dataBuffer instanceof Uint8Array ||
+        dataBuffer instanceof ArrayBuffer ||
+        ArrayBuffer.isView(dataBuffer)) {
+        imageBuffer = Buffer.from(dataBuffer);
+      } else if (Array.isArray(dataBuffer)) {
+        imageBuffer = Buffer.from(dataBuffer);
+      } else if (typeof dataBuffer === 'object' && dataBuffer !== null) {
+        if (dataBuffer.data) {
+          imageBuffer = Buffer.from(dataBuffer.data);
+        } else if (dataBuffer.buffer) {
+          imageBuffer = Buffer.from(dataBuffer.buffer);
+        } else {
+          throw new Error('Object tidak memiliki property data atau buffer yang valid');
+        }
+      } else {
+        throw new Error(`Tipe input tidak didukung: ${typeof dataBuffer}`);
+      }
+      if (!imageBuffer || imageBuffer.length === 0) {
+        throw new Error('Buffer kosong atau tidak valid');
+      }
+      if (!mime) {
+        return await fn.sendMessage(jid, {
+          document: imageBuffer,
+          mimetype: 'application/octet-stream',
+          fileName: 'file',
+          caption,
+          ...options
+        }, createQuotedOptions(quoted, options));
+      }
+      const messageContent = createMediaMessage(mime, imageBuffer, caption, options);
+      return await fn.sendMessage(jid, messageContent, createQuotedOptions(quoted, options));
+    } catch (error) {
+      const errorContext = {
+        function: 'sendMediaFromBuffer',
+        jid,
+        mime,
+        error: {
+          message: error.message,
+          stack: error.stack
+        },
+        inputAnalysis: {
+          type: typeof dataBuffer,
+          isArray: Array.isArray(dataBuffer),
+          isBuffer: Buffer.isBuffer(dataBuffer),
+          isUint8Array: dataBuffer instanceof Uint8Array,
+          isArrayBuffer: dataBuffer instanceof ArrayBuffer,
+          isArrayBufferView: ArrayBuffer.isView(dataBuffer),
+          hasLength: dataBuffer?.length,
+          length: dataBuffer?.length,
+          constructorName: dataBuffer?.constructor?.name
+        }
+      };
+      log(errorContext, true);
+      throw new Error(`Gagal memproses media: ${error.message}`);
     }
-    if (!mime) {
-      return await fn.sendMessage(jid, {
-        document: imageBuffer,
-        mimetype: 'application/octet-stream',
-        fileName: 'file',
-        caption,
-        ...options
-      }, createQuotedOptions(quoted, options));
-    }
-    const messageContent = createMediaMessage(mime, imageBuffer, caption, options);
-    return await fn.sendMessage(jid, messageContent, createQuotedOptions(quoted, options));
   };
   fn.getMediaBuffer = async (message) => {
     const MAX_FILE_SIZE = config.performance.maxFileSize;
@@ -274,15 +357,28 @@ export async function clientBot(fn, dbSettings) {
   };
   fn.sendFileUrl = async (jid, url, caption, quoted, options = {}) => {
     try {
-      const res = await axios({
-        method: 'get',
-        url: url,
-        responseType: 'arraybuffer',
-        family: config.security.networkFamily,
-        headers: { 'User-Agent': config.security.userAgent }
+      const headers = {
+        'User-Agent': config.security.userAgent,
+        ...(options.headers || {})
+      };
+      if (url.includes('tiktok') || url.includes('ttcdn') || url.includes('musical.ly')) {
+        headers['Referer'] = 'https://www.tiktok.com/';
+      } else if (url.includes('instagram') || url.includes('cdninstagram')) {
+        headers['Referer'] = 'https://www.instagram.com/';
+      } else if (url.includes('facebook') || url.includes('fbcdn')) {
+        headers['Referer'] = 'https://www.facebook.com/';
+      }
+      const response = await nativeFetch(url, {
+        method: 'GET',
+        headers: headers
       });
-      const mime = await detectMimeType(res.data, res.headers);
-      return await fn.sendMediaFromBuffer(jid, mime, res.data, caption, quoted, options);
+      if (!response.ok) throw new Error(`Download failed: ${response.status} ${response.statusText}`);
+      const buffer = await response.arrayBuffer();
+      if (!buffer || buffer.byteLength === 0) throw new Error('Downloaded buffer is empty');
+      const responseHeaders = {};
+      response.headers.forEach((value, key) => responseHeaders[key] = value);
+      const mime = await detectMimeType(buffer, responseHeaders);
+      return await fn.sendMediaFromBuffer(jid, mime, buffer, caption, quoted, options);
     } catch (error) {
       throw error;
     }
@@ -296,23 +392,23 @@ export async function clientBot(fn, dbSettings) {
         return await fn.sendMediaFromBuffer(jid, mime, buffer, caption, quoted, options);
       }
       const MAX_FILE_SIZE_BYTES = config.performance.maxFileSize;
-      const headResponse = await axios({
-        method: 'head',
-        url: url,
-        family: config.security.networkFamily,
+      const headResponse = await nativeFetch(url, {
+        method: 'HEAD',
         headers: { 'User-Agent': config.security.userAgent }
       });
-      const contentLength = headResponse.headers['content-length'];
+      if (!headResponse.ok) throw new Error(`HEAD request failed: ${headResponse.status} ${headResponse.statusText}`);
+      const contentLength = headResponse.headers.get('content-length');
       if (contentLength && parseInt(contentLength, 10) > MAX_FILE_SIZE_BYTES) throw new Error(`File terlalu besar (>${MAX_FILE_SIZE_BYTES / 1024 / 1024}MB).`);
-      const dataResponse = await axios({
-        method: 'get',
-        url: url,
-        responseType: 'arraybuffer',
-        family: config.security.networkFamily,
+      const dataResponse = await nativeFetch(url, {
+        method: 'GET',
         headers: { 'User-Agent': config.security.userAgent }
       });
-      const mimeType = await detectMimeType(dataResponse.data, dataResponse.headers);
-      return await fn.sendMediaFromBuffer(jid, mimeType, dataResponse.data, caption, quoted, options);
+      if (!dataResponse.ok) throw new Error(`GET request failed: ${dataResponse.status} ${dataResponse.statusText}`);
+      const buffer = await dataResponse.arrayBuffer();
+      const headers = {};
+      dataResponse.headers.forEach((value, key) => headers[key] = value);
+      const mimeType = await detectMimeType(buffer, headers);
+      return await fn.sendMediaFromBuffer(jid, mimeType, buffer, caption, quoted, options);
     } catch (error) {
       throw error;
     }
@@ -527,6 +623,35 @@ export async function clientBot(fn, dbSettings) {
     const formattedMessage = messageText.replace(/@user/g, `@${memberNum}`);
     await fn.sendFilePath(idGroup, formattedMessage, outputPath);
     await tmpDir.deleteFile(outputPath);
+  };
+  fn.profileImageBuffer = async (jid, type = 'image') => {
+    try {
+      const url = await fn.profilePictureUrl(jid, type);
+      const response = await nativeFetch(url, {
+        method: 'GET',
+        headers: { 'User-Agent': config.security.userAgent }
+      });
+      if (!response.ok) throw new Error(`Download failed with status: ${response.status} ${response.statusText}`);
+      const buffer = await response.arrayBuffer();
+      return Buffer.from(buffer);
+    } catch (error) {
+      throw error;
+    }
+  };
+  fn.sendFromTiktok = async (jid, url, caption, quoted, options = {}) => {
+    try {
+      const res = await axios({
+        method: 'get',
+        url: url,
+        responseType: 'arraybuffer',
+        family: config.security.networkFamily,
+        headers: { 'User-Agent': config.security.userAgent }
+      });
+      const mime = await detectMimeType(res.data, res.headers);
+      return await fn.sendMediaFromBuffer(jid, mime, res.data, caption, quoted, options);
+    } catch (error) {
+      throw error;
+    }
   };
   return fn;
 };

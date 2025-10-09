@@ -80,7 +80,7 @@ async function showCategories(sReply, dbSettings, m, sections) {
 };
 
 async function showAllCommands(sReply, dbSettings, m, sections) {
-  let ts = `\`\`\`── ${dbSettings.botName} ──\n\n`;
+  let ts = `\`\`\`── ${dbSettings.botName} ──`;
   ts += `\n\nKeterangan:\nⓁ = Menggunakan Limit\n🄶 = Menggunakan Limit Game`;
   const allDbCommands = await Command.find().lean();
   const commandMap = new Map(allDbCommands.map(cmd => [cmd.name, cmd]));

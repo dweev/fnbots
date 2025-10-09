@@ -118,7 +118,8 @@ class AutoDownloadHandler {
       if (result) {
         const baseCaption = buildBaseCaption(result);
         if (result.type === 'video' && result.video?.playAddr) {
-          await fn.sendFileUrl(toId, result.video.playAddr, baseCaption, m);
+          const videoUrl = (Array.isArray(result.video.playAddr) && result.video.playAddr.length > 0) ? result.video.playAddr[0] : result.video.playAddr;
+          await fn.sendFromTiktok(toId, videoUrl, baseCaption, m);
         } else if (result.type === 'image' && result.images?.length > 0) {
           await sendImages(fn, result, [], toId, m, baseCaption);
         }

@@ -89,3 +89,70 @@ export function convert(input, options = {}) {
     vbr: options.vbr !== false,
   });
 }
+
+/* =====================
+   FETCH BRIDGE
+   ===================== */
+const fetchNative = loadAddon("fetch");
+const textDecoder = new TextDecoder("utf-8");
+
+export function fetch(url, options = {}) {
+  if (typeof url !== "string") throw new TypeError("fetch() requires a URL string");
+  if (!fetchNative) throw new Error("Native fetch addon not loaded");
+  url = url.trim().replace(/\s+/g, "+").replace(/[\t\r\n]/g, "");
+  if (!/^https?:\/\//i.test(url)) throw new Error("Invalid or unsupported URL protocol");
+  const nativeFunc = fetchNative.startFetch || fetchNative.fetch;
+  if (typeof nativeFunc !== "function") throw new Error("No valid native fetch entrypoint");
+  const exec = typeof fetchNative.startFetch === "function" ? fetchNative.startFetch(url, options) : { promise: nativeFunc(url, options) };
+  const promise = exec.promise || exec;
+  return promise
+    .then((res) => {
+      if (!res || typeof res !== "object")
+        throw new Error("Invalid response from native fetch");
+      let body = res.body;
+      if (Array.isArray(body)) {
+        body = Buffer.from(body.buffer || body);
+      } else if (!Buffer.isBuffer(body)) {
+        try {
+          body = Buffer.from(body || []);
+        } catch {
+          body = Buffer.alloc(0);
+        }
+      }
+      const cachedTextRef = { val: null };
+      const out = {
+        ...res,
+        ok: res.status >= 200 && res.status < 300,
+        abort: exec.abort,
+        arrayBuffer() {
+          return Promise.resolve(body);
+        },
+        text() {
+          if (cachedTextRef.val === null) {
+            try {
+              cachedTextRef.val = textDecoder.decode(body);
+            } catch {
+              cachedTextRef.val = "";
+            }
+          }
+          return Promise.resolve(cachedTextRef.val);
+        },
+        json() {
+          try {
+            if (cachedTextRef.val === null)
+              cachedTextRef.val = textDecoder.decode(body);
+            return Promise.resolve(JSON.parse(cachedTextRef.val));
+          } catch (e) {
+            return Promise.reject(
+              new Error(`Invalid JSON: ${e.message}`)
+            );
+          }
+        },
+      };
+      return out;
+    })
+    .catch((err) => {
+      const msg = err instanceof Error ? err.message : String(err);
+      throw new Error(`curl perform error: ${msg}`);
+    });
+}

@@ -103,7 +103,7 @@ export async function checkCommandAccess(command, userData, user, maintenance) {
     isSadmin, isMaster, isVIP, isPremium,
     isGroupAdmins, isWhiteList, hakIstimewa, isMuted
   } = userData;
-  if (isSadmin) return true;
+  if (isSadmin) return { allowed: true };
   let userLevel = 'userBiasa';
   if (isMaster) userLevel = 'master';
   else if (isVIP) userLevel = 'vip';
@@ -116,21 +116,37 @@ export async function checkCommandAccess(command, userData, user, maintenance) {
     groupAdmin: ['master', 'owner', 'bot', 'vip', 'premium'],
     userBiasa:  ['master', 'owner', 'bot', 'vip', 'premium', 'manage']
   };
-  if (forbiddenCategories[userLevel] && forbiddenCategories[userLevel].includes(command.category)) {
-    return false;
+  if (forbiddenCategories[userLevel]?.includes(command.category)) {
+    return { allowed: false, reason: 'category' };
   }
   const isAllowedByState = (maintenance && (isWhiteList || hakIstimewa)) || (!maintenance && (hakIstimewa || !isMuted));
-  if (!isAllowedByState) return false;
+  if (!isAllowedByState) {
+    return { allowed: false, reason: 'state' };
+  }
   const isLimited = await user.isLimit();
   const isGameLimited = await user.isGameLimit();
-  if (isLimited && isGameLimited) {
-    if (!command.isCommandWithoutPayment) return false;
-  } else if (isLimited) {
-    if (!command.isLimitGameCommand && !command.isCommandWithoutPayment) return false;
-  } else if (isGameLimited) {
-    if (!command.isLimitCommand && !command.isCommandWithoutPayment) return false;
+  if (command.isCommandWithoutPayment) {
+    return { allowed: true };
   }
-  return true;
+  if (command.isLimitGameCommand && isGameLimited) {
+    const shouldWarn = !user.limitgame.warned;
+    return { 
+      allowed: false, 
+      reason: 'gamelimit', 
+      shouldWarn: shouldWarn,
+      needSetWarning: shouldWarn ? 'gamelimit' : null
+    };
+  }
+  if (command.isLimitCommand && isLimited) {
+    const shouldWarn = !user.limit.warned;
+    return { 
+      allowed: false, 
+      reason: 'limit', 
+      shouldWarn: shouldWarn,
+      needSetWarning: shouldWarn ? 'limit' : null
+    };
+  }
+  return { allowed: true };
 };
 export async function isUserVerified(m, dbSettings, StoreGroupMetadata, fn, sReply, hakIstimewa) {
   if (m.fromMe || hakIstimewa) return true;

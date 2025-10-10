@@ -13,10 +13,6 @@ export const methods = {
   async isLimit() {
     if (config.ownerNumber.includes(this.userId) || this.isMaster || this.isVIPActive) return false;
     if (this.limit.current <= 0) {
-      if (!this.limit.warned) {
-        this.limit.warned = true;
-        await this.constructor.updateOne({ userId: this.userId }, { $set: { 'limit.warned': true } });
-      }
       return true;
     }
     return false;
@@ -24,13 +20,27 @@ export const methods = {
   async isGameLimit() {
     if (config.ownerNumber.includes(this.userId) || this.isMaster || this.isVIPActive) return false;
     if (this.limitgame.current <= 0) {
-      if (!this.limitgame.warned) {
-        this.limitgame.warned = true;
-        await this.constructor.updateOne({ userId: this.userId }, { $set: { 'limitgame.warned': true } });
-      }
       return true;
     }
     return false;
+  },
+  async setLimitWarned() {
+    if (!this.limit.warned) {
+      this.limit.warned = true;
+      await this.constructor.updateOne(
+        { userId: this.userId },
+        { $set: { 'limit.warned': true } }
+      );
+    }
+  },
+  async setGameLimitWarned() {
+    if (!this.limitgame.warned) {
+      this.limitgame.warned = true;
+      await this.constructor.updateOne(
+        { userId: this.userId },
+        { $set: { 'limitgame.warned': true } }
+      );
+    }
   },
   resetLimits() {
     const dbSettings = Settings.getSettings();

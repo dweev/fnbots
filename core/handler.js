@@ -479,8 +479,8 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
                 continue;
               }
               try {
-                const hasAccess = await checkCommandAccess(command, userData, user, maintenance);
-                if (hasAccess) {
+                const accessResult = await checkCommandAccess(command, userData, user, maintenance);
+                if (accessResult.allowed) {
                   const args = currentCommand.split(' ').slice(1);
                   const fullArgs = args.join(' ');
                   const commandArgs = {
@@ -517,6 +517,23 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
                   await performanceManager.cache.updateUserStats(user.userId, userUpdates);
                   await performanceManager.cache.updateCommandStats(command.name, 1);
                   performanceManager.cache.incrementGlobalStats();
+                } else {
+                  if (accessResult.shouldWarn) {
+                    let replyMsg = '';
+                    if (accessResult.reason === 'limit') {
+                      replyMsg = 'Maaf, limit harian Anda telah habis.';
+                    } else if (accessResult.reason === 'gamelimit') {
+                      replyMsg = 'Maaf, limit game Anda telah habis.';
+                    }
+                    if (replyMsg) {
+                      await sReply(replyMsg);
+                      if (accessResult.needSetWarning === 'limit') {
+                        await user.setLimitWarned();
+                      } else if (accessResult.needSetWarning === 'gamelimit') {
+                        await user.setGameLimitWarned();
+                      }
+                    }
+                  }
                 }
               } catch (error) {
                 await sReply(`Terjadi kesalahan saat menjalankan perintah "${command.name}": \n${error.message}`);

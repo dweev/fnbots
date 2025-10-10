@@ -6,7 +6,7 @@
 */
 // ─── Info ────────────────────────────────
 
-import { fetchTikTokData, buildBaseCaption, sendImages } from '../../function/index.js';
+import { fetchTikTokData, buildBaseCaption, sendImages, normalizeResult } from '../../function/index.js';
 
 export const command = {
   name: 'tiktok',
@@ -23,22 +23,42 @@ export const command = {
     } else {
       return await sReply(`Silakan balas pesan berisi link TikTok atau kirim linknya langsung.\nContoh: ${dbSettings.rname}tt https://...`);
     }
-    let result;
-    try {
-      result = await fetchTikTokData(url, 'v1');
-    } catch {
+    const versions = ['v1', 'v2', 'v3'];
+    let result = null;
+    let lastError = null;
+    for (const version of versions) {
       try {
-        result = await fetchTikTokData(url, 'v2');
-      } catch {
-        result = await fetchTikTokData(url, 'v3');
+        result = await Promise.race([
+          fetchTikTokData(url, version),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error(`Timeout (${version})`)), 15000)
+          )
+        ]);
+        if (result) break;
+      } catch (error) {
+        lastError = error;
+        continue;
       }
     }
-    const baseCaption = buildBaseCaption(result);
-    if (result.type === 'video' && result.video?.playAddr) {
-      const videoUrl = (Array.isArray(result.video.playAddr) && result.video.playAddr.length > 0) ? result.video.playAddr[0] : result.video.playAddr;
-      await fn.sendFromTiktok(toId, videoUrl, baseCaption, m);
-    } else if (result.type === 'image' && result.images?.length > 0) {
-      await sendImages(fn, result, args, toId, m, baseCaption);
+    if (!result) {
+      return await sReply(
+        `Gagal mengunduh TikTok.\n\n` +
+        `Error terakhir: ${lastError?.message || 'Unknown error'}\n\n` +
+        `Kemungkinan penyebab:\n` +
+        `• Link tidak valid\n` +
+        `• Video bersifat pribadi\n` +
+        `• API downloader bermasalah\n` +
+        `• Koneksi timeout`
+      );
+    }
+    const normalizedResult = normalizeResult(result);
+    const baseCaption = buildBaseCaption(normalizedResult);
+    if (normalizedResult.type === 'video' && normalizedResult.videoUrl) {
+      await fn.sendFromTiktok(toId, normalizedResult.videoUrl, baseCaption, m);
+    } else if (normalizedResult.type === 'image' && normalizedResult.images?.length > 0) {
+      await sendImages(fn, normalizedResult, args, toId, m, baseCaption);
+    } else {
+      return await sReply('Tidak dapat menemukan media yang valid dari TikTok.');
     }
     await reactDone();
   }

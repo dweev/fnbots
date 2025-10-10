@@ -263,3 +263,27 @@ export async function getZodiak(nama, tgl) {
     throw error;
   }
 };
+export function normalizeResult(result) {
+  const normalized = {
+    type: result.type,
+    desc: result.desc || '',
+    author: result.author || {},
+    statistics: result.statistics || {},
+    hashtag: result.hashtag || [],
+    music: result.music || {},
+    images: result.images || [],
+    videoUrl: null
+  };
+  if (result.type === 'video') {
+    if (result.video?.playAddr) {
+      normalized.videoUrl = Array.isArray(result.video.playAddr) ? result.video.playAddr[0] : result.video.playAddr;
+    } else if (result.videoHD) {
+      normalized.videoUrl = result.videoHD;
+    } else if (result.videoWatermark) {
+      normalized.videoUrl = result.videoWatermark;
+    } else if (result.direct) {
+      normalized.videoUrl = result.direct;
+    }
+  }
+  return normalized;
+};

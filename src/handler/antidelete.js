@@ -8,6 +8,19 @@
 
 import log from '../lib/logger.js';
 
+function rehydrateBuffer(obj) {
+  if (!obj || typeof obj !== 'object') return obj;
+  if (obj.type === 'Buffer' && Array.isArray(obj.data)) {
+    return Buffer.from(obj.data);
+  }
+  for (const key in obj) {
+    if (typeof obj[key] === 'object') {
+      obj[key] = rehydrateBuffer(obj[key]);
+    }
+  }
+  return obj;
+}
+
 class AntiDeletedHandler {
   constructor(mongoStore, fn) {
     this.mongoStore = mongoStore;
@@ -21,7 +34,8 @@ class AntiDeletedHandler {
     const deletedMsgId = m.protocolMessage.key.id;
     const remoteJid = toId;
     try {
-      const originalMessage = await mongoStore.loadMessage(remoteJid, deletedMsgId);
+      const rawOriginalMessage = await mongoStore.loadMessage(remoteJid, deletedMsgId);
+      const originalMessage = rehydrateBuffer(rawOriginalMessage);
       if (!originalMessage || originalMessage.fromMe) {
         return;
       }

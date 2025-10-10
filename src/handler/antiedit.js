@@ -8,6 +8,19 @@
 
 import log from '../lib/logger.js';
 
+function rehydrateBuffer(obj) {
+  if (!obj || typeof obj !== 'object') return obj;
+  if (obj.type === 'Buffer' && Array.isArray(obj.data)) {
+    return Buffer.from(obj.data);
+  }
+  for (const key in obj) {
+    if (typeof obj[key] === 'object') {
+      obj[key] = rehydrateBuffer(obj[key]);
+    }
+  }
+  return obj;
+}
+
 class AntiEditHandler {
   constructor(mongoStore, fn) {
     this.mongoStore = mongoStore;
@@ -42,7 +55,11 @@ class AntiEditHandler {
   }
   async getOriginalMessage(mongoStore, chatId, messageId) {
     try {
-      const messages = await mongoStore.loadMessage(chatId, messageId);
+      const rawOriginalMessage = await mongoStore.loadMessage(chatId, messageId);
+      if (!rawOriginalMessage || rawOriginalMessage.fromMe) {
+        return;
+      }
+      const messages = rehydrateBuffer(rawOriginalMessage);
       return messages;
     } catch (error) {
       log(`Error mengambil pesan original: ${error}`, true);

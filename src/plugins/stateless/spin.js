@@ -22,7 +22,7 @@ export const command = {
       if (!bi0) return await sReply("Masukkan jumlah taruhan, contoh: .spin 10k, .spin all, .spin 50%");
       if (!user || user.balance <= 0) return await sReply("User tidak ditemukan atau saldo 0.\nsilakan gunakan permainan mode grinding dulu seperti .chop, .mine, .fish, .hunt, .ngelonte, .work atau gunakan perintah .daily jika kamu belum daily claim hari ini.");
       const saldoAwal = BigInt(user.balance);
-      let bid = 0n;
+      let bid;
       if (bi0 === 'all' || bi0 === 'allin') {
         bid = saldoAwal;
       } else if (bi0.endsWith('%')) {

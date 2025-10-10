@@ -62,10 +62,10 @@ function ensureBuffer(input) {
       return Buffer.from(input.data);
     }
   }
-  if (input && typeof input.length === 'number' && typeof input[0] === 'number') {
+  if (typeof input.length === 'number' && typeof input[0] === 'number') {
     return Buffer.from(input);
   }
-  if (input && input.buffer instanceof ArrayBuffer) {
+  if (input.buffer instanceof ArrayBuffer) {
     return Buffer.from(input);
   }
   throw new Error(
@@ -100,7 +100,6 @@ export default async function audioChanger({ mediaBuffer, filterName }) {
     const filterKeys = Array.from(ffmpegFilters.keys());
     const randomKey = filterKeys[Math.floor(Math.random() * filterKeys.length)];
     selectedFilter = ffmpegFilters.get(randomKey);
-    filterName = randomKey;
   }
   const inputFile = await tmpDir.createTempFileWithContent(finalBuffer, 'input.mp3');
   const outputFile = tmpDir.createTempFile('output.mp3');

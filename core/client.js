@@ -312,7 +312,7 @@ export async function clientBot(fn, dbSettings) {
       }
       if (!messageType) {
         throw new MediaValidationError('Format media tidak didukung', {
-          availableKeys: Object.keys(message || {}),
+          availableKeys: Object.keys(message),
           mimetype: message?.mimetype
         });
       }
@@ -414,7 +414,6 @@ export async function clientBot(fn, dbSettings) {
     }
   };
   fn.sendFilePath = async (jid, caption, localPath, options = {}) => {
-    let convertedPath;
     try {
       try {
         await fs.access(localPath);
@@ -454,8 +453,6 @@ export async function clientBot(fn, dbSettings) {
       return await fn.sendMessage(jid, messageContent, quotedOptions);
     } catch (error) {
       throw error;
-    } finally {
-      if (convertedPath) await tmpDir.deleteFile(convertedPath);
     }
   };
   fn.extractGroupMetadata = (result) => {

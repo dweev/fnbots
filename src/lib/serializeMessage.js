@@ -83,7 +83,6 @@ export default async function serializeMessage(fn, msg) {
       }
       m.key = key;
       m.fromMe = msg.key.fromMe;
-      mfrom = msg.key.remoteJid.startsWith('status') ? jidNormalizedUser(msg.key.participant) : jidNormalizedUser(msg.key.remoteJid);
       mchat = msg.key.remoteJid;
     }
     const isStatus = mchat === 'status@broadcast';

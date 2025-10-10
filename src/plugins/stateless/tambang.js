@@ -76,7 +76,7 @@ export const command = {
       if (!user || user.balance <= 0) return await sReply("User tidak ditemukan atau saldo 0.\nsilakan gunakan permainan mode grinding dulu seperti .chop, .mine, .fish, .hunt, .ngelonte, .work atau gunakan perintah .daily jika kamu belum daily claim hari ini.");
       const saldoAwal = BigInt(user.balance);
       const bi0 = args[0] ? args[0].toLowerCase() : '';
-      let bid = 0n;
+      let bid;
       if (bi0 === 'all' || bi0 === 'allin') { bid = saldoAwal; }
       else if (bi0.endsWith('%')) {
         const percentValue = parseFloat(bi0.replace(/%/g, '').replace(',', '.'));

@@ -18,10 +18,9 @@ export const command = {
   execute: async ({ fn, toId, user, args, serial, sReply }) => {
     await gameStateManager.startGame(serial);
     try {
-      let count = 1;
       let pricePerTicket = 500000n;
       if (!args[0] || !args[0].toLowerCase().endsWith('x')) return await sReply("Format perintah salah.\nContoh: `.lotre 10x` atau `.lotre 5x 1m`");
-      count = parseInt(args[0].toLowerCase().replace('x', ''));
+      const count = parseInt(args[0].toLowerCase().replace('x', ''));
       if (isNaN(count) || count <= 0 || count > 10) return await sReply("Jumlah tiket tidak valid (1-10).");
       if (args[1]) {
         const bi0 = args[1].toLowerCase();

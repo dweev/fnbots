@@ -75,7 +75,7 @@ export async function createWASocket(dbSettings) {
     maxMsgRetryCount: 5,
     auth: { creds: state.creds, keys: makeCacheableSignalKeyStore(state.keys, pinoLogger) },
     transactionOpts: { maxCommitRetries: 5, delayBetweenTriesMs: 1000 },
-    markOnlineOnConnect: true,
+    markOnlineOnConnect: false,
     linkPreviewImageThumbnailWidth: 192,
     syncFullHistory: true,
     fireInitQueries: true,

@@ -30,7 +30,7 @@ export const command = {
         return await sReply(`Perintah ini memerlukan input. Balas pesan berisi link/indeks, atau ketik langsung.\nContoh: ${dbSettings.rname}ytdl https://... atau ${dbSettings.rname}ytdl 1 (setelah ${dbSettings.rname}ytsearch)`);
       }
       let url = '';
-      let videoTitle = 'Audio dari YouTube';
+      let videoTitle;
       if (/^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\//i.test(input)) {
         url = cleanYoutubeUrl(input);
         const metadata = await youtubeDownloader.getVideoMetadata(url);

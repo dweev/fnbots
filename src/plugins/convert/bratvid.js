@@ -40,7 +40,7 @@ export const command = {
         inputText = arg;
       }
       if (!inputText && quotedMsg) {
-        if ((quotedMsg && quotedMsg?.type === "extendedTextMessage") || (quotedMsg && quotedMsg?.type === "conversation")) {
+        if (quotedMsg?.type === "extendedTextMessage" || quotedMsg?.type === "conversation") {
           inputText = quotedMsg?.body;
         }
       }

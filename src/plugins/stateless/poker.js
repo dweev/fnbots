@@ -23,7 +23,7 @@ export const command = {
       const saldoAwal = BigInt(user.balance);
       const bi0 = args[0] ? args[0].toLowerCase() : '';
       if (!bi0) return await sReply("Format tidak valid. Contoh: .poker 10k");
-      let bid = 0n;
+      let bid;
       if (bi0 === 'all' || bi0 === 'allin') { bid = saldoAwal; }
       else if (bi0.endsWith('%')) {
         const percentValue = parseFloat(bi0.replace(/%/g, '').replace(',', '.'));

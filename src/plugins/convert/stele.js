@@ -11,9 +11,9 @@ import util from 'util';
 import fs from 'fs-extra';
 import { delay } from 'baileys';
 import config from '../../../config.js';
-import { exec as cp_exec } from 'child_process';
+import { execFile as cp_execFile } from 'child_process';
 
-const exec = util.promisify(cp_exec);
+const execFile = util.promisify(cp_execFile);
 export const command = {
   name: 'stele',
   category: 'convert',
@@ -28,7 +28,18 @@ export const command = {
     const telegramUrl = arg;
     await fs.ensureDir(inputDir);
     await fs.ensureDir(tmpDir);
-    await exec(`"${config.paths.stickerConvertPath}" --download-telegram "${telegramUrl}" --telegram-token "${process.env.TELE_TOKEN}" --telegram-userid "${process.env.TELE_USERID}" --no-confirm --no-progress --no-compress --input-dir "${inputDir}"`);
+    await execFile(
+      config.paths.stickerConvertPath,
+      [
+        '--download-telegram', telegramUrl,
+        '--telegram-token', process.env.TELE_TOKEN,
+        '--telegram-userid', process.env.TELE_USERID,
+        '--no-confirm',
+        '--no-progress',
+        '--no-compress',
+        '--input-dir', inputDir,
+      ]
+    );
     await delay(2000);
     const files = await fs.readdir(inputDir);
     const webpFiles = files.filter(f => f.endsWith('.webp'));
@@ -37,7 +48,7 @@ export const command = {
       const inputPath = path.join(inputDir, file);
       await fs.access(inputPath);
       await fn.sendRawWebpAsSticker(toId, inputPath);
-    }                            
+    }
     await fs.rm(config.paths.stickerDir, { recursive: true, force: true });
   }
 };

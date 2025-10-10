@@ -23,7 +23,7 @@ export const command = {
       const saldoAwal = BigInt(user.balance);
       const bi0 = args[0] ? args[0].toLowerCase() : '';
       if (!bi0) return await sReply("Masukkan jumlah taruhan, contoh: .aduq 10k, .aduq all, .aduq 50%");
-      let bid = 0n;
+      let bid;
       if (bi0 === 'all' || bi0 === 'allin') {
         bid = saldoAwal;
       } else if (bi0.endsWith('%')) {
@@ -93,7 +93,7 @@ export const command = {
           winner = 'push';
         }
       }
-      let selisih = 0n;
+      let selisih;
       let winText = "";
       if (winner === 'player') {
         selisih = bid;

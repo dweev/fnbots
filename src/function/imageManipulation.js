@@ -129,7 +129,7 @@ async function applyEffect(buffer, effectFn) {
 };
 async function overlayImage(ctx, baseImagePath, data, position = 'center') {
   const base = await loadImage(await fs.readFile(baseImagePath));
-  let x = 0, y = 0, width = base.width, height = base.height;
+  let x = 0, y = 0, width, height;
   const dataRatio = data.width / data.height;
   const baseRatio = base.width / base.height;
   if (baseRatio < dataRatio) {

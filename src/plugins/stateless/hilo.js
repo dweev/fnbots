@@ -24,7 +24,7 @@ export const command = {
       const saldoAwal = BigInt(user.balance);
       const bi0 = args[0]?.toLowerCase();
       if (!bi0) return await sReply("Masukkan jumlah taruhan.");
-      let bid = 0n;
+      let bid;
       if (bi0 === 'all' || bi0 === 'allin') {
         bid = saldoAwal;
       } else if (bi0.endsWith('%')) {
@@ -57,7 +57,7 @@ export const command = {
       const currentCard = Math.floor(Math.random() * 13) + 1;
       const nextCard = Math.floor(Math.random() * 13) + 1;
       const cardToEmoji = (val) => ['A🂡', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟', 'J🂫', 'Q🂭', 'K🂮'][val - 1];
-      let selisih = 0n;
+      let selisih;
       let resultText = "";
       if (nextCard === currentCard) {
         selisih = 0n;

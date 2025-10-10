@@ -90,7 +90,7 @@ export const command = {
       if ((hasBig || hasSmall) && hasNumericBet) return await sReply("Dilarang mencampur taruhan 'big'/'small' dengan taruhan angka spesifik.");
       if (hasBig && hasSmall) return await sReply("Dilarang bertaruh pada 'big' dan 'small' secara bersamaan.");
       const totalTaruhan = BigInt(taruhanList.length);
-      let tot = 0n;
+      let tot;
       if (isAllIn) {
         if (totalTaruhan > 1n) return await sReply("'all' hanya bisa digunakan untuk 1 jenis taruhan.");
         bid = saldoAwal;

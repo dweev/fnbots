@@ -30,7 +30,6 @@ export async function handleGameBotResponse(params) {
     ularTanggaSessions, tictactoeSessions, samgongSessions, tebakkalimat, siapakahaku,
     ulartangga, tebakgame
   } = gameStates;
-  let { interactiveHandled } = gameStates;
 
   const quotedMsg = m.quoted ? m.quoted : false;
   const txt = body;
@@ -90,7 +89,6 @@ export async function handleGameBotResponse(params) {
     const huruf = m.body?.toLowerCase()?.trim();
     const isValidHangmanInput = (huruf && huruf.length === 1 && /^[a-z]$/i.test(huruf)) || (huruf === 'menyerah');
     if (isValidHangmanInput) {
-      interactiveHandled = true;
       const dataGame = hangman[toId];
       const [jawaban, display, clue, data, mode, timeout,] = dataGame;
       const rewardNormal = 500;
@@ -1094,7 +1092,7 @@ export async function handleGameBotResponse(params) {
       return true;
     }
   }
-  if (chatBots[serial] && !interactiveHandled && !isCmd) {
+  if (chatBots[serial] && !isCmd) {
     clearTimeout(chatBots[serial]);
     chatBots[serial] = setTimeout(() => {
       delete chatBots[serial];

@@ -70,7 +70,7 @@ export const command = {
       const config = gameModes[mode];
       if (!config) return await sReply(`Mode "${mode}" tidak ditemukan. Pilihan: easy, normal, hard, extreme.`);
       if (!user || user.balance <= 0) return await sReply("User tidak ditemukan atau saldo 0.\nsilakan gunakan permainan mode grinding dulu seperti .chop, .mine, .fish, .hunt, .ngelonte, .work atau gunakan perintah .daily jika kamu belum daily claim hari ini.");
-      const saldoAwal = user ? BigInt(user.balance) : 0n;
+      const saldoAwal = BigInt(user.balance);
       if (saldoAwal < BigInt(config.cost)) return await sReply(`Saldomu tidak cukup untuk bermain mode ${mode} (butuh ${formatNumber(config.cost)}).`);
       const { key } = await sReply('🎰 Slot Machine🎰\n⏳ Rolling...');
       const slotSymbols = ['💎', '❄️', '☠️', '⚡', '❤️'];

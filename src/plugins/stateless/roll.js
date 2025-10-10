@@ -88,7 +88,7 @@ export const command = {
       if ((betSet.has('odd') || betSet.has('ganjil')) && (betSet.has('even') || betSet.has('genap'))) return await sReply("Dilarang bertaruh pada 'odd' dan 'even' bersamaan.");
       if (betSet.has('0') && taruhanList.length > 1) return await sReply("Taruhan '0' hanya boleh 1 angka saja.");
       const totalTaruhan = BigInt(taruhanList.length);
-      let tot = 0n;
+      let tot;
       if (isAllIn) {
         if (totalTaruhan > 1n) return await sReply("'all' hanya untuk 1 jenis taruhan.");
         bid = saldoAwal; tot = saldoAwal;

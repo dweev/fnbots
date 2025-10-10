@@ -88,7 +88,8 @@ static OpenInputResult OpenFromBuffer(const uint8_t* data, size_t len){
   R.fmt.p = (AVFormatContext*)ensure_cptr(avformat_alloc_context(), "avformat_alloc_context failed");
   R.fmt.p->pb = R.io.p;
   R.fmt.p->flags |= AVFMT_FLAG_CUSTOM_IO;
-
+  
+  av_log_set_level(AV_LOG_QUIET);
   ensure(avformat_open_input(&R.fmt.p, "", nullptr, nullptr) == 0, "avformat_open_input failed");
   ensure(avformat_find_stream_info(R.fmt.p, nullptr) >= 0, "avformat_find_stream_info failed");
   return R;
@@ -134,14 +135,14 @@ static uint64_t choose_layout_legacy(int ch) {
 #endif
 
 static int default_frame_size(AVCodecID id, int /*sr*/){
-  if (id == AV_CODEC_ID_OPUS) return 960;    // 20ms @ 48k
-  if (id == AV_CODEC_ID_MP3)  return 1152;   // MP3
-  return 1024;                               // AAC/PCM
+  if (id == AV_CODEC_ID_OPUS) return 960;
+  if (id == AV_CODEC_ID_MP3)  return 1152;
+  return 1024;
 }
 
 static std::vector<uint8_t> convertCore(
   const uint8_t* input, size_t inLen,
-  const std::string& out_format,   // "mp3" | "opus" | "ogg" | "wav" | "aac" | "m4a"
+  const std::string& out_format,
   int64_t bitrate_bps,
   int sample_rate,
   int channels,

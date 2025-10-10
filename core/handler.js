@@ -60,7 +60,6 @@ const tebakkalimat            = {};
 const siapakahaku             = {};
 const ulartangga              = {};
 const tebakgame               = {};
-const interactiveHandled      = false;
 let suggested                 = false;
 let groupData                 = null;
 let mygroupMembers            = {};
@@ -100,17 +99,6 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
   const body = m?.body;
   const type = m?.type;
   const txt = body;
-
-  const userData = {
-    isSadmin: isSadmin,
-    isMaster: isMaster,
-    isVIP: isVIP,
-    isPremium: isPremium,
-    isGroupAdmins: m.isGroup ? m.isAdmin : false,
-    isWhiteList: isWhiteList,
-    hakIstimewa: hakIstimewa,
-    isMuted: groupData ? groupData.isMuted : false
-  };
 
   const reactDone = async () => { await delay(1000); await fn.sendMessage(toId, { react: { text: '✅', key: m.key } }); };
   const reactFail = async () => { await delay(1000); await fn.sendMessage(toId, { react: { text: '❎', key: m.key } }); };
@@ -297,6 +285,17 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
       return;
     }
   }
+  
+  const userData = {
+    isSadmin: isSadmin,
+    isMaster: isMaster,
+    isVIP: isVIP,
+    isPremium: isPremium,
+    isGroupAdmins: m.isGroup ? m.isAdmin : false,
+    isWhiteList: isWhiteList,
+    hakIstimewa: hakIstimewa,
+    isMuted: groupData ? groupData.isMuted : false
+  };
   try {
     if (m.isGroup && !isCmd && groupData) {
       const currentTime = Date.now();
@@ -618,7 +617,7 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
       sudokuGame, chatBots, sessions, chessGame, othelloGame,
       ludoSessions, game41Sessions, gamematematika, werewolfSessions,
       minesweeperSessions, ularTanggaSessions, tictactoeSessions,
-      samgongSessions, tebakkalimat, siapakahaku, ulartangga, tebakgame, interactiveHandled
+      samgongSessions, tebakkalimat, siapakahaku, ulartangga, tebakgame
     };
     const gameHandled = await handleGameBotResponse({ m, toId, body, user, sReply, sPesan, fn, serial, isCmd, reactFail, dbSettings, config, gameStates });
     if (gameHandled) return;

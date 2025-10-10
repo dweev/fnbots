@@ -1,6 +1,6 @@
 {
   "name": "whatsapp-bot",
-  "version": "1.0.0",
+  "version": "1.base",
   "description": "WhatsApp Bot by FN",
   "main": "core/main.js",
   "type": "module",
@@ -11,7 +11,8 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "test": "NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest --runInBand",
-    "build:addon": "node-gyp configure && node-gyp build"
+    "build:addon": "node-gyp configure && node-gyp build",
+    "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s && git add CHANGELOG.md"
   },
   "keywords": [
     "whatsapp",
@@ -30,7 +31,7 @@
     "audio-decode": "^2.2.3",
     "awesome-phonenumber": "^7.5.0",
     "axios": "^1.12.2",
-    "baileys": "github:Terror-Machine/Baileys",
+    "baileys": "github:Terror-Machine/Baileys#fork",
     "canvas": "^3.2.0",
     "cheerio": "^1.1.2",
     "chess.js": "^1.4.0",
@@ -53,6 +54,7 @@
     "lru-cache": "^11.2.1",
     "mathjs": "^14.8.1",
     "mime-types": "^3.0.1",
+    "mongodb": "^6.20.0",
     "mongoose": "^8.18.1",
     "node-cron": "^4.2.1",
     "node-gtts": "github:Terror-Machine/node-gtts",
@@ -77,6 +79,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.33.0",
+    "conventional-changelog-cli": "^5.0.0",
     "eslint": "^9.32.0",
     "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-security": "^3.0.1",

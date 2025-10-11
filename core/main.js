@@ -88,17 +88,6 @@ function setupWhatsAppEventHandlers(fn) {
       await processContactUpdate(contact);
     }
   });
-  fn.ev.on('lid-mapping.update', async ({ lid, pn }) => {
-    try {
-      await log(`LID mapping update received: ${pn} <-> ${lid}`);
-      const success = await fn.storeLIDMapping(lid, pn);
-      if (success) {
-        await log(`LID mapping stored and session migrated successfully`);
-      }
-    } catch (error) {
-      await log(`Failed to handle LID mapping update: ${error.message}`, true);
-    }
-  });
   fn.ev.on('messages.upsert', async (message) => {
     await updateMessageUpsert(fn, message, dbSettings);
   });

@@ -168,6 +168,7 @@ export async function createWASocket(dbSettings) {
         await log(`WA Version: ${global.version.join('.')}`);
         await log(`BOT Number: ${jidNormalizedUser(fn.user.id).split('@')[0]}`);
         await log(`${dbSettings.botName} Success Connected to whatsapp...`);
+        await fn.storeLIDMapping().catch(err => log(`Background LID sync failed: ${err.message}`, true));
         setInterval(cleanupExpiredOTPSessions, config.performance.defaultInterval);
       }
       if (connection === 'close') {

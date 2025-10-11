@@ -7,7 +7,6 @@
 // ─── Info src/worker/workers/sticker_native_worker.js ────────────────
 
 import { sticker as stickerNative, addExif as addExifNative } from '../../addon/bridge.js';
-import webp from 'node-webpmux';
 
 function ensureBuffer(data) {
   if (Buffer.isBuffer(data)) return data;
@@ -20,26 +19,39 @@ function ensureBuffer(data) {
   throw new Error(`Invalid data type in worker. Expected Buffer, got ${typeof data}`);
 }
 
+function isWebP(buffer) {
+  return (
+    buffer.length >= 12 &&
+    buffer.slice(0, 4).toString() === "RIFF" &&
+    buffer.slice(8, 12).toString() === "WEBP"
+  );
+}
+
+function hasExifMetadata(buffer) {
+  if (!isWebP(buffer)) return false;
+  let offset = 12;
+  while (offset < buffer.length - 8) {
+    const chunkHeader = buffer.slice(offset, offset + 4).toString();
+    const chunkSize = buffer.readUInt32LE(offset + 4);
+    if (chunkHeader === 'EXIF') {
+      return true;
+    }
+    offset += 8 + chunkSize + (chunkSize % 2);
+  }
+  return false;
+}
+
 export default async function createNativeSticker({ mediaBuffer, ...options }) {
   if (!mediaBuffer) {
     throw new Error('mediaBuffer is required in worker');
   }
   const finalBuffer = ensureBuffer(mediaBuffer);
-  const isAlreadyWebP = (
-    finalBuffer.length >= 12 &&
-    finalBuffer.slice(0, 4).toString() === "RIFF" &&
-    finalBuffer.slice(8, 12).toString() === "WEBP"
-  );
-
+  const isAlreadyWebP = isWebP(finalBuffer);
   let result;
-  if (isAlreadyWebP) {
-    const img = new webp.Image();
-    await img.load(finalBuffer);
-    if (img.exif) {
-      result = finalBuffer;
-    } else {
-      result = await addExifNative(finalBuffer, options);
-    }
+  if (isAlreadyWebP && hasExifMetadata(finalBuffer)) {
+    result = finalBuffer;
+  } else if (isAlreadyWebP) {
+    result = await addExifNative(finalBuffer, options);
   } else {
     result = await stickerNative(finalBuffer, options);
   }

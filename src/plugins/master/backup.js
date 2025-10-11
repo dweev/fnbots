@@ -8,10 +8,10 @@
 
 import util from 'util';
 import path from 'path';
-import { exec as cp_exec } from 'child_process';
 import { tmpDir } from '../../lib/tempManager.js';
+import { execFile as cp_execFile } from 'child_process';
 
-const exec = util.promisify(cp_exec);
+const execFile = util.promisify(cp_execFile);
 export const command = {
   name: 'backup',
   category: 'master',
@@ -30,16 +30,16 @@ export const command = {
       backupFilePath = tmpDir.createTempFile('zip', fileName);
       const sourceDir = '.';
       const exclusions = [
-        `"${path.basename(backupFilePath)}"`,
-        '"logs/*"',
-        '"node_modules/*"',
-        '"venv/*"',
-        '".git/*"',
-        '".*"'
+        path.basename(backupFilePath),
+        'logs/*',
+        'node_modules/*',
+        'venv/*',
+        '.git/*',
+        '.*'
       ];
-      const excludeString = exclusions.map(ex => `-x ${ex}`).join(' ');
-      const command = `zip -r ${backupFilePath} ${sourceDir} ${excludeString}`;
-      await exec(command);
+      const excludeArgs = exclusions.map(ex => ['-x', ex]).flat();
+      const zipArgs = ['-r', backupFilePath, sourceDir, ...excludeArgs];
+      await execFile('zip', zipArgs);
       await fn.sendFilePath(toId, dbSettings.autocommand, backupFilePath, { quoted: m });
     } finally {
       await tmpDir.deleteFile(backupFilePath);

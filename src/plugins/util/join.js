@@ -17,7 +17,7 @@ export const command = {
     if (dbSettings.autojoin === true) return;
     if (!arg) {
       return await sReply(`Silakan berikan link undangan grup WhatsApp yang ingin Kamu masuki.\nContoh: ${dbSettings.sname}join https://chat.whatsapp.com/abc123xyz`);
-    } else if (args[0].match(/(chat\.whatsapp\.com)/gi)) {
+    } else if (args[0].match(/^https:\/\/chat\.whatsapp\.com\//i)) {
       const inviteCode = args[0].split("https://chat.whatsapp.com/")[1];
       if (!inviteCode) return await sReply(`Silakan berikan link undangan grup WhatsApp yang valid.\nContoh: ${dbSettings.sname}join https://chat.whatsapp.com/abc123xyz`);
       const { restrict, joinApprovalMode, subject, participants, id } = await fn.groupGetInviteInfo(inviteCode);

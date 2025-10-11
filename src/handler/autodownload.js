@@ -21,10 +21,10 @@ const exec = util.promisify(cp_exec);
 class AutoDownloadHandler {
   constructor() {
     this.platforms = [
-      { name: 'tiktok', regex: /https?:\/\/(www\.|vm\.|vt\.)?tiktok\.com\//i, handler: this.handleTikTok },
-      { name: 'facebook', regex: /https?:\/\/(?:www\.|m\.|web\.)?facebook\.com\/[^\s]+/i, handler: this.handleFacebook },
-      { name: 'instagram', regex: /https?:\/\/(www\.)?instagram\.com\/(s|p|reel|stories|tv)\/([a-zA-Z0-9\-_]+)/i, handler: this.handleInstagram },
-      { name: 'twitter', regex: /https?:\/\/(?:www\.|mobile\.)?(?:twitter\.com|x\.com)\/[a-zA-Z0-9_]+\/status\/\d+/i, handler: this.handleTwitter },
+      { name: 'tiktok', regex: /^https?:\/\/(www\.|vm\.|vt\.)?tiktok\.com\//i, handler: this.handleTikTok },
+      { name: 'facebook', regex: /^https?:\/\/(?:www\.|m\.|web\.)?facebook\.com\/[^\s]+/i, handler: this.handleFacebook },
+      { name: 'instagram', regex: /^https?:\/\/(www\.)?instagram\.com\/(s|p|reel|stories|tv)\/([a-zA-Z0-9\-_]+)/i, handler: this.handleInstagram },
+      { name: 'twitter', regex: /^https?:\/\/(?:www\.|mobile\.)?(?:twitter\.com|x\.com)\/[a-zA-Z0-9_]+\/status\/\d+/i, handler: this.handleTwitter },
     ];
   }
   async handle(params) {

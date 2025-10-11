@@ -34,7 +34,7 @@ export const command = {
       } else {
         return await sReply("Silakan berikan URL Facebook atau balas pesan yang berisi URL.");
       }
-      if (!/^https?:\/\/(www\.)?(m\.)?(web\.)?facebook\.com/.test(input)) return await sReply("URL yang Kamu berikan bukan URL Facebook yang valid.");
+      if (!/^https?:\/\/(www\.)?(m\.)?(web\.)?facebook\.com([/?#]|$)/.test(input)) return await sReply("URL yang Kamu berikan bukan URL Facebook yang valid.");
       const downloadVideoCmd = `${config.paths.ytDlpPath} -f "bestvideo[ext=mp4]" -o "${tempVideoPath}" "${input}"`;
       const downloadAudioCmd = `${config.paths.ytDlpPath} -f "bestaudio[ext=m4a]" -o "${tempAudioPath}" "${input}"`;
       await exec(downloadVideoCmd, { shell: '/bin/bash' });

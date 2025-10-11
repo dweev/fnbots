@@ -53,7 +53,7 @@ export function buildBaseCaption(result) {
     `📝 *Deskripsi:* ${result.desc || '(Tidak ada deskripsi)'}`;
 };
 export async function fetchTikTokData(url, version = 'v1') {
-  if (!/^https?:\/\/(www\.|vt\.|vm\.|t\.)?tiktok\.com/.test(url)) {
+  if (!/^https?:\/\/(www\.|vt\.|vm\.|t\.)?tiktok\.com(\/|$)/.test(url)) {
     throw new Error("URL yang Kamu berikan sepertinya bukan link TikTok yang valid.");
   }
   const data = await Downloader(url, { version });
@@ -193,6 +193,17 @@ export function formatTimestampToHourMinute(ts) {
   const minutes = date.getMinutes().toString().padStart(2, '0');
   return `${hours}.${minutes}`;
 };
+function redactUrlSecrets(urlString) {
+  try {
+    const urlObj = new URL(urlString);
+    if (urlObj.searchParams.has('appid')) {
+      urlObj.searchParams.set('appid', 'REDACTED');
+    }
+    return urlObj.toString();
+  } catch {
+    return urlString;
+  }
+};
 export async function fetchJson(url, options = {}) {
   try {
     const { headers: optionHeaders, ...restOptions } = options;
@@ -208,7 +219,8 @@ export async function fetchJson(url, options = {}) {
     }
     return await response.json();
   } catch (error) {
-    await log(`Error fetchJson: ${url}.\n${error}`, true);
+    const safeUrl = redactUrlSecrets(url);
+    await log(`Error fetchJson: ${safeUrl}.\n${error}`, true);
     throw error;
   }
 };

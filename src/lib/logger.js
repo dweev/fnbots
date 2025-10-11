@@ -17,6 +17,18 @@ import { signalHandler } from './signalHandler.js';
 const logFilePath = path.join(process.cwd(), config.paths.logsDir);
 const blockedKeywords = config.logger.blockedKeywords;
 
+function redactSecrets(input) {
+  if (!input || typeof input !== 'string') return input;
+  let redacted = input;
+  const secrets = [config.openWather, config.huggigFace, config.geminiApikey];
+  secrets.forEach(secret => {
+    if (typeof secret === 'string' && secret.length > 0) {
+      redacted = redacted.split(secret).join('[REDACTED]');
+    }
+  });
+  return redacted;
+}
+
 class SafeRotatingFileStream {
   constructor(filePath, options = {}) {
     this.filePath = filePath;
@@ -409,13 +421,13 @@ export default async function log(message, isError = false) {
     if (isError) {
       console.error('Logger error:', loggerError);
       if (message instanceof Error) {
-        console.error(message.message);
-        console.error(message.stack);
+        console.error(redactSecrets(message.message));
+        console.error(redactSecrets(message.stack));
       } else {
-        console.error(message);
+        console.error(redactSecrets(message));
       }
     } else {
-      console.log(message);
+      console.log(redactSecrets(message));
     }
   }
 }

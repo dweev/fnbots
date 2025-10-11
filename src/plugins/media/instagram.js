@@ -25,7 +25,7 @@ export const command = {
     } else {
       return await sReply(`Silakan balas pesan berisi link Instagram atau kirim linknya langsung.\nContoh: ${dbSettings.rname}ig https://...`);
     }
-    if (!/^https?:\/\/(www\.)?instagram\.com/.test(url)) return await sReply("URL yang Kamu berikan sepertinya bukan link Instagram yang valid.");
+    if (!/^https?:\/\/(www\.)?instagram\.com(\/|$)/.test(url)) return await sReply("URL yang Kamu berikan sepertinya bukan link Instagram yang valid.");
     const data = await instagram(url);
     if (!data) return await sReply("Gagal mengambil data dari Instagram. Pastikan link valid dan tidak private.");
     if (data.post_info) {

@@ -190,12 +190,12 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
       const { stdout, stderr } = await exec(body?.slice(2).trim());
       const combinedOutput = (stdout || stderr || "").trim();
       if (combinedOutput) {
-        await sReply(util.format(combinedOutput));
+        await sReply(`\`\`\`\n${util.format(combinedOutput)}\n\`\`\``);
       } else {
         await sReply("Perintah berhasil dieksekusi, namun tidak ada output yang dihasilkan.");
       }
     } catch (error) {
-      await sReply(util.format(error));
+      await sReply(`\`\`\`\n${util.format(error)}\n\`\`\``);
     }
   } else if (body?.toLowerCase().trim() === "res") {
     if (!isSadmin && !isMaster) return;
@@ -318,7 +318,7 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
         }
       }
       if (groupData.antilink) {
-        if (body?.match(/(chat\.whatsapp\.com)/gi) && !isPrivileged) {
+        if (body?.match(/^https?:\/\/chat\.whatsapp\.com\/\w+/i) && !isPrivileged) {
           await fn.sendMessage(toId, { delete: { remoteJid: toId, fromMe: false, id: id, participant: serial } });
           await fn.removeParticipant(toId, serial);
         }

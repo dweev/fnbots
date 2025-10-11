@@ -345,22 +345,39 @@ The directory structure is designed for a clear separation of concerns, making t
 ├── core/                  # Core engine & main bot logic flow
 ├── database/              # DB connection, session management & cache layer
 ├── logs/                  # Activity and error log files
+├── media/                 # Media files (images, videos, etc.)
 ├── src/
 │   ├── addon/             # Collection of native adddons built with C/C++ (e.g., ffmpeg processing)
+│   ├── fonts/             # Font files assets
 │   ├── function/          # Collection of feature-specific utility functions
+│   ├── games/             # Game database & assets
 │   ├── handler/           # Handlers for non-command features (e.g., auto-sticker)
+│   ├── image/             # Image assets
+│   ├── ktp/               # KTP assets & templates
 │   ├── lib/               # Core libraries & business logic (plugin loader, performance)
+│   ├── media/             # Media assets
 │   ├── models/            # MongoDB (Mongoose) schemas & models
 │   ├── plugins/           # All bot commands (highly modular)
 │   ├── sampah/            # Managed temporary file storage
 │   ├── utils/             # General utilities (security, scrapers, external scripts)
 │   └── worker/            # Async worker system for heavy tasks (FFMPEG, Canvas)
 ├── .env.example           # Environment variable template
+├── .gitignore             # Git ignore file
+├── binding.gyp            # Build configuration for native addons
+├── cliff.toml             # Configuration for code linting
 ├── config.js              # Main configuration file
-├── install.sh             # Automated server setup script
-├── update.sh              # Python dependency update script
 ├── ecosystem.config.cjs   # PM2 configuration for deployment
-└── package.json           # Project dependencies
+├── eslint.config.js       # ESLint configuration
+├── igdocs.js              # Instagram scraping configuration
+├── install.sh             # Automated server setup script
+├── jest.config.js         # Jest testing configuration
+├── LICENSE                # Project license (MIT)
+├── mongo.sh               # MongoDB setup script
+├── package.json           # Project metadata and scripts
+├── pull.sh                # Git pull & update script
+├── README.md              # Project documentation (this file)
+├── system.sh              # System dependency check script
+└── update.sh              # Python dependency update script
 ```
 
 -----
@@ -370,7 +387,7 @@ The directory structure is designed for a clear separation of concerns, making t
 ### Software
 
   * **Node.js**: `v20.x` or higher
-  * **MongoDB**: `v5.0` or higher (local or Atlas)
+  * **MongoDB**: `v4.0` or higher (local or Atlas)
   * **Redis**: `v6.x` or higher
   * **Git**
   * **FFMPEG**: **Required** for all media processing (stickers, audio filters).
@@ -432,6 +449,11 @@ The easiest way to set up is by using the `install.sh` script on a fresh Ubuntu 
   sudo bash install.sh
   ```
 
+  If you encounter errors related to `mongo`:
+  ```bash
+  sudo bash mongo.sh
+  ```
+
 ### Running the Bot
 
 1.  **Start with Pairing Code (Recommended)**
@@ -462,6 +484,12 @@ pm2 start ecosystem.config.cjs
 
 # Monitor logs
 pm2 logs
+```
+
+For ROOT users (running at systemd level), use the `system.sh` script to set up the systemd service.
+```bash
+sudo bash ./system.sh
+bot start
 ```
 
 -----

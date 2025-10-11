@@ -1,24 +1,38 @@
-// ─── Info ────────────────────────────────
+// ─── Info ──────────────────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
-// ─── Info src/lib/restartManager.js ──────
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
+// ─── Info src/lib/restartManager.js ────────────────────
 
 import log from './logger.js';
 import { delay } from 'baileys';
 import { spawn } from 'child_process';
+import { existsSync } from 'fs';
 
 const MAX_RESTART_ATTEMPTS = 5;
 const RESTART_DELAY_MS = 6000;
-const isPm2 = 'PM2_HOME' in process.env || 'pm_id' in process.env || 'NODE_APP_INSTANCE' in process.env;
+
+const isPm2 =
+  'PM2_HOME' in process.env ||
+  'pm_id' in process.env ||
+  'NODE_APP_INSTANCE' in process.env;
+
+const isSystemd =
+  process.env.INVOCATION_ID ||
+  process.env.JOURNAL_STREAM ||
+  existsSync('/run/systemd/system');
+
 const isSelfRestarted = process.env.RESTARTED_BY_SELF === '1';
 
 function logRestartInfo() {
   log('Starting Engine...');
-  log(`Running Mode: ${isPm2 ? 'PM2' : 'Node'} | RestartedBySelf: ${isSelfRestarted}`);
-};
+  log(
+    `Running Mode: ${isPm2 ? 'PM2' : isSystemd ? 'Systemd' : 'Node'
+    } | RestartedBySelf: ${isSelfRestarted}`,
+  );
+}
 logRestartInfo();
 
 class RestartManager {
@@ -49,7 +63,7 @@ class RestartManager {
     this.isRestarting = true;
     const nextAttempt = this.currentAttempts + 1;
     if (nextAttempt > MAX_RESTART_ATTEMPTS) {
-      await log(`FATAL: Max restart attempts (${MAX_RESTART_ATTEMPTS}) reached.`);
+      await log(`FATAL: Max restart attempts reached (${MAX_RESTART_ATTEMPTS})`);
       await log(`Reason: ${reason}`);
       if (performanceManager) {
         await performanceManager.cache.forceSync();
@@ -67,7 +81,7 @@ class RestartManager {
       }
     }
     await delay(RESTART_DELAY_MS);
-    if (isPm2) {
+    if (isPm2 || isSystemd) {
       process.exit(1);
     } else {
       spawn(process.argv[0], process.argv.slice(1), {
@@ -76,8 +90,8 @@ class RestartManager {
         env: {
           ...process.env,
           RESTART_ATTEMPTS: nextAttempt.toString(),
-          RESTARTED_BY_SELF: '1'
-        }
+          RESTARTED_BY_SELF: '1',
+        },
       });
       process.exit(0);
     }
@@ -102,9 +116,19 @@ class RestartManager {
       const util = await import('util');
       const execAsync = util.promisify(exec);
       try {
-        await execAsync(`pm2 stop ${process.env.pm_id}`);
+        await execAsync(`pm2 stop ${process.env.pm_id || 'fnbots'}`);
       } catch (error) {
         log(`PM2 stop failed: ${error.message}`, true);
+        process.exit(0);
+      }
+    } else if (isSystemd) {
+      const { exec } = await import('child_process');
+      const util = await import('util');
+      const execAsync = util.promisify(exec);
+      try {
+        await execAsync(`systemctl stop fnbots`);
+      } catch (error) {
+        log(`Systemd stop failed: ${error.message}`, true);
         process.exit(0);
       }
     } else {

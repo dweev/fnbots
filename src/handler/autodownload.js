@@ -162,8 +162,7 @@ class AutoDownloadHandler {
     } finally {
       await Promise.all([
         tmpDir.deleteFile(tempVideoPath),
-        tmpDir.deleteFile(tempAudioPath),
-        tmpDir.deleteFile(finalOutputPath)
+        tmpDir.deleteFile(tempAudioPath)
       ]);
     }
   }
@@ -190,8 +189,7 @@ class AutoDownloadHandler {
     } finally {
       await Promise.all([
         tmpDir.deleteFile(tempVideoPath),
-        tmpDir.deleteFile(tempAudioPath),
-        tmpDir.deleteFile(finalOutputPath)
+        tmpDir.deleteFile(tempAudioPath)
       ]);
     }
   }

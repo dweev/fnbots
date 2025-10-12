@@ -31,6 +31,5 @@ export const command = {
     const saveTtsAsync = util.promisify(ttsId.save);
     await saveTtsAsync(tempFilePath, inputText);
     await fn.sendFilePath(toId, `tts-${Date.now()}.mp3`, tempFilePath, { quoted: m });
-    await tmpDir.deleteFile(tempFilePath);
   }
 };

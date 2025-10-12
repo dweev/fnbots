@@ -171,7 +171,6 @@ export async function generateFakeChatWithQCGenerator(m, count, fn, StoreMessage
     const result = await QuoteGenerator(params);
     const finalImagePath = await tmpDir.createTempFileWithContent(result.image, 'jpg');
     await fn.sendFilePath(jid, '', finalImagePath, { quoted: m });
-    await tmpDir.deleteFile(finalImagePath);
   } catch (error) {
     await log(`Error fakeConversation:\n${error.stack || error}`, true);
     await sReply(error.message || 'Terjadi kesalahan saat membuat fake chat.');

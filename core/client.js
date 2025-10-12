@@ -453,6 +453,10 @@ export async function clientBot(fn, dbSettings) {
       return await fn.sendMessage(jid, messageContent, quotedOptions);
     } catch (error) {
       throw error;
+    } finally {
+      if (localPath !== config.paths.vanya || localPath !== config.paths.avatar) {
+        await fs.unlink(localPath);
+      }
     }
   };
   fn.extractGroupMetadata = (result) => {
@@ -619,7 +623,6 @@ export async function clientBot(fn, dbSettings) {
     const outputPath = await tmpDir.createTempFileWithContent(imageBuffer, 'png');
     const formattedMessage = messageText.replace(/@user/g, `@${memberNum}`);
     await fn.sendFilePath(idGroup, formattedMessage, outputPath);
-    await tmpDir.deleteFile(outputPath);
   };
   fn.profileImageBuffer = async (jid, type = 'image') => {
     try {

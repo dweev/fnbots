@@ -507,8 +507,6 @@ export async function sendAndCleanupFile(fn, toId, localPath, m, dbSettings) {
   } catch (error) {
     await log(error, true);
     await fn.sendReply(toId, `Gagal mengirim file: ${error.message}`, { quoted: m });
-  } finally {
-    await tmpDir.deleteFile(localPath);
   }
 };
 export async function expiredCheck(fn, ownerNumber) {

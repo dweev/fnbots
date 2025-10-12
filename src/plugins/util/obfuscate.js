@@ -69,14 +69,9 @@ export const command = {
       level: level,
       pass: pass,
     });
-    let tempFilePath = '';
-    try {
-      tempFilePath = path.join(config.paths.tempDir, outputFileName);
-      await fs.writeFile(tempFilePath, obfuscatedCode, 'utf-8');
-      const caption = `Obfuskasi Berhasil!\n\n*Level:* ${level}\n*Password/Tag:* ${pass}`;
-      await fn.sendFilePath(toId, caption, tempFilePath, { quoted: m });
-    } finally {
-      await fs.unlink(tempFilePath);
-    }
+    const tempFilePath = path.join(config.paths.tempDir, outputFileName);
+    await fs.writeFile(tempFilePath, obfuscatedCode, 'utf-8');
+    const caption = `Obfuskasi Berhasil!\n\n*Level:* ${level}\n*Password/Tag:* ${pass}`;
+    await fn.sendFilePath(toId, caption, tempFilePath, { quoted: m });
   }
 };

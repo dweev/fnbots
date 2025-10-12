@@ -48,7 +48,8 @@ export const command = {
       await sharp(outputPath).jpeg({ quality: 90, progressive: true, mozjpeg: true }).toFile(sendPath);
       await fn.sendFilePath(toId, dbSettings.autocommand, sendPath, { quoted: m });
     } finally {
-      await tmpDir.deleteFile(inputPath); await tmpDir.deleteFile(outputPath); await tmpDir.deleteFile(sendPath);
+      await tmpDir.deleteFile(inputPath);
+      await tmpDir.deleteFile(outputPath);
     }
   }
 };

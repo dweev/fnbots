@@ -42,15 +42,10 @@ export const command = {
         const detectedType = processor.determineFileType(originalFileName);
         outputFileName = processor.getOutputFileName(originalFileName, detectedType);
       }
-      let tempFilePath = '';
-      try {
-        tempFilePath = path.join(global.tmpDir, outputFileName);
-        await fs.writeFile(tempFilePath, beautifiedBuffer);
-        const caption = `Kode Berhasil Dirapikan!`;
-        await fn.sendFilePath(toId, caption, tempFilePath, { quoted: m });
-      } finally {
-        await fs.unlink(tempFilePath);
-      }
+      const tempFilePath = path.join(global.tmpDir, outputFileName);
+      await fs.writeFile(tempFilePath, beautifiedBuffer);
+      const caption = `Kode Berhasil Dirapikan!`;
+      await fn.sendFilePath(toId, caption, tempFilePath, { quoted: m });
     } else {
       let codeToProcess = '';
       if (quotedMsg && (quotedMsg?.type === 'extendedTextMessage' || quotedMsg?.type === 'conversation')) {
@@ -92,15 +87,10 @@ export const command = {
         const replyText = `\`\`\`${detectedType}\n${beautifiedText}\n\`\`\``;
         await sReply(replyText);
       } else {
-        let tempFilePath = '';
-        try {
-          tempFilePath = path.join(global.tmpDir, outputFileName);
-          await fs.writeFile(tempFilePath, beautifiedBuffer);
-          const caption = `Kode Berhasil Dirapikan! (Hasil terlalu panjang, dikirim sebagai file)`;
-          await fn.sendFilePath(toId, caption, tempFilePath, { quoted: m });
-        } finally {
-          await fs.unlink(tempFilePath);
-        }
+        const tempFilePath = path.join(global.tmpDir, outputFileName);
+        await fs.writeFile(tempFilePath, beautifiedBuffer);
+        const caption = `Kode Berhasil Dirapikan! (Hasil terlalu panjang, dikirim sebagai file)`;
+        await fn.sendFilePath(toId, caption, tempFilePath, { quoted: m });
       }
     }
   }

@@ -6,12 +6,12 @@
 */
 // ─── Info ────────────────────────────────
 
-import fs from 'fs-extra';
 import util from 'util';
-import { exec as cp_exec } from 'child_process';
-import { tmpDir } from '../../lib/tempManager.js';
+import fs from 'fs-extra';
 import log from '../../lib/logger.js';
 import config from '../../../config.js';
+import { exec as cp_exec } from 'child_process';
+import { tmpDir } from '../../lib/tempManager.js';
 
 const exec = util.promisify(cp_exec);
 
@@ -43,7 +43,8 @@ export const command = {
       await exec(ffmpegCmd, { shell: '/bin/bash' });
       await fs.access(finalOutputPath);
       await fn.sendFilePath(toId, dbSettings.autocommand, finalOutputPath, { quoted: m });
-      await tmpDir.deleteFile(tempVideoPath); await tmpDir.deleteFile(tempAudioPath); await tmpDir.deleteFile(finalOutputPath);
+      await tmpDir.deleteFile(tempVideoPath);
+      await tmpDir.deleteFile(tempAudioPath);
     } catch (error) {
       if (error.stderr) {
         await log(`FFMPEG/YTDLP Error:\n\n${error.stderr}`, true);

@@ -36,6 +36,5 @@ export const command = {
     await exec(command);
     await fn.sendFilePath(toId, dbSettings.autocommand, outputPath, { quoted: m });
     await tmpDir.deleteFile(inputPath);
-    await tmpDir.deleteFile(outputPath);
   }
 };

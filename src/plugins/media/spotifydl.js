@@ -8,7 +8,6 @@
 
 import { delay } from 'baileys';
 import config from '../../../config.js';
-import { tmpDir } from '../../lib/tempManager.js';
 import { SpotifyDownloader } from 'yt-spotify-dl';
 
 const spotify = new SpotifyDownloader();
@@ -33,11 +32,9 @@ export const command = {
     if (Array.isArray(result)) {
       for (const filePath of result) {
         await fn.sendFilePath(toId, dbSettings.autocommand, filePath, { quoted: m });
-        await tmpDir.deleteFile(filePath);
       }
     } else {
       await fn.sendFilePath(toId, dbSettings.autocommand, result, { quoted: m });
-      await tmpDir.deleteFile(result);
     }
   }
 };

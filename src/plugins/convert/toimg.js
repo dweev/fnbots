@@ -44,7 +44,6 @@ export const command = {
           await fn.sendFilePath(toId, dbSettings.autocommand, outputMp4Path, { quoted: m });
         } finally {
           await tmpDir.deleteFile(inputGifPath);
-          await tmpDir.deleteFile(outputMp4Path);
         }
       } else {
         await fn.sendMediaFromBuffer(toId, 'image/webp', mediaData, dbSettings.autocommand, m);

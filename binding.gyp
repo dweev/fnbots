@@ -87,6 +87,35 @@
       ]
     },
     {
+      "target_name": "media",
+      "sources": [ "src/addon/media.cpp" ],
+      "include_dirs": [
+        "<!@(node -p \"require('node-addon-api').include\")"
+      ],
+      "dependencies": [
+        "<!(node -p \"require('node-addon-api').gyp\")"
+      ],
+      "cflags_cc": [
+        "-std=c++17",
+        "-O3",
+        "-march=native",
+        "-fexceptions",
+        "-Wno-deprecated-declarations",
+        "-Wno-reorder",
+        "-Wno-unused-variable",
+        "-Wno-unused-parameter",
+        "-Wno-sign-compare"
+      ],
+      "defines": [ "NAPI_CPP_EXCEPTIONS" ],
+      "libraries": [
+        "-lavformat",
+        "-lavcodec",
+        "-lavutil",
+        "-lswscale",
+        "-lswresample"
+      ]
+    },
+    {
       "target_name": "fetch",
       "sources": ["src/addon/fetch.cpp"],
       "include_dirs": ["<!@(node -p \"require('node-addon-api').include\")"],

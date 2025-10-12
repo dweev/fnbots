@@ -21,6 +21,12 @@ function loadAddon(name) {
 }
 
 const stickerNative = loadAddon("sticker");
+const converterNative = loadAddon("converter");
+const ffmpegNative = loadAddon("convertMedia");
+const mediaNative = loadAddon("media");
+const fetchNative = loadAddon("fetch");
+
+const textDecoder = new TextDecoder("utf-8");
 
 function isWebP(buf) {
   return (
@@ -43,7 +49,6 @@ export function sticker(buffer, options = {}) {
   if (!Buffer.isBuffer(buffer)) {
     throw new Error("sticker() input harus Buffer");
   }
-
   const opts = {
     crop: options.crop ?? false,
     quality: options.quality ?? 80,
@@ -53,11 +58,9 @@ export function sticker(buffer, options = {}) {
     authorName: options.authorName || dbSettings.packAuthor,
     emojis: options.emojis || [],
   };
-
   if (isWebP(buffer)) {
     return stickerNative.addExif(buffer, opts);
   }
-
   return stickerNative.sticker(buffer, opts);
 }
 
@@ -68,12 +71,9 @@ export function encodeRGBA(buf, w, h, opt = {}) {
   return stickerNative.encodeRGBA(buf, w, h, opt);
 }
 
-const converterNative = loadAddon("converter");
-
 export function convert(input, options = {}) {
   const buf = Buffer.isBuffer(input) ? input : input?.data;
   if (!Buffer.isBuffer(buf)) throw new Error("convert() input harus Buffer");
-
   return converterNative.convert(buf, {
     format: options.format || "opus",
     bitrate: options.bitrate || "64k",
@@ -84,9 +84,6 @@ export function convert(input, options = {}) {
   });
 }
 
-const ffmpegNative = loadAddon("convertMedia");
-
-
 export function convertMedia(input, options = {}) {
   const buf = Buffer.isBuffer(input) ? input : input?.data;
   if (!Buffer.isBuffer(buf)) throw new Error("upscale() input harus Buffer");
@@ -96,8 +93,18 @@ export function convertMedia(input, options = {}) {
   });
 }
 
-const fetchNative = loadAddon("fetch");
-const textDecoder = new TextDecoder("utf-8");
+export function mergeVideoAudio(videoBuffer, audioBuffer, options = {}) {
+  if (!Buffer.isBuffer(videoBuffer)) {
+    throw new Error("mergeVideoAudio() videoBuffer harus Buffer");
+  }
+  if (!Buffer.isBuffer(audioBuffer)) {
+    throw new Error("mergeVideoAudio() audioBuffer harus Buffer");
+  }
+  return mediaNative.mergeVideoAudio(videoBuffer, audioBuffer, {
+    preset: options.preset || 'fast',
+    crf: options.crf ?? 23
+  });
+}
 
 export function fetch(url, options = {}) {
   if (typeof url !== "string") throw new TypeError("fetch() requires a URL string");
@@ -110,8 +117,7 @@ export function fetch(url, options = {}) {
   const promise = exec.promise || exec;
   return promise
     .then((res) => {
-      if (!res || typeof res !== "object")
-        throw new Error("Invalid response from native fetch");
+      if (!res || typeof res !== "object") throw new Error("Invalid response from native fetch");
       let body = res.body;
       if (Array.isArray(body)) {
         body = Buffer.from(body.buffer || body);

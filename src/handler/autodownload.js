@@ -11,8 +11,8 @@ import { delay } from 'baileys';
 import log from '../lib/logger.js';
 import config from '../../config.js';
 import instagram from '../utils/igdl.js';
-import { tmpDir } from '../lib/tempManager.js';
 import { exec as cp_exec } from 'child_process';
+import { mergeVideoAudio } from '../addon/bridge.js';
 import { performanceManager } from '../lib/performanceManager.js';
 import { fetchTikTokData, buildBaseCaption, chunkArray, sendImages, normalizeResult } from '../function/index.js';
 
@@ -141,56 +141,61 @@ class AutoDownloadHandler {
   }
   async handleFacebook(params) {
     const { body, fn, toId, m, dbSettings, user } = params;
-    const tempVideoPath = tmpDir.createTempFile('mp4');
-    const tempAudioPath = tmpDir.createTempFile('m4a');
-    const finalOutputPath = tmpDir.createTempFile('mp4');
     try {
       const urlMatch = body.match(/https?:\/\/(?:www\.|m\.|web\.)?facebook\.com\/[^\s]+/);
       if (!urlMatch) return;
       const input = urlMatch[0];
-      const downloadVideoCmd = `${config.paths.ytDlpPath} -f "bestvideo[ext=mp4]" -o "${tempVideoPath}" "${input}"`;
-      const downloadAudioCmd = `${config.paths.ytDlpPath} -f "bestaudio[ext=m4a]" -o "${tempAudioPath}" "${input}"`;
-      await exec(downloadVideoCmd);
-      await exec(downloadAudioCmd);
-      const ffmpegCmd = `ffmpeg -i "${tempVideoPath}" -i "${tempAudioPath}" -c:v copy -c:a aac "${finalOutputPath}"`;
-      await exec(ffmpegCmd);
-      await fn.sendFilePath(toId, dbSettings.autocommand, finalOutputPath, { quoted: m });
+      const downloadVideoCmd = `${config.paths.ytDlpPath} -f "bestvideo[ext=mp4]" -o - "${input}"`;
+      const { stdout: videoBuffer } = await exec(downloadVideoCmd, {
+        shell: '/bin/bash',
+        encoding: 'buffer',
+        maxBuffer: 200 * 1024 * 1024
+      });
+      const downloadAudioCmd = `${config.paths.ytDlpPath} -f "bestaudio[ext=m4a]" -o - "${input}"`;
+      const { stdout: audioBuffer } = await exec(downloadAudioCmd, {
+        shell: '/bin/bash',
+        encoding: 'buffer',
+        maxBuffer: 200 * 1024 * 1024
+      });
+      const finalBuffer = mergeVideoAudio(videoBuffer, audioBuffer, {
+        preset: 'ultrafast',
+        crf: 28
+      });
+      await fn.sendMediaFromBuffer(toId, 'video/mp4', finalBuffer, dbSettings.autocommand, m);
       await performanceManager.cache.updateUserStats(user.userId, { $inc: { userCount: 1 } });
       performanceManager.cache.incrementGlobalStats();
     } catch (error) {
       log(`Error autodownload Facebook: ${error.message}`, true);
-    } finally {
-      await Promise.all([
-        tmpDir.deleteFile(tempVideoPath),
-        tmpDir.deleteFile(tempAudioPath)
-      ]);
     }
   }
+
   async handleTwitter(params) {
     const { body, fn, toId, m, dbSettings, user } = params;
-    const tempVideoPath = tmpDir.createTempFile('mp4');
-    const tempAudioPath = tmpDir.createTempFile('m4a');
-    const finalOutputPath = tmpDir.createTempFile('mp4');
     try {
       const urlMatch = body.match(/https?:\/\/(?:www\.|mobile\.)?(?:twitter\.com|x\.com)\/[^\s]+/);
       if (!urlMatch) return;
       const input = urlMatch[0];
-      const downloadVideoCmd = `${config.paths.ytDlpPath} -f "bestvideo[ext=mp4]" -o "${tempVideoPath}" "${input}"`;
-      const downloadAudioCmd = `${config.paths.ytDlpPath} -f "bestaudio[ext=m4a]" -o "${tempAudioPath}" "${input}"`;
-      await exec(downloadVideoCmd);
-      await exec(downloadAudioCmd);
-      const ffmpegCmd = `ffmpeg -i "${tempVideoPath}" -i "${tempAudioPath}" -c:v copy -c:a aac "${finalOutputPath}"`;
-      await exec(ffmpegCmd);
-      await fn.sendFilePath(toId, dbSettings.autocommand, finalOutputPath, { quoted: m });
+      const downloadVideoCmd = `${config.paths.ytDlpPath} -f "bestvideo[ext=mp4]" -o - "${input}"`;
+      const { stdout: videoBuffer } = await exec(downloadVideoCmd, {
+        shell: '/bin/bash',
+        encoding: 'buffer',
+        maxBuffer: 200 * 1024 * 1024
+      });
+      const downloadAudioCmd = `${config.paths.ytDlpPath} -f "bestaudio[ext=m4a]" -o - "${input}"`;
+      const { stdout: audioBuffer } = await exec(downloadAudioCmd, {
+        shell: '/bin/bash',
+        encoding: 'buffer',
+        maxBuffer: 200 * 1024 * 1024
+      });
+      const finalBuffer = mergeVideoAudio(videoBuffer, audioBuffer, {
+        preset: 'ultrafast',
+        crf: 28
+      });
+      await fn.sendMediaFromBuffer(toId, 'video/mp4', finalBuffer, dbSettings.autocommand, m);
       await performanceManager.cache.updateUserStats(user.userId, { $inc: { userCount: 1 } });
       performanceManager.cache.incrementGlobalStats();
     } catch (error) {
       log(`Error autodownload Twitter/X: ${error.message}`, true);
-    } finally {
-      await Promise.all([
-        tmpDir.deleteFile(tempVideoPath),
-        tmpDir.deleteFile(tempAudioPath)
-      ]);
     }
   }
 }

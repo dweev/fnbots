@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### 🚀 What's Changed
+- refactor: replace isBug function with analyzeMessage from safety-safe for enhanced security checks ([da5d9af](https://github.com/Terror-Machine/fnbots/commit/da5d9af52e8fd29b9550d647e747ffde71cf2778))
 - refactor: remove redundant file deletion calls and streamline temporary file handling ([d43d07a](https://github.com/Terror-Machine/fnbots/commit/d43d07a2c5a570b2ee652496684c34986f02cabf))
 - refactor: simplify channel layout handling and remove legacy code paths ([4357fed](https://github.com/Terror-Machine/fnbots/commit/4357fed7d2def20b098e9d9e1101a65c3d62f249))
 - chore: update auto-release workflow for improved changelog generation and version handling ([111c3b3](https://github.com/Terror-Machine/fnbots/commit/111c3b308b29440f32232e8386472d7e24cc91d3))

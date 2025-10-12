@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### 🚀 What's Changed
+- feat: add libavfilter-dev to system dependencies for enhanced media processing ([87ccdd4](https://github.com/Terror-Machine/fnbots/commit/87ccdd4d5290b81aa398ba63c612dbf1d8c40258))
+- feat: add media upscaling functionality using native addon for improved performance ([952c60c](https://github.com/Terror-Machine/fnbots/commit/952c60ca50f8a2c118d537b40b2fba3e9ed7c4a6))
+- feat: enhance media conversion commands and add PTT support for audio outputs ([5962153](https://github.com/Terror-Machine/fnbots/commit/5962153437311659a8526baf9365572e94d059af))
+- feat: add chat bot implementation using Gemini API for interactive conversations ([7da82dc](https://github.com/Terror-Machine/fnbots/commit/7da82dc03aa78c4b00c6e313592bddd429cf7691))
+- docs: update CHANGELOG.md with deduplicated commits ([597f13b](https://github.com/Terror-Machine/fnbots/commit/597f13b5bf60a506ff0a0128bc7e0ac08d2dcfb4))
 - refactor: replace isBug function with analyzeMessage from safety-safe for enhanced security checks ([da5d9af](https://github.com/Terror-Machine/fnbots/commit/da5d9af52e8fd29b9550d647e747ffde71cf2778))
 - refactor: remove redundant file deletion calls and streamline temporary file handling ([d43d07a](https://github.com/Terror-Machine/fnbots/commit/d43d07a2c5a570b2ee652496684c34986f02cabf))
 - refactor: simplify channel layout handling and remove legacy code paths ([4357fed](https://github.com/Terror-Machine/fnbots/commit/4357fed7d2def20b098e9d9e1101a65c3d62f249))

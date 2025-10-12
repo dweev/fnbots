@@ -31,10 +31,10 @@ export const command = {
     await delay(2000);
     if (Array.isArray(result)) {
       for (const filePath of result) {
-        await fn.sendFilePath(toId, dbSettings.autocommand, filePath, { quoted: m });
+        await fn.sendFilePath(toId, dbSettings.autocommand, filePath, { quoted: m, ptt: true });
       }
     } else {
-      await fn.sendFilePath(toId, dbSettings.autocommand, result, { quoted: m });
+      await fn.sendFilePath(toId, dbSettings.autocommand, result, { quoted: m, ptt: true });
     }
   }
 };

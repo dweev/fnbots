@@ -432,20 +432,37 @@ export async function clientBot(fn, dbSettings) {
         messageContent = { document: { stream: fs.createReadStream(localPath) }, mimetype: mime, fileName, mentions, ...options };
       } else if (mime.startsWith('audio/')) {
         const inputBuffer = await fs.readFile(localPath);
-        const outputBuffer = convertNative(inputBuffer, {
-          format: 'opus',
-          ptt: options?.ptt
-        });
-        if (!Buffer.isBuffer(outputBuffer) || outputBuffer.length === 0) {
-          throw new Error('Native audio conversion failed to produce a valid buffer.');
+        if (options.ptt === true) {
+          const outputBuffer = convertNative(inputBuffer, {
+            format: 'opus',
+            ptt: true
+          });
+          if (!Buffer.isBuffer(outputBuffer) || outputBuffer.length === 0) {
+            throw new Error('Native audio conversion failed to produce a valid buffer.');
+          }
+          messageContent = {
+            audio: outputBuffer,
+            mimetype: 'audio/ogg; codecs=opus',
+            ptt: true,
+            mentions,
+            ...options
+          };
+        } else {
+          const outputBuffer = convertNative(inputBuffer, {
+            format: 'mpeg',
+            ptt: true
+          });
+          if (!Buffer.isBuffer(outputBuffer) || outputBuffer.length === 0) {
+            throw new Error('Native audio conversion failed to produce a valid buffer.');
+          }
+          messageContent = {
+            audio: outputBuffer,
+            mimetype: 'audio/mpeg',
+            ptt: false,
+            mentions,
+            ...options
+          };
         }
-        messageContent = {
-          audio: outputBuffer,
-          mimetype: 'audio/ogg; codecs=opus',
-          ptt: options?.ptt || true,
-          mentions,
-          ...options
-        };
       } else {
         const streamContent = { stream: fs.createReadStream(localPath) };
         messageContent = createMediaMessage(mime, streamContent, caption, { mentions, fileName, ...options });
@@ -454,7 +471,7 @@ export async function clientBot(fn, dbSettings) {
     } catch (error) {
       throw error;
     } finally {
-      if (localPath !== config.paths.vanya || localPath !== config.paths.avatar) {
+      if (!localPath.includes(config.paths.vanya) && !localPath.includes(config.paths.avatar)) {
         await fs.unlink(localPath);
       }
     }

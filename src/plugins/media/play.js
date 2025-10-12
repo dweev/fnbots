@@ -25,6 +25,6 @@ export const command = {
     const videoUrl = video.url;
     const downloadedFilePath = await youtubeDownloader.download(videoUrl, null, global.tmpDir, null, '0');
     const caption = `*Title:* ${videoTitle}\n*URL:* ${videoUrl}`;
-    await fn.sendFilePath(toId, caption, downloadedFilePath, { quoted: m });
+    await fn.sendFilePath(toId, caption, downloadedFilePath, { quoted: m, ptt: true });
   }
 };

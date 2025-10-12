@@ -53,6 +53,6 @@ export const command = {
       videoTitle = `Audio dari YouTube - ${index + 1}`;
     }
     const downloadedFilePath = await youtubeDownloader.download(url, null, global.tmpDir, null, '0');
-    await fn.sendFilePath(toId, videoTitle, downloadedFilePath, { quoted: m });
+    await fn.sendFilePath(toId, videoTitle, downloadedFilePath, { quoted: m, ptt: true });
   }
 };

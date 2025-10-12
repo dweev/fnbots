@@ -75,6 +75,7 @@ struct OpenInputResult {
   AVIOGuard io;
   BufferCtx* ctx = nullptr;
 };
+
 static void freeBufferCtx(OpenInputResult& R){ if(R.ctx){ delete R.ctx; R.ctx=nullptr; } }
 
 static OpenInputResult OpenFromBuffer(const uint8_t* data, size_t len){
@@ -145,7 +146,10 @@ static std::vector<uint8_t> convertCore(
 ){
   auto Rin = OpenFromBuffer(input, inLen);
   int aidx = av_find_best_stream(Rin.fmt.p, AVMEDIA_TYPE_AUDIO, -1, -1, nullptr, 0);
-  ensure(aidx >= 0, "No audio stream found");
+  if (aidx < 0) {
+    aidx = av_find_best_stream(Rin.fmt.p, AVMEDIA_TYPE_VIDEO, -1, -1, nullptr, 0);
+  }
+  ensure(aidx >= 0, "No audio/video stream found");
 
   AVStream* in_st = Rin.fmt.p->streams[aidx];
   const AVCodec* dec = avcodec_find_decoder(in_st->codecpar->codec_id);
@@ -183,9 +187,8 @@ static std::vector<uint8_t> convertCore(
   ensure_cptr(enc_ctx.p, "alloc enc ctx failed");
 
   int sr = sample_rate > 0 ? sample_rate : (dec_ctx.p->sample_rate > 0 ? dec_ctx.p->sample_rate : 48000);
-  if (out_codec_id == AV_CODEC_ID_OPUS || ptt) sr = 48000;
 
-  int want_ch = (channels == 1 || ptt) ? 1 : 2;
+  int want_ch = (channels == 1 || ptt) ? 1 : (channels > 0 ? channels : 2);
   AVSampleFormat out_sfmt = pick_sample_fmt(enc);
 
   AVChannelLayout out_ch{};
@@ -200,7 +203,7 @@ static std::vector<uint8_t> convertCore(
 
   if (bitrate_bps <= 0) {
     if (out_codec_id == AV_CODEC_ID_MP3) bitrate_bps = 128000;
-    else if (out_codec_id == AV_CODEC_ID_OPUS) bitrate_bps = ptt ? 32000 : 64000;
+    else if (out_codec_id == AV_CODEC_ID_OPUS) bitrate_bps = ptt ? 32000 : 48000;
     else if (out_codec_id == AV_CODEC_ID_AAC) bitrate_bps = 128000;
     else bitrate_bps = 128000;
   }
@@ -221,7 +224,9 @@ static std::vector<uint8_t> convertCore(
   if (in_st->codecpar->ch_layout.nb_channels > 0) {
     ensure(av_channel_layout_copy(&in_ch, &in_st->codecpar->ch_layout) == 0, "copy in ch_layout failed");
   } else {
-    set_layout_default(&in_ch, dec_ctx.p->channels > 0 ? dec_ctx.p->channels : 2);
+    int in_channels = (dec_ctx.p->ch_layout.nb_channels > 0) ? dec_ctx.p->ch_layout.nb_channels : 
+                      (dec_ctx.p->channels > 0 ? dec_ctx.p->channels : 2);
+    set_layout_default(&in_ch, in_channels);
   }
 
   SwrGuard swr;
@@ -297,7 +302,7 @@ static std::vector<uint8_t> convertCore(
       if (r == AVERROR(EAGAIN) || r == AVERROR_EOF) break;
       ensure(r == 0, "receive_frame(dec) failed");
 
-      const int dst_nb = av_rescale_rnd(
+      const int dst_nb = (int)av_rescale_rnd(
         swr_get_delay(swr.p, dec_ctx.p->sample_rate) + in_fr.p->nb_samples,
         enc_ctx.p->sample_rate, dec_ctx.p->sample_rate, AV_ROUND_UP
       );
@@ -335,7 +340,7 @@ static std::vector<uint8_t> convertCore(
     if (r == AVERROR_EOF || r == AVERROR(EAGAIN)) break;
     ensure(r == 0, "receive_frame(dec,flush) failed");
 
-    const int dst_nb = av_rescale_rnd(
+    const int dst_nb = (int)av_rescale_rnd(
       swr_get_delay(swr.p, dec_ctx.p->sample_rate) + in_fr.p->nb_samples,
       enc_ctx.p->sample_rate, dec_ctx.p->sample_rate, AV_ROUND_UP
     );
@@ -367,7 +372,7 @@ static std::vector<uint8_t> convertCore(
   }
 
   while (true) {
-    int delay = swr_get_delay(swr.p, dec_ctx.p->sample_rate);
+    int delay = (int)swr_get_delay(swr.p, dec_ctx.p->sample_rate);
     if (delay <= 0) break;
 
     AVFrame* tmp = av_frame_alloc();
@@ -375,7 +380,7 @@ static std::vector<uint8_t> convertCore(
     ensure(av_channel_layout_copy(&tmp->ch_layout, &enc_ctx.p->ch_layout) == 0, "copy tmp3 ch_layout failed");
     tmp->format         = enc_ctx.p->sample_fmt;
     tmp->sample_rate    = enc_ctx.p->sample_rate;
-    tmp->nb_samples     = av_rescale_rnd(delay, enc_ctx.p->sample_rate, dec_ctx.p->sample_rate, AV_ROUND_UP);
+    tmp->nb_samples     = (int)av_rescale_rnd(delay, enc_ctx.p->sample_rate, dec_ctx.p->sample_rate, AV_ROUND_UP);
     if (tmp->nb_samples <= 0) { av_frame_free(&tmp); break; }
     ensure(av_frame_get_buffer(tmp, 0) == 0, "tmp get_buffer3 failed");
 
@@ -434,12 +439,11 @@ Napi::Value Convert(const Napi::CallbackInfo& info){
   Napi::Object opt = (info.Length() >= 2 && info[1].IsObject()) ? info[1].As<Napi::Object>() : Napi::Object::New(env);
 
   std::string format = opt.Has("format") ? opt.Get("format").ToString().Utf8Value() : "opus";
-  int sampleRate     = opt.Has("sampleRate") ? opt.Get("sampleRate").ToNumber().Int32Value() : 48000;
-  int channels       = opt.Has("channels")   ? opt.Get("channels").ToNumber().Int32Value()   : 2;
+  int sampleRate     = opt.Has("sampleRate") ? opt.Get("sampleRate").ToNumber().Int32Value() : 16000;
+  int channels       = opt.Has("channels")   ? opt.Get("channels").ToNumber().Int32Value()   : 1;
   bool ptt           = opt.Has("ptt")        ? opt.Get("ptt").ToBoolean().Value()            : false;
   bool vbr           = opt.Has("vbr")        ? opt.Get("vbr").ToBoolean().Value()            : true;
-  int64_t bitrate    = parseBitrate(opt.Has("bitrate") ? opt.Get("bitrate") : env.Null(),
-                                    (format=="mp3"?128000:64000));
+  int64_t bitrate    = parseBitrate(opt.Has("bitrate") ? opt.Get("bitrate") : env.Null(), 48000);
 
   try {
     auto out = convertCore(input.Data(), input.Length(), format, bitrate, sampleRate, channels, ptt, vbr);

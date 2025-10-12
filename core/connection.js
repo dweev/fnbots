@@ -75,7 +75,7 @@ export async function createWASocket(dbSettings) {
     maxMsgRetryCount: 5,
     auth: { creds: state.creds, keys: makeCacheableSignalKeyStore(state.keys, pinoLogger) },
     transactionOpts: { maxCommitRetries: 5, delayBetweenTriesMs: 1000 },
-    markOnlineOnConnect: false,
+    markOnlineOnConnect: true,
     linkPreviewImageThumbnailWidth: 192,
     syncFullHistory: true,
     fireInitQueries: true,
@@ -88,8 +88,12 @@ export async function createWASocket(dbSettings) {
 
   fn.clearSession = authStore.clearSession;
   fn.storeLIDMapping = authStore.storeLIDMapping;
-  fn.getPNForLID = authStore.getPNForLID;
-  fn.getLIDForPN = authStore.getLIDForPN;
+  fn.getPN = authStore.getPNForLID;
+  fn.getLID = authStore.getLIDForPN;
+  fn.restoreSession = authStore.restoreSession;
+  fn.resetRetryAttempts = authStore.resetRetryAttempts;
+  fn.needsSessionRecreation = authStore.needsSessionRecreation;
+  fn.completeSessionRecreation = authStore.completeSessionRecreation;
 
   if (pairingCode && !phoneNumber && !fn.authState.creds.registered) {
     let numberToValidate = config.botNumber ? config.botNumber : dbSettings.botNumber;
@@ -168,17 +172,57 @@ export async function createWASocket(dbSettings) {
         await log(`WA Version: ${global.version.join('.')}`);
         await log(`BOT Number: ${jidNormalizedUser(fn.user.id).split('@')[0]}`);
         await log(`${dbSettings.botName} Success Connected to whatsapp...`);
+        const needsRecreation = await fn.needsSessionRecreation();
+        if (needsRecreation) {
+          await log('Detected restored session. Generating new session keys...');
+          try {
+            await fn.query({
+              tag: 'iq',
+              attrs: {
+                to: '@s.whatsapp.net',
+                type: 'get',
+                xmlns: 'encrypt',
+                id: fn.generateMessageTag()
+              }
+            });
+            await fn.completeSessionRecreation();
+            await log('New session keys generated successfully');
+          } catch (error) {
+            await log(`Session generation failed: ${error.message}`, true);
+          }
+        }
         await fn.storeLIDMapping().catch(err => log(`Background LID sync failed: ${err.message}`, true));
+        await fn.resetRetryAttempts();
+        setInterval(() => {
+          fn.storeLIDMapping().catch(err =>
+            log(`Periodic LID sync failed: ${err.message}`, true)
+          );
+        }, 6 * 60 * 60 * 1000);
         setInterval(cleanupExpiredOTPSessions, config.performance.defaultInterval);
       }
       if (connection === 'close') {
         await log(`Connection closed. Code: ${statusCode}`);
-        const code = [401, 402, 403, 411, 500];
+        const code = [401, 402, 403, 411];
         if (code.includes(statusCode)) {
           dbSettings.botNumber = null;
           await authStore.clearSession();
           await Settings.updateSettings(dbSettings);
           restartManager.forceExit(1);
+        } else if (statusCode === 500) {
+          const restoreResult = await fn.restoreSession(5);
+          if (restoreResult.shouldClearSession) {
+            await log('Max retry attempts reached. Clearing session...', true);
+            dbSettings.botNumber = null;
+            await authStore.clearSession();
+            await Settings.updateSettings(dbSettings);
+            restartManager.forceExit(1);
+          } else if (restoreResult.success) {
+            await log(`Session restored (attempt ${restoreResult.attempt}). Restarting...`);
+            await restartManager.restart(`Session restored, reconnecting (attempt ${restoreResult.attempt})`, (await import('../src/lib/performanceManager.js')).performanceManager);
+          } else {
+            await log(`Session restore failed (attempt ${restoreResult.attempt}). Retrying...`);
+            await restartManager.restart(`Retry connection (attempt ${restoreResult.attempt})`, (await import('../src/lib/performanceManager.js')).performanceManager);
+          }
         } else {
           await restartManager.restart(`Connection closed: ${statusCode}`, (await import('../src/lib/performanceManager.js')).performanceManager);
         }

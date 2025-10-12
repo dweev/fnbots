@@ -20,9 +20,6 @@ function loadAddon(name) {
   }
 }
 
-/* =====================
-   STICKER BRIDGE
-   ===================== */
 const stickerNative = loadAddon("sticker");
 
 function isWebP(buf) {
@@ -71,9 +68,6 @@ export function encodeRGBA(buf, w, h, opt = {}) {
   return stickerNative.encodeRGBA(buf, w, h, opt);
 }
 
-/* =====================
-   CONVERTER BRIDGE
-   ===================== */
 const converterNative = loadAddon("converter");
 
 export function convert(input, options = {}) {
@@ -90,9 +84,18 @@ export function convert(input, options = {}) {
   });
 }
 
-/* =====================
-   FETCH BRIDGE
-   ===================== */
+const ffmpegNative = loadAddon("convertMedia");
+
+
+export function convertMedia(input, options = {}) {
+  const buf = Buffer.isBuffer(input) ? input : input?.data;
+  if (!Buffer.isBuffer(buf)) throw new Error("upscale() input harus Buffer");
+  return ffmpegNative.upscale(buf, {
+    scale: options.scale ?? 2.0,
+    quality: options.quality ?? 1
+  });
+}
+
 const fetchNative = loadAddon("fetch");
 const textDecoder = new TextDecoder("utf-8");
 

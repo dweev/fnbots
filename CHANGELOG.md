@@ -2,9 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [3.0.5] - 2025-10-12
 
 ### 🚀 What's Changed
+- feat: update version to 3.0.5 in package.json and package-lock.json ([f370d96](https://github.com/Terror-Machine/fnbots/commit/f370d96bd5b28cc65ff66ffdeb7a88cfbe330f20))
+- feat: enhance session management with retry logic and backup restoration ([f0e2b7b](https://github.com/Terror-Machine/fnbots/commit/f0e2b7baceb69b410097d574d84bc31f1728a554))
+- feat: refactor audio processing to use spawn for FFMPEG and buffer handling ([92d685c](https://github.com/Terror-Machine/fnbots/commit/92d685c5ef0e86b7ba07a34e2b718173848df1e8))
+- feat: implement media merging functionality using native addon for video and audio streams ([e685b04](https://github.com/Terror-Machine/fnbots/commit/e685b04255ead9abc106809d524dca39c7e1d539))
+- docs: update CHANGELOG.md with deduplicated commits ([f2df7ae](https://github.com/Terror-Machine/fnbots/commit/f2df7aea8440e2a0c3f5f51fa307330457a4fc9b))
 - feat: add libavfilter-dev to system dependencies for enhanced media processing ([87ccdd4](https://github.com/Terror-Machine/fnbots/commit/87ccdd4d5290b81aa398ba63c612dbf1d8c40258))
 - feat: add media upscaling functionality using native addon for improved performance ([952c60c](https://github.com/Terror-Machine/fnbots/commit/952c60ca50f8a2c118d537b40b2fba3e9ed7c4a6))
 - feat: enhance media conversion commands and add PTT support for audio outputs ([5962153](https://github.com/Terror-Machine/fnbots/commit/5962153437311659a8526baf9365572e94d059af))

@@ -6,22 +6,8 @@
 */
 // ─── Info src/worker/workers/audio_changer_worker.js ────────────────
 
-import fs from 'fs-extra';
-import { exec } from 'child_process';
+import { spawn } from 'child_process';
 import log from '../../lib/logger.js';
-import { tmpDir } from '../../lib/tempManager.js';
-
-function runFFMPEG(inputPath, outputPath, filter) {
-  return new Promise((resolve, reject) => {
-    const command = `ffmpeg -i "${inputPath}" ${filter.flag} "${filter.filter}" "${outputPath}"`;
-    exec(command, (error, stderr) => {
-      if (error) {
-        return reject(new Error(`FFMPEG ERROR: ${stderr || error.message}`));
-      }
-      resolve(outputPath);
-    });
-  });
-}
 
 const ffmpegFilters = new Map([
   ['8d',         { flag: '-af',             filter: 'apulsator=hz=0.3'                                                                          }],
@@ -74,11 +60,49 @@ function ensureBuffer(input) {
     `isArray=${Array.isArray(input)}, ` +
     `hasData=${input?.data !== undefined}`
   );
-}
+};
+function runFFMPEGWithBuffer(inputBuffer, filter) {
+  return new Promise((resolve, reject) => {
+    const args = [
+      '-i', 'pipe:0',
+      filter.flag, filter.filter,
+      '-f', 'mp3',
+      'pipe:1'
+    ];
+    const ffmpeg = spawn('ffmpeg', args, {
+      stdio: ['pipe', 'pipe', 'pipe']
+    });
+    const chunks = [];
+    let errorOutput = '';
+    ffmpeg.stdout.on('data', (chunk) => {
+      chunks.push(chunk);
+    });
+    ffmpeg.stderr.on('data', (data) => {
+      errorOutput += data.toString();
+    });
+    ffmpeg.on('close', (code) => {
+      if (code === 0) {
+        const outputBuffer = Buffer.concat(chunks);
+        if (outputBuffer.length === 0) {
+          reject(new Error('FFMPEG created empty output'));
+        } else {
+          resolve(outputBuffer);
+        }
+      } else {
+        console.error('FFmpeg Error Output:', errorOutput);
+        reject(new Error(`FFMPEG exited with code ${code}`));
+      }
+    });
+    ffmpeg.on('error', (err) => {
+      reject(new Error(`FFMPEG spawn error: ${err.message}`));
+    });
+    ffmpeg.stdin.write(inputBuffer);
+    ffmpeg.stdin.end();
+  });
+};
+
 export default async function audioChanger({ mediaBuffer, filterName }) {
-  if (!mediaBuffer) {
-    throw new Error('mediaBuffer is required but received undefined');
-  }
+  if (!mediaBuffer) throw new Error('mediaBuffer is required but received undefined');
   let finalBuffer;
   try {
     finalBuffer = ensureBuffer(mediaBuffer);
@@ -86,9 +110,7 @@ export default async function audioChanger({ mediaBuffer, filterName }) {
     log(`[AudioChanger] Buffer conversion failed: ${error.message}`, true);
     throw error;
   }
-  if (finalBuffer.length === 0) {
-    throw new Error('Audio buffer is empty');
-  }
+  if (finalBuffer.length === 0) throw new Error('Audio buffer is empty');
   let selectedFilter;
   if (filterName) {
     selectedFilter = ffmpegFilters.get(filterName);
@@ -101,32 +123,13 @@ export default async function audioChanger({ mediaBuffer, filterName }) {
     const randomKey = filterKeys[Math.floor(Math.random() * filterKeys.length)];
     selectedFilter = ffmpegFilters.get(randomKey);
   }
-  const inputFile = await tmpDir.createTempFileWithContent(finalBuffer, 'input.mp3');
-  const outputFile = tmpDir.createTempFile('output.mp3');
   try {
-    await runFFMPEG(inputFile, outputFile, selectedFilter);
-    if (!await fs.pathExists(outputFile)) {
-      throw new Error('FFMPEG did not create output file');
-    }
-    const outputStats = await fs.stat(outputFile);
-    if (outputStats.size === 0) {
-      throw new Error('FFMPEG created empty output file');
-    }
-    const outputBuffer = await fs.readFile(outputFile);
-    if (!Buffer.isBuffer(outputBuffer)) {
-      throw new Error('Output is not a Buffer');
-    }
-    if (outputBuffer.length === 0) {
-      throw new Error('Output buffer is empty');
-    }
+    const outputBuffer = await runFFMPEGWithBuffer(finalBuffer, selectedFilter);
+    if (!Buffer.isBuffer(outputBuffer)) throw new Error('Output is not a Buffer');
+    if (outputBuffer.length === 0) throw new Error('Output buffer is empty');
     return outputBuffer;
   } catch (error) {
     log(`Processing failed: ${error.message}`, true);
     throw error;
-  } finally {
-    await Promise.all([
-      tmpDir.deleteFile(inputFile),
-      tmpDir.deleteFile(outputFile)
-    ]);
   }
 }

@@ -66,6 +66,7 @@ jobs:
           fi
 
       - name: Generate changelog
+        if: steps.check_version.outputs.version_changed == 'true'
         run: |
           bash -c 'cat > generate_changelog.sh << "SCRIPT_EOF"
           #!/bin/bash
@@ -285,18 +286,14 @@ jobs:
           fi
 
       - name: Commit changelog
+        if: steps.check_version.outputs.version_changed == 'true'
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           
           if [[ -n $(git status --porcelain CHANGELOG.md) ]]; then
             git add CHANGELOG.md
-            
-            if [ "${{ steps.check_version.outputs.version_changed }}" == "true" ]; then
-              git commit -m "chore(release): update CHANGELOG.md for v${{ steps.check_version.outputs.version }}"
-            else
-              git commit -m "docs: update CHANGELOG.md with deduplicated commits"
-            fi
+            git commit -m "chore(release): update CHANGELOG.md for v${{ steps.check_version.outputs.version }}"
             
             for i in {1..3}; do
               if git push; then
@@ -333,3 +330,13 @@ jobs:
           echo "📝 [View Changelog](https://github.com/${{ github.repository }}/blob/master/CHANGELOG.md)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           cat release_notes.txt >> $GITHUB_STEP_SUMMARY
+
+      - name: No release summary
+        if: steps.check_version.outputs.version_changed == 'false'
+        run: |
+          echo "## ℹ️ No Release Created" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "No version change detected in package.json." >> $GITHUB_STEP_SUMMARY
+          echo "Current version remains at: $(jq -r .version package.json)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "To create a new release, update the version in package.json." >> $GITHUB_STEP_SUMMARY

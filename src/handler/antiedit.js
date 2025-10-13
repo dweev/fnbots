@@ -13,12 +13,44 @@ function rehydrateBuffer(obj) {
   if (obj.type === 'Buffer' && Array.isArray(obj.data)) {
     return Buffer.from(obj.data);
   }
-  for (const key in obj) {
-    if (typeof obj[key] === 'object') {
-      obj[key] = rehydrateBuffer(obj[key]);
+  if (obj instanceof Uint8Array || obj instanceof ArrayBuffer || ArrayBuffer.isView(obj)) {
+    return Buffer.from(obj);
+  }
+  if (Array.isArray(obj)) {
+    if (obj.length > 0 && typeof obj[0] === 'number') {
+      return Buffer.from(obj);
+    }
+    return obj.map(item => rehydrateBuffer(item));
+  }
+  const keys = Object.keys(obj);
+  const hasNumericKeys = keys.length > 0 && keys.every(key => !isNaN(parseInt(key)));
+  if (hasNumericKeys && !obj.type && !Array.isArray(obj)) {
+    const maxIndex = Math.max(...keys.map(k => parseInt(k)));
+    const arr = new Array(maxIndex + 1);
+    for (const key in obj) {
+      arr[parseInt(key)] = obj[key];
+    }
+    return Buffer.from(arr);
+  }
+  if (obj.data && !obj.type) {
+    if (Array.isArray(obj.data) || Buffer.isBuffer(obj.data) ||
+      obj.data instanceof Uint8Array || obj.data instanceof ArrayBuffer) {
+      return Buffer.from(obj.data);
     }
   }
-  return obj;
+  if (obj.buffer && !obj.type) {
+    if (Array.isArray(obj.buffer) || Buffer.isBuffer(obj.buffer) ||
+      obj.buffer instanceof Uint8Array || obj.buffer instanceof ArrayBuffer) {
+      return Buffer.from(obj.buffer);
+    }
+  }
+  const cloned = {};
+  for (const key in obj) {
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
+      cloned[key] = rehydrateBuffer(obj[key]);
+    }
+  }
+  return cloned;
 }
 
 class AntiEditHandler {
@@ -47,7 +79,7 @@ class AntiEditHandler {
       if (isMediaEdit) {
         await this.processMediaEdit(originalMessage, m, oldText, mediaType, fn);
       } else {
-        await this.processTextEdit(m, oldText, fn);
+        await this.processTextEdit(m, oldText, fn, originalMessage);
       }
     } catch (error) {
       log(`Error in anti-edit handler: ${error}`, true);
@@ -116,7 +148,7 @@ class AntiEditHandler {
       await fn.sendMessage(m.chat, {
         image: buffer,
         caption: caption
-      }, { quoted: m });
+      }, { quoted: m, ephemeralExpiration: originalMessage.expiration ?? 0 });
     } catch (error) {
       log(`Error handling image edit: ${error}`, true);
     }
@@ -128,7 +160,7 @@ class AntiEditHandler {
       await fn.sendMessage(m.chat, {
         video: buffer,
         caption: caption
-      }, { quoted: m });
+      }, { quoted: m, ephemeralExpiration: originalMessage.expiration ?? 0 });
     } catch (error) {
       log(`Error handling video edit: ${error}`, true);
     }
@@ -142,17 +174,15 @@ class AntiEditHandler {
         mimetype: originalMessage.mime,
         fileName: originalMessage.message.documentMessage?.fileName,
         caption: caption
-      }, { quoted: m });
+      }, { quoted: m, ephemeralExpiration: originalMessage.expiration ?? 0 });
     } catch (error) {
       log(`Error handling document edit: ${error}`, true);
     }
   }
-  async processTextEdit(m, oldText, fn) {
+  async processTextEdit(m, oldText, fn, originalMessage) {
     try {
       const message = this.buildTextEditMessage(oldText);
-      await fn.sendMessage(m.chat, {
-        text: message
-      }, { quoted: m });
+      await fn.sendReply(m.chat, message, { quoted: m, ephemeralExpiration: originalMessage.expiration });
     } catch (error) {
       log(`Error handling text edit: ${error}`, true);
     }

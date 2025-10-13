@@ -722,7 +722,8 @@ export async function clientBot(fn, dbSettings) {
     });
     const outputPath = await tmpDir.createTempFileWithContent(imageBuffer, 'png');
     const formattedMessage = messageText.replace(/@user/g, `@${memberNum}`);
-    await fn.sendFilePath(idGroup, formattedMessage, outputPath);
+    const res = await fn.groupGetMetadata(idGroup);
+    await fn.sendFilePath(idGroup, formattedMessage, outputPath, { ephemeralExpiration: res.expiration });
   };
   fn.profileImageBuffer = async (jid, type = 'image') => {
     try {

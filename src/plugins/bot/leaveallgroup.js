@@ -15,7 +15,7 @@ export const command = {
   category: 'bot',
   description: 'Mengeluarkan bot dari semua grup dengan opsi mode dan teks perpisahan.',
   isCommandWithoutPayment: true,
-  execute: async ({ fn, m, args, toId, sReply }) => {
+  execute: async ({ fn, args, toId, sReply }) => {
     let mode = 'all';
     let farewellText = '';
     if (args.length > 0) {
@@ -52,7 +52,8 @@ export const command = {
       if (idGroup === toId) continue;
       try {
         if (farewellText) {
-          await fn.sendPesan(idGroup, farewellText, m);
+          const res = await fn.groupGetMetadata(idGroup);
+          await fn.sendPesan(idGroup, farewellText, { ephemeralExpiration: res.expiration });
           await delay(1000);
         }
         await fn.groupLeave(idGroup);

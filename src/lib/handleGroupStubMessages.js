@@ -57,13 +57,16 @@ export default async function handleGroupStubMessages(fn, m) {
         const otp = generateOTP();
         try {
           await OTPSession.createSession(requesterJid, m.key.remoteJid, otp);
+          const expiration = await fn.getEphemeralExpiration(requesterJid);
           await fn.sendPesan(requesterJid,
             `*Kode Verifikasi Grup*\n\n` +
             `Untuk melanjutkan proses persetujuan, silakan kirim kode berikut:\n\n` +
             `*${otp}*\n\n` +
             `Kode berlaku selama 5 menit\n` +
             `Maksimal 4 kali percobaan`,
-            m
+            {
+              ephemeralExpiration: expiration
+            }
           );
         } catch (error) {
           await log(`Gagal mengirim OTP ke ${requesterJid}: ${error.message}`, true);

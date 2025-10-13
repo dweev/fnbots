@@ -42,7 +42,7 @@ export const command = {
       `Kamu mendapat giliran pertama. Sesi akan berakhir dalam 3 menit jika tidak aktif.\n` +
       `Ketik angka (1-9) untuk menempatkan 'X' Kamu.\n`;
     introText += formatTicTacToeBoard(initialBoard);
-    await fn.sendPesan(toId, introText, m);
+    await fn.sendPesan(toId, introText, { ephemeralExpiration: m.expiration ?? 0 });
     await user.addXp();
   }
 };

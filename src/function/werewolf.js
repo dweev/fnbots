@@ -62,7 +62,7 @@ export function initializeGameWW(toId, fn, m, werewolfSessions) {
   Object.keys(gameState.pemain).forEach(jid => {
     startMessage += `- @${jid.split('@')[0]}\n`;
   });
-  fn.sendPesan(toId, startMessage, m);
+  fn.sendPesan(toId, startMessage, { ephemeralExpiration: m.expiration ?? 0 });
   startNightPhase(toId, fn, m, werewolfSessions);
 };
 export async function endGame(toId, reason, fn, m, werewolfSessions) {
@@ -81,7 +81,7 @@ export async function endGame(toId, reason, fn, m, werewolfSessions) {
   teamWerewolf.forEach(p => {
     endMessage += `- @${p.id.split('@')[0]} (${p.role} ${emoji_role(p.role)})\n`;
   });
-  await fn.sendPesan(toId, endMessage, m);
+  await fn.sendPesan(toId, endMessage, { ephemeralExpiration: m.expiration ?? 0 });
   delete werewolfSessions[toId];
 };
 async function processVotingResult(toId, fn, m, werewolfSessions) {
@@ -104,11 +104,11 @@ async function processVotingResult(toId, fn, m, werewolfSessions) {
     }
   }
   if (isTie || !lynchedJid) {
-    await fn.sendPesan(toId, `Hasil voting seri atau tidak ada yang divote. Tidak ada yang dieksekusi malam ini.`, m);
+    await fn.sendPesan(toId, `Hasil voting seri atau tidak ada yang divote. Tidak ada yang dieksekusi malam ini.`, { ephemeralExpiration: m.expiration ?? 0 });
   } else {
     gameState.pemain[lynchedJid].isAlive = false;
     const lynchedPlayer = gameState.pemain[lynchedJid];
-    await fn.sendPesan(toId, `Warga desa telah sepakat untuk menggantung @${lynchedJid.split('@')[0]}. Dia adalah seorang *${lynchedPlayer.role}* ${emoji_role(lynchedPlayer.role)}.`, m);
+    await fn.sendPesan(toId, `Warga desa telah sepakat untuk menggantung @${lynchedJid.split('@')[0]}. Dia adalah seorang *${lynchedPlayer.role}* ${emoji_role(lynchedPlayer.role)}.`, { ephemeralExpiration: m.expiration ?? 0 });
   }
   const winner = checkPemenang(gameState);
   if (winner) {
@@ -128,7 +128,7 @@ async function startVotingPhase(toId, fn, m, werewolfSessions) {
       votingMessage += `${index + 1}. @${p.id.split('@')[0]}\n`;
     }
   });
-  await fn.sendPesan(toId, votingMessage, m);
+  await fn.sendPesan(toId, votingMessage, { ephemeralExpiration: m.expiration ?? 0 });
   gameState.phaseTimeout = setTimeout(() => processVotingResult(toId, fn, m, werewolfSessions), 90 * 1000);
 };
 async function startDayDiscussionPhase(toId, nightEvents, fn, m, werewolfSessions) {
@@ -137,7 +137,7 @@ async function startDayDiscussionPhase(toId, nightEvents, fn, m, werewolfSession
   gameState.status = 'DISCUSSION';
   gameState.day++;
   const dayMessage = `☀️ Hari ke-${gameState.day} telah tiba.\n\n${nightEvents}\n\nWarga desa punya waktu 90 detik untuk berdiskusi sebelum voting dimulai.`;
-  await fn.sendPesan(toId, dayMessage, m);
+  await fn.sendPesan(toId, dayMessage, { ephemeralExpiration: m.expiration ?? 0 });
   gameState.phaseTimeout = setTimeout(() => startVotingPhase(toId, fn, m, werewolfSessions), 90 * 1000);
 };
 async function processNightActions(toId, fn, m, werewolfSessions) {
@@ -163,7 +163,7 @@ async function startNightPhase(toId, fn, m, werewolfSessions) {
   if (!gameState) return;
   gameState.status = 'NIGHT';
   gameState.aksiMalam = {};
-  await fn.sendPesan(toId, `🌙 Malam telah tiba. Semua warga tertidur. Para peran khusus, silakan cek pesan pribadi untuk beraksi. Waktu 90 detik.`, m);
+  await fn.sendPesan(toId, `🌙 Malam telah tiba. Semua warga tertidur. Para peran khusus, silakan cek pesan pribadi untuk beraksi. Waktu 90 detik.`, { ephemeralExpiration: m.expiration ?? 0 });
   const livingPlayersForDm = Object.values(gameState.pemain)
     .filter(p => p.isAlive)
     .map((p, i) => `${i + 1}. @${p.id.split('@')[0]}`)
@@ -195,7 +195,8 @@ async function startNightPhase(toId, fn, m, werewolfSessions) {
       } else {
         dmMessage += commandInstruction;
       }
-      await fn.sendPesan(player.id, dmMessage, m);
+      const expiration = await fn.getEphemeralExpiration(player.id);
+      await fn.sendPesan(player.id, dmMessage, { ephemeralExpiration: expiration });
     }
   }
   gameState.phaseTimeout = setTimeout(() => processNightActions(toId, fn, m, werewolfSessions), 90 * 1000);

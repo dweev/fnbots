@@ -45,10 +45,11 @@ export const command = {
       `Kartu buangan pertama adalah [ ${discardPile[0].display} ].\n` +
       `Sesi ini akan berakhir dalam 10 menit.\n\n` +
       `Giliranmu! Kartu sudah saya kirim via DM.`;
-    await fn.sendPesan(toId, groupMessage, m);
+    await fn.sendPesan(toId, groupMessage, { ephemeralExpiration: m.expiration ?? 0 });
     const privateMessage = `Ini kartumu untuk game di grup:\n\n${formatKartu(playerHand)}\n\n` +
       `Pilih aksimu di grup: *ambil dek* atau *ambil buangan*.`;
-    await fn.sendPesan(playerId, privateMessage, m);
+    const expiration = await fn.getEphemeralExpiration(playerId);
+    await fn.sendPesan(playerId, privateMessage, { ephemeralExpiration: expiration });
     await user.addXp();
   }
 };

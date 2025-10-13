@@ -151,18 +151,19 @@ export async function runBotTurn41(toId, m, fn, game41Sessions) {
     if (botFinalScore > playerScore) resultText += `🤖 Bot menang!`;
     else if (playerScore > botFinalScore) resultText += `🎉 Selamat, kamu menang!`;
     else resultText += `🤝 Hasilnya seri!`;
-    await fn.sendPesan(toId, resultText, m);
+    await fn.sendPesan(toId, resultText, { ephemeralExpiration: m.expiration ?? 0 });
     delete game41Sessions[toId];
     return;
   }
   gameState.turn = 'player';
   const groupMessage = `Bot telah bergerak dan membuang kartu [ ${discardedCard.display} ].\n\n` +
     `Giliranmu, @${gameState.playerJid.split('@')[0]}! Cek DM untuk melihat kartumu.`;
-  await fn.sendPesan(toId, groupMessage, m);
+  await fn.sendPesan(toId, groupMessage, { ephemeralExpiration: m.expiration ?? 0 });
   const privateMessage = `Bot membuang [ ${discardedCard.display} ].\n\n` +
     `Kartu Kamu saat ini:\n${formatKartu(gameState.playerHand)}\n\n` +
     `Pilih aksimu di grup: *ambil dek* atau *ambil buangan*.`;
-  await fn.sendPesan(gameState.playerJid, privateMessage, m);
+  const expiration = await fn.getEphemeralExpiration(gameState.playerJid);
+  await fn.sendPesan(gameState.playerJid, privateMessage, { ephemeralExpiration: expiration });
 };
 export async function runBotSamgongTurn(toId, m, fn, samgongSessions) {
   const gameState = samgongSessions[toId];
@@ -213,6 +214,6 @@ export async function runBotSamgongTurn(toId, m, fn, samgongSessions) {
   } else {
     resultText += `🤝 Hasilnya seri (Bandar menang)!`;
   }
-  await fn.sendPesan(toId, resultText, m);
+  await fn.sendPesan(toId, resultText, { ephemeralExpiration: m.expiration ?? 0 });
   delete samgongSessions[toId];
 };

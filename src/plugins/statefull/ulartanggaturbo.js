@@ -31,7 +31,7 @@ export const command = {
       `▫️ Menang dengan *mencapai atau melewati* kotak 50.\n` +
       `▫️ Sesi berakhir dalam 3 menit jika tidak aktif.\n\n` +
       `Kamu mendapat giliran pertama! Ketik *lempar* untuk melempar dadu.`;
-    await fn.sendPesan(toId, welcomeMessage, m);
+    await fn.sendPesan(toId, welcomeMessage, { ephemeralExpiration: m.expiration ?? 0 });
     await user.addXp();
   }
 };

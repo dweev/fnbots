@@ -21,6 +21,6 @@ export const command = {
       return a;
     }, []) || [];
     const adminListText = groupAdmins.map((admin, i) => `${i + 1}. @${admin.id.split('@')[0]}`).join('\n');
-    await fn.sendPesan(toId, `Daftar Admin Group: ${groupAdmins.length}\n\n` + adminListText, m);
+    await fn.sendPesan(toId, `Daftar Admin Group: ${groupAdmins.length}\n\n` + adminListText, { ephemeralExpiration: m.expiration ?? 0 });
   }
 };

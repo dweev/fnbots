@@ -121,7 +121,7 @@ export async function runBotUlarTanggaTurn(toId, m, fn, ularTanggaSessions) {
   }
   if (gameState.botPos >= board.size) {
     botText += `\n🤖 Bot mencapai garis finis dan MENANG!`;
-    await fn.sendPesan(toId, botText, m);
+    await fn.sendPesan(toId, botText, { ephemeralExpiration: m.expiration ?? 0 });
     clearTimeout(gameState.timeoutId);
     delete ularTanggaSessions[toId];
     return;
@@ -129,7 +129,7 @@ export async function runBotUlarTanggaTurn(toId, m, fn, ularTanggaSessions) {
   if (isDouble && gameState.botDoublesCount < 2) {
     gameState.botDoublesCount++;
     botText += `\nBot mendapat angka kembar dan berhak melempar lagi! (Bonus ke-${gameState.botDoublesCount})`;
-    await fn.sendPesan(toId, botText, m);
+    await fn.sendPesan(toId, botText, { ephemeralExpiration: m.expiration ?? 0 });
     setTimeout(() => runBotUlarTanggaTurn(toId, m, fn, ularTanggaSessions), 2000);
   } else {
     if (isDouble && gameState.botDoublesCount >= 2) {
@@ -138,12 +138,12 @@ export async function runBotUlarTanggaTurn(toId, m, fn, ularTanggaSessions) {
     gameState.botDoublesCount = 0;
     gameState.turn = 'player';
     botText += `\nSekarang giliranmu, @${gameState.playerJid.split('@')[0]}! Ketik *lempar*.`;
-    await fn.sendPesan(toId, botText, m);
+    await fn.sendPesan(toId, botText, { ephemeralExpiration: m.expiration ?? 0 });
     startUlarTanggaTimeout(toId, ularTanggaSessions);
   }
 };
 export async function runBotUlarTanggaTurnV2(toId, m, fn, ulartangga) {
-  const sPesan = (text) => fn.sendPesan(toId, text, m);
+  const sPesan = (text) => fn.sendPesan(toId, text, { ephemeralExpiration: m.expiration ?? 0 });
   const gameState = ulartangga[toId];
   if (!gameState) return;
   await delay(2000);

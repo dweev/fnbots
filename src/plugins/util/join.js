@@ -13,7 +13,7 @@ export const command = {
   category: 'util',
   description: 'Menginstruksikan bot agar masuk ke dalam grup',
   isCommandWithoutPayment: true,
-  execute: async ({ fn, m, dbSettings, arg, args, sReply, isMaster, isSadmin }) => {
+  execute: async ({ fn, dbSettings, arg, args, sReply, isMaster, isSadmin }) => {
     if (dbSettings.autojoin === true) return;
     if (!arg) {
       return await sReply(`Silakan berikan link undangan grup WhatsApp yang ingin Kamu masuki.\nContoh: ${dbSettings.sname}join https://chat.whatsapp.com/abc123xyz`);
@@ -24,7 +24,10 @@ export const command = {
       if (!(isSadmin || isMaster) && participants.length < dbSettings.memberLimit) return await sReply(`Grup terlalu kecil!\n\nMember: ${participants.length}\nMinimal: ${dbSettings.memberLimit}\nBot hanya bergabung ke grup dengan ${dbSettings.memberLimit}+ member.`);
       if (!joinApprovalMode) {
         await fn.groupAcceptInvite(inviteCode);
-        if (!restrict) await fn.sendPesan(id, `Halo warga grup *${subject}*!\nTerima kasih sudah mengundang ${dbSettings.botname}. Ketik *.rules* untuk melihat peraturan.`, m);
+        if (!restrict) {
+          const res = await fn.groupMetadata(id);
+          await fn.sendPesan(id, `Halo warga grup *${subject}*!\nTerima kasih sudah mengundang ${dbSettings.botname}. Ketik *.rules* untuk melihat peraturan.`, { ephemeralExpiration: res.ephemeralDuration ?? 0 }); 
+        }
         if (isSadmin || isMaster) {
           await Whitelist.addToWhitelist(id, 'group');
         }

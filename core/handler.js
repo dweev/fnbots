@@ -354,17 +354,17 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
               cooldownManager.markMediaSpamProcessed(serial);
               const mention = '@' + serial.split('@')[0];
               if (isSadmin) {
-                await fn.sendPesan(toId, `creatorku yang ganteng ${mention}\ngaboleh spam ya...`, m);
+                await fn.sendPesan(toId, `creatorku yang ganteng ${mention}\ngaboleh spam ya...`, { ephemeralExpiration: m.expiration ?? 0 });
               } else if (isMaster) {
-                await fn.sendPesan(toId, `wah ini nih! ${mention}\nHei Owner, jangan ngajarin membernya buat spam! 🤦‍♂️🤦‍♂️😤🧐`, m);
+                await fn.sendPesan(toId, `wah ini nih! ${mention}\nHei Owner, jangan ngajarin membernya buat spam! 🤦‍♂️🤦‍♂️😤🧐`, { ephemeralExpiration: m.expiration ?? 0 });
               } else if (isVIP) {
-                await fn.sendPesan(toId, `hmmmmm gitu ya ${mention}\nvip bebas spam. 😒🙃😏`, m);
+                await fn.sendPesan(toId, `hmmmmm gitu ya ${mention}\nvip bebas spam. 😒🙃😏`, { ephemeralExpiration: m.expiration ?? 0 });
               } else if (isPremium) {
-                await fn.sendPesan(toId, `wadooooh si ${mention}\nasik nih premium bisa spam. 😒🙃😏`, m);
+                await fn.sendPesan(toId, `wadooooh si ${mention}\nasik nih premium bisa spam. 😒🙃😏`, { ephemeralExpiration: m.expiration ?? 0 });
               } else if (isGroupAdmins) {
-                await fn.sendPesan(toId, `yaela ${mention}\njangan mentang-mentang jadi admin spam terus terusan ya!`, m);
+                await fn.sendPesan(toId, `yaela ${mention}\njangan mentang-mentang jadi admin spam terus terusan ya!`, { ephemeralExpiration: m.expiration ?? 0 });
               } else {
-                await fn.sendPesan(toId, `member bangsat ya ${mention}\nspam anjeng! 😡😡😡😡`, m);
+                await fn.sendPesan(toId, `member bangsat ya ${mention}\nspam anjeng! 😡😡😡😡`, { ephemeralExpiration: m.expiration ?? 0 });
                 setTimeout(async () => {
                   await fn.removeParticipant(toId, serial);
                 }, 1000);
@@ -412,15 +412,8 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
                 `• Pesan: "${m.body}"\n\n` +
                 `_Kamu sedang AFK dengan alasan: ${user.reason}_\n` +
                 `AFK sejak: ${user.waktu}`;
-              await fn.sendMessage(
-                user.jid,
-                {
-                  text: notificationMsg,
-                  contextInfo: {
-                    mentionedJid: [serial, user.jid]
-                  }
-                }
-              );
+              const expiration = await fn.getEphemeralExpiration(user.jid);
+              await fn.sendPesan(user.jid, notificationMsg, { ephemeralExpiration: expiration });
             } catch (error) {
               await log(error, true);
             }

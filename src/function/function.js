@@ -67,7 +67,7 @@ export async function textMatch1(fn, m, lt, toId) {
       "*Mungkinkah yang kamu maksud:*",
       ...suggestions.map(s => `• ${s.from} → ${s.to}`)
     ].join("\n");
-    await fn.sendPesan(toId, suggestionText, m);
+    await fn.sendPesan(toId, suggestionText, { ephemeralExpiration: m.expiration ?? 0 });
   }
 };
 export async function textMatch2(lt) {
@@ -518,9 +518,11 @@ export async function expiredCheck(fn, ownerNumber) {
       const latestMessageFromOwner = await StoreMessages.getLatestMessage(ownerNumber[0]);
       const notificationText = `Premium expired: @${user.userId.split('@')[0]}`;
       if (latestMessageFromOwner) {
-        await fn.sendPesan(ownerNumber[0], notificationText, { quoted: latestMessageFromOwner });
+        const expiration = await fn.getEphemeralExpiration(ownerNumber[0]);
+        await fn.sendPesan(ownerNumber[0], notificationText, { quoted: latestMessageFromOwner, ephemeralExpiration: expiration });
       } else {
-        await fn.sendPesan(ownerNumber[0], notificationText);
+        const expiration = await fn.getEphemeralExpiration(ownerNumber[0]);
+        await fn.sendPesan(ownerNumber[0], notificationText, { ephemeralExpiration: expiration });
       }
       await User.removePremium(user.userId);
     }
@@ -535,9 +537,11 @@ export async function expiredVIPcheck(fn, ownerNumber) {
       const latestMessageFromOwner = await StoreMessages.getLatestMessage(ownerNumber[0]);
       const notificationText = `VIP expired: @${user.userId.split('@')[0]}`;
       if (latestMessageFromOwner) {
-        await fn.sendPesan(ownerNumber[0], notificationText, { quoted: latestMessageFromOwner });
+        const expiration = await fn.getEphemeralExpiration(ownerNumber[0]);
+        await fn.sendPesan(ownerNumber[0], notificationText, { quoted: latestMessageFromOwner, ephemeralExpiration: expiration });
       } else {
-        await fn.sendPesan(ownerNumber[0], notificationText);
+        const expiration = await fn.getEphemeralExpiration(ownerNumber[0]);
+        await fn.sendPesan(ownerNumber[0], notificationText, { ephemeralExpiration: expiration });
       }
       await User.removeVIP(user.userId);
     }

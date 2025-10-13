@@ -37,10 +37,11 @@ export const command = {
     const groupMessage = `Permainan Samgong (Gaya Hit/Stand) dimulai oleh @${playerId.split('@')[0]}!\n\n` +
       `Satu kartu Bandar terbuka: [ ${botHand[0].display} ]\n\n` +
       `Giliranmu, @${playerId.split('@')[0]}! Cek DM. Sesi akan berakhir dalam 5 menit jika tidak aktif.`;
-    await fn.sendPesan(toId, groupMessage, m);
+    await fn.sendPesan(toId, groupMessage, { ephemeralExpiration: m.expiration ?? 0 });
     const privateMessage = `Ini kartumu (Total: *${calculateSamgongValue(playerHand)}*):\n${formatKartu(playerHand)}\n\n` +
       `Ketik *hit* untuk menambah kartu, atau *stand* untuk berhenti.`;
-    await fn.sendPesan(playerId, privateMessage, m);
+    const expiration = await fn.getEphemeralExpiration(playerId);
+    await fn.sendPesan(playerId, privateMessage, { ephemeralExpiration: expiration });
     await user.addXp();
   }
 };

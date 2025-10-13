@@ -63,7 +63,8 @@ class AutoJoinHandler {
         await fn.groupAcceptInvite(inviteCode);
         if (!restrict) {
           const greetingMessage = `Halo warga grup *${subject}*!\nTerima kasih sudah mengundang ${dbSettings.botname}. Ketik *.rules* untuk melihat peraturan.`;
-          await fn.sendPesan(groupId, greetingMessage, m);
+          const res = await fn.groupMetadata(groupId);
+          await fn.sendPesan(groupId, greetingMessage, { ephemeralExpiration: res.expiration });
         }
         await sReply("✅ Berhasil join grup.");
         const userUpdates = { $inc: { userCount: 1 } };
@@ -87,7 +88,8 @@ class AutoJoinHandler {
         await fn.groupAcceptInvite(inviteCode);
         if (!restrict) {
           const greetingMessage = `Halo warga grup *${subject}*!\nTerima kasih sudah mengundang ${dbSettings.botname}. Ketik *.rules* untuk melihat peraturan.`;
-          await fn.sendPesan(groupId, greetingMessage, m);
+          const res = await fn.groupMetadata(groupId);
+          await fn.sendPesan(groupId, greetingMessage, { ephemeralExpiration: res.expiration });
         }
         await sReply("✅ Berhasil join grup.");
         const userUpdates = { $inc: { userCount: 1 } };

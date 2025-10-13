@@ -470,7 +470,8 @@ export async function handleGameBotResponse(params) {
       const privateMessage = `Kamu mengambil [ ${takenCard.display} ].\n\n` +
         `Kartu Kamu sekarang:\n${formatKartu(gameState.playerHand)}\n\n` +
         `Ketik *buang <nomor kartu>* (1-5) di grup untuk membuang kartu.`;
-      await fn.sendPesan(gameState.playerJid, privateMessage, m);
+      const expiration = await fn.getEphemeralExpiration(gameState.playerJid);
+      await fn.sendPesan(gameState.playerJid, privateMessage, { ephemeralExpiration: expiration });
       await user.addXp();
       await performanceManager.cache.updateUserStats(user.userId, counthits);
       return true;
@@ -543,7 +544,8 @@ export async function handleGameBotResponse(params) {
       let privateMessage = `Kamu mengambil [ ${newCard.display} ].\n\n` +
         `Tangan Kamu sekarang (Total: *${playerScore}*):\n${formatKartu(gameState.playerHand)}`;
       if (playerScore > 30) {
-        await fn.sendPesan(gameState.playerJid, privateMessage, m);
+        const expiration = await fn.getEphemeralExpiration(gameState.playerJid);
+        await fn.sendPesan(gameState.playerJid, privateMessage, { ephemeralExpiration: expiration });
         await sReply(`💥 *HANGUS!* Nilai kartu Kamu (*${playerScore}*) melebihi 30. Bot menang!`);
         delete samgongSessions[toId];
         await user.addXp();
@@ -551,7 +553,8 @@ export async function handleGameBotResponse(params) {
         return true;
       } else {
         privateMessage += `\n\nKetik *hit* lagi atau *stand*.`;
-        await fn.sendPesan(gameState.playerJid, privateMessage, m);
+        const expiration = await fn.getEphemeralExpiration(gameState.playerJid);
+        await fn.sendPesan(gameState.playerJid, privateMessage, { ephemeralExpiration: expiration });
         startTimeout(toId);
         await user.addXp();
         await performanceManager.cache.updateUserStats(user.userId, counthits);
@@ -946,7 +949,7 @@ export async function handleGameBotResponse(params) {
           teks += `\n❗ *Jawaban yang belum tertebak:*\n${belum.join('\n')}`;
         }
         delete family100[toId];
-        await fn.sendPesan(toId, teks, m);
+        await fn.sendPesan(toId, teks, { ephemeralExpiration: m.expiration ?? 0 });
         addStat();
         return true;
       }
@@ -960,7 +963,7 @@ export async function handleGameBotResponse(params) {
           let teks = `🎉 Semua jawaban ditemukan!\n\n🏆 *Total Hadiah Awal:* ${total}\n`;
           teks += await bagiSaldo();
           delete family100[toId];
-          await fn.sendPesan(toId, teks, m);
+          await fn.sendPesan(toId, teks, { ephemeralExpiration: m.expiration ?? 0 });
           addStat();
           return true;
         }

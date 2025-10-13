@@ -48,7 +48,8 @@ export const command = {
         case '408': {
           await sReply(`Info: ${targetUserMention} baru saja keluar dari grup.\n\nKarena privasi, undangan akan dikirimkan secara pribadi.`);
           const inviteCode = await fn.groupInviteCode(toId);
-          await fn.sendPesan(target, `Kamu diundang kembali ke grup, silahkan klik link berikut untuk bergabung: https://chat.whatsapp.com/${inviteCode}`, m);
+          const expiration = await fn.getEphemeralExpiration(target);
+          await fn.sendPesan(target, `Kamu diundang kembali ke grup, silahkan klik link berikut untuk bergabung: https://chat.whatsapp.com/${inviteCode}`, { ephemeralExpiration: expiration });
           break;
         }
         case '401':

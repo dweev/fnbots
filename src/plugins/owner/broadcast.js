@@ -62,9 +62,11 @@ export const command = {
       try {
         if (whitelistIdSet.has(idGroup)) {
           const caption = `*${dbSettings.botName} Broadcast*\n\n${messageContent}`;
-          await fn.sendFilePath(idGroup, caption, config.paths.avatar);
+          const res = await fn.groupGetMetadata(idGroup);
+          await fn.sendFilePath(idGroup, caption, config.paths.avatar, { ephemeralExpiration: res.expiration });
         } else {
-          await fn.sendPesan(idGroup, messageContent);
+          const res = await fn.groupGetMetadata(idGroup);
+          await fn.sendPesan(idGroup, messageContent, { ephemeralExpiration: res.expiration });
         }
         successCount++;
         await delay(1500);

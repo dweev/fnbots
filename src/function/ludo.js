@@ -160,7 +160,7 @@ export function checkForCapture(gameState, attackerColor, attackerNewPos) {
   return captureText;
 };
 export async function runBotLudoTurns(toId, m, fn, ludoSessions) {
-  const sPesan = (text) => fn.sendPesan(toId, text, m);
+  const sPesan = (text) => fn.sendPesan(toId, text, { ephemeralExpiration: m.expiration ?? 0 });
   const gameState = ludoSessions[toId];
   if (!gameState || gameState.status !== 'BOTS_TURN') return;
   const botColor = gameState.players[gameState.turn];

@@ -20,6 +20,6 @@ export const command = {
     mentions.forEach((jid, idx) => {
       message += `\n${idx + 1}. @${jid.split('@')[0]}`;
     });
-    await fn.sendPesan(toId, message, m);
+    await fn.sendPesan(toId, message, { ephemeralExpiration: m.expiration ?? 0 });
   }
 };

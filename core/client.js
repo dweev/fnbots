@@ -18,7 +18,7 @@ import { runJob } from '../src/worker/worker_manager.js';
 import { randomByte, getBuffer, getSizeMedia } from '../src/function/index.js';
 import { convert as convertNative, fetch as nativeFetch } from '../src/addon/bridge.js';
 import { MediaValidationError, MediaProcessingError, MediaSizeError } from '../src/lib/errorManager.js';
-import { jidNormalizedUser, generateWAMessage, generateWAMessageFromContent, downloadContentFromMessage, jidDecode, jidEncode, getBinaryNodeChildString, getBinaryNodeChildren, getBinaryNodeChild, proto } from 'baileys';
+import { jidNormalizedUser, generateWAMessage, generateWAMessageFromContent, downloadContentFromMessage, jidDecode, jidEncode, getBinaryNodeChildString, getBinaryNodeChildren, getBinaryNodeChild, proto, WAMessageAddressingMode } from 'baileys';
 
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
@@ -95,20 +95,63 @@ const handleBufferInput = async (input) => {
 };
 const createMediaMessage = (mime, data, caption, options = {}) => {
   if (mime.includes('gif')) {
-    return { video: data, caption, gifPlayback: true, ...options };
+    return {
+      video: data,
+      caption,
+      gifPlayback: true,
+      mimetype: mime,
+      ...options
+    };
   } else if (mime === 'image/webp' && options.asSticker) {
-    return { sticker: data, ...options };
+    return {
+      sticker: data,
+      ...options
+    };
   } else if (mime.startsWith('image/')) {
-    return { image: data, caption, ...options };
+    return {
+      image: data,
+      caption,
+      mimetype: mime,
+      ...options
+    };
   } else if (mime.startsWith('video/')) {
-    return { video: data, caption, mimetype: mime, ...options };
+    return {
+      video: data,
+      caption,
+      mimetype: mime,
+      ...options
+    };
   } else if (mime.startsWith('audio/')) {
-    return { audio: data, mimetype: mime, ...options };
+    return {
+      audio: data,
+      mimetype: mime,
+      ptt: options.ptt || false,
+      ...options
+    };
+  } else if (options.location) {
+    return {
+      location: {
+        degreesLatitude: options.location.degreesLatitude || options.location.latitude,
+        degreesLongitude: options.location.degreesLongitude || options.location.longitude,
+        name: options.location.name || '',
+        address: options.location.address || ''
+      }
+    };
+  } else if (options.contact) {
+    return {
+      contacts: {
+        displayName: options.contact.displayName || options.contact.name,
+        contacts: [{
+          vcard: options.contact.vcard
+        }]
+      }
+    };
   } else {
+    const fileName = options.fileName || `file.${mime.split('/')[1] || 'bin'}`;
     return {
       document: data,
       mimetype: mime,
-      fileName: options.fileName || `file.${mime.split('/')[1] || 'bin'}`,
+      fileName: fileName,
       caption,
       ...options
     };
@@ -486,40 +529,67 @@ export async function clientBot(fn, dbSettings) {
   fn.extractGroupMetadata = (result) => {
     const group = getBinaryNodeChild(result, 'group');
     const descChild = getBinaryNodeChild(group, 'description');
-    const desc = descChild ? getBinaryNodeChildString(descChild, 'body') : undefined;
-    const descId = descChild?.attrs?.id;
+    let desc;
+    let descId;
+    let descOwner;
+    let descOwnerPn;
+    let descTime;
+    if (descChild) {
+      desc = getBinaryNodeChildString(descChild, 'body');
+      descOwner = descChild.attrs.participant ? jidNormalizedUser(descChild.attrs.participant) : undefined;
+      descOwnerPn = descChild.attrs.participant_pn ? jidNormalizedUser(descChild.attrs.participant_pn) : undefined;
+      descTime = +descChild.attrs.t;
+      descId = descChild.attrs.id;
+    }
     const groupId = group.attrs.id.includes('@') ? group.attrs.id : jidEncode(group.attrs.id, 'g.us');
-    const eph = getBinaryNodeChild(group, 'ephemeral')?.attrs?.expiration;
-    const participants = getBinaryNodeChildren(group, 'participant') || [];
+    const eph = getBinaryNodeChild(group, 'ephemeral')?.attrs.expiration;
+    const memberAddMode = getBinaryNodeChildString(group, 'member_add_mode') === 'all_member_add';
     return {
       id: groupId,
-      addressingMode: group.attrs.addressing_mode,
+      notify: group.attrs.notify,
+      addressingMode: group.attrs.addressing_mode === 'lid' ? WAMessageAddressingMode.LID : WAMessageAddressingMode.PN,
       subject: group.attrs.subject,
-      subjectOwner: group.attrs.s_o?.endsWith('@lid') ? group.attrs.s_o_pn : group.attrs.s_o,
-      subjectOwnerPhoneNumber: group.attrs.s_o_pn,
+      subjectOwner: group.attrs.s_o,
+      subjectOwnerPn: group.attrs.s_o_pn,
       subjectTime: +group.attrs.s_t,
+      size: group.attrs.size ? +group.attrs.size : getBinaryNodeChildren(group, 'participant').length,
       creation: +group.attrs.creation,
-      size: participants.length,
-      owner: group.attrs.creator?.endsWith('@lid') ? group.attrs.creator_pn : group.attrs.creator,
-      ownerPhoneNumber: group.attrs.creator_pn ? jidNormalizedUser(group.attrs.creator_pn) : undefined,
+      owner: group.attrs.creator ? jidNormalizedUser(group.attrs.creator) : undefined,
+      ownerPn: group.attrs.creator_pn ? jidNormalizedUser(group.attrs.creator_pn) : undefined,
+      owner_country_code: group.attrs.creator_country_code,
       desc,
       descId,
-      linkedParent: getBinaryNodeChild(group, 'linked_parent')?.attrs?.jid,
+      descOwner,
+      descOwnerPn,
+      descTime,
+      linkedParent: getBinaryNodeChild(group, 'linked_parent')?.attrs.jid || undefined,
       restrict: !!getBinaryNodeChild(group, 'locked'),
       announce: !!getBinaryNodeChild(group, 'announcement'),
       isCommunity: !!getBinaryNodeChild(group, 'parent'),
       isCommunityAnnounce: !!getBinaryNodeChild(group, 'default_sub_group'),
       joinApprovalMode: !!getBinaryNodeChild(group, 'membership_approval_mode'),
-      memberAddMode: getBinaryNodeChildString(group, 'member_add_mode') === 'all_member_add',
-      ephemeralDuration: eph ? +eph : undefined,
-      participants: participants.map(({ attrs }) => ({
-        id: attrs.jid.endsWith('@lid') ? attrs.phone_number : attrs.jid,
-        jid: attrs.jid.endsWith('@lid') ? attrs.phone_number : attrs.jid,
-        lid: attrs.jid.endsWith('@lid') ? attrs.jid : attrs.lid,
-        admin: attrs.type || null
-      }))
+      memberAddMode,
+      participants: getBinaryNodeChildren(group, 'participant').map(({ attrs }) => {
+        return {
+          id: attrs.jid.endsWith('@lid') ? attrs.phone_number : attrs.jid,
+          jid: attrs.jid.endsWith('@lid') ? attrs.phone_number : attrs.jid,
+          lid: attrs.jid.endsWith('@lid') ? attrs.jid : attrs.lid,
+          admin: attrs.type || null
+        };
+      }),
+      ephemeralDuration: eph ? +eph : undefined
     };
   };
+  fn.groupQuery = async (jid, type, content) =>
+    fn.query({
+      tag: 'iq',
+      attrs: {
+        type,
+        xmlns: 'w:g2',
+        to: jid
+      },
+      content
+    });
   fn.groupMetadata = async (jid) => {
     const result = await fn.query({
       tag: 'iq',
@@ -557,6 +627,10 @@ export async function clientBot(fn, dbSettings) {
     }
     fn.ev.emit('groups.update', Object.values(data));
     return data;
+  };
+  fn.groupGetInviteInfo = async (code) => {
+    const results = await fn.groupQuery('@g.us', 'get', [{ tag: 'invite', attrs: { code } }]);
+    return fn.extractGroupMetadata(results);
   };
   fn.sendGroupInvite = async (jid, participant, inviteCode, inviteExpiration, groupName = 'Unknown Subject', caption = 'Invitation to join my WhatsApp group', jpegThumbnail = null, options = {}) => {
     const msg = proto.Message.create({
@@ -627,6 +701,8 @@ export async function clientBot(fn, dbSettings) {
         message: message.message,
         messageTimestamp: message.messageTimestamp
       }
+    }, {
+      ephemeralExpiration: message.expiration || 0,
     });
   };
   fn.handleGroupEventImage = async (idGroup, eventDetails) => {
@@ -679,6 +755,18 @@ export async function clientBot(fn, dbSettings) {
       } else {
         throw error;
       }
+    }
+  };
+  fn.getEphemeralExpiration = async (jid) => {
+    try {
+      const data = await fn.fetchDisappearingDuration(jid);
+      if (Array.isArray(data) && data.length > 0) {
+        const userData = data.find(item => item.id === jid);
+        return userData?.disappearing_mode?.duration || 0;
+      }
+      return 0;
+    } catch {
+      return 0;
     }
   };
   return fn;

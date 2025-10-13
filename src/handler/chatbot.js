@@ -107,33 +107,12 @@ export class ChatbotHandler {
           const { stream } = await getMediaStream(mediaDoc._id);
           mediaBuffer = stream;
         }
-        const mediaType = mediaDoc.type || mediaDoc.mime.split('/')[0];
-        const typeMapping = {
-          'image': 'image',
-          'video': 'video',
-          'audio': 'audio',
-          'sticker': 'sticker'
-        };
-        const messageType = typeMapping[mediaType] || 'document';
-        if (['image', 'video', 'audio', 'sticker'].includes(messageType)) {
-          await fn.sendMessage(toId, {
-            [messageType]: mediaBuffer,
-            mimetype: mediaDoc.mime,
-            ptt: messageType === 'audio' ? true : undefined,
-          }, { quoted: m });
-        } else {
-          await fn.sendMessage(toId, {
-            document: mediaBuffer,
-            mimetype: mediaDoc.mime,
-            fileName: mediaDoc.name || 'file'
-          }, { quoted: m });
-        }
+        await fn.sendMediaFromBuffer(toId, mediaDoc.mime, mediaBuffer, '', m, { ptt: mediaDoc.mime.startsWith('audio/') });
         await delay(1000);
       }
       return true;
     } catch (error) {
-      log(`Error in media response: ${error.message}`);
-      log(error, true);
+      log(`Error in media response: ${error.message}`, true);
       return false;
     }
   }

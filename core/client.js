@@ -24,12 +24,19 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 export const ttsId = require('node-gtts')('id');
 
-const createQuotedOptions = (quoted, options = {}) => ({
-  quoted,
-  ephemeralExpiration: quoted?.expiration ?? 0,
-  messageId: randomByte(32),
-  ...options
-});
+const createQuotedOptions = (quoted, options = {}) => {
+  const ephemeralExpiration = options?.ephemeralExpiration
+    ?? options?.expiration
+    ?? quoted?.expiration
+    ?? 0;
+
+  return {
+    quoted,
+    ephemeralExpiration,
+    messageId: randomByte(32),
+    ...options
+  };
+};
 const extractMentions = (text) => {
   if (!text || typeof text !== 'string') return [];
   return [...text.matchAll(/@(\d{0,16})(@lid|@s\.whatsapp\.net)?/g)].map(v => v[1] + (v[2] || '@s.whatsapp.net'));
@@ -192,10 +199,10 @@ export async function clientBot(fn, dbSettings) {
             return await fn.sendMediaFromBuffer(chat, mime, buffer, finalCaption, quoted, opts);
           }
         }
-        return await fn.sendMessage(chat, { text: content, ...opts }, createQuotedOptions(quoted));
+        return await fn.sendMessage(chat, { text: content, ...opts }, createQuotedOptions(quoted, opts));
       } catch (error) {
         log(error, true);
-        return await fn.sendMessage(chat, { text: content, ...opts }, createQuotedOptions(quoted));
+        return await fn.sendMessage(chat, { text: content, ...opts }, createQuotedOptions(quoted, opts));
       }
     }
   };

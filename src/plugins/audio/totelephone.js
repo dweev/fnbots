@@ -25,11 +25,6 @@ export const command = {
       mediaBuffer: mediaBuffer,
       filterName: 'telephone'
     });
-    const outputBuffer = Buffer.isBuffer(resultBuffer) ? resultBuffer : Buffer.from(resultBuffer.data || resultBuffer);
-    await fn.sendMessage(toId, {
-      audio: outputBuffer,
-      mimetype: 'audio/mpeg',
-      ptt: quotedMsg?.audioMessage?.ptt || false
-    }, { quoted: m });
+    await fn.sendMediaFromBuffer(toId, 'audio/mpeg', resultBuffer, '', m);
   }
 };

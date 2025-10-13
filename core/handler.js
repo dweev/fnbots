@@ -103,7 +103,7 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
   const reactDone = async () => { await delay(1000); await fn.sendMessage(toId, { react: { text: '✅', key: m.key } }); };
   const reactFail = async () => { await delay(1000); await fn.sendMessage(toId, { react: { text: '❎', key: m.key } }); };
   const sReply = (content, options = {}) => fn.sendReply(toId, content, { quoted: m, ...options });
-  const sPesan = (content) => fn.sendPesan(toId, content, m);
+  const sPesan = (content, options = {}) => fn.sendPesan(toId, content, { ephemeralExpiration: m.expiration ?? 0, ...options });
   const sendRawWebpAsSticker = async (_data, options = {}) => { await fn.sendRawWebpAsSticker(toId, _data, m, { ...options }); };
   const isCmd = txt?.startsWith(dbSettings.rname) || txt?.startsWith(dbSettings.sname);
 

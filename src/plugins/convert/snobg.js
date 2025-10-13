@@ -19,7 +19,7 @@ export const command = {
   category: 'convert',
   description: 'convert image to no background sticker',
   isCommandWithoutPayment: true,
-  execute: async ({ fn, m, arg, quotedMsg, sReply, sendRawWebpAsSticker }) => {
+  execute: async ({ fn, m, arg, quotedMsg, sReply, sendRawWebpAsSticker, dbSettings }) => {
     let command = '';
     const targetMsg = quotedMsg ? m.quoted || m : m.message;
     if (!targetMsg) return await sReply("Media tidak ditemukan.");
@@ -37,8 +37,8 @@ export const command = {
     }
     await exec(command);
     const finalStickerBuffer = await fs.readFile(outputPath);
+    await sendRawWebpAsSticker(finalStickerBuffer, { packName: dbSettings.packName, authorName: dbSettings.packAuthor });
     await tmpDir.deleteFile(inputPath);
     await tmpDir.deleteFile(outputPath);
-    await sendRawWebpAsSticker(finalStickerBuffer);
   }
 };

@@ -20,7 +20,7 @@ export const command = {
   description: 'convert telegram sticker to whatsapp webp sticker',
   isCommandWithoutPayment: true,
   aliases: ['stickertele'],
-  execute: async ({ fn, toId, arg, sReply }) => {
+  execute: async ({ arg, sReply, dbSettings, sendRawWebpAsSticker }) => {
     await fs.ensureDir(config.paths.stickerDir, { mode: 0o755 });
     const inputDir = `${config.paths.stickerDir}/input`;
     const tmpDir = `${config.paths.stickerDir}/tmp`;
@@ -47,7 +47,7 @@ export const command = {
     for (const file of webpFiles) {
       const inputPath = path.join(inputDir, file);
       await fs.access(inputPath);
-      await fn.sendRawWebpAsSticker(toId, inputPath);
+      await sendRawWebpAsSticker(inputPath, { packName: dbSettings.packName, authorName: dbSettings.packAuthor });
     }
     await fs.rm(config.paths.stickerDir, { recursive: true, force: true });
   }

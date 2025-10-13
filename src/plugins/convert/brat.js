@@ -14,7 +14,7 @@ export const command = {
   category: 'convert',
   description: 'Membuat brat dari teks',
   isCommandWithoutPayment: true,
-  execute: async ({ quotedMsg, sReply, sendRawWebpAsSticker, arg }) => {
+  execute: async ({ quotedMsg, sReply, sendRawWebpAsSticker, arg, dbSettings }) => {
     let inputText;
     if ((quotedMsg && quotedMsg?.type === "extendedTextMessage") || (quotedMsg && quotedMsg?.type === "conversation")) {
       inputText = quotedMsg?.body;
@@ -34,6 +34,6 @@ export const command = {
     });
     const buffer = await bratGenerator(cleanedString, cleanedArray);
     const webpSticker = await webpFormatter(buffer, "contain");
-    await sendRawWebpAsSticker(webpSticker);
+    await sendRawWebpAsSticker(webpSticker, { packName: dbSettings.packName, authorName: dbSettings.packAuthor });
   }
 };

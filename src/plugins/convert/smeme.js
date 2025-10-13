@@ -18,7 +18,7 @@ export const command = {
   category: 'convert',
   description: 'convert image to sticker memes',
   isCommandWithoutPayment: true,
-  execute: async ({ fn, m, arg, quotedMsg, sendRawWebpAsSticker, mentionedJidList, sReply }) => {
+  execute: async ({ fn, m, arg, quotedMsg, sendRawWebpAsSticker, mentionedJidList, sReply, dbSettings }) => {
     if (!arg) return await sReply(`Mohon berikan teks yang ingin dijadikan sticker meme.`);
     arg = cleanFormattingText(arg);
     let textTop = '';
@@ -79,7 +79,7 @@ export const command = {
       fontSize: 45,
       square,
     });
-    await sendRawWebpAsSticker(resBuffer);
+    await sendRawWebpAsSticker(resBuffer, { packName: dbSettings.packName, authorName: dbSettings.packAuthor });
     await tmpDir.deleteFile(tmpInPath);
   }
 };

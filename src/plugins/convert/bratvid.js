@@ -17,13 +17,12 @@ export const command = {
   category: 'convert',
   description: 'Membuat bratvid dari teks',
   isCommandWithoutPayment: true,
-  execute: async ({ fn, m, quotedMsg, toId, sReply, dbSettings, arg }) => {
+  execute: async ({ quotedMsg, sendRawWebpAsSticker, sReply, dbSettings, arg }) => {
     let tempFrameDir = '';
     let outputPath = '';
     try {
       let bgColor = "#FFFFFF";
       let inputText = '';
-      const stickerOptions = { packname: dbSettings.packName, author: dbSettings.packAuthor };
       const hexColorRegex = /^#([0-9A-F]{3}|[0-9A-F]{4}|[0-9A-F]{6}|[0-9A-F]{8})$/i;
       if (arg.includes('|')) {
         const parts = arg.split('|');
@@ -65,7 +64,7 @@ export const command = {
         frameFiles.push(framePath);
       }
       await generateAnimatedBratVid(tempFrameDir, outputPath);
-      await fn.sendRawWebpAsSticker(toId, await fs.readFile(outputPath), m, stickerOptions);
+      await sendRawWebpAsSticker(outputPath, { packName: dbSettings.packName, authorName: dbSettings.packAuthor });
     } finally {
       if (tempFrameDir) {
         await fs.rm(tempFrameDir, { recursive: true, force: true });

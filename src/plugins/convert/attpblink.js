@@ -16,7 +16,7 @@ export const command = {
   description: 'Animated Text To PNG Blinking plugins',
   aliases: ['attp-blink'],
   isCommandWithoutPayment: true,
-  execute: async ({ quotedMsg, sendRawWebpAsSticker, arg, sReply }) => {
+  execute: async ({ quotedMsg, arg, sReply, dbSettings, sendRawWebpAsSticker }) => {
     let text = '';
     const textLimit = 100;
     if ((quotedMsg && quotedMsg?.type === "extendedTextMessage") || (quotedMsg && quotedMsg?.type === "conversation")) {
@@ -28,6 +28,6 @@ export const command = {
     const randomFonts = ["SpicyRice", "Bangers"];
     const hasilRandomFonts = randomChoice(randomFonts);
     const result = await attpBlinkGenerate(text, hasilRandomFonts);
-    await sendRawWebpAsSticker(result);
+    await sendRawWebpAsSticker(result, { packName: dbSettings.packName, authorName: dbSettings.packAuthor });
   }
 };

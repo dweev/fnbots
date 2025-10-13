@@ -14,7 +14,7 @@ export const command = {
   category: 'convert',
   description: 'Membuat Quote Chat',
   isCommandWithoutPayment: true,
-  execute: async ({ fn, m, quotedMsg, serial, arg, sReply, pushname, quotedParticipant, sendRawWebpAsSticker, StoreMessages }) => {
+  execute: async ({ fn, m, quotedMsg, serial, arg, sReply, pushname, quotedParticipant, sendRawWebpAsSticker, StoreMessages, dbSettings }) => {
     const isQuotedText = quotedMsg && (quotedMsg?.type === 'extendedTextMessage' || quotedMsg?.type === 'conversation');
     const getProfilePic = async (jid) => {
       try {
@@ -93,6 +93,6 @@ export const command = {
     params.messages.push(message);
     const result = await QuoteGenerator(params);
     const imageBuffer = Buffer.from(result.image, 'base64');
-    await sendRawWebpAsSticker(imageBuffer);
+    await sendRawWebpAsSticker(imageBuffer, { packName: dbSettings.packName, authorName: dbSettings.packAuthor });
   }
 };

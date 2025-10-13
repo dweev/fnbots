@@ -13,7 +13,7 @@ export const command = {
   category: 'convert',
   description: 'Membuat sticker HARTA TAHTA dengan teks kustom menggunakan ImageMagick.',
   isCommandWithoutPayment: true,
-  execute: async ({ fn, m, args, toId, sReply, dbSettings }) => {
+  execute: async ({ args, sendRawWebpAsSticker, sReply, dbSettings }) => {
     if (args.length === 0) return await sReply(`Teks tidak boleh kosong.\nGunakan format: ${dbSettings.sname}harta NAMA`);
     const text = args[0].toUpperCase();
     if (text.length > 8) return await sReply(`Teks terlalu panjang! Maksimal 8 huruf.`);
@@ -24,6 +24,6 @@ export const command = {
       outputFormat: 'webp'
     });
     const outputBuffer = Buffer.isBuffer(resultBuffer) ? resultBuffer : Buffer.from(resultBuffer.data || resultBuffer);
-    await fn.sendMessage(toId, { sticker: outputBuffer }, { quoted: m });
+    await sendRawWebpAsSticker(outputBuffer, { packName: dbSettings.packName, authorName: dbSettings.packAuthor });
   }
 };

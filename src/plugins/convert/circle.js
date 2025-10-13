@@ -38,7 +38,7 @@ export const command = {
   category: 'convert',
   description: 'convert image to circle sticker',
   isCommandWithoutPayment: true,
-  execute: async ({ fn, m, quotedMsg, sReply, sendRawWebpAsSticker }) => {
+  execute: async ({ fn, m, quotedMsg, sReply, sendRawWebpAsSticker, dbSettings }) => {
     const targetMsg = quotedMsg ? m.quoted || m : m.message;
     if (!targetMsg) return await sReply("Media tidak ditemukan.");
     const mime = targetMsg?.imageMessage?.mimetype || targetMsg?.videoMessage?.mimetype;
@@ -71,12 +71,12 @@ export const command = {
       ];
       await execFFmpeg(args);
       const buffs = await fs.readFile(outputPath);
-      await sendRawWebpAsSticker(buffs);
+      await sendRawWebpAsSticker(buffs, { packName: dbSettings.packName, authorName: dbSettings.packAuthor });
       await tmpDir.deleteFile(inputPath);
       await tmpDir.deleteFile(outputPath);
     } else {
       const buffs = await makeCircleSticker(buffer);
-      await sendRawWebpAsSticker(buffs);
+      await sendRawWebpAsSticker(buffs, { packName: dbSettings.packName, authorName: dbSettings.packAuthor });
     }
   }
 };

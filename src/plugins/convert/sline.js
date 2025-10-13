@@ -20,7 +20,7 @@ export const command = {
   description: 'convert line sticker to whatsapp webp sticker',
   isCommandWithoutPayment: true,
   aliases: ['stickerline'],
-  execute: async ({ fn, toId, arg, sReply }) => {
+  execute: async ({ arg, sReply, dbSettings, sendRawWebpAsSticker }) => {
     await fs.ensureDir(config.paths.stickerDir, { mode: 0o755 });
     const inputDir = `${config.paths.stickerDir}/input`;
     const outputDir = `${config.paths.stickerDir}/output`;
@@ -42,7 +42,7 @@ export const command = {
       await exec(`ffmpeg -i "${inputPath}" "${tmpDir}/frame_%04d.png"`);
       await exec(`ffmpeg -framerate 15 -i "${tmpDir}/frame_%04d.png" -plays 0 -lossless 1 "${outputPath}"`);
       await fs.access(outputPath);
-      await fn.sendRawWebpAsSticker(toId, outputPath);
+      await sendRawWebpAsSticker(outputPath, { packName: dbSettings.packName, authorName: dbSettings.packAuthor });
     }
     await fs.rm(config.paths.stickerDir, { recursive: true, force: true });
   }

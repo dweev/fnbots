@@ -13,7 +13,7 @@ export const command = {
   category: 'convert',
   description: 'Membuat sticker kustom dengan 3 baris teks menggunakan ImageMagick.',
   isCommandWithoutPayment: true,
-  execute: async ({ fn, m, args, arg, toId, sReply, dbSettings }) => {
+  execute: async ({ args, arg, sendRawWebpAsSticker, sReply, dbSettings }) => {
     if (!arg || args.length !== 3) return await sReply(`Gunakan format: ${dbSettings.sname}create KATA1 KATA2 KATA3\nContoh: ${dbSettings.sname}create HARTA TAHTA ANIME`);
     const text1 = args[0].toUpperCase();
     const text2 = args[1].toUpperCase();
@@ -28,6 +28,6 @@ export const command = {
       outputFormat: 'webp'
     });
     const outputBuffer = Buffer.isBuffer(resultBuffer) ? resultBuffer : Buffer.from(resultBuffer.data || resultBuffer);
-    await fn.sendMessage(toId, { sticker: outputBuffer }, { quoted: m });
+    await sendRawWebpAsSticker(outputBuffer, { packName: dbSettings.packName, authorName: dbSettings.packAuthor });
   }
 };

@@ -16,7 +16,7 @@ export const command = {
   description: 'Animated Text To PNG Gradient plugins',
   aliases: ['attp-gradient'],
   isCommandWithoutPayment: true,
-  execute: async ({ quotedMsg, sendRawWebpAsSticker, arg, sReply }) => {
+  execute: async ({ quotedMsg, sendRawWebpAsSticker, arg, sReply, dbSettings }) => {
     let text = '';
     const textLimit = 100;
     if ((quotedMsg && quotedMsg?.type === "extendedTextMessage") || (quotedMsg && quotedMsg?.type === "conversation")) {
@@ -48,6 +48,6 @@ export const command = {
     const randomColors = [fireColors, oceanColors, synthwaveColors, pastelColors, rainbowColors, colors];
     const hasilRandomColors = randomChoice(randomColors);
     const result = await attpGradientGenerate(text, hasilRandomFonts, hasilRandomColors);
-    await sendRawWebpAsSticker(result);
+    await sendRawWebpAsSticker(result, { packName: dbSettings.packName, authorName: dbSettings.packAuthor });
   }
 };

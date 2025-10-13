@@ -16,7 +16,7 @@ export const command = {
   description: 'Membuat stiker dari gambar atau video (maks 10 detik). Bisa juga dari URL.\nPenggunaan:\n- .s (reply media)\n- .s --crop (dengan crop)\n- .s nama|author\n- .s url --crop\n- .s nama|author --crop',
   aliases: ['s', 'stiker', 'wm'],
   isCommandWithoutPayment: true,
-  execute: async ({ fn, m, dbSettings, arg, args, quotedMsg, toId, sReply }) => {
+  execute: async ({ fn, m, dbSettings, arg, args, quotedMsg, sReply, sendRawWebpAsSticker }) => {
     const pack = {
       packName: dbSettings.packName,
       authorName: dbSettings.packAuthor,
@@ -65,6 +65,6 @@ export const command = {
       ...pack
     });
     if (!Buffer.isBuffer(stickerBuffer) || stickerBuffer.length === 0) return await sReply('Worker gagal menghasilkan buffer stiker yang valid.');
-    await fn.sendMessage(toId, { sticker: stickerBuffer }, { quoted: m });
+    await sendRawWebpAsSticker(stickerBuffer, { packName: dbSettings.packName, authorName: dbSettings.packAuthor });
   }
 };

@@ -38,10 +38,16 @@ function isWebP(buf) {
 }
 
 export function addExif(buffer, meta = {}) {
+  const dbSettings = Settings.getSettings();
   if (!Buffer.isBuffer(buffer)) {
     throw new Error("addExif() input harus Buffer");
   }
-  return stickerNative.addExif(buffer, meta);
+  const opts = {
+    packName: meta.packName || dbSettings.packName,
+    authorName: meta.authorName || dbSettings.packAuthor,
+    emojis: meta.emojis || [],
+  };
+  return stickerNative.addExif(buffer, opts);
 }
 
 export function sticker(buffer, options = {}) {

@@ -15,7 +15,7 @@ export const command = {
   category: 'convert',
   description: 'Text To PNG plugins',
   isCommandWithoutPayment: true,
-  execute: async ({ quotedMsg, sendRawWebpAsSticker, arg, sReply }) => {
+  execute: async ({ quotedMsg, sendRawWebpAsSticker, arg, sReply, dbSettings }) => {
     const randomStyle = { color: randomChoice(warna) };
     let inputText;
     if ((quotedMsg && quotedMsg?.type === "extendedTextMessage") || (quotedMsg && quotedMsg?.type === "conversation")) {
@@ -30,6 +30,6 @@ export const command = {
     const hasilRandomFonts = randomChoice(randomFonts);
     const result = await generateTTP(inputText, randomStyle, hasilRandomFonts);
     const webpSticker = await webpFormatter(result, "contain");
-    await sendRawWebpAsSticker(webpSticker);
+    await sendRawWebpAsSticker(webpSticker, { packName: dbSettings.packName, authorName: dbSettings.packAuthor });
   }
 };

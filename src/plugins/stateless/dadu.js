@@ -17,7 +17,7 @@ export const command = {
   category: 'stateless',
   description: 'Game Mengocox Dadu',
   isLimitGameCommand: true,
-  execute: async ({ fn, m, sPesan, user, toId, serial, reactFail }) => {
+  execute: async ({ sPesan, user, serial, reactFail, dbSettings, sendRawWebpAsSticker }) => {
     await gameStateManager.startGame(serial);
     try {
       const dirPath = config.paths.dice;
@@ -27,7 +27,7 @@ export const command = {
       const match = randomFile.match(/roll-(\d)\.webp/);
       const diceValue = match ? parseInt(match[1], 10) : 1;
       const fileBuffer = await fs.readFile(filePath);
-      await fn.sendRawWebpAsSticker(toId, fileBuffer, m);
+      await sendRawWebpAsSticker(fileBuffer, { packName: dbSettings.packName, authorName: dbSettings.packAuthor });
       if (diceValue === 6) {
         const reward = 1500n;
         await sPesan(`🎉 Jackpot! Kamu mendapatkan ${formatNumber(reward)} dari hasil dadu angka 6!`);

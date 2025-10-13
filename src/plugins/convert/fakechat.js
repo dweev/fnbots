@@ -14,6 +14,7 @@ export const command = {
   category: 'convert',
   description: 'Membuat Fake Chats',
   isCommandWithoutPayment: true,
+  aliases: ['iqc'],
   execute: async ({ fn, toId, arg, sReply, dbSettings, m, quotedMsg }) => {
     let caption = '';
     if (quotedMsg && (quotedMsg?.type === 'extendedTextMessage' || quotedMsg?.type === 'conversation')) {

@@ -13,7 +13,7 @@ export const command = {
   category: 'util',
   description: 'Menjalankan skrip eksternal untuk mengambil data atau media.',
   isCommandWithoutPayment: true,
-  execute: async ({ fn, m, sReply, toId, dbSettings, arg }) => {
+  execute: async ({ fn, m, sReply, toId, dbSettings, arg, sendRawWebpAsSticker }) => {
     const argsArray = arg.match(/(?:[^\s"']+|"[^"]*"|'[^']*')+/g) || [];
     if (argsArray.length === 0) return await sReply("Argumen tidak boleh kosong.");
     const result = await runJob('mediaProcessor', { argsArray });
@@ -25,16 +25,16 @@ export const command = {
         await fn.sendFileUrl2(toId, result.content, dbSettings.autocommand, m);
         break;
       case 'sticker':
-        await fn.sendRawWebpAsSticker(toId, result.content, m, { packname: dbSettings.packName, author: dbSettings.packAuthor });
+        await sendRawWebpAsSticker(result.content, { packName: dbSettings.packName, authorName: dbSettings.packAuthor });
         break;
       case 'ptt':
-        await fn.sendMessage(m.chat, { audio: result.content, mimetype: 'audio/ogg; codecs=opus', ptt: true }, { quoted: m });
+        await fn.sendMediaFromBuffer(toId, 'audio/ogg; codecs=opus', result.content, dbSettings.autocommand, m);
         break;
       case 'media':
         await fn.sendMediaFromBuffer(toId, result.mime, result.content, dbSettings.autocommand, m);
         break;
       case 'document':
-        await fn.sendMessage(m.chat, { document: result.content, mimetype: result.mime }, { quoted: m });
+        await fn.sendMediaFromBuffer(toId, result.mime, result.content, dbSettings.autocommand, m);
         break;
       default:
         await sReply("Tipe hasil tidak dikenali dari worker.");

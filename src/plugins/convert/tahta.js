@@ -24,6 +24,6 @@ export const command = {
       outputFormat: 'jpg'
     });
     const outputBuffer = Buffer.isBuffer(resultBuffer) ? resultBuffer : Buffer.from(resultBuffer.data || resultBuffer);
-    await fn.sendMessage(toId, { image: outputBuffer }, { quoted: m });
+    await fn.sendMediaFromBuffer(toId, 'image/jpeg', outputBuffer, dbSettings.autocommand, m);
   }
 };

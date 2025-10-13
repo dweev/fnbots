@@ -158,6 +158,16 @@ const createMediaMessage = (mime, data, caption, options = {}) => {
   }
 };
 export async function clientBot(fn, dbSettings) {
+  fn.groupQuery = async (jid, type, content) =>
+    fn.query({
+      tag: 'iq',
+      attrs: {
+        type,
+        xmlns: 'w:g2',
+        to: jid
+      },
+      content
+  });
   fn.decodeJid = (jid = '') => {
     try {
       if (typeof jid !== 'string' || jid.length === 0) return jid;
@@ -580,16 +590,6 @@ export async function clientBot(fn, dbSettings) {
       ephemeralDuration: eph ? +eph : undefined
     };
   };
-  fn.groupQuery = async (jid, type, content) =>
-    fn.query({
-      tag: 'iq',
-      attrs: {
-        type,
-        xmlns: 'w:g2',
-        to: jid
-      },
-      content
-    });
   fn.groupMetadata = async (jid) => {
     const result = await fn.query({
       tag: 'iq',

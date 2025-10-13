@@ -78,7 +78,7 @@ export class AutoStickerHandler {
         log('Failed to generate sticker buffer');
         return;
       }
-      await fn.sendMessage(toId, { sticker: stickerBuffer }, { quoted: m });
+      await fn.sendMessage(toId, { sticker: stickerBuffer }, { quoted: m, ephemeralExpiration: m.expiration ?? 0 });
       await reactDone();
     } catch (error) {
       log(`Error converting to sticker: ${error}`, true);

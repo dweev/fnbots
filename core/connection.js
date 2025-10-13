@@ -136,9 +136,15 @@ export async function createWASocket(dbSettings) {
         restartManager.reset();
         if (dbSettings.restartState) {
           dbSettings.restartState = false;
-          await fn.sendPesan(dbSettings.restartId, `✅ Restart sukses..`, { ephemeralExpiration: dbSettings.dataM.expiration ?? 0 });
+          if (dbSettings.restartId.includes('@g.us')) {
+            const res = await fn.groupMetadata(dbSettings.restartId);
+            await fn.sendPesan(dbSettings.restartId, `✅ Restart sukses..`, { ephemeralExpiration: res.ephemeralDuration ?? 0 });
+          }
+          if (dbSettings.restartId.includes('@s.whatsapp.net')) {
+            const expiration = await fn.getEphemeralExpiration(dbSettings.restartId);
+            await fn.sendPesan(dbSettings.restartId, `✅ Restart sukses..`, { ephemeralExpiration: expiration });
+          }
           dbSettings.restartId = undefined;
-          dbSettings.dataM = {};
           await Settings.updateSettings(dbSettings);
         }
         await log(`Connecting to WhatsApp...`);

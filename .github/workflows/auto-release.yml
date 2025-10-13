@@ -16,28 +16,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install System Dependencies
-        run: |
-          sudo apt update -y
-          sudo apt install -y \
-            build-essential pkg-config cmake python3 python3-dev \
-            ffmpeg imagemagick \
-            libavformat-dev libavcodec-dev libavutil-dev \
-            libavfilter-dev \
-            libswresample-dev libswscale-dev \
-            libwebp-dev libpng-dev libjpeg-dev zlib1g-dev \
-            libfreetype6-dev libharfbuzz-dev libpango1.0-dev \
-            libgif-dev libopus-dev libvpx-dev \
-            libcurl4-openssl-dev libnghttp2-dev libssl-dev
-
-      - name: Install dependencies
-        run: npm install
-
       - name: Check version changes
         id: check_version
         run: |
@@ -64,6 +42,31 @@ jobs:
           else
             echo "version_changed=false" >> $GITHUB_OUTPUT
           fi
+
+      - name: Setup Node.js
+        if: steps.check_version.outputs.version_changed == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install System Dependencies
+        if: steps.check_version.outputs.version_changed == 'true'
+        run: |
+          sudo apt update -y
+          sudo apt install -y \
+            build-essential pkg-config cmake python3 python3-dev \
+            ffmpeg imagemagick \
+            libavformat-dev libavcodec-dev libavutil-dev \
+            libavfilter-dev \
+            libswresample-dev libswscale-dev \
+            libwebp-dev libpng-dev libjpeg-dev zlib1g-dev \
+            libfreetype6-dev libharfbuzz-dev libpango1.0-dev \
+            libgif-dev libopus-dev libvpx-dev \
+            libcurl4-openssl-dev libnghttp2-dev libssl-dev
+
+      - name: Install dependencies
+        if: steps.check_version.outputs.version_changed == 'true'
+        run: npm install
 
       - name: Generate changelog
         if: steps.check_version.outputs.version_changed == 'true'

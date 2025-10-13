@@ -201,7 +201,6 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
     if (!isSadmin && !isMaster) return;
     dbSettings.restartState = true;
     dbSettings.restartId = m.from;
-    dbSettings.dataM = m;
     await Settings.updateSettings(dbSettings);
     await reactDone();
     await restartManager.restart("Manual restart", performanceManager);

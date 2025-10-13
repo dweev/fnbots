@@ -13,7 +13,8 @@ export const command = {
   aliases: ['setgrouplink'],
   isCommandWithoutPayment: true,
   execute: async ({ fn, m, isBotGroupAdmins, toId, sReply }) => {
-    if (!m.isGroup || !isBotGroupAdmins) return await sReply(`Perintah ini hanya bisa digunakan jika bot menjadi admin grup.`);
+    if (!m.isGroup) return await sReply(`Perintah ini hanya bisa digunakan didalam group.`);
+    if (!isBotGroupAdmins) return await sReply(`Perintah ini hanya bisa digunakan jika bot menjadi admin grup.`);
     await fn.groupRevokeInvite(toId);
     const response = await fn.groupInviteCode(toId);
     await sReply(`https://chat.whatsapp.com/${response}`);

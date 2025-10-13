@@ -12,7 +12,8 @@ export const command = {
   description: 'Mengatur nama group',
   isCommandWithoutPayment: true,
   execute: async ({ fn, toId, sReply, isBotGroupAdmins, serial, arg, m }) => {
-    if (!m.isGroup || !isBotGroupAdmins) return await sReply(`Perintah ini hanya bisa digunakan di grup dan bot harus menjadi admin grup.`);
+    if (!m.isGroup) return await sReply(`Perintah ini hanya bisa digunakan didalam group.`);
+    if (!isBotGroupAdmins) return await sReply(`Perintah ini hanya bisa digunakan jika bot menjadi admin grup.`);
     const groupchat = await fn.groupMetadata(toId);
     const oldName = groupchat.subject || 'Tidak diketahui';
     const newName = arg.trim();

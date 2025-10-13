@@ -12,7 +12,8 @@ export const command = {
   description: 'Memberikan informasi group.',
   isCommandWithoutPayment: true,
   execute: async ({ fn, m, isBotGroupAdmins, toId, sReply, args, reactDone }) => {
-    if (!m.isGroup || !isBotGroupAdmins) return await sReply(`Perintah ini hanya bisa digunakan di grup dan bot harus menjadi admin grup.`);
+    if (!m.isGroup) return await sReply(`Perintah ini hanya bisa digunakan didalam group.`);
+    if (!isBotGroupAdmins) return await sReply(`Perintah ini hanya bisa digunakan jika bot menjadi admin grup.`);
     const modeInput = (args[0] || '').toLowerCase();
     const modeMap = {
       'member': 'all_member_add',

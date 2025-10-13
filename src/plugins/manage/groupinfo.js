@@ -15,7 +15,8 @@ export const command = {
   aliases: ['infogroup', 'ginfo'],
   isCommandWithoutPayment: true,
   execute: async ({ fn, m, isBotGroupAdmins, toId, sReply }) => {
-    if (!m.isGroup || !isBotGroupAdmins) return await sReply(`Perintah ini hanya bisa digunakan jika bot menjadi admin grup.`);
+    if (!m.isGroup) return await sReply(`Perintah ini hanya bisa digunakan didalam group.`);
+    if (!isBotGroupAdmins) return await sReply(`Perintah ini hanya bisa digunakan jika bot menjadi admin grup.`);
     const groupchat = await fn.groupMetadata(toId);
     const { subject, subjectOwner, subjectOwnerPhoneNumber, creation, desc } = groupchat;
     let creator;

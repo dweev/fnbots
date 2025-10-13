@@ -16,8 +16,9 @@ export const command = {
   description: 'Mengatur foto profile group',
   isCommandWithoutPayment: true,
   execute: async ({ fn, toId, sReply, isBotGroupAdmins, args, arg, m, quotedMsg, reactDone }) => {
+    if (!m.isGroup) return await sReply(`Perintah ini hanya bisa digunakan didalam group.`);
+    if (!isBotGroupAdmins) return await sReply(`Perintah ini hanya bisa digunakan jika bot menjadi admin grup.`);
     if (!arg) {
-      if (!m.isGroup || !isBotGroupAdmins) return await sReply(`Perintah ini hanya bisa digunakan di grup dan bot harus menjadi admin grup.`);
       const targetMsg = quotedMsg ? m.quoted || m : m.message;
       const mimeType = targetMsg?.imageMessage?.mimetype;
       if (!mimeType || !mimeType.startsWith('image/')) return await sReply(`Balas pesan gambar atau kirim gambar dengan perintah ini.`);
@@ -27,7 +28,6 @@ export const command = {
       await fn.updateProfilePicture(toId, { url: filename });
       await tmpDir.deleteFile(filename); await reactDone();
     } else if (args[0] === "full") {
-      if (!m.isGroup || !isBotGroupAdmins) return await sReply(`Perintah ini hanya bisa digunakan di grup dan bot harus menjadi admin grup.`);
       const targetMsg = quotedMsg ? m.quoted || m : m.message;
       const mimeType = targetMsg?.imageMessage?.mimetype;
       if (!mimeType || !mimeType.startsWith('image/')) return await sReply(`Balas pesan gambar atau kirim gambar dengan perintah ini.`);

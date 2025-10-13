@@ -12,7 +12,9 @@ export const command = {
   description: 'membatalkan atau menghapus pesan untuk semua.',
   isCommandWithoutPayment: true,
   execute: async ({ fn, m, quotedMsg, isBotGroupAdmins, toId, quotedParticipant, sReply }) => {
-    if (!m.isGroup || !quotedMsg || !quotedMsg?.key?.fromMe && !isBotGroupAdmins) return await sReply(`Perintah ini hanya bisa digunakan di grup, harus membalas pesan bot dan bot harus menjadi admin grup.`);
+    if (!m.isGroup) return await sReply(`Perintah ini hanya bisa digunakan didalam group.`);
+    if (!isBotGroupAdmins) return await sReply(`Perintah ini hanya bisa digunakan jika bot menjadi admin grup.`);
+    if (!quotedMsg || !quotedMsg?.key?.fromMe) return await sReply(`Perintah ini hanya bisa digunakan dengan membalas pesan bot.`);
     await fn.sendMessage(toId, { delete: { remoteJid: toId, fromMe: m.isBotAdmin ? false : true, id: quotedMsg?.key.id, participant: quotedParticipant } });
   }
 };

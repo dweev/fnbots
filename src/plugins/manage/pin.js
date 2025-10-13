@@ -12,8 +12,9 @@ export const command = {
   description: 'Menyematkan pesan.',
   isCommandWithoutPayment: true,
   execute: async ({ fn, m, isBotGroupAdmins, toId, sReply, args, quotedMsg }) => {
+    if (!m.isGroup) return await sReply(`Perintah ini hanya bisa digunakan didalam group.`);
+    if (!isBotGroupAdmins) return await sReply(`Perintah ini hanya bisa digunakan jika bot menjadi admin grup.`);
     if (quotedMsg) {
-      if (m.isGroup && !isBotGroupAdmins) return await sReply("Bot tidak menjadi admin grup.");
       const arg1 = args[0]?.toLowerCase();
       let actionType = 1;
       let durationInSeconds = 2592000;

@@ -14,7 +14,8 @@ export const command = {
   category: 'manage',
   description: 'Matikan/aktifkan bot di group',
   isCommandWithoutPayment: true,
-  execute: async ({ fn, args, sReply, toId, dbSettings, reactDone, isSadmin, isMaster }) => {
+  execute: async ({ fn, m, args, sReply, toId, dbSettings, reactDone, isSadmin, isMaster }) => {
+    if (!m.isGroup) return await sReply(`Perintah ini hanya bisa digunakan didalam group.`);
     const group = await Group.ensureGroup(toId);
     const status = args[0]?.toLowerCase();
     switch (status) {

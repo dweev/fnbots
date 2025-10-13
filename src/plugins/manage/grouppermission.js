@@ -12,7 +12,8 @@ export const command = {
   description: 'Memberikan informasi group.',
   isCommandWithoutPayment: true,
   execute: async ({ fn, m, isBotGroupAdmins, toId, sReply, args, reactDone }) => {
-    if (!m.isGroup || !isBotGroupAdmins) return await sReply(`Perintah ini hanya bisa digunakan di grup dan bot harus menjadi admin grup.`);
+    if (!m.isGroup) return await sReply(`Perintah ini hanya bisa digunakan didalam group.`);
+    if (!isBotGroupAdmins) return await sReply(`Perintah ini hanya bisa digunakan jika bot menjadi admin grup.`);
     const mode = (args[0] || '').toLowerCase();
     if (!['locked', 'unlocked'].includes(mode)) return await sReply(`gunakan argumen seperti locked atau unlocked`);
     await fn.groupSettingUpdate(toId, mode); await reactDone();

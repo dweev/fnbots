@@ -14,8 +14,9 @@ export const command = {
   description: 'Mengaktifkan atau menonaktifkan mode antitagsw.',
   aliases: ['antitagstory'],
   isCommandWithoutPayment: true,
-  execute: async ({ m, toId, dbSettings, ar, reactDone, sReply }) => {
-    if (!m.isGroup) return await sReply(`Perintah ini hanya bisa digunakan di grup.`);
+  execute: async ({ m, toId, dbSettings, ar, reactDone, sReply, isBotGroupAdmins }) => {
+    if (!m.isGroup) return await sReply(`Perintah ini hanya bisa digunakan didalam group.`);
+    if (!isBotGroupAdmins) return await sReply(`Perintah ini hanya bisa digunakan jika bot menjadi admin grup.`);
     const command = ar[0];
     if (!['on', 'off'].includes(command)) return await sReply(`Format salah. Gunakan:\n${dbSettings.rname}antitagsw on\n${dbSettings.rname}antitagsw off`);
     let group = await Group.findOne({ groupId: toId });

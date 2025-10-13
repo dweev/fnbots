@@ -50,7 +50,9 @@ export const command = {
         message.from = {
           id: 1,
           name: pushname,
-          photo: { buffer: await getProfilePic(serial) },
+          photo: { 
+            buffer: await getProfilePic(serial) 
+          },
           number: "+" + serial.split('@')[0],
           time: formatTimestampToHourMinute(m.timestamp),
         };
@@ -58,7 +60,7 @@ export const command = {
         message.entities = processedArg.entities;
         message.replyMessage = {
           chatId: 2,
-          name: await (targetSender),
+          name: await fn.getName(targetSender),
           text: processedQuoted.text,
           entities: processedQuoted.entities,
           number: "+" + targetSender.split('@')[0]
@@ -67,7 +69,9 @@ export const command = {
         message.from = {
           id: 1,
           name: await fn.getName(targetSender),
-          photo: { buffer: await getProfilePic(targetSender) },
+          photo: { 
+            buffer: await getProfilePic(targetSender) 
+          },
           number: "+" + targetSender.split('@')[0],
           time: formatTimestampToHourMinute(m.timestamp),
         };
@@ -80,7 +84,9 @@ export const command = {
         message.from = {
           id: 1,
           name: pushname,
-          photo: { buffer: await getProfilePic(serial) },
+          photo: { 
+            buffer: await getProfilePic(serial) 
+          },
           number: "+" + serial.split('@')[0],
           time: formatTimestampToHourMinute(m.timestamp)
         };

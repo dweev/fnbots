@@ -20,10 +20,6 @@ import { convert as convertNative, fetch as nativeFetch } from '../src/addon/bri
 import { MediaValidationError, MediaProcessingError, MediaSizeError } from '../src/lib/errorManager.js';
 import { jidNormalizedUser, generateWAMessage, generateWAMessageFromContent, downloadContentFromMessage, jidDecode, jidEncode, getBinaryNodeChildString, getBinaryNodeChildren, getBinaryNodeChild, proto, WAMessageAddressingMode } from 'baileys';
 
-import { createRequire } from 'node:module';
-const require = createRequire(import.meta.url);
-export const ttsId = require('node-gtts')('id');
-
 const createQuotedOptions = (quoted, options = {}) => {
   const ephemeralExpiration = options?.ephemeralExpiration
     ?? options?.expiration
@@ -265,22 +261,6 @@ export async function clientBot(fn, dbSettings) {
   fn.sendReply = async (chat, content, options = {}) => {
     const quoted = options.quoted || options.m;
     return _internalSendMessage(chat, content, { ...options, quoted });
-  };
-  fn.sendAudioTts = async (jid, audioURL, quoted) => {
-    const tempFilePath = tmpDir.createTempFile('mp3');
-    try {
-      await new Promise((resolve, reject) => {
-        ttsId.save(tempFilePath, audioURL, (err) => {
-          if (err) return reject(err);
-          resolve();
-        });
-      });
-      await fn.sendMessage(jid, { audio: { stream: fs.createReadStream(tempFilePath) }, mimetype: 'audio/mpeg' }, createQuotedOptions(quoted));
-    } catch (error) {
-      throw error;
-    } finally {
-      await tmpDir.deleteFile(tempFilePath);
-    }
   };
   fn.sendContact = async (jid, displayName, contactName, nomor, quoted) => {
     const vcard = `BEGIN:VCARD\nVERSION:3.0\nN:${displayName}\nFN:${contactName}\nORG:${contactName}\nTEL;type=CELL;type=VOICE;waid=${nomor}:+${nomor}\nEND:VCARD`;
@@ -688,22 +668,6 @@ export async function clientBot(fn, dbSettings) {
       });
     }
     return album;
-  };
-  fn.forwardMessage = async (jid, message) => {
-    return await fn.sendMessage(jid, {
-      forward: {
-        key: {
-          remoteJid: message.key.remoteJid,
-          fromMe: message.key.fromMe,
-          id: message.key.id,
-          ...(message.key.participant && { participant: message.key.participant })
-        },
-        message: message.message,
-        messageTimestamp: message.messageTimestamp
-      }
-    }, {
-      ephemeralExpiration: message.expiration || 0,
-    });
   };
   fn.handleGroupEventImage = async (idGroup, eventDetails) => {
     const { memberJid, eventText, subject, messageText } = eventDetails;

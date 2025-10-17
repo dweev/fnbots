@@ -7,8 +7,11 @@
 // ─── Info ────────────────────────────────
 
 import util from 'util';
-import { ttsId } from '../../../core/client.js';
 import { tmpDir } from '../../lib/tempManager.js';
+
+import { createRequire } from 'node:module';
+const require = createRequire(import.meta.url);
+export const ttsId = require('node-gtts')('id');
 
 export const command = {
   name: 'totts',

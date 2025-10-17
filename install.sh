@@ -84,6 +84,7 @@ check_cpu_capabilities() {
         print_success "CPU mendukung AVX"
     else
         print_warning "CPU TIDAK mendukung AVX"
+        print_info "Akan menggunakan MongoDB 4.4 (kompatibel tanpa AVX)"
     fi
 }
 
@@ -205,6 +206,43 @@ EOF
     print_success "Konfigurasi MongoDB dibuat"
 }
 
+create_mongodb_service_file() {
+    print_step "Membuat file service systemd untuk MongoDB..."
+    $SUDO_CMD tee /etc/systemd/system/mongod.service > /dev/null << 'EOF'
+[Unit]
+Description=MongoDB Database Server
+Documentation=https://docs.mongodb.org/manual
+After=network.target
+
+[Service]
+User=mongodb
+Group=mongodb
+Environment="OPTIONS=-f /etc/mongod.conf"
+EnvironmentFile=-/etc/default/mongod
+ExecStart=/usr/bin/mongod $OPTIONS
+# file size
+LimitFSIZE=infinity
+# cpu time
+LimitCPU=infinity
+# virtual memory size
+LimitAS=infinity
+# open files
+LimitNOFILE=64000
+# processes/threads
+LimitNPROC=64000
+# total threads (user+kernel)
+TasksMax=infinity
+TasksAccounting=false
+
+# Recommended limits for mongod as per official documentation.
+# Read more: https://docs.mongodb.com/manual/reference/ulimit/
+
+[Install]
+WantedBy=multi-user.target
+EOF
+    print_success "File service MongoDB berhasil dibuat."
+}
+
 setup_mongodb_directories() {
     print_step "Menyiapkan directories MongoDB..."
     
@@ -218,43 +256,85 @@ setup_mongodb_directories() {
     print_success "Directories MongoDB disiapkan"
 }
 
-install_mongodb() {    
-    $SUDO_CMD systemctl stop mongod 2>/dev/null || true
+install_mongodb_with_avx() {
+    print_step "Memulai instalasi MongoDB 7.0 (dengan dukungan AVX)..."
     
-    print_step "Menghentikan process MongoDB yang aktif..."
-    $SUDO_CMD pkill -f mongod 2>/dev/null || true
-    sleep 3
+    print_step "Menambahkan GPG Key resmi MongoDB..."
+    curl -fsSL https://www.mongodb.org/static/pgp/server-7.0.asc | \
+       $SUDO_CMD gpg --dearmor -o /usr/share/keyrings/mongodb-server-7.0.gpg
+
+    print_step "Menambahkan repositori MongoDB sesuai versi Ubuntu..."
+    MONGO_REPO_FILE="/etc/apt/sources.list.d/mongodb-org.list"
     
-    print_step "Menghapus instalasi MongoDB lama..."
-    $SUDO_CMD apt remove --purge mongodb-org* -y 2>/dev/null || true
+    case "$OS_CODENAME" in
+        noble|jammy)
+            echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0 multiverse" | $SUDO_CMD tee $MONGO_REPO_FILE
+            ;;
+        focal)
+            curl -fsSL https://www.mongodb.org/static/pgp/server-6.0.asc | \
+               $SUDO_CMD gpg --dearmor -o /usr/share/keyrings/mongodb-server-6.0.gpg
+            echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-6.0.gpg ] https://repo.mongodb.org/apt/ubuntu $OS_CODENAME/mongodb-org/6.0 multiverse" | $SUDO_CMD tee $MONGO_REPO_FILE
+            ;;
+        *)
+            print_error "Versi Ubuntu $OS_CODENAME tidak didukung oleh logika instalasi MongoDB ini."
+            exit 1
+            ;;
+    esac
+
+    print_step "Update daftar paket setelah penambahan repositori..."
+    $SUDO_CMD apt-get update -y
     
-    print_step "Membersihkan data lama..."
-    $SUDO_CMD rm -rf /var/lib/mongodb
-    $SUDO_CMD rm -rf /var/log/mongodb
+    print_step "Menginstall paket mongodb-org..."
+    $SUDO_CMD apt-get install -y mongodb-org
+
+    create_mongodb_service_file
+}
+
+install_mongodb_without_avx() {
+    print_step "Memulai instalasi MongoDB 4.4 (tanpa AVX requirement)..."
     
-    print_step "Menghapus repository lama..."
-    $SUDO_CMD rm -f /etc/apt/sources.list.d/mongodb*.list 2>/dev/null || true
-    $SUDO_CMD rm -f /usr/share/keyrings/mongodb*.gpg 2>/dev/null || true
-    
-    print_step "Menambahkan repository MongoDB..."
+    print_step "Menambahkan repository MongoDB 4.4..."
     $SUDO_CMD apt-get install -y gnupg curl
     curl -fsSL "https://www.mongodb.org/static/pgp/server-4.4.asc" | \
         $SUDO_CMD gpg --dearmor -o /usr/share/keyrings/mongodb-server-4.4.gpg
     
     echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-4.4.gpg ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/4.4 multiverse" | \
         $SUDO_CMD tee /etc/apt/sources.list.d/mongodb-org-4.4.list
-    
+
     print_step "Update package list..."
     $SUDO_CMD apt-get update -y
-    
-    print_step "Install MongoDB..."
-    $SUDO_CMD apt-get install -y mongodb-org
 
-    sleep 2
+    print_step "Install MongoDB 4.4..."
+    $SUDO_CMD apt-get install -y mongodb-org
     
     fix_mongodb_environment
     cleanup_mongodb_sockets
     create_mongodb_config
+}
+
+install_mongodb() {    
+    $SUDO_CMD systemctl stop mongod 2>/dev/null || true
+    print_info "Menghentikan proses MongoDB yang mungkin masih aktif..."
+    $SUDO_CMD pkill -f mongod 2>/dev/null || true
+    sleep 3
+    
+    print_step "Menghapus instalasi MongoDB versi lama (jika ada)..."
+    $SUDO_CMD apt-get remove --purge mongodb-org* mongodb* -y 2>/dev/null || true
+    
+    print_step "Membersihkan data dan repository lama..."
+    $SUDO_CMD rm -rf /var/lib/mongodb
+    $SUDO_CMD rm -rf /var/log/mongodb
+    $SUDO_CMD rm -rf /etc/mongod.conf
+    $SUDO_CMD rm -f /etc/apt/sources.list.d/mongodb*.list
+    $SUDO_CMD rm -f /usr/share/keyrings/mongodb*.gpg
+    $SUDO_CMD apt-get autoremove -y
+    
+    if [ "$CPU_HAS_AVX" = true ]; then
+        install_mongodb_with_avx
+    else
+        install_mongodb_without_avx
+    fi
+    
     setup_mongodb_directories
     
     print_step "Reset data directories..."
@@ -263,18 +343,23 @@ install_mongodb() {
     $SUDO_CMD chown -R mongodb:mongodb /var/lib/mongodb
     $SUDO_CMD chown -R mongodb:mongodb /var/log/mongodb
 
-    print_step "Start MongoDB service..."
+    print_step "Menjalankan service MongoDB..."
     $SUDO_CMD systemctl daemon-reload
     $SUDO_CMD systemctl enable mongod
-    $SUDO_CMD systemctl restart mongod
+    $SUDO_CMD systemctl start mongod
     sleep 5
 
     if $SUDO_CMD systemctl is-active --quiet mongod; then
-        print_success "MongoDB berhasil diinstall dan berjalan via systemd"
+        if [ "$CPU_HAS_AVX" = true ]; then
+            print_success "MongoDB 7.0/6.0 berhasil diinstall dan berjalan via systemd."
+        else
+            print_success "MongoDB 4.4 berhasil diinstall dan berjalan via systemd."
+        fi
     else
-        print_error "MongoDB gagal dijalankan otomatis. Cek log dengan:"
-        echo "   sudo journalctl -u mongod -xe"
-        echo "   atau sudo tail -f /var/log/mongodb/mongod.log"
+        print_error "MongoDB gagal dijalankan secara otomatis. Cek log dengan:"
+        echo -e "   ${YELLOW}sudo systemctl status mongod${NC}"
+        echo -e "   ${YELLOW}sudo journalctl -u mongod -xe${NC}"
+        echo -e "   ${YELLOW}sudo tail -f /var/log/mongodb/mongod.log${NC}"
     fi
 }
 
@@ -481,6 +566,77 @@ install_playwright() {
     print_success "Playwright berhasil diinstall"
 }
 
+install_mongosh() {
+    print_step "Menginstall MongoDB Shell (mongosh)..."
+    
+    if command -v mongosh >/dev/null 2>&1; then
+        MONGOSH_VERSION=$(mongosh --version 2>/dev/null | head -1)
+        print_warning "mongosh sudah terinstall: $MONGOSH_VERSION"
+        read -p "Update mongosh ke versi terbaru? (y/n): " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            print_info "Melewati instalasi mongosh"
+            return 0
+        fi
+    fi
+    
+    if [ ! -f "/usr/share/keyrings/mongodb-server-7.0.gpg" ]; then
+        print_step "Menambahkan GPG key MongoDB untuk mongosh..."
+        curl -fsSL https://www.mongodb.org/static/pgp/server-7.0.asc | \
+            $SUDO_CMD gpg --dearmor -o /usr/share/keyrings/mongodb-server-7.0.gpg
+    fi
+    
+    MONGOSH_REPO="/etc/apt/sources.list.d/mongodb-org.list"
+    if [ ! -f "$MONGOSH_REPO" ]; then
+        print_step "Menambahkan repository MongoDB..."
+        case "$OS_CODENAME" in
+            noble|jammy)
+                echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0 multiverse" | \
+                    $SUDO_CMD tee $MONGOSH_REPO
+                ;;
+            focal)
+                echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/7.0 multiverse" | \
+                    $SUDO_CMD tee $MONGOSH_REPO
+                ;;
+            *)
+                print_warning "Menggunakan repository jammy untuk mongosh"
+                echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0 multiverse" | \
+                    $SUDO_CMD tee $MONGOSH_REPO
+                ;;
+        esac
+    fi
+    
+    print_step "Update package list untuk mongosh..."
+    $SUDO_CMD apt-get update -y
+    
+    print_step "Menginstall mongodb-mongosh..."
+    if $SUDO_CMD apt-get install -y mongodb-mongosh; then
+        MONGOSH_VERSION=$(mongosh --version 2>/dev/null | head -1)
+        print_success "mongosh berhasil diinstall: $MONGOSH_VERSION"
+    else
+        print_warning "Gagal menginstall dari repository, mencoba metode alternatif..."
+        
+        print_step "Download mongosh binary..."
+        MONGOSH_URL="https://downloads.mongodb.com/compass/mongosh-2.3.7-linux-x64.tgz"
+        
+        cd /tmp
+        curl -L -o mongosh.tgz "$MONGOSH_URL"
+        tar -xzf mongosh.tgz
+        
+        $SUDO_CMD cp mongosh-*/bin/mongosh /usr/local/bin/
+        $SUDO_CMD chmod +x /usr/local/bin/mongosh
+        
+        rm -rf mongosh* 
+        cd - > /dev/null
+        
+        if command -v mongosh >/dev/null 2>&1; then
+            print_success "mongosh berhasil diinstall via binary"
+        else
+            print_error "Gagal menginstall mongosh"
+        fi
+    fi
+}
+
 cleanup() {
     print_step "Membersihkan cache dan temporary files..."
     $SUDO_CMD apt-get autoremove -y
@@ -494,14 +650,6 @@ fix_permissions() {
         $SUDO_CMD chown -R "$ORIGINAL_USER:$ORIGINAL_USER" .
         print_success "Permissions berhasil diperbaiki untuk user: $ORIGINAL_USER"
     fi
-}
-
-install_mongosh() {
-    print_step "Menginstall mongosh..."
-    
-    $SUDO_CMD apt-get update -y
-    $SUDO_CMD apt install mongosh -y
-    print_success "mongosh berhasil diinstall"
 }
 
 print_summary() {
@@ -525,18 +673,19 @@ print_summary() {
     echo ""
     echo "MongoDB:"
     echo "   Versi: $(mongod --version 2>/dev/null | head -1 | awk '{print $3}' || echo 'tidak terinstall')"
-    echo "   CPU AVX: $([ "$CPU_HAS_AVX" = true ] && echo 'supported' || echo 'not supported')"
+    echo "   CPU AVX: $([ "$CPU_HAS_AVX" = true ] && echo 'supported (MongoDB 7.0/6.0)' || echo 'not supported (MongoDB 4.4)')"
     echo ""
     echo "Catatan MongoDB:"
     echo "   - Cek process: sudo ps aux | grep mongod"
     echo "   - Cek port: sudo ss -tlnp | grep 27017"
+    echo "   - Cek status: sudo systemctl status mongod"
+    echo "   - Cek log: sudo tail -f /var/log/mongodb/mongod.log"
     echo ""
     echo "Langkah Selanjutnya:"
     echo "   1. Copy 'env.example' ke 'env' dan edit konfigurasi"
     echo "   2. Aktifkan virtual environment: source venv/bin/activate"
     echo "   3. Build native addon: npm run build:addon"
     echo "   4. Aktifkan mongoDB shell: mongosh"
-    echo "   4a. Jika mongoDB error gunakan sudo bash mongo.sh"
     echo "   5. Gunakan PM2 untuk manajemen proses jika diperlukan"
     echo "   6. Atau gunakan npm start untuk menjalankan aplikasi"
     echo ""
@@ -603,13 +752,13 @@ main() {
     install_playwright
     echo ""
     
+    install_mongosh
+    echo ""
+    
     cleanup
     echo ""
     
     fix_permissions
-    echo ""
-
-    install_mongosh
     echo ""
     
     print_summary

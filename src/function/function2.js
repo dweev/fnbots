@@ -299,3 +299,27 @@ export function normalizeResult(result) {
   }
   return normalized;
 };
+export function normalizeMentionsInBody(body, originalMentionedJids, resolvedMentionedJids) {
+  if (!body || !Array.isArray(originalMentionedJids) || !Array.isArray(resolvedMentionedJids)) return body;
+  let normalizedBody = body;
+  const lidToJidMap = new Map();
+  for (let i = 0; i < Math.min(originalMentionedJids.length, resolvedMentionedJids.length); i++) {
+    const original = originalMentionedJids[i];
+    const resolved = resolvedMentionedJids[i];
+    if (original !== resolved && original.endsWith('@lid') && resolved.endsWith('@s.whatsapp.net')) {
+      const lidNumber = original.split('@')[0];
+      const jidNumber = resolved.split('@')[0];
+      lidToJidMap.set(lidNumber, jidNumber);
+    }
+  }
+  for (const [lidNumber, jidNumber] of lidToJidMap.entries()) {
+    const patterns = [
+      new RegExp(`@\\+?\\s*${lidNumber.replace(/(\d)/g, '$1\\s*')}\\b`, 'g'),
+      new RegExp(`@${lidNumber}\\b`, 'g')
+    ];
+    for (const pattern of patterns) {
+      normalizedBody = normalizedBody.replace(pattern, `@${jidNumber}`);
+    }
+  }
+  return normalizedBody;
+};

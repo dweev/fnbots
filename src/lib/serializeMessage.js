@@ -9,45 +9,16 @@
 import log from './logger.js';
 import { mongoStore } from '../../database/index.js';
 import { updateContact } from '../lib/contactManager.js';
-import { jidNormalizedUser, extractMessageContent, getDevice, areJidsSameUser } from 'baileys';
+import { normalizeMentionsInBody } from '../function/index.js';
+import { jidNormalizedUser, extractMessageContent, getDevice, areJidsSameUser, getContentType } from 'baileys';
 
-function normalizeMentionsInBody(body, originalMentionedJids, resolvedMentionedJids) {
-  if (!body || !Array.isArray(originalMentionedJids) || !Array.isArray(resolvedMentionedJids)) return body;
-  let normalizedBody = body;
-  const lidToJidMap = new Map();
-  for (let i = 0; i < Math.min(originalMentionedJids.length, resolvedMentionedJids.length); i++) {
-    const original = originalMentionedJids[i];
-    const resolved = resolvedMentionedJids[i];
-    if (original !== resolved && original.endsWith('@lid') && resolved.endsWith('@s.whatsapp.net')) {
-      const lidNumber = original.split('@')[0];
-      const jidNumber = resolved.split('@')[0];
-      lidToJidMap.set(lidNumber, jidNumber);
-    }
-  }
-  for (const [lidNumber, jidNumber] of lidToJidMap.entries()) {
-    const patterns = [
-      new RegExp(`@\\+?\\s*${lidNumber.replace(/(\d)/g, '$1\\s*')}\\b`, 'g'),
-      new RegExp(`@${lidNumber}\\b`, 'g')
-    ];
-    for (const pattern of patterns) {
-      normalizedBody = normalizedBody.replace(pattern, `@${jidNumber}`);
-    }
-  }
-  return normalizedBody;
-};
-function getContentType(content) {
-  if (content) {
-    const keys = Object.keys(content);
-    const key = keys.find(k => (k === 'conversation' || k.endsWith('Message') || k.includes('V2') || k.includes('V3')) && k !== 'senderKeyDistributionMessage');
-    return key;
-  }
-};
 function unwrapMessage(msg) {
   if (!msg || typeof msg !== 'object') return null;
+  if (msg.ephemeralMessage?.message) return unwrapMessage(msg.ephemeralMessage.message);
+  if (msg.viewOnceMessage?.message) return unwrapMessage(msg.viewOnceMessage.message);
+  if (msg.documentWithCaptionMessage?.message) return unwrapMessage(msg.documentWithCaptionMessage.message);
   if (msg.viewOnceMessageV2?.message) return unwrapMessage(msg.viewOnceMessageV2.message);
   if (msg.viewOnceMessageV2Extension?.message) return unwrapMessage(msg.viewOnceMessageV2Extension.message);
-  if (msg.viewOnceMessage?.message) return unwrapMessage(msg.viewOnceMessage.message);
-  if (msg.ephemeralMessage?.message) return unwrapMessage(msg.ephemeralMessage.message);
   if (msg.editedMessage?.message) {
     const innerMsg = msg.editedMessage.message;
     if (innerMsg.protocolMessage?.type === 14 && innerMsg.protocolMessage?.editedMessage) {
@@ -276,8 +247,9 @@ export default async function serializeMessage(fn, msg) {
       m.isQuoted = !!kamuCrot?.contextInfo?.quotedMessage;
       if (m.isQuoted) {
         const quotedInfo = kamuCrot.contextInfo;
-        m.quoted = unwrapMessage(quotedInfo.quotedMessage);
-        if (m.quoted) {
+        const quotedMsg = unwrapMessage(quotedInfo.quotedMessage);
+        if (quotedMsg) {
+          m.quoted = quotedMsg;
           m.quoted.type = getContentType(m.quoted) || Object.keys(m.quoted)[0];
           const akuCrot = m.quoted[m.quoted.type] || m.quoted;
           m.quoted.isMedia = !!akuCrot?.mimetype || !!akuCrot?.thumbnailDirectPath;
@@ -297,21 +269,18 @@ export default async function serializeMessage(fn, msg) {
           }
           if (akuCrot?.contextInfo) {
             const rawQuotedMentionedJid = akuCrot.contextInfo.mentionedJid || [];
-            const lidToJidMap = new Map();
             const resolvedJids = await Promise.all(rawQuotedMentionedJid.map(mentionId => mongoStore.resolveJid(mentionId)));
             m.quoted.mentionedJid = resolvedJids;
             akuCrot.contextInfo.mentionedJid = resolvedJids;
             let quotedBody = akuCrot?.text || akuCrot?.caption || akuCrot?.conversation || akuCrot?.selectedButtonId || akuCrot?.singleSelectReply?.selectedRowId || akuCrot?.selectedId || akuCrot?.contentText || akuCrot?.selectedDisplayText || akuCrot?.title || akuCrot?.name || m.quoted.caption || m.quoted.conversation || m.quoted.contentText || m.quoted.selectedDisplayText || m.quoted.title || '';
-            for (const [lid, jid] of lidToJidMap.entries()) {
-              quotedBody = quotedBody.replace(new RegExp(`@${lid}`, 'g'), `@${jid}`);
-            }
-            akuCrot.text = quotedBody;
+            quotedBody = normalizeMentionsInBody(quotedBody, rawQuotedMentionedJid, resolvedJids);
             m.quoted.body = quotedBody;
           } else {
             m.quoted.mentionedJid = [];
             m.quoted.body = akuCrot?.text || akuCrot?.caption || akuCrot?.conversation || akuCrot?.selectedButtonId || akuCrot?.singleSelectReply?.selectedRowId || akuCrot?.selectedId || akuCrot?.contentText || akuCrot?.selectedDisplayText || akuCrot?.title || akuCrot?.name || m.quoted.caption || m.quoted.conversation || m.quoted.contentText || m.quoted.selectedDisplayText || m.quoted.title || '';
           }
           m.quoted.expiration = akuCrot?.contextInfo?.expiration || 0;
+          m.quoted.pushName = await fn.getName(m.quoted.sender);
           if (m.quoted.isMedia) {
             m.quoted.mime = akuCrot?.mimetype;
             m.quoted.size = akuCrot?.fileLength;

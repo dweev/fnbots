@@ -2,9 +2,37 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.0.6] - 2025-10-17
+
+### 🚀 What's Changed
+- refactor: integrate normalizeMentionsInBody function for improved message handling and update package version to 3.0.6 ([5db0825](https://github.com/Terror-Machine/fnbots/commit/5db0825ee9d140bc3ce2dc39c680a5c12bf3b8bd))
+- refactor: remove ttsId functionality and related audio processing code and remove unused forwardMessage functions ([a4da0ad](https://github.com/Terror-Machine/fnbots/commit/a4da0adca6467ccd93863e1db7f308f9f4d8e63e))
+- refactor: update ttsId import to use dynamic require for better module handling ([0b4fa84](https://github.com/Terror-Machine/fnbots/commit/0b4fa84e5bf0299e416bc3bcd0a7e502dc609803))
+- refactor: integrate normalizeMentionsInBody function and clean up unwrapMessage logic ([ed87265](https://github.com/Terror-Machine/fnbots/commit/ed87265dd946f636e5a0ddc3e236625bb65d6a8b))
+- feat: add normalizeMentionsInBody function to handle user mentions in messages ([aebb6f7](https://github.com/Terror-Machine/fnbots/commit/aebb6f7c439960c699250e86ebaf09aa41c46e94))
+- refactor: increase chunk size for media processing and adjust delay timing ([3355dce](https://github.com/Terror-Machine/fnbots/commit/3355dce413abec455ceba10747cdfdcc39b996bb))
+- refactor: simplify Baileys version fetching and update socket configuration ([5e6c505](https://github.com/Terror-Machine/fnbots/commit/5e6c505ee70070ea799743f5659742cc047c5cbb))
+- fix: filter out 'notify' messages in WhatsApp event handler ([f04a16f](https://github.com/Terror-Machine/fnbots/commit/f04a16fe8b0b6c02335d29ff31692e2914aaeb41))
+- refactor: rename project and update metadata ([1275030](https://github.com/Terror-Machine/fnbots/commit/1275030a3165471e9d068ac8929cc2bd07deff8d))
+- feat: add MongoDB installation support for versions 4.4 and 7.0 with AVX detection ([ea63d8b](https://github.com/Terror-Machine/fnbots/commit/ea63d8bfea132395bf1dad5cd6b501e6427c1ec3))
+- fix: update MongoDB URI to use localhost for local development ([ffdbf27](https://github.com/Terror-Machine/fnbots/commit/ffdbf2719ac8b9f4526188faf1375fbd5fdbab5e))
+- fix: remove unique constraint from chatId in messages schema ([55e7970](https://github.com/Terror-Machine/fnbots/commit/55e797032ea29168d9cfdb3f9074c2ac83c677b1))
+- refactor: ensure consistent name fetching ([5b56e8c](https://github.com/Terror-Machine/fnbots/commit/5b56e8cbdeac3f376b7f114cf84bfc474f4a27c3))
+- fix: refactor restart handling to include dynamic ephemeral expiration based on restartId type ([6374638](https://github.com/Terror-Machine/fnbots/commit/6374638cc45ebe6a14b852a788ed0e8f9aae90db))
+- fix: enhance buffer rehydration and add ephemeral expiration to message handling ([243f858](https://github.com/Terror-Machine/fnbots/commit/243f858338208b1384e6cc35cd3eadc23b94bd1c))
+- fix: enhance rehydration and message handling by adding support for various buffer types and ephemeral expiration ([a34150b](https://github.com/Terror-Machine/fnbots/commit/a34150bdb2d52bdc6c6662ba75fdb17bf31a1a4d))
+- fix: enhance message handling by adding ephemeral expiration and refactoring media sending methods ([4204a1f](https://github.com/Terror-Machine/fnbots/commit/4204a1ff957e4ce2e7ca4737ba2cfa785827d50a))
+- fix: update sticker creation functions to utilize dbSettings for pack name and author name ([2fc86ec](https://github.com/Terror-Machine/fnbots/commit/2fc86ec98346d022850bbf67bf17aa4e295baeb5))
+- fix: include ephemeral expiration in message sending for better management ([1c7caf5](https://github.com/Terror-Machine/fnbots/commit/1c7caf56e7b592f4e2da2c10759dbb60e9ea01ac))
+- fix: enhance media message creation and group metadata extraction with additional fields ([642e387](https://github.com/Terror-Machine/fnbots/commit/642e387accf7d94dbd04826ee4f7219cccec9d99))
+- fix: enforce group and admin checks for management commands ([3ce7bcb](https://github.com/Terror-Machine/fnbots/commit/3ce7bcbd9554bf5613b290ad7df154dfe7d47322))
+- fix: PENTUNG!!! (refactor): simplify media response handling by using sendMediaFromBuffer ([c315458](https://github.com/Terror-Machine/fnbots/commit/c31545894d21dde285c62bdf091ea06ce316e4b9))
+- fix: ensure changelog generation and commit only occur on version changes ([2f21804](https://github.com/Terror-Machine/fnbots/commit/2f2180430f4959b57e30e6450b2b423fe86a15ef))
+
 ## [3.0.5] - 2025-10-12
 
 ### 🚀 What's Changed
+- chore(release): update CHANGELOG.md for v3.0.5 ([fa88f4c](https://github.com/Terror-Machine/fnbots/commit/fa88f4c606cc4c4cd2fd4f34467384be2ae18a42))
 - feat: update version to 3.0.5 in package.json and package-lock.json ([f370d96](https://github.com/Terror-Machine/fnbots/commit/f370d96bd5b28cc65ff66ffdeb7a88cfbe330f20))
 - feat: enhance session management with retry logic and backup restoration ([f0e2b7b](https://github.com/Terror-Machine/fnbots/commit/f0e2b7baceb69b410097d574d84bc31f1728a554))
 - feat: refactor audio processing to use spawn for FFMPEG and buffer handling ([92d685c](https://github.com/Terror-Machine/fnbots/commit/92d685c5ef0e86b7ba07a34e2b718173848df1e8))

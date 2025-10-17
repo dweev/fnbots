@@ -63,7 +63,7 @@ class AutoDownloadHandler {
             const caption = `${baseCaption}\n\n🖼️ *File ${index + 1} dari ${mediaUrls.length}*`;
             return createMediaObjectFromUrl(url, caption);
           });
-          const chunks = chunkArray(mediaToSend, 10);
+          const chunks = chunkArray(mediaToSend, 100);
           for (const [index, chunk] of chunks.entries()) {
             await fn.sendAlbum(toId, chunk, { quoted: m });
             if (chunks.length > 1 && index < chunks.length - 1) {
@@ -83,7 +83,7 @@ class AutoDownloadHandler {
             const caption = `📸 *Instagram Story/Highlight*\n\n🖼️ *Item ${index + 1} dari ${mediaDetails.length}*`;
             return createMediaObject(mediaItem, caption);
           });
-          const chunks = chunkArray(mediaToSend, 10);
+          const chunks = chunkArray(mediaToSend, 100);
           for (const [index, chunk] of chunks.entries()) {
             await fn.sendAlbum(toId, chunk, { quoted: m });
             if (chunks.length > 1 && index < chunks.length - 1) {

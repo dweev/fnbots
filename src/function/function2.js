@@ -117,11 +117,11 @@ export async function sendImages(fn, result, args, toId, m, baseCaption) {
         `Errors:\n${errors.join('\n')}`
       );
     }
-    const chunks = chunkArray(downloadedImages, 15);
+    const chunks = chunkArray(downloadedImages, 100);
     for (const [chunkIndex, chunk] of chunks.entries()) {
       await fn.sendAlbum(toId, chunk, { quoted: m });
       if (chunks.length > 1 && chunkIndex < chunks.length - 1) {
-        await delay(1000);
+        await delay(2000);
       }
     }
     if (errors.length > 0) {

@@ -62,11 +62,11 @@ export const command = {
             return createMediaObjectFromUrl(url, caption);
           });
         }
-        const chunks = chunkArray(mediaToSend, 15);
+        const chunks = chunkArray(mediaToSend, 100);
         for (const [index, chunk] of chunks.entries()) {
           await fn.sendAlbum(toId, chunk, { quoted: m });
           if (chunks.length > 1 && index < chunks.length - 1) {
-            await delay(1000);
+            await delay(2000);
           }
         }
       }
@@ -98,11 +98,11 @@ export const command = {
             return createMediaObject(mediaItem, caption);
           });
         }
-        const chunks = chunkArray(mediaToSend, 15);
+        const chunks = chunkArray(mediaToSend, 100);
         for (const [index, chunk] of chunks.entries()) {
           await fn.sendAlbum(toId, chunk, { quoted: m });
           if (chunks.length > 1 && index < chunks.length - 1) {
-            await delay(1000);
+            await delay(2000);
           }
         }
       }

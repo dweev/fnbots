@@ -89,6 +89,7 @@ function setupWhatsAppEventHandlers(fn) {
     }
   });
   fn.ev.on('messages.upsert', async (message) => {
+    if (message.type !== 'notify') return;
     await updateMessageUpsert(fn, message, dbSettings);
   });
   fn.ev.on('group-participants.update', async (update) => {

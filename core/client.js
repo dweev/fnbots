@@ -490,11 +490,9 @@ export async function clientBot(fn, dbSettings) {
         } else {
           const outputBuffer = convertNative(inputBuffer, {
             format: 'mpeg',
-            ptt: true
+            ptt: false
           });
-          if (!Buffer.isBuffer(outputBuffer) || outputBuffer.length === 0) {
-            throw new Error('Native audio conversion failed to produce a valid buffer.');
-          }
+          if (!Buffer.isBuffer(outputBuffer) || outputBuffer.length === 0) throw new Error('Native audio conversion failed to produce a valid buffer.');
           messageContent = {
             audio: outputBuffer,
             mimetype: 'audio/mpeg',

@@ -18,7 +18,6 @@ export const command = {
   execute: async ({ fn, m, toId, sReply, isBotGroupAdmins, botNumber, ownerNumber }) => {
     if (!m.isGroup) return await sReply('Perintah ini hanya bisa digunakan di dalam grup.');
     if (!isBotGroupAdmins) return await sReply('Bot harus menjadi admin untuk menjalankan perintah ini.');
-    await sReply('⏳ Memulai proses pembersihan grup... Anggota yang bukan admin atau tidak memiliki status khusus akan dikeluarkan.');
     const groupMetadata = await fn.groupMetadata(toId);
     const allMemberIds = groupMetadata.participants.map(p => p.id);
     const groupAdminIds = new Set(
@@ -54,6 +53,6 @@ export const command = {
         await log(`Gagal mengeluarkan ${memberId}: ${error.message}`, true);
       }
     }
-    await sReply(`✅ Proses pembersihan selesai.\n\n- Berhasil dikeluarkan: *${removedCount}* anggota\n- Gagal: *${failedCount}*`);
+    await sReply(`Proses pembersihan selesai.\n\n- Berhasil dikeluarkan: *${removedCount}* anggota\n- Gagal: *${failedCount}*`);
   }
 };

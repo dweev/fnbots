@@ -46,12 +46,7 @@ async function ensureMongoDBRunning() {
     return true;
   } catch {
     log('Starting MongoDB...');
-    try {
-      execSync('sudo systemctl start mongod', { stdio: 'inherit' });
-    } catch {
-      log('Systemd failed, starting MongoDB manually...');
-      execSync('sudo /root/mongo.sh', { stdio: 'inherit' });
-    }
+    execSync('sudo systemctl start mongod', { stdio: 'inherit' });
     log('Waiting for MongoDB...');
     await waitPort({ host: 'localhost', port: 27017, timeout: 15000 });
     log('MongoDB started successfully');

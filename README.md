@@ -133,16 +133,16 @@ graph TD
   end
 
     subgraph "Background Processes"
-        BG --> BA[Cron Jobs];
-        BG --> BB[Cache Sync];
-        BG --> BC[Batch DB Writes];
-        BG --> BD[File Watcher];
-        
-        BA --> BA1[Reset Daily Limits];
-        BA --> BA2[Clean Expired Users];
-        BB --> BB1[Sync Settings];
-        BC --> BC1[Bulk Operations];
-        BD --> BD1[Hot-Reload Plugins];
+      BG --> BA[Cron Jobs];
+      BG --> BB[Cache Sync];
+      BG --> BC[Batch DB Writes];
+      BG --> BD[File Watcher];
+      
+      BA --> BA1[Reset Daily Limits];
+      BA --> BA2[Clean Expired Users];
+      BB --> BB1[Sync Settings];
+      BC --> BC1[Bulk Operations];
+      BD --> BD1[Hot-Reload Plugins];
     end
 
   P --> Q;
@@ -364,7 +364,6 @@ The directory structure is designed for a clear separation of concerns, making t
 ├── .env.example           # Environment variable template
 ├── .gitignore             # Git ignore file
 ├── binding.gyp            # Build configuration for native addons
-├── cliff.toml             # Configuration for code linting
 ├── config.js              # Main configuration file
 ├── ecosystem.config.cjs   # PM2 configuration for deployment
 ├── eslint.config.js       # ESLint configuration
@@ -372,7 +371,6 @@ The directory structure is designed for a clear separation of concerns, making t
 ├── install.sh             # Automated server setup script
 ├── jest.config.js         # Jest testing configuration
 ├── LICENSE                # Project license (MIT)
-├── mongo.sh               # MongoDB setup script
 ├── package.json           # Project metadata and scripts
 ├── pull.sh                # Git pull & update script
 ├── README.md              # Project documentation (this file)
@@ -404,7 +402,7 @@ The resource requirements are higher than a standard bot due to heavy processing
     * **CPU**: **4 vCores** or more
     * **RAM**: **8 GB** or more
     * **Storage**: **80 GB+ SSD/NVMe**
-    * **OS**: Ubuntu 22.04 LTS or a similar Linux distribution.
+    * **OS**: Ubuntu 24.04 LTS or a similar Linux distribution. (i never try on ubuntu 22, but i recommend to use ubuntu 24)
 
   * **Minimal (Testing/Low-Load)**:
 

@@ -21,14 +21,14 @@ const REDIS_TTL = {
 };
 
 const REDIS_PREFIX = {
-  CONTACT: 'cache:contact:',
-  GROUP: 'cache:groupmeta:',
-  LID_TO_JID: 'cache:lid2jid:',
-  JID_TO_LID: 'cache:jid2lid:',
-  MESSAGES: 'cache:messages:',
-  CONVERSATIONS: 'cache:conv:',
-  PRESENCE: 'cache:presence:',
-  STATUS: 'cache:status:'
+  CONTACT       : 'cache:contact:',
+  GROUP         : 'cache:groupmetadata:',
+  LID_TO_JID    : 'cache:getLIDForPN:',
+  JID_TO_LID    : 'cache:getPNForLID:',
+  MESSAGES      : 'cache:messages:',
+  CONVERSATIONS : 'cache:conversation:',
+  PRESENCE      : 'cache:presence:',
+  STATUS        : 'cache:storystatus:'
 };
 
 class DBStore {
@@ -151,7 +151,9 @@ class DBStore {
     ]);
   }
   async flushBatch(type, Model) {
-    if (this.queueLocks[type]) return;
+    while (this.queueLocks[type]) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
     if (this.updateQueues[type].size === 0) return;
     this.queueLocks[type] = true;
     try {
@@ -310,7 +312,7 @@ class DBStore {
         log(`Error fetching existing contact: ${error.message}`, true);
       }
     }
-    const updated = { ...existing };
+    const updated = { ...(existing || {}), jid };
     for (const key in data) {
       if (data[key] !== undefined && data[key] !== null) {
         updated[key] = data[key];
@@ -410,7 +412,7 @@ class DBStore {
         log(`Error fetching existing group: ${error.message}`, true);
       }
     }
-    const updated = { ...existing, ...metadata, groupId };
+    const updated = { ...(existing || {}), ...metadata, groupId };
     if (existing && !this.hasChanges(existing, updated, 'groups')) {
       this.stats.skippedWrites++;
       return;
@@ -641,16 +643,22 @@ class DBStore {
       for (const pattern of patterns) {
         const stream = redis.scanStream({ match: pattern, count: 100 });
         const keysToDelete = [];
-        stream.on('data', (keys) => keysToDelete.push(...keys));
+        stream.on('data', (keys) => {
+          stream.pause();
+          keysToDelete.push(...keys);
+          stream.resume();
+        });
         await new Promise((resolve, reject) => {
           stream.on('end', async () => {
             try {
               if (keysToDelete.length > 0) {
                 for (let i = 0; i < keysToDelete.length; i += 1000) {
                   const batch = keysToDelete.slice(i, i + 1000);
-                  await redis.del(batch);
+                  await redis.del(...batch);
                 }
                 log(`Deleted ${keysToDelete.length} keys for pattern ${pattern}`);
+              } else {
+                log(`No keys found for pattern ${pattern}`);
               }
               resolve();
             } catch (error) {
@@ -660,10 +668,11 @@ class DBStore {
           stream.on('error', reject);
         });
       }
-      log('All caches cleared');
+      log('All caches cleared successfully');
     } catch (error) {
       this.stats.errors++;
       log(`Failed to clear Redis cache: ${error.message}`, true);
+      throw error;
     }
   }
   startCacheCleanup() {

@@ -16,9 +16,7 @@ export default async function groupParticipantsUpdate({ id, participants, action
   try {
     const botJid = jidNormalizedUser(fn.user.id);
     const getUserId = (participant) => {
-      if (typeof participant === 'string') {
-        return participant;
-      }
+      if (typeof participant === 'string') return participant;
       return participant.id || participant.phoneNumber;
     };
     switch (action) {
@@ -86,33 +84,32 @@ export default async function groupParticipantsUpdate({ id, participants, action
           await StoreGroupMetadata.deleteOne({ groupId: id });
           mongoStore.clearGroupCacheByKey(id);
           return;
-        } else {
-          const groupData = await Group.findOne({ groupId: id }).lean();
-          if (groupData?.leave?.state) {
-            const metadata = await mongoStore.getGroupMetadata(id);
-            for (const participant of participants) {
-              const userId = getUserId(participant);
-              let leaveMemberJid;
-              if (userId.endsWith('@lid')) {
-                leaveMemberJid = await mongoStore.findJidByLid(userId);
-              } else {
-                leaveMemberJid = jidNormalizedUser(userId);
-              }
-              if (leaveMemberJid && leaveMemberJid.includes(botJid)) continue;
-              if (leaveMemberJid) {
-                await fn.handleGroupEventImage(id, {
-                  memberJid: leaveMemberJid,
-                  eventText: 'Selamat Tinggal!!',
-                  subject: metadata.subject,
-                  messageText: groupData.leave.pesan
-                });
-              } else {
-                await log(`Gagal mengidentifikasi JID untuk anggota: ${userId}. Pesan dilewati.`);
-              }
+        }
+        const groupData = await Group.findOne({ groupId: id }).lean();
+        if (groupData?.leave?.state) {
+          const metadata = await mongoStore.getGroupMetadata(id);
+          for (const participant of participants) {
+            const userId = getUserId(participant);
+            let leaveMemberJid;
+            if (userId.endsWith('@lid')) {
+              leaveMemberJid = await mongoStore.findJidByLid(userId);
+            } else {
+              leaveMemberJid = jidNormalizedUser(userId);
+            }
+            if (leaveMemberJid && leaveMemberJid === botJid) continue;
+            if (leaveMemberJid) {
+              await fn.handleGroupEventImage(id, {
+                memberJid: leaveMemberJid,
+                eventText: 'Selamat Tinggal!!',
+                subject: metadata.subject,
+                messageText: groupData.leave.pesan
+              });
+            } else {
+              await log(`Gagal mengidentifikasi JID untuk anggota: ${userId}. Pesan dilewati.`);
             }
           }
-          await mongoStore.syncGroupMetadata(fn, id);
         }
+        await mongoStore.syncGroupMetadata(fn, id);
         break;
       }
       case 'promote':

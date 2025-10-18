@@ -67,6 +67,7 @@ export async function createWASocket(dbSettings) {
     version: global.version,
     browser: Browsers.macOS('Chrome'),
     countryCode: 'ID',
+    syncFullHistory: true,
     emitOwnEvents: true,
     auth: { creds: state.creds, keys: makeCacheableSignalKeyStore(state.keys, pinoLogger) },
   });

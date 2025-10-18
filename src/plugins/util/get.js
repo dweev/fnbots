@@ -27,8 +27,8 @@ export const command = {
       case 'sticker':
         await sendRawWebpAsSticker(result.content, { packName: dbSettings.packName, authorName: dbSettings.packAuthor });
         break;
-      case 'ptt':
-        await fn.sendMediaFromBuffer(toId, 'audio/ogg; codecs=opus', result.content, dbSettings.autocommand, m);
+      case 'mpeg':
+        await fn.sendMediaFromBuffer(toId, 'audio/mpeg', result.content, dbSettings.autocommand, m);
         break;
       case 'media':
         await fn.sendMediaFromBuffer(toId, result.mime, result.content, dbSettings.autocommand, m);

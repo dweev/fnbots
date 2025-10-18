@@ -46,8 +46,8 @@ export default async function ({ argsArray }) {
       }
       if (ext === '.webm') {
         try {
-          const outputBuffer = convertNative(inputBuffer, { format: 'opus', ptt: true });
-          return { type: 'ptt', content: outputBuffer };
+          const outputBuffer = convertNative(inputBuffer, { format: 'mpeg', ptt: false });
+          return { type: 'mpeg', content: outputBuffer };
         } catch (error) {
           log(`Native .webm conversion failed in worker: ${error.message}`, true);
           return { type: 'document', content: inputBuffer, mime: 'video/webm' };

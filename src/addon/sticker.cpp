@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <limits>
 #include <mutex>
+#include <cmath>
 #include <webp/encode.h>
 #include <webp/mux.h>
 #include <webp/mux_types.h>
@@ -256,7 +257,83 @@ static std::vector<uint8_t> ResizeRGBA(const uint8_t* src, int sw, int sh, int d
   return dst;
 }
 
-static std::vector<uint8_t> RGBAResize512(const uint8_t* rgba, int w, int h, bool crop){
+static void ApplyRoundedCorners(uint8_t* rgba, int w, int h, int radius) {
+  if (radius <= 0 || radius > w/2 || radius > h/2) return;
+  
+  for (int y = 0; y < radius; ++y) {
+    for (int x = 0; x < radius; ++x) {
+      float dx = radius - x - 0.5f;
+      float dy = radius - y - 0.5f;
+      float dist = std::sqrt(dx*dx + dy*dy);
+      
+      if (dist > radius) {
+        size_t idx = ((size_t)y * w + x) * 4;
+        rgba[idx + 3] = 0;
+      } else if (dist > radius - 1.0f) {
+        float alpha = radius - dist;
+        alpha = std::max(0.0f, std::min(1.0f, alpha));
+        size_t idx = ((size_t)y * w + x) * 4;
+        rgba[idx + 3] = (uint8_t)(rgba[idx + 3] * alpha);
+      }
+    }
+  }
+  
+  for (int y = 0; y < radius; ++y) {
+    for (int x = w - radius; x < w; ++x) {
+      float dx = x - (w - radius) + 0.5f;
+      float dy = radius - y - 0.5f;
+      float dist = std::sqrt(dx*dx + dy*dy);
+      
+      if (dist > radius) {
+        size_t idx = ((size_t)y * w + x) * 4;
+        rgba[idx + 3] = 0;
+      } else if (dist > radius - 1.0f) {
+        float alpha = radius - dist;
+        alpha = std::max(0.0f, std::min(1.0f, alpha));
+        size_t idx = ((size_t)y * w + x) * 4;
+        rgba[idx + 3] = (uint8_t)(rgba[idx + 3] * alpha);
+      }
+    }
+  }
+  
+  for (int y = h - radius; y < h; ++y) {
+    for (int x = 0; x < radius; ++x) {
+      float dx = radius - x - 0.5f;
+      float dy = y - (h - radius) + 0.5f;
+      float dist = std::sqrt(dx*dx + dy*dy);
+      
+      if (dist > radius) {
+        size_t idx = ((size_t)y * w + x) * 4;
+        rgba[idx + 3] = 0;
+      } else if (dist > radius - 1.0f) {
+        float alpha = radius - dist;
+        alpha = std::max(0.0f, std::min(1.0f, alpha));
+        size_t idx = ((size_t)y * w + x) * 4;
+        rgba[idx + 3] = (uint8_t)(rgba[idx + 3] * alpha);
+      }
+    }
+  }
+  
+  for (int y = h - radius; y < h; ++y) {
+    for (int x = w - radius; x < w; ++x) {
+      float dx = x - (w - radius) + 0.5f;
+      float dy = y - (h - radius) + 0.5f;
+      float dist = std::sqrt(dx*dx + dy*dy);
+      
+      if (dist > radius) {
+        size_t idx = ((size_t)y * w + x) * 4;
+        rgba[idx + 3] = 0;
+      } else if (dist > radius - 1.0f) {
+        float alpha = radius - dist;
+        alpha = std::max(0.0f, std::min(1.0f, alpha));
+        size_t idx = ((size_t)y * w + x) * 4;
+        rgba[idx + 3] = (uint8_t)(rgba[idx + 3] * alpha);
+      }
+    }
+  }
+}
+
+static std::vector<uint8_t> RGBAResize512(const uint8_t* rgba, int w, int h, bool crop, int cornerRadius){
   const int TW = 512, TH = 512;
   
   if (!rgba || w <= 0 || h <= 0 || w > 8192 || h > 8192) {
@@ -310,7 +387,13 @@ static std::vector<uint8_t> RGBAResize512(const uint8_t* rgba, int w, int h, boo
       std::memcpy(cropped.data() + dst_offset, rgba + src_offset, row_bytes);
     }
 
-    return ResizeRGBA(cropped.data(), side, side, TW, TH);
+    auto resized = ResizeRGBA(cropped.data(), side, side, TW, TH);
+    
+    if (cornerRadius > 0) {
+      ApplyRoundedCorners(resized.data(), TW, TH, cornerRadius);
+    }
+    
+    return resized;
     
   } else {
     double rw = (double)TW / (double)w;
@@ -341,6 +424,19 @@ static std::vector<uint8_t> RGBAResize512(const uint8_t* rgba, int w, int h, boo
       size_t row_bytes = (size_t)dstW * 4;
       
       std::memcpy(canvas.data() + dst_offset, scaled.data() + src_offset, row_bytes);
+    }
+    
+    if (cornerRadius > 0) {
+      std::vector<uint8_t> temp_scaled(scaled);
+      ApplyRoundedCorners(temp_scaled.data(), dstW, dstH, cornerRadius);
+      
+      for (int y = 0; y < dstH; ++y) {
+        size_t dst_offset = ((size_t)(offY + y) * (size_t)TW + (size_t)offX) * 4;
+        size_t src_offset = (size_t)y * (size_t)dstW * 4;
+        size_t row_bytes = (size_t)dstW * 4;
+        
+        std::memcpy(canvas.data() + dst_offset, temp_scaled.data() + src_offset, row_bytes);
+      }
     }
     
     return canvas;
@@ -393,7 +489,7 @@ static std::vector<uint8_t> EncodeWebPStaticRGBA512(const uint8_t* rgba512, int 
 }
 
 static std::vector<uint8_t> EncodeWebPAnimRGBA512(const std::vector<RGBAFrame>& frames, 
-                                                  int quality, int fps, bool crop){
+                                                  int quality, int fps, bool crop, int cornerRadius){
   if (frames.empty()) throw std::runtime_error("No frames to encode");
   
   WebPAnimEncoderOptions aopt; 
@@ -416,7 +512,7 @@ static std::vector<uint8_t> EncodeWebPAnimRGBA512(const std::vector<RGBAFrame>& 
   int64_t t0 = frames.front().pts_ms;
   
   for (const auto& fr : frames) {
-    std::vector<uint8_t> rgba512 = RGBAResize512(fr.data.data(), fr.w, fr.h, crop);
+    std::vector<uint8_t> rgba512 = RGBAResize512(fr.data.data(), fr.w, fr.h, crop, cornerRadius);
 
     WebPPicture pic; 
     if (!WebPPictureInit(&pic)) {
@@ -759,10 +855,12 @@ Napi::Value MakeSticker(const Napi::CallbackInfo& info){
     int quality = opt.Has("quality") ? (int)opt.Get("quality").ToNumber().Int32Value() : 80;
     int fps = opt.Has("fps") ? (int)opt.Get("fps").ToNumber().Int32Value() : 15;
     int maxDur = opt.Has("maxDuration") ? (int)opt.Get("maxDuration").ToNumber().Int32Value() : 15;
+    int cornerRadius = opt.Has("cornerRadius") ? (int)opt.Get("cornerRadius").ToNumber().Int32Value() : 40;
     
     quality = std::max(1, std::min(100, quality));
     fps = std::max(1, std::min(60, fps));
     maxDur = std::max(1, std::min(60, maxDur));
+    cornerRadius = std::max(0, std::min(256, cornerRadius)); // Max 256px radius
     
     std::string pack = opt.Has("packName") ? opt.Get("packName").ToString().Utf8Value() : "";
     std::string author = opt.Has("authorName") ? opt.Get("authorName").ToString().Utf8Value() : "";
@@ -817,11 +915,11 @@ Napi::Value MakeSticker(const Napi::CallbackInfo& info){
       frames.clear();
       frames.shrink_to_fit();
       
-      auto rgba512 = RGBAResize512(clean_buffer.data(), frame_w, frame_h, crop);
+      auto rgba512 = RGBAResize512(clean_buffer.data(), frame_w, frame_h, crop, cornerRadius);
       webp = EncodeWebPStaticRGBA512(rgba512.data(), quality);
       
     } else {
-      webp = EncodeWebPAnimRGBA512(frames, quality, fps, crop);
+      webp = EncodeWebPAnimRGBA512(frames, quality, fps, crop, cornerRadius);
     }
 
     auto exif = BuildWhatsAppExif(pack, author, emojis);

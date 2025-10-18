@@ -8,9 +8,9 @@
 
 import path from 'path';
 import fs from 'fs-extra';
-import FileType from 'file-type';
 import log from '../../lib/logger.js';
 import { spawn } from 'child_process';
+import { fileTypeFromBuffer } from 'file-type';
 import { tmpDir } from '../../lib/tempManager.js';
 import { convert as convertNative } from '../../addon/bridge.js';
 
@@ -53,7 +53,7 @@ export default async function ({ argsArray }) {
           return { type: 'document', content: inputBuffer, mime: 'video/webm' };
         }
       }
-      const fileType = await FileType.fromBuffer(inputBuffer);
+      const fileType = await fileTypeFromBuffer(inputBuffer);
       return { type: 'media', content: inputBuffer, mime: fileType?.mime || 'application/octet-stream' };
     } finally {
       await tmpDir.deleteFile(localPath);

@@ -6,8 +6,8 @@
 */
 // ─── Info ────────────────────────────────
 
-import FileType from 'file-type';
 import config from '../../../config.js';
+import { fileTypeFromBuffer } from 'file-type';
 import { safetySettings } from '../../function/index.js';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
@@ -28,7 +28,7 @@ export const command = {
     const finalPrompt = userPrompt || defaultPrompt;
     const mediaBuffer = await fn.getMediaBuffer(targetMsg);
     if (!mediaBuffer) return await sReply('Gagal mengunduh media gambar.');
-    const fileType = await FileType.fromBuffer(mediaBuffer);
+    const fileType = await fileTypeFromBuffer(mediaBuffer);
     const supportedTypes = ['image/jpeg', 'image/png', 'image/webp'];
     if (!fileType || !supportedTypes.includes(fileType.mime)) return await sReply(`Tipe file tidak didukung. Terdeteksi: ${fileType?.mime || 'tidak diketahui'}`);
     const genAI = new GoogleGenerativeAI(config.geminiApikey);

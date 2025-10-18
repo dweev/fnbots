@@ -9,12 +9,12 @@
 import path from 'path';
 import fs from 'fs-extra';
 import axios from 'axios';
-import FileType from 'file-type';
 import config from '../config.js';
 import log from '../src/lib/logger.js';
 import { mongoStore } from '../database/index.js';
 import { tmpDir } from '../src/lib/tempManager.js';
 import { runJob } from '../src/worker/worker_manager.js';
+import { fileTypeFromBuffer, fileTypeFromFile } from 'file-type';
 import { randomByte, getBuffer, getSizeMedia } from '../src/function/index.js';
 import { convert as convertNative, fetch as nativeFetch } from '../src/addon/bridge.js';
 import { MediaValidationError, MediaProcessingError, MediaSizeError } from '../src/lib/errorManager.js';
@@ -40,7 +40,7 @@ const extractMentions = (text) => {
 const detectMimeType = async (data, headers = {}) => {
   let mime = headers['content-type'];
   if (!mime || mime.includes('octet-stream')) {
-    const fileType = await FileType.fromBuffer(data);
+    const fileType = await fileTypeFromBuffer(data);
     mime = fileType?.mime || 'application/octet-stream';
   }
   return mime;
@@ -196,7 +196,7 @@ export async function clientBot(fn, dbSettings) {
   fn.getFile = async (inputPath, save) => {
     try {
       const data = await handleBufferInput(inputPath);
-      const type = await FileType.fromBuffer(data) || {
+      const type = await fileTypeFromBuffer(data) || {
         mime: 'application/octet-stream',
         ext: 'bin'
       };
@@ -461,7 +461,7 @@ export async function clientBot(fn, dbSettings) {
         throw new Error(`File tidak ditemukan di path: ${localPath}`);
       }
       const mentions = extractMentions(caption);
-      const fileType = await FileType.fromFile(localPath);
+      const fileType = await fileTypeFromFile(localPath);
       const mime = fileType?.mime || 'application/octet-stream';
       const stats = await fs.stat(localPath);
       const fileSizeInMB = stats.size / (1024 * 1024);

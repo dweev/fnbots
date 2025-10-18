@@ -370,11 +370,28 @@ install_redis() {
     print_step "Mengkonfigurasi Redis..."
     REDIS_CONF="/etc/redis/redis.conf"
     if [ -f "$REDIS_CONF" ]; then
-        $SUDO_CMD cp "$REDIS_CONF" "${REDIS_CONF}.backup"
+        $SUDO_CMD cp "$REDIS_CONF" "${REDIS_CONF}.backup.$(date +%Y%m%d)"
+        
+        $SUDO_CMD sed -i 's/^bind 127.0.0.1 ::1/bind 127.0.0.1/' "$REDIS_CONF" 2>/dev/null || true
+        
+        if ! grep -q "^maxmemory" "$REDIS_CONF"; then
+            echo "maxmemory 512mb" | $SUDO_CMD tee -a "$REDIS_CONF" > /dev/null
+        else
+            $SUDO_CMD sed -i 's/^# maxmemory <bytes>/maxmemory 512mb/' "$REDIS_CONF"
+        fi
+        
+        if ! grep -q "^maxmemory-policy" "$REDIS_CONF"; then
+            echo "maxmemory-policy allkeys-lru" | $SUDO_CMD tee -a "$REDIS_CONF" > /dev/null
+        else
+            $SUDO_CMD sed -i 's/^# maxmemory-policy noeviction/maxmemory-policy allkeys-lru/' "$REDIS_CONF"
+        fi
         
         if grep -q "^appendonly no" "$REDIS_CONF"; then
             $SUDO_CMD sed -i 's/^appendonly no/appendonly yes/' "$REDIS_CONF"
-            print_info "AOF persistence diaktifkan"
+        fi
+        
+        if grep -q "^# appendfsync everysec" "$REDIS_CONF"; then
+            $SUDO_CMD sed -i 's/^# appendfsync everysec/appendfsync everysec/' "$REDIS_CONF"
         fi
         
         $SUDO_CMD sed -i '/^save [0-9]/d' "$REDIS_CONF"
@@ -382,22 +399,37 @@ install_redis() {
         
         cat << 'EOF' | $SUDO_CMD tee -a "$REDIS_CONF" > /dev/null
 
-# RDB Snapshots Configuration
+# Optimized RDB Snapshots
 save 900 1
 save 300 10
 save 60 10000
 EOF
         
-        print_info "RDB snapshotting dikonfigurasi"
+        print_success "Redis dikonfigurasi dengan:"
+        print_info "  - Memory limit: 512MB dengan LRU eviction"
+        print_info "  - AOF persistence: enabled (everysec)"
+        print_info "  - RDB snapshots: enabled (periodic backup)"
+    else
+        print_warning "Redis config file tidak ditemukan di lokasi standar"
     fi
     
     $SUDO_CMD systemctl enable redis-server
     $SUDO_CMD systemctl restart redis-server
     
+    sleep 2
+    
     if $SUDO_CMD systemctl is-active --quiet redis-server; then
-        print_success "Redis berhasil diinstall dan berjalan"
+        print_success "Redis berhasil diinstall dan berjalan di port 6379!"
+        
+        if command -v redis-cli >/dev/null 2>&1; then
+            if redis-cli ping >/dev/null 2>&1; then
+                print_success "Redis connection test: OK"
+            fi
+        fi
     else
-        print_warning "Redis terinstall tapi tidak berjalan"
+        print_error "Redis gagal dijalankan. Cek log dengan:"
+        echo "   sudo systemctl status redis-server"
+        echo "   sudo journalctl -u redis-server -xe"
     fi
 }
 
@@ -659,8 +691,12 @@ print_summary() {
     echo "==============================================================="
     echo ""
     echo "Status Layanan:"
-    echo "   MongoDB Process: $(sudo ps aux | grep mongod | grep -v grep | wc -l) process berjalan"
-    echo "   Redis:   $($SUDO_CMD systemctl is-active redis-server 2>/dev/null || echo 'tidak terinstall')"
+    echo "   MongoDB: $($SUDO_CMD systemctl is-active mongod 2>/dev/null || echo 'tidak aktif')"
+    if $SUDO_CMD systemctl is-active --quiet redis-server 2>/dev/null; then
+        echo "   Cache DB: Aktif (port 6379)"
+    else
+        echo "   Cache DB: tidak aktif"
+    fi
     echo ""
     echo "Python:"
     echo "   Versi: $(python3.12 --version 2>/dev/null || echo 'tidak terinstall')"
@@ -675,19 +711,20 @@ print_summary() {
     echo "   Versi: $(mongod --version 2>/dev/null | head -1 | awk '{print $3}' || echo 'tidak terinstall')"
     echo "   CPU AVX: $([ "$CPU_HAS_AVX" = true ] && echo 'supported (MongoDB 7.0/6.0)' || echo 'not supported (MongoDB 4.4)')"
     echo ""
-    echo "Catatan MongoDB:"
-    echo "   - Cek process: sudo ps aux | grep mongod"
-    echo "   - Cek port: sudo ss -tlnp | grep 27017"
-    echo "   - Cek status: sudo systemctl status mongod"
-    echo "   - Cek log: sudo tail -f /var/log/mongodb/mongod.log"
+    echo "Perintah Berguna:"
+    echo "   Cek MongoDB: sudo systemctl status mongod"
+    if $SUDO_CMD systemctl is-active --quiet redis-server 2>/dev/null; then
+        echo "   Cek Redis: sudo systemctl status redis-server"
+        echo "   Redis CLI: redis-cli"
+    fi
+    echo "   MongoDB Shell: mongosh"
     echo ""
     echo "Langkah Selanjutnya:"
     echo "   1. Copy 'env.example' ke 'env' dan edit konfigurasi"
     echo "   2. Aktifkan virtual environment: source venv/bin/activate"
     echo "   3. Build native addon: npm run build:addon"
-    echo "   4. Aktifkan mongoDB shell: mongosh"
-    echo "   5. Gunakan PM2 untuk manajemen proses jika diperlukan"
-    echo "   6. Atau gunakan npm start untuk menjalankan aplikasi"
+    echo "   4. Gunakan PM2 memulai proses: pm2 start ecosystem.config.cjs"
+    echo "   5. Atau gunakan: npm start"
     echo ""
     echo "Catatan:"
     echo "   Timezone: Asia/Jakarta"

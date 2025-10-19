@@ -52,8 +52,8 @@ export const command = {
       if (idGroup === toId) continue;
       try {
         if (farewellText) {
-          const res = await fn.groupGetMetadata(idGroup);
-          await fn.sendPesan(idGroup, farewellText, { ephemeralExpiration: res.expiration });
+          const res = await fn.groupMetadata(idGroup);
+          await fn.sendPesan(idGroup, farewellText, { ephemeralExpiration: res.ephemeralDuration });
           await delay(1000);
         }
         await fn.groupLeave(idGroup);

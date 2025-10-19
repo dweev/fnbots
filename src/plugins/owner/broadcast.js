@@ -55,18 +55,18 @@ export const command = {
     if (targetGroups.length === 0) {
       return await sReply('Tidak ada grup target yang ditemukan untuk mode ini.');
     }
-    await sReply(`📢 Memulai broadcast [Mode: ${broadcastMode}] ke ${targetGroups.length} grup...`);
+    await sReply(`Memulai broadcast ${broadcastMode} ke ${targetGroups.length} grup...`);
     let successCount = 0;
     let failedCount = 0;
     for (const idGroup of targetGroups) {
       try {
         if (whitelistIdSet.has(idGroup)) {
           const caption = `*${dbSettings.botName} Broadcast*\n\n${messageContent}`;
-          const res = await fn.groupGetMetadata(idGroup);
-          await fn.sendFilePath(idGroup, caption, config.paths.avatar, { ephemeralExpiration: res.expiration });
+          const res = await fn.groupMetadata(idGroup);
+          await fn.sendFilePath(idGroup, caption, config.paths.avatar, { ephemeralExpiration: res.ephemeralDuration });
         } else {
-          const res = await fn.groupGetMetadata(idGroup);
-          await fn.sendPesan(idGroup, messageContent, { ephemeralExpiration: res.expiration });
+          const res = await fn.groupMetadata(idGroup);
+          await fn.sendPesan(idGroup, messageContent, { ephemeralExpiration: res.ephemeralDuration });
         }
         successCount++;
         await delay(1500);
@@ -75,6 +75,6 @@ export const command = {
         await log(`Gagal broadcast ke ${idGroup}: ${error.message}`, true);
       }
     }
-    await sReply(`Broadcast selesai.\n\n- ✅ Berhasil terkirim: *${successCount}* grup\n- ❌ Gagal terkirim: *${failedCount}* grup`);
+    await sReply(`Broadcast selesai.\n\n- Berhasil terkirim: *${successCount}* grup\n- Gagal terkirim: *${failedCount}* grup`);
   }
 };

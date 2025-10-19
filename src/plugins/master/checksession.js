@@ -9,7 +9,7 @@
 import { redis } from '../../../database/index.js';
 
 export const command = {
-  name: 'listsession',
+  name: 'checksession',
   category: 'master',
   description: 'List semua Signal session keys untuk debugging',
   isCommandWithoutPayment: true,

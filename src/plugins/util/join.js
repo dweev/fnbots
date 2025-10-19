@@ -26,7 +26,7 @@ export const command = {
         await fn.groupAcceptInvite(inviteCode);
         if (!restrict) {
           const res = await fn.groupMetadata(id);
-          await fn.sendPesan(id, `Halo warga grup *${subject}*!\nTerima kasih sudah mengundang ${dbSettings.botname}. Ketik *.rules* untuk melihat peraturan.`, { ephemeralExpiration: res.ephemeralDuration ?? 0 }); 
+          await fn.sendPesan(id, `Halo warga grup *${subject}*!\nTerima kasih sudah mengundang ${dbSettings.botname}.`, { ephemeralExpiration: res.ephemeralDuration ?? 0 }); 
         }
         if (isSadmin || isMaster) {
           await Whitelist.addToWhitelist(id, 'group');

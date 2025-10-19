@@ -11,129 +11,253 @@ import { performanceManager } from '../../lib/performanceManager.js';
 export const command = {
   name: 'checkmemory',
   category: 'master',
-  description: 'Monitor dan kelola penggunaan memori aplikasi.\nUsage: memory [status|start|stop|set|check|gc|help]\nLihat "{prefix}memory help" untuk detail perintah.',
+  description: 'Monitor dan kelola penggunaan memori aplikasi.\nLihat ".memory help" untuk detail perintah.',
   isCommandWithoutPayment: true,
+  aliases: ['memory'],
   execute: async ({ args, sReply }) => {
     const subCommand = args[0]?.toLowerCase();
+
     if (!subCommand || subCommand === 'status') {
-      const settings = performanceManager.cache.getMemorySettings();
+      const settings = performanceManager.getMemorySettings();
       const memUsage = process.memoryUsage();
       const rssInMB = Math.round(memUsage.rss / 1024 / 1024);
       const heapUsedInMB = Math.round(memUsage.heapUsed / 1024 / 1024);
       const heapTotalInMB = Math.round(memUsage.heapTotal / 1024 / 1024);
+      const externalMB = Math.round(memUsage.external / 1024 / 1024);
       const rssPercent = Math.round((rssInMB / settings.rssThreshold) * 100);
+
       const response = `*Memory Monitor Status*\n\n` +
-        `*Status*: ${settings.isMonitoring ? 'Running' : 'Stopped'}\n` +
-        `*Auto-Restart*: ${settings.enableAutoRestart ? 'Enabled' : 'Disabled'}\n` +
-        `*Check Interval*: ${settings.checkInterval / 1000}s\n\n` +
+        `Status: ${settings.isMonitoring ? 'Running' : 'Stopped'}\n` +
+        `Auto-Restart: ${settings.enableAutoRestart ? 'Enabled' : 'Disabled'}\n` +
+        `Check Interval: ${settings.checkInterval / 1000}s\n` +
+        `Persistence: Redis\n\n` +
         `*Current Usage:*\n` +
         `RSS: ${rssInMB}MB / ${settings.rssThreshold}MB (${rssPercent}%)\n` +
-        `Heap: ${heapUsedInMB}MB / ${heapTotalInMB}MB\n\n` +
-        `*Warnings*: ${settings.currentStats.warnings} consecutive\n` +
-        `*Auto-Restart*: After ${settings.consecutiveWarningsBeforeRestart} warnings or threshold exceeded\n\n` +
-        `Use '{prefix}memory help' for more commands.`;
+        `Heap: ${heapUsedInMB}MB / ${heapTotalInMB}MB\n` +
+        `External: ${externalMB}MB\n\n` +
+        `*Warning Configuration:*\n` +
+        `Consecutive Warnings: ${settings.currentStats.warnings}\n` +
+        `Restart Threshold: ${settings.consecutiveWarningsBeforeRestart} warnings\n` +
+        `Warning Trigger: ${Math.round(settings.warningThreshold * 100)}% of RSS\n\n` +
+        `Use .memory help for commands`;
+
       return sReply(response);
-    } else if (subCommand === 'help') {
+    }
+
+    if (subCommand === 'help') {
       return sReply(
         `*Memory Monitor Commands*\n\n` +
-        `🔹 {prefix}memory status - Show status\n` +
-        `🔹 {prefix}memory start - Start monitoring\n` +
-        `🔹 {prefix}memory stop - Stop monitoring\n` +
-        `🔹 {prefix}memory set [param] [value] - Update settings\n` +
-        `   - rss [MB] - RSS threshold\n` +
-        `   - interval [ms] - Check interval\n` +
-        `   - autorestart [on/off] - Toggle auto-restart\n` +
-        `   - warnings [count] - Warnings before restart\n` +
-        `🔹 {prefix}memory check - Force memory check\n` +
-        `🔹 {prefix}memory gc - Force garbage collection`
+        `*Information:*\n` +
+        `.memory status - Current status\n` +
+        `.memory check - Force check\n` +
+        `.memory info - Detailed config\n\n` +
+        `*Control:*\n` +
+        `.memory start - Start monitor\n` +
+        `.memory stop - Stop monitor\n` +
+        `.memory gc - Force GC\n` +
+        `.memory reset - Reset to defaults\n\n` +
+        `*Settings:*\n` +
+        `.memory set rss [MB] - RSS threshold (min: 500)\n` +
+        `.memory set interval [seconds] - Check interval (min: 10)\n` +
+        `.memory set autorestart [on/off] - Auto-restart toggle\n` +
+        `.memory set warnings [count] - Warnings before restart (1-10)\n` +
+        `.memory set threshold [0.1-1.0] - Warning percentage\n\n` +
+        `Settings persist across restarts via Redis`
       );
-    } else if (subCommand === 'start') {
-      performanceManager.cache.startMemoryMonitoring();
+    }
+
+    if (subCommand === 'info') {
+      const settings = performanceManager.getMemorySettings();
+      const memUsage = process.memoryUsage();
+      const rssInMB = Math.round(memUsage.rss / 1024 / 1024);
+      const heapUsedInMB = Math.round(memUsage.heapUsed / 1024 / 1024);
+      const heapTotalInMB = Math.round(memUsage.heapTotal / 1024 / 1024);
+      const arrayBuffersMB = Math.round(memUsage.arrayBuffers / 1024 / 1024);
+      const externalMB = Math.round(memUsage.external / 1024 / 1024);
+
+      const lastCheckAgo = Math.round((Date.now() - settings.currentStats.lastCheck) / 1000);
+      const uptime = Math.round(process.uptime());
+      const uptimeHours = Math.floor(uptime / 3600);
+      const uptimeMinutes = Math.floor((uptime % 3600) / 60);
+
+      const response = `*Memory Monitor Details*\n\n` +
+        `*System:*\n` +
+        `Uptime: ${uptimeHours}h ${uptimeMinutes}m\n` +
+        `Last Check: ${lastCheckAgo}s ago\n` +
+        `Monitoring: ${settings.isMonitoring ? 'Active' : 'Inactive'}\n\n` +
+        `*Memory Usage:*\n` +
+        `RSS: ${rssInMB}MB\n` +
+        `Heap Used: ${heapUsedInMB}MB\n` +
+        `Heap Total: ${heapTotalInMB}MB\n` +
+        `Array Buffers: ${arrayBuffersMB}MB\n` +
+        `External: ${externalMB}MB\n\n` +
+        `*Configuration:*\n` +
+        `RSS Threshold: ${settings.rssThreshold}MB\n` +
+        `Warning Threshold: ${Math.round(settings.warningThreshold * 100)}%\n` +
+        `Check Interval: ${settings.checkInterval / 1000}s\n` +
+        `Warning Count: ${settings.consecutiveWarningsBeforeRestart}\n` +
+        `Auto-Restart: ${settings.enableAutoRestart ? 'Yes' : 'No'}\n\n` +
+        `*Current Status:*\n` +
+        `Consecutive Warnings: ${settings.currentStats.warnings}\n` +
+        `Last RSS: ${settings.currentStats.lastUsage.rss}MB\n` +
+        `Last Heap: ${settings.currentStats.lastUsage.heapUsed}MB`;
+
+      return sReply(response);
+    }
+
+    if (subCommand === 'start') {
+      performanceManager.startMemoryMonitoring();
       return sReply('Memory monitoring started');
-    } else if (subCommand === 'stop') {
-      performanceManager.cache.stopMemoryMonitoring();
+    }
+
+    if (subCommand === 'stop') {
+      performanceManager.stopMemoryMonitoring();
       return sReply('Memory monitoring stopped');
-    } else if (subCommand === 'check') {
+    }
+
+    if (subCommand === 'check') {
       const stats = performanceManager.cache.checkMemoryUsage();
-      const settings = performanceManager.cache.getMemorySettings();
+      const settings = performanceManager.getMemorySettings();
+      const rssPercent = Math.round((stats.rssMB / settings.rssThreshold) * 100);
+      const heapPercent = Math.round((stats.heapUsedMB / stats.heapTotalMB) * 100);
+
       return sReply(
         `*Memory Check Results*\n\n` +
-        `RSS: ${stats.rssMB}MB (${Math.round((stats.rssMB / settings.rssThreshold) * 100)}%)\n` +
-        `Heap: ${stats.heapUsedMB}MB / ${stats.heapTotalMB}MB\n` +
-        `Warnings: ${settings.currentStats.warnings} consecutive\n` +
-        `Auto-Restart: ${settings.enableAutoRestart ? 'Enabled' : 'Disabled'}`
+        `RSS: ${stats.rssMB}MB / ${settings.rssThreshold}MB (${rssPercent}%)\n` +
+        `Heap: ${stats.heapUsedMB}MB / ${stats.heapTotalMB}MB (${heapPercent}%)\n` +
+        `Consecutive Warnings: ${settings.currentStats.warnings}\n` +
+        `Warning Threshold: ${settings.consecutiveWarningsBeforeRestart}\n` +
+        `Auto-Restart: ${settings.enableAutoRestart ? 'Active' : 'Inactive'}\n` +
+        `Status: ${rssPercent >= settings.warningThreshold * 100 ? 'WARNING' : 'NORMAL'}`
       );
-    } else if (subCommand === 'set') {
+    }
+
+    if (subCommand === 'reset') {
+      const defaultSettings = {
+        checkInterval: 600000,
+        rssThreshold: 3000,
+        warningThreshold: 0.8,
+        consecutiveWarningsBeforeRestart: 3,
+        enableAutoRestart: true
+      };
+
+      await performanceManager.updateMemorySettings(defaultSettings);
+
+      return sReply(
+        `Settings reset to defaults:\n\n` +
+        `RSS Threshold: 3000MB\n` +
+        `Check Interval: 600s\n` +
+        `Warning Threshold: 80%\n` +
+        `Warnings Count: 3\n` +
+        `Auto-Restart: Enabled`
+      );
+    }
+
+    if (subCommand === 'set') {
       const param = args[1]?.toLowerCase();
-      if (!param) {
-        return sReply('Invalid parameters. Use: {prefix}memory set [rss|interval|autorestart|warnings] [value]');
+      const value = args[2];
+
+      if (!param || !value) {
+        return sReply('Usage: .memory set [parameter] [value]\nSee .memory help for parameters');
       }
+
       const newSettings = {};
+
       if (param === 'rss') {
-        const value = Number(args[2]);
-        if (isNaN(value) || value < 100) {
-          return sReply('Invalid RSS value. Use a number greater than 100 MB.');
+        const rss = Number(value);
+        if (isNaN(rss) || rss < 500) {
+          return sReply('Invalid RSS value. Must be >= 500 MB');
         }
-        newSettings.rssThreshold = value;
+        newSettings.rssThreshold = rss;
       } else if (param === 'interval') {
-        const value = Number(args[2]);
-        if (isNaN(value) || value < 10000) {
-          return sReply('Invalid interval. Use a number greater than 10000 ms (10 seconds).');
+        const seconds = Number(value);
+        if (isNaN(seconds) || seconds < 10) {
+          return sReply('Invalid interval. Must be >= 10 seconds');
         }
-        newSettings.checkInterval = value;
+        newSettings.checkInterval = seconds * 1000;
       } else if (param === 'autorestart') {
-        const value = args[2]?.toLowerCase();
-        if (value === 'on' || value === 'true' || value === '1') {
+        if (['on', 'true', '1', 'yes'].includes(value.toLowerCase())) {
           newSettings.enableAutoRestart = true;
-        } else if (value === 'off' || value === 'false' || value === '0') {
+        } else if (['off', 'false', '0', 'no'].includes(value.toLowerCase())) {
           newSettings.enableAutoRestart = false;
         } else {
-          return sReply('Invalid value. Use "on" or "off".');
+          return sReply('Invalid value. Use: on/off, true/false, yes/no, 1/0');
         }
       } else if (param === 'warnings') {
-        const value = Number(args[2]);
-        if (isNaN(value) || value < 1) {
-          return sReply('Invalid warnings count. Use a number greater than 0.');
+        const count = Number(value);
+        if (isNaN(count) || count < 1 || count > 10) {
+          return sReply('Invalid warnings count. Must be between 1-10');
         }
-        newSettings.consecutiveWarningsBeforeRestart = value;
+        newSettings.consecutiveWarningsBeforeRestart = count;
+      } else if (param === 'threshold') {
+        const threshold = Number(value);
+        if (isNaN(threshold) || threshold < 0.1 || threshold > 1) {
+          return sReply('Invalid threshold. Must be between 0.1-1.0 (10%-100%)');
+        }
+        newSettings.warningThreshold = threshold;
       } else {
-        return sReply('Invalid parameter. Use rss, interval, autorestart, or warnings.');
+        return sReply('Invalid parameter. See .memory help for valid parameters');
       }
-      performanceManager.cache.updateMemorySettings(newSettings);
-      let message = 'Memory monitor settings updated:';
+
+      const updated = await performanceManager.updateMemorySettings(newSettings);
+
+      let message = 'Settings updated and saved to Redis:\n\n';
       if (newSettings.rssThreshold) {
-        message += `\n- RSS threshold: ${newSettings.rssThreshold}MB`;
+        message += `RSS Threshold: ${updated.rssThreshold}MB\n`;
       }
       if (newSettings.checkInterval) {
-        message += `\n- Check interval: ${newSettings.checkInterval / 1000}s`;
+        message += `Check Interval: ${updated.checkInterval / 1000}s\n`;
       }
       if (typeof newSettings.enableAutoRestart !== 'undefined') {
-        message += `\n- Auto-restart: ${newSettings.enableAutoRestart ? 'Enabled' : 'Disabled'}`;
+        message += `Auto-Restart: ${updated.enableAutoRestart ? 'Enabled' : 'Disabled'}\n`;
       }
       if (newSettings.consecutiveWarningsBeforeRestart) {
-        message += `\n- Warnings before restart: ${newSettings.consecutiveWarningsBeforeRestart}`;
+        message += `Warnings Threshold: ${updated.consecutiveWarningsBeforeRestart}\n`;
       }
+      if (newSettings.warningThreshold) {
+        message += `Warning Trigger: ${Math.round(updated.warningThreshold * 100)}%\n`;
+      }
+      message += `\nSettings persist across restarts`;
+
       return sReply(message);
-    } else if (subCommand === 'gc' && global.gc) {
+    }
+
+    if (subCommand === 'gc') {
+      if (!global.gc) {
+        return sReply('Garbage collection not available\nStart Node.js with --expose-gc flag');
+      }
+
       const before = process.memoryUsage();
-      const heapUsedBeforeMB = Math.round(before.heapUsed / 1024 / 1024);
-      sReply('Forcing garbage collection...');
+      const heapBeforeMB = Math.round(before.heapUsed / 1024 / 1024);
+      const rssBeforeMB = Math.round(before.rss / 1024 / 1024);
+
+      await sReply('Running garbage collection...');
+
       global.gc();
+
       setTimeout(async () => {
         const after = process.memoryUsage();
-        const heapUsedAfterMB = Math.round(after.heapUsed / 1024 / 1024);
-        const freedMB = heapUsedBeforeMB - heapUsedAfterMB;
+        const heapAfterMB = Math.round(after.heapUsed / 1024 / 1024);
+        const rssAfterMB = Math.round(after.rss / 1024 / 1024);
+        const heapFreed = heapBeforeMB - heapAfterMB;
+        const rssFreed = rssBeforeMB - rssAfterMB;
+
         await sReply(
-          `Garbage collection complete\n` +
-          `Heap usage: ${heapUsedBeforeMB}MB → ${heapUsedAfterMB}MB ` +
-          `(freed ${freedMB}MB)`
+          `*Garbage Collection Complete*\n\n` +
+          `*Heap Memory:*\n` +
+          `Before: ${heapBeforeMB}MB\n` +
+          `After: ${heapAfterMB}MB\n` +
+          `Freed: ${heapFreed}MB\n\n` +
+          `*RSS Memory:*\n` +
+          `Before: ${rssBeforeMB}MB\n` +
+          `After: ${rssAfterMB}MB\n` +
+          `Freed: ${rssFreed}MB`
         );
       }, 1000);
+
       return;
-    } else if (subCommand === 'gc' && !global.gc) {
-      return sReply('Garbage collection not available. Start Node.js with --expose-gc flag.');
-    } else {
-      return sReply('Unknown subcommand. Use {prefix}memory help for available commands.');
     }
+
+    return sReply('Unknown command. Use .memory help for available commands');
   }
 };

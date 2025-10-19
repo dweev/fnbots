@@ -2,9 +2,39 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.0.7] - 2025-10-19
+
+### 🚀 What's Changed
+- chore: update version to 3.0.7 in package.json and package-lock.json ([e517a29](https://github.com/Terror-Machine/fnbots/commit/e517a29eb66c490291f1d293e6f908d56051dbac))
+- feat: enhance cachestats command with detailed cache and store statistics ([9b1bf77](https://github.com/Terror-Machine/fnbots/commit/9b1bf77594398b8d48d843562b194a86b1f67992))
+- refactor: remove memory monitor statistics (redundance) from cachestats command output ([a8eb1a9](https://github.com/Terror-Machine/fnbots/commit/a8eb1a9302263eab38991a35d6563847718aa9ad))
+- feat: add checksession command for listing Signal session keys with detailed information ([00fadd9](https://github.com/Terror-Machine/fnbots/commit/00fadd922a0a283a704dc7642e923b0cad5e6f81))
+- feat: add cache management commands for clearing and syncing caches ([000c044](https://github.com/Terror-Machine/fnbots/commit/000c044e960e9bbdb418a740410d4cd867d53d9f))
+- refactor: remove cache management commands for cleanup ([e96ed94](https://github.com/Terror-Machine/fnbots/commit/e96ed9447de56cc191d3b1bc93b59604b3f145c2))
+- feat: enhance memory monitoring command with detailed status and configuration options ([e129503](https://github.com/Terror-Machine/fnbots/commit/e1295031ca2a703939c119db430215ead6307900))
+- feat: enhance performance manager with native cron scheduling and memory settings validation ([9240244](https://github.com/Terror-Machine/fnbots/commit/92402440cbfe82add8ba1ca4397b24785c72116e))
+- feat: implement cron job scheduling functionality with support for multiple concurrency modes ([d4700c4](https://github.com/Terror-Machine/fnbots/commit/d4700c4fa322cb41ba1f5cc50a2fbaebf634ca01))
+- refactor: enhance ecosystem configuration with additional environment settings and logging options ([1df983d](https://github.com/Terror-Machine/fnbots/commit/1df983d7dec6dd97e268abf50320b9cddeaa8795))
+- refactor: update file-type usage and dependencies ([76ad559](https://github.com/Terror-Machine/fnbots/commit/76ad559908413d85d7ec6047d1f9925d7e0e665e))
+- refactor: improve Redis cache handling and update metadata structures ([10c9cbd](https://github.com/Terror-Machine/fnbots/commit/10c9cbd12213b247c28ec5740d70d4e74144f0f6))
+- feat: add rounded corners and update related functions ([eb9af2c](https://github.com/Terror-Machine/fnbots/commit/eb9af2cc1e8d8167afb1136d4268f53be365376d))
+- feat: improve stability, security, and performance ([e686207](https://github.com/Terror-Machine/fnbots/commit/e68620798b44628e65f1df5758e9b73de7ff236c))
+- refactor: update sticker plugins using sendMessage buffer for remove redundant process in sendRawWebpAsSticker ([19a689e](https://github.com/Terror-Machine/fnbots/commit/19a689edac63c82f16fbed29e0029c876ecfcbe0))
+- refactor: remove unnecessary status message from group cleansing process ([7a16781](https://github.com/Terror-Machine/fnbots/commit/7a167818ace558ab868dcc56f9a6a9d35ca42504))
+- fix: add syncFullHistory option to WASocket configuration ([eaa84eb](https://github.com/Terror-Machine/fnbots/commit/eaa84eb719b52c7978a76ea77406e4ed85567075))
+- fix: enhance Redis configuration with memory limits and persistence settings ([564d76d](https://github.com/Terror-Machine/fnbots/commit/564d76d669b4cf679d1b13cf251e839c790d0bbe))
+- refactor: enhance project directory detection and user context in system script ([d611283](https://github.com/Terror-Machine/fnbots/commit/d6112839e38673627dd74c072a3980447924f4ea))
+- fix: streamline MongoDB startup process by removing manual fallback to mongo.sh ([c1ea75b](https://github.com/Terror-Machine/fnbots/commit/c1ea75b5139e22f8739624e71cd27abc0fcb68c8))
+- refactor: update README for Ubuntu 24.04 LTS compatibility and remove mongo.sh script ([4907617](https://github.com/Terror-Machine/fnbots/commit/4907617bdde0e563f36e4514dad9f0a8779b9340))
+- refactor: simplify restart logic by removing systemd checks and self-restart flag ([9cb5237](https://github.com/Terror-Machine/fnbots/commit/9cb523727307481517994e5a1b62bae993d7baf1))
+- fix: sync group metadata error: forbidden after bot get kicked from groups. ([12d0f6e](https://github.com/Terror-Machine/fnbots/commit/12d0f6e3dc07212b6d2bf8b7802b42381a28f655))
+- refactor: disable ptt option in audio conversion for consistency ([44ddc00](https://github.com/Terror-Machine/fnbots/commit/44ddc00868e0eeebf34364c6a468d3b4938f5e54))
+- refactor: remove ptt option from audio sending functions for consistency ([1b3da44](https://github.com/Terror-Machine/fnbots/commit/1b3da4405503de5a926712456de0c03483a5ee89))
+
 ## [3.0.6] - 2025-10-17
 
 ### 🚀 What's Changed
+- chore(release): update CHANGELOG.md for v3.0.6 ([d1eff47](https://github.com/Terror-Machine/fnbots/commit/d1eff47abe0c194f748d4941b4a7a1796ea6ce4a))
 - refactor: integrate normalizeMentionsInBody function for improved message handling and update package version to 3.0.6 ([5db0825](https://github.com/Terror-Machine/fnbots/commit/5db0825ee9d140bc3ce2dc39c680a5c12bf3b8bd))
 - refactor: remove ttsId functionality and related audio processing code and remove unused forwardMessage functions ([a4da0ad](https://github.com/Terror-Machine/fnbots/commit/a4da0adca6467ccd93863e1db7f308f9f4d8e63e))
 - refactor: update ttsId import to use dynamic require for better module handling ([0b4fa84](https://github.com/Terror-Machine/fnbots/commit/0b4fa84e5bf0299e416bc3bcd0a7e502dc609803))

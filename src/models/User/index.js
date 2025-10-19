@@ -33,15 +33,29 @@ Object.assign(
   statsStatics
 );
 
-userSchema.statics.ensureUser = async function(userId) {
+userSchema.statics.ensureUser = async function (userId, retries = 3) {
   if (!userId || typeof userId !== 'string' || !userId.includes('@')) {
-    return new this({ userId: 'invalid@s.whatsapp.net' }); 
+    return new this({ userId: 'invalid@s.whatsapp.net' });
   }
-  return this.findOneAndUpdate(
-    { userId },
-    { $setOnInsert: { userId } },
-    { upsert: true, new: true, runValidators: true }
-  );
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await this.findOneAndUpdate(
+        { userId },
+        { $setOnInsert: { userId } },
+        { upsert: true, new: true, runValidators: true, setDefaultsOnInsert: true }
+      );
+    } catch (error) {
+      if (error.code === 11000) {
+        const user = await this.findOne({ userId });
+        if (user) return user;
+        if (i < retries - 1) {
+          await new Promise(resolve => setTimeout(resolve, 100 * (i + 1)));
+          continue;
+        }
+      }
+      throw error;
+    }
+  }
 };
 
 const User = mongoose.model('User', userSchema);

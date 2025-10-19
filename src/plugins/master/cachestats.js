@@ -6,6 +6,7 @@
 */
 // ─── Info ────────────────────────────────
 
+import { redis, mongoStore } from '../../../database/index.js';
 import { performanceManager } from '../../lib/performanceManager.js';
 
 export const command = {
@@ -17,6 +18,37 @@ export const command = {
   isEnabled: true,
   execute: async ({ sReply }) => {
     const stats = await performanceManager.getFullStatus();
+    const storeStats = mongoStore.getStats();
+    
+    const cacheCounts = {
+      contacts: 0,
+      groups: 0,
+      lidToJid: 0,
+      jidToLid: 0,
+      messages: 0,
+      conversations: 0,
+      presence: 0,
+      status: 0
+    };
+    
+    const stream = redis.scanStream({ match: 'cache:*', count: 1000 });
+    
+    await new Promise((resolve, reject) => {
+      stream.on('data', (keys) => {
+        keys.forEach(key => {
+          if (key.startsWith('cache:contact:')) cacheCounts.contacts++;
+          else if (key.startsWith('cache:groupmetadata:')) cacheCounts.groups++;
+          else if (key.startsWith('cache:getLIDForPN:')) cacheCounts.lidToJid++;
+          else if (key.startsWith('cache:getPNForLID:')) cacheCounts.jidToLid++;
+          else if (key.startsWith('cache:messages:')) cacheCounts.messages++;
+          else if (key.startsWith('cache:conversation:')) cacheCounts.conversations++;
+          else if (key.startsWith('cache:presence:')) cacheCounts.presence++;
+          else if (key.startsWith('cache:storystatus:')) cacheCounts.status++;
+        });
+      });
+      stream.on('end', resolve);
+      stream.on('error', reject);
+    });
     
     const uptimeHours = Math.floor(stats.uptime / 3600);
     const uptimeMinutes = Math.floor((stats.uptime % 3600) / 60);
@@ -39,10 +71,36 @@ export const command = {
     statsText += `Whitelist: ${stats.cache.whitelist.size} entries\n`;
     statsText += `Group Data: ${stats.cache.groupData.size} entries\n\n`;
     
+    statsText += `*Store Cache Sizes:*\n`;
+    statsText += `Contacts: ${cacheCounts.contacts}\n`;
+    statsText += `Groups: ${cacheCounts.groups}\n`;
+    statsText += `GetLIDForPN: ${cacheCounts.lidToJid}\n`;
+    statsText += `GetPNForLID: ${cacheCounts.jidToLid}\n`;
+    statsText += `Messages: ${cacheCounts.messages}\n`;
+    statsText += `Conversations: ${cacheCounts.conversations}\n`;
+    statsText += `Presence: ${cacheCounts.presence}\n`;
+    statsText += `Status: ${cacheCounts.status}\n\n`;
+    
     statsText += `*Sync Performance:*\n`;
     statsText += `Last Sync: ${stats.cache.performance.lastSync}\n`;
     statsText += `Queue Size: ${stats.cache.performance.queueSize}\n`;
     statsText += `Queue Pending: ${stats.cache.performance.queuePending}\n\n`;
+    
+    statsText += `*Store Cache Statistics:*\n`;
+    statsText += `Redis Hits: ${storeStats.redis.hits}\n`;
+    statsText += `Redis Misses: ${storeStats.redis.misses}\n`;
+    statsText += `Redis Hit Rate: ${storeStats.redis.hitRate}\n`;
+    statsText += `DB Hits: ${storeStats.database.hits}\n`;
+    statsText += `DB Misses: ${storeStats.database.misses}\n`;
+    statsText += `Total Operations: ${storeStats.total}\n\n`;
+    
+    statsText += `*Batch Operations:*\n`;
+    statsText += `Pending Contacts: ${storeStats.batches.pendingContacts}\n`;
+    statsText += `Pending Groups: ${storeStats.batches.pendingGroups}\n`;
+    statsText += `Total Writes: ${storeStats.batches.totalWrites}\n`;
+    statsText += `Skipped Writes: ${storeStats.batches.skippedWrites}\n`;
+    statsText += `Efficiency: ${storeStats.batches.efficiency}\n`;
+    statsText += `Errors: ${storeStats.errors}\n\n`;
     
     statsText += `*Job Scheduler:*\n`;
     statsText += `Total Jobs: ${stats.scheduler.totalJobs}\n`;

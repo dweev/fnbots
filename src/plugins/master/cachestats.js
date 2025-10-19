@@ -57,14 +57,6 @@ export const command = {
       statsText += `\n`;
     }
     
-    statsText += `*Memory Monitor:*\n`;
-    statsText += `Monitoring: ${stats.memory.isMonitoring ? 'Active' : 'Inactive'}\n`;
-    statsText += `RSS Threshold: ${stats.memory.rssThreshold}MB\n`;
-    statsText += `Check Interval: ${stats.memory.checkInterval / 1000}s\n`;
-    statsText += `Auto-Restart: ${stats.memory.enableAutoRestart ? 'Enabled' : 'Disabled'}\n`;
-    statsText += `Consecutive Warnings: ${stats.memory.currentStats.warnings}\n`;
-    statsText += `Warning Threshold: ${Math.round(stats.memory.warningThreshold * 100)}%\n\n`;
-    
     statsText += `*Configuration:*\n`;
     statsText += `Sync Interval: ${stats.config.CACHE_SYNC_INTERVAL / 1000}s\n`;
     statsText += `Batch Size: ${stats.config.BATCH_SIZE}\n`;

@@ -41,11 +41,6 @@ module.exports = {
         TZ: 'Asia/Jakarta',
         NODE_OPTIONS: '--max-old-space-size=3072'
       },
-      error_file: './logs/err.log',
-      out_file: './logs/out.log',
-      log_date_format: 'DD-MM-YYYY HH:mm:ss Z',
-      merge_logs: true,
-      time: true,
       exp_backoff_restart_delay: 100,
       listen_timeout: 10000,
       kill_timeout: 5000

@@ -17,21 +17,38 @@ module.exports = {
       script: './core/main.js',
       node_args: '--max-old-space-size=4096 --expose-gc',
       max_memory_restart: '3G',
+      instances: 1,
+      exec_mode: 'fork',
+      min_uptime: '10s',
+      max_restarts: 10,
+      autorestart: true,
       watch: watchMode,
       ignore_watch: [
         '.git',
         '.github',
         'logs',
         'node_modules',
-        'src/sampah'
+        'src/sampah',
+        'build',
+        '*.log'
       ],
       watch_options: {
         usePolling: true,
         interval: 1000
       },
       env: {
-        NODE_ENV: watchMode ? 'development' : 'production'
-      }
+        NODE_ENV: watchMode ? 'development' : 'production',
+        TZ: 'Asia/Jakarta',
+        NODE_OPTIONS: '--max-old-space-size=3072'
+      },
+      error_file: './logs/err.log',
+      out_file: './logs/out.log',
+      log_date_format: 'DD-MM-YYYY HH:mm:ss Z',
+      merge_logs: true,
+      time: true,
+      exp_backoff_restart_delay: 100,
+      listen_timeout: 10000,
+      kill_timeout: 5000
     }
   ]
 };

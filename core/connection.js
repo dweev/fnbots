@@ -18,7 +18,7 @@ import log, { pinoLogger } from '../src/lib/logger.js';
 import { fetch as nativeFetch } from '../src/addon/bridge.js';
 import { restartManager } from '../src/lib/restartManager.js';
 import { Settings, mongoStore, StoreGroupMetadata, OTPSession } from '../database/index.js';
-import { default as makeWASocket, jidNormalizedUser, Browsers, makeCacheableSignalKeyStore } from 'baileys';
+import { default as makeWASocket, jidNormalizedUser, Browsers, makeCacheableSignalKeyStore, fetchLatestWaWebVersion } from 'baileys';
 
 let phoneNumber;
 let pairingStarted = false;
@@ -40,7 +40,7 @@ const question = (text) => new Promise((resolve) => rl.question(text, resolve));
 
 async function getBaileysVersion() {
   try {
-    const version = [2, 3000, 1027934701];
+    const { version } = await fetchLatestWaWebVersion();
     return version;
   } catch (error) {
     await log(`Failed to fetch latest Baileys version, using fallback:\n${error.message}`, true);

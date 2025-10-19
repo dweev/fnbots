@@ -25,7 +25,9 @@ const converterNative = loadAddon("converter");
 const ffmpegNative = loadAddon("convertMedia");
 const mediaNative = loadAddon("media");
 const fetchNative = loadAddon("fetch");
+const cronNative = loadAddon("cron");
 
+const jobs = new Map();
 const textDecoder = new TextDecoder("utf-8");
 
 function isWebP(buf) {
@@ -170,4 +172,33 @@ export function fetch(url, options = {}) {
       const msg = err instanceof Error ? err.message : String(err);
       throw new Error(`curl perform error: ${msg}`);
     });
+}
+
+class CronJob {
+  constructor(name, handle) {
+    this._name = name;
+    this._handle = handle;
+    if (this._handle?.start) this._handle.start();
+  }
+  stop() {
+    if (this._handle?.stop) {
+      this._handle.stop();
+      this._handle = null;
+      jobs.delete(this._name);
+    }
+  }
+  isRunning() {
+    return this._handle?.isRunning?.() ?? false;
+  }
+  secondsToNext() {
+    return this._handle?.secondsToNext?.() ?? -1;
+  }
+}
+
+export function schedule(exprOrName, callback, options = {}) {
+  if (typeof callback !== "function") throw new Error("schedule() requires a callback function");
+  const handle = cronNative.schedule(exprOrName, callback, options);
+  const job = new CronJob(exprOrName, handle);
+  jobs.set(exprOrName, job);
+  return job;
 }

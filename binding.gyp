@@ -1,6 +1,34 @@
 {
   "targets": [
     {
+      "target_name": "cron",
+      "sources": ["src/addon/cron.cpp"],
+      "include_dirs": ["<!@(node -p \"require('node-addon-api').include\")"],
+      "dependencies": ["<!(node -p \"require('node-addon-api').gyp\")"],
+      "cflags_cc": [
+        "-std=c++20",
+        "-O3",
+        "-march=native",
+        "-flto=auto",
+        "-fuse-linker-plugin",
+        "-funroll-loops",
+        "-fomit-frame-pointer",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fexceptions",
+        "-Wno-deprecated-declarations",
+        "-Wno-reorder",
+        "-Wno-unused-variable",
+        "-Wno-unused-parameter",
+        "-Wno-sign-compare"
+      ],
+      "defines": ["NAPI_CPP_EXCEPTIONS"],
+      "ldflags": [
+        "-Wl,--as-needed",
+        "-Wl,--gc-sections"
+      ]
+    },
+    {
       "target_name": "sticker",
       "sources": [ "src/addon/sticker.cpp" ],
       "include_dirs": [

@@ -194,7 +194,12 @@ export async function createWASocket(dbSettings) {
       }
       if (connection === 'close') {
         await log(`Connection closed. Code: ${statusCode}`);
-        const code = [401, 402, 403, 411];
+        const errorMessage = lastDisconnect?.error?.message || '';
+        if (errorMessage.includes('QR refs attempts ended')) {
+          await log('Pairing code timeout. Silakan restart dan input code lebih cepat.', true);
+          return await restartManager.restart('Pairing code timeout', (await import('../src/lib/performanceManager.js')).performanceManager);
+        }
+        const code = [401, 402, 403, 411, 503];
         if (code.includes(statusCode)) {
           dbSettings.botNumber = null;
           await authStore.clearSession();

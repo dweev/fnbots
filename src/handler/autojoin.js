@@ -62,7 +62,7 @@ class AutoJoinHandler {
       if (!joinApprovalMode) {
         await fn.groupAcceptInvite(inviteCode);
         if (!restrict) {
-          const greetingMessage = `Halo warga grup *${subject}*!\nTerima kasih sudah mengundang ${dbSettings.botname}. Ketik *.rules* untuk melihat peraturan.`;
+          const greetingMessage = `Halo warga grup *${subject}*!\nTerima kasih sudah mengundang ${dbSettings.botname}.`;
           const res = await fn.groupMetadata(groupId);
           await fn.sendPesan(groupId, greetingMessage, { ephemeralExpiration: res.ephemeralDuration });
         }

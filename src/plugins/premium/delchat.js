@@ -18,6 +18,6 @@ export const command = {
     if (!keyword) return sReply('Gagal! Berikan keyword yang ingin dihapus.\nContoh: .delchat hai');
     const db = await DatabaseBot.getDatabase();
     await db.deleteChat(keyword);
-    await sReply(`✅ Auto-reply untuk keyword "${keyword}" berhasil dihapus.`);
+    await sReply(`Auto-reply untuk keyword "${keyword}" berhasil dihapus.`);
   },
 };

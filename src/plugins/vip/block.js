@@ -39,10 +39,10 @@ export const command = {
     }
     let response = '';
     if (blocked.length > 0) {
-      response += `✅ Berhasil block:\n` + blocked.map((j, i) => `${i + 1}. @${j.split('@')[0]}`).join('\n') + '\n\n';
+      response += `Berhasil block:\n` + blocked.map((j, i) => `${i + 1}. @${j.split('@')[0]}`).join('\n') + '\n\n';
     }
     if (failed.length > 0) {
-      response += `❎ Gagal (admin?):\n` + failed.map((j, i) => `${i + 1}. @${j.split('@')[0]}`).join('\n');
+      response += `Gagal:\n` + failed.map((j, i) => `${i + 1}. @${j.split('@')[0]}`).join('\n');
     }
     await sReply(response);
   }

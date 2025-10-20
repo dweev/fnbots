@@ -19,6 +19,6 @@ export const command = {
     const targetId = quotedParticipant || mentionedJidList[0] || serial;
     if (!targetId) return await sReply("Mohon mention atau reply pesan user yang ingin di-cheat saldo.");
     await user.addBalance(amountToCheat.toString());
-    await sPesan(`✅ Sukses cheat saldo sebanyak *${formatNumber(amountToCheat)}* kepada @${targetId.split('@')[0]}`);
+    await sPesan(`Sukses cheat saldo sebanyak *${formatNumber(amountToCheat)}* kepada @${targetId.split('@')[0]}`);
   }
 };

@@ -28,7 +28,7 @@ export const command = {
       { new: true }
     );
     if (result) {
-      await sReply(`✅ audio '${name}' berhasil diperbarui.`);
+      await sReply(`audio '${name}' berhasil diperbarui.`);
     } else {
       await sReply(`audio dengan nama '${name}' tidak ditemukan. Mungkin Anda ingin membuatnya dengan .addaudio?`);
     }

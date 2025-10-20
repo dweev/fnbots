@@ -25,7 +25,7 @@ export const command = {
     const command = `sudo useradd -m -p $(openssl passwd -1 "${password}") ${username}`;
     const { stdout } = await exec(command);
     if (stdout) {
-      await sReply(`✅ Sukses!\n\nUser *${username}* berhasil dibuat di server ${getServerIp}.`);
+      await sReply(`Sukses!\n\nUser *${username}* berhasil dibuat di server ${getServerIp}.`);
     }
   }
 };

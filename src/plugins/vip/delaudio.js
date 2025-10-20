@@ -19,7 +19,7 @@ export const command = {
     if (!name) return sReply('Gagal! Berikan nama audio yang ingin dihapus.\nContoh: .delaudio fnbots');
     const result = await Media.deleteOne({ name: name, type: 'audio' });
     if (result.deletedCount > 0) {
-      await sReply(`✅ audio '${name}' berhasil dihapus dari database.`);
+      await sReply(`audio '${name}' berhasil dihapus dari database.`);
     } else {
       await sReply(`audio dengan nama '${name}' tidak ditemukan.`);
     }

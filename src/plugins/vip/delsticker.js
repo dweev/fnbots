@@ -19,7 +19,7 @@ export const command = {
     if (!name) return sReply('Gagal! Berikan nama stiker yang ingin dihapus.\nContoh: .delsticker fnbots');
     const result = await Media.deleteOne({ name: name, type: 'sticker' });
     if (result.deletedCount > 0) {
-      await sReply(`✅ Stiker '${name}' berhasil dihapus dari database.`);
+      await sReply(`Stiker '${name}' berhasil dihapus dari database.`);
     } else {
       await sReply(`Stiker dengan nama '${name}' tidak ditemukan.`);
     }

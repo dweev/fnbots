@@ -29,6 +29,6 @@ export const command = {
       mime: mime,
       data: buffer
     });
-    await sReply(`✅ Stiker '${name}' berhasil disimpan.`);
+    await sReply(`Stiker '${name}' berhasil disimpan.`);
   },
 };

@@ -124,11 +124,11 @@ export async function createWASocket(dbSettings) {
           dbSettings.restartState = false;
           if (dbSettings.restartId.includes('@g.us')) {
             const res = await fn.groupMetadata(dbSettings.restartId);
-            await fn.sendPesan(dbSettings.restartId, `✅ Restart sukses..`, { ephemeralExpiration: res.ephemeralDuration ?? 0 });
+            await fn.sendPesan(dbSettings.restartId, `Restart sukses..`, { ephemeralExpiration: res.ephemeralDuration ?? 0 });
           }
           if (dbSettings.restartId.includes('@s.whatsapp.net')) {
             const expiration = await fn.getEphemeralExpiration(dbSettings.restartId);
-            await fn.sendPesan(dbSettings.restartId, `✅ Restart sukses..`, { ephemeralExpiration: expiration });
+            await fn.sendPesan(dbSettings.restartId, `Restart sukses..`, { ephemeralExpiration: expiration });
           }
           dbSettings.restartId = undefined;
           await Settings.updateSettings(dbSettings);

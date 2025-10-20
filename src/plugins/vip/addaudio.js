@@ -27,6 +27,6 @@ export const command = {
       mime: mime,
       data: buffer
     });
-    await sReply(`✅ audio '${name}' berhasil disimpan.`);
+    await sReply(`audio '${name}' berhasil disimpan.`);
   },
 };

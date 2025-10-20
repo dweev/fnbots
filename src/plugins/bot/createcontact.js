@@ -37,6 +37,6 @@ export const command = {
       saveOnPrimaryAddressbook: true
     };
     await fn.addOrEditContact(targetJid, contactData);
-    await sReply(`✅ Sukses!\n\nKontak "${contactName}" untuk nomor ${targetJid.split('@')[0]} berhasil disimpan.`);
+    await sReply(`Sukses!\n\nKontak "${contactName}" untuk nomor ${targetJid.split('@')[0]} berhasil disimpan.`);
   }
 };

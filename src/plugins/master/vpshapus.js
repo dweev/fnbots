@@ -22,6 +22,6 @@ export const command = {
     if (!username) return await sReply(`Format perintah salah.\nContoh: \`${dbSettings.rname}vpshapus namauser\``);
     const command = `sudo deluser --remove-home ${username}`;
     await exec(command);
-    await sReply(`✅ Sukses!\n\nUser *${username}* telah dihapus dari server.`);
+    await sReply(`Sukses!\n\nUser *${username}* telah dihapus dari server.`);
   }
 };

@@ -27,6 +27,6 @@ export const command = {
       return await sReply(`Anda harus menunjuk target!\nBalas pesan, mention, atau berikan nomor.\nContoh: ${dbSettings.rname}hapuskontak @user`);
     }
     await fn.removeContact(targetJid);
-    await sReply(`✅ Sukses!\n\nNama untuk kontak ${targetJid.split('@')[0]} telah dihapus.`);
+    await sReply(`Sukses!\n\nNama untuk kontak ${targetJid.split('@')[0]} telah dihapus.`);
   }
 };

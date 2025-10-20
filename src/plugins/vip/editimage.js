@@ -28,7 +28,7 @@ export const command = {
       { new: true }
     );
     if (result) {
-      await sReply(`✅ gambar '${name}' berhasil diperbarui.`);
+      await sReply(`gambar '${name}' berhasil diperbarui.`);
     } else {
       await sReply(`gambar dengan nama '${name}' tidak ditemukan. Mungkin Anda ingin membuatnya dengan .addimage?`);
     }

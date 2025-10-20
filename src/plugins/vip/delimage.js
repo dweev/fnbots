@@ -19,7 +19,7 @@ export const command = {
     if (!name) return sReply('Gagal! Berikan nama gambar yang ingin dihapus.\nContoh: .delimage fnbots');
     const result = await Media.deleteOne({ name: name, type: 'image' });
     if (result.deletedCount > 0) {
-      await sReply(`✅ gambar '${name}' berhasil dihapus dari database.`);
+      await sReply(`gambar '${name}' berhasil dihapus dari database.`);
     } else {
       await sReply(`gambar dengan nama '${name}' tidak ditemukan.`);
     }

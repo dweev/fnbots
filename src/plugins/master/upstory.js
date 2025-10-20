@@ -44,6 +44,6 @@ export const command = {
       font: 5,
       statusJidList: jidList
     });
-    await sReply('✅ Status berhasil diunggah!');
+    await sReply('Status berhasil diunggah!');
   }
 };

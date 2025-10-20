@@ -29,7 +29,7 @@ export const command = {
       { new: true }
     );
     if (result) {
-      await sReply(`✅ Stiker '${name}' berhasil diperbarui.`);
+      await sReply(`Stiker '${name}' berhasil diperbarui.`);
     } else {
       await sReply(`Stiker dengan nama '${name}' tidak ditemukan. Mungkin Anda ingin membuatnya dengan .addsticker?`);
     }

@@ -21,13 +21,13 @@ export const command = {
       chatBots[serial] = setTimeout(() => {
         delete chatBots[serial];
       }, SESSION_TIMEOUT);
-      await sReply(`✅ Chatbot AI telah diaktifkan!\nKetik pesan apa saja untuk memulai percakapan.\n\nKetik ${dbSettings.rname}chatbot off untuk menonaktifkan.`);
+      await sReply(`Chatbot AI telah diaktifkan!\nKetik pesan apa saja untuk memulai percakapan.\n\nKetik ${dbSettings.rname}chatbot off untuk menonaktifkan.`);
     } else {
       if (chatBots[serial]) {
         clearTimeout(chatBots[serial]);
         delete chatBots[serial];
       };
-      await sReply('✅ Chatbot AI telah dinonaktifkan.');
+      await sReply('Chatbot AI telah dinonaktifkan.');
     };
   }
 };

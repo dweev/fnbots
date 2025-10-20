@@ -28,6 +28,6 @@ export const command = {
       mime: mime,
       data: buffer
     });
-    await sReply(`✅ Gambar '${name}' berhasil disimpan.`);
+    await sReply(`Gambar '${name}' berhasil disimpan.`);
   },
 };

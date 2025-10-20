@@ -18,6 +18,6 @@ export const command = {
     if (!text) return await sReply('Gagal! Berikan teks yang ingin dihapus.');
     const db = await DatabaseBot.getDatabase();
     await db.deleteBacot(text);
-    await sReply(`✅ Teks bacot berhasil dihapus.`);
+    await sReply(`Teks bacot berhasil dihapus.`);
   },
 };

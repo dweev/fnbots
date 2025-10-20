@@ -18,6 +18,6 @@ export const command = {
     if (!text) return await sReply('Gagal! Berikan teks yang ingin ditambahkan.');
     const db = await DatabaseBot.getDatabase();
     await db.addBacot(text);
-    await sReply(`✅ Teks bacot baru berhasil ditambahkan.`);
+    await sReply(`Teks bacot baru berhasil ditambahkan.`);
   },
 };

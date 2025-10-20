@@ -129,29 +129,50 @@ function setupWhatsAppEventHandlers(fn) {
   fn.ev.on('chats.update', async (updates) => {
     for (const chatUpdate of updates) {
       const lastMessage = chatUpdate.messages?.[0];
-      if (!lastMessage || !lastMessage.key) continue;
-      const key = lastMessage.key;
-      const isGroup = key.remoteJid.endsWith('@g.us');
+      if (!lastMessage) continue;
+      const messageData = lastMessage.message;
+      if (!messageData || !messageData.key) continue;
+      const key = messageData.key;
+      const isGroup = key.remoteJid?.endsWith('@g.us');
+      let jid, lid;
       if (isGroup) {
         delete key.remoteJidAlt;
+        const participant = jidNormalizedUser(key.participant);
+        const participantAlt = jidNormalizedUser(key.participantAlt);
+        if (key.addressingMode === 'lid') {
+          lid = participant?.endsWith('@lid') ? participant : null;
+          jid = participantAlt?.endsWith('@s.whatsapp.net') ? participantAlt : null;
+        } else {
+          jid = participant?.endsWith('@s.whatsapp.net') ? participant : null;
+          lid = participantAlt?.endsWith('@lid') ? participantAlt : null;
+        }
+        if (!jid) {
+          jid = participant?.endsWith('@s.whatsapp.net') ? participant : (participantAlt?.endsWith('@s.whatsapp.net') ? participantAlt : null);
+        }
+        if (!lid) {
+          lid = participant?.endsWith('@lid') ? participant : (participantAlt?.endsWith('@lid') ? participantAlt : null);
+        }
       } else {
         delete key.participant;
         delete key.participantAlt;
-      }
-      let jid, lid;
-      if (isGroup) {
-        const participant = jidNormalizedUser(key.participant);
-        const participantAlt = jidNormalizedUser(key.participantAlt);
-        jid = participant?.endsWith('@s.whatsapp.net') ? participant : (participantAlt?.endsWith('@s.whatsapp.net') ? participantAlt : null);
-        lid = participant?.endsWith('@lid') ? participant : (participantAlt?.endsWith('@lid') ? participantAlt : null);
-      } else {
         const remoteJid = jidNormalizedUser(key.remoteJid);
         const remoteJidAlt = jidNormalizedUser(key.remoteJidAlt);
-        jid = remoteJid?.endsWith('@s.whatsapp.net') ? remoteJid : (remoteJidAlt?.endsWith('@s.whatsapp.net') ? remoteJidAlt : null);
-        lid = remoteJid?.endsWith('@lid') ? remoteJid : (remoteJidAlt?.endsWith('@lid') ? remoteJidAlt : null);
+        if (key.addressingMode === 'lid') {
+          lid = remoteJid?.endsWith('@lid') ? remoteJid : null;
+          jid = remoteJidAlt?.endsWith('@s.whatsapp.net') ? remoteJidAlt : null;
+        } else {
+          jid = remoteJid?.endsWith('@s.whatsapp.net') ? remoteJid : null;
+          lid = remoteJidAlt?.endsWith('@lid') ? remoteJidAlt : null;
+        }
+        if (!jid) {
+          jid = remoteJid?.endsWith('@s.whatsapp.net') ? remoteJid : (remoteJidAlt?.endsWith('@s.whatsapp.net') ? remoteJidAlt : null);
+        }
+        if (!lid) {
+          lid = remoteJid?.endsWith('@lid') ? remoteJid : (remoteJidAlt?.endsWith('@lid') ? remoteJidAlt : null);
+        }
       }
       if (jid && lid) {
-        const eName = lastMessage.pushName || await fn.getName(jid);
+        const eName = messageData.pushName || await fn.getName(jid);
         await updateContact(jid, { lid: lid, name: eName });
       }
     }

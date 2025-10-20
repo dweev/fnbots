@@ -9,30 +9,8 @@
 import log from './logger.js';
 import { mongoStore } from '../../database/index.js';
 import { updateContact } from '../lib/contactManager.js';
-import { normalizeMentionsInBody } from '../function/index.js';
-import { jidNormalizedUser, extractMessageContent, getDevice, areJidsSameUser, getContentType } from 'baileys';
-
-function unwrapMessage(msg) {
-  if (!msg || typeof msg !== 'object') return null;
-  if (msg.ephemeralMessage?.message) return unwrapMessage(msg.ephemeralMessage.message);
-  if (msg.viewOnceMessage?.message) return unwrapMessage(msg.viewOnceMessage.message);
-  if (msg.documentWithCaptionMessage?.message) return unwrapMessage(msg.documentWithCaptionMessage.message);
-  if (msg.viewOnceMessageV2?.message) return unwrapMessage(msg.viewOnceMessageV2.message);
-  if (msg.viewOnceMessageV2Extension?.message) return unwrapMessage(msg.viewOnceMessageV2Extension.message);
-  if (msg.editedMessage?.message) {
-    const innerMsg = msg.editedMessage.message;
-    if (innerMsg.protocolMessage?.type === 14 && innerMsg.protocolMessage?.editedMessage) {
-      return unwrapMessage(innerMsg.protocolMessage.editedMessage);
-    }
-    return unwrapMessage(innerMsg);
-  }
-  if (msg.contextInfo?.quotedMessage) msg.contextInfo.quotedMessage = unwrapMessage(msg.contextInfo.quotedMessage);
-  if (msg.message) {
-    const extracted = extractMessageContent(msg.message);
-    if (extracted) msg.message = extracted;
-  }
-  return msg;
-};
+import { normalizeMentionsInBody, unwrapMessage } from '../function/index.js';
+import { jidNormalizedUser, getDevice, areJidsSameUser, getContentType } from 'baileys';
 
 export default async function serializeMessage(fn, msg) {
   try {

@@ -7,11 +7,11 @@
 // ─── info src/function/function2.js ─────────────
 
 import sharp from 'sharp';
-import { delay } from 'baileys';
 import log from '../lib/logger.js';
 import * as cheerio from 'cheerio';
 import { createCanvas, loadImage } from 'canvas';
 import { Downloader } from '@tobyg74/tiktok-api-dl';
+import { delay, extractMessageContent } from 'baileys';
 import { fetch as nativeFetch } from '../addon/bridge.js';
 
 export function cleanYoutubeUrl(url) {
@@ -322,4 +322,25 @@ export function normalizeMentionsInBody(body, originalMentionedJids, resolvedMen
     }
   }
   return normalizedBody;
+};
+export function unwrapMessage(msg) {
+  if (!msg || typeof msg !== 'object') return null;
+  if (msg.ephemeralMessage?.message) return unwrapMessage(msg.ephemeralMessage.message);
+  if (msg.viewOnceMessage?.message) return unwrapMessage(msg.viewOnceMessage.message);
+  if (msg.documentWithCaptionMessage?.message) return unwrapMessage(msg.documentWithCaptionMessage.message);
+  if (msg.viewOnceMessageV2?.message) return unwrapMessage(msg.viewOnceMessageV2.message);
+  if (msg.viewOnceMessageV2Extension?.message) return unwrapMessage(msg.viewOnceMessageV2Extension.message);
+  if (msg.editedMessage?.message) {
+    const innerMsg = msg.editedMessage.message;
+    if (innerMsg.protocolMessage?.type === 14 && innerMsg.protocolMessage?.editedMessage) {
+      return unwrapMessage(innerMsg.protocolMessage.editedMessage);
+    }
+    return unwrapMessage(innerMsg);
+  }
+  if (msg.contextInfo?.quotedMessage) msg.contextInfo.quotedMessage = unwrapMessage(msg.contextInfo.quotedMessage);
+  if (msg.message) {
+    const extracted = extractMessageContent(msg.message);
+    if (extracted) msg.message = extracted;
+  }
+  return msg;
 };

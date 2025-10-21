@@ -13,7 +13,7 @@ export const command = {
   category: 'list',
   description: 'Menampilkan semua daftar story dari daftar kontak bot.',
   isCommandWithoutPayment: true,
-  execute: async ({ sReply, isSadmin }) => {
+  execute: async ({ sReply, isSadmin, store }) => {
     if (!isSadmin) return;
     const usersWithStories = await StoreStory.aggregate([
       {
@@ -28,14 +28,21 @@ export const command = {
         }
       }
     ]);
-    if (!usersWithStories || usersWithStories.length === 0) {
-      return await sReply('Saat ini tidak ada pengguna yang memiliki story aktif di database.');
+    if (!usersWithStories || usersWithStories.length === 0) return await sReply('Saat ini tidak ada pengguna yang memiliki story aktif di database.');
+    const cacheStats = await store.getStoryCacheStats();
+    let replyText = '*Daftar Story Pengguna Aktif*\n\n';
+    for (const [index, storyData] of usersWithStories.entries()) {
+      let userNumber;
+      if (storyData.userId.endsWith('@lid')) {
+        userNumber = await store.findJidByLid(storyData.userId);
+      } else {
+        userNumber = storyData.userId;
+      }
+      replyText += `${index + 1}. @${userNumber.split('@')[0]} || *${storyData.storyCount}* story\n`;
     }
-    let replyText = '✨ *Daftar Story Pengguna Aktif*\n\n';
-    usersWithStories.forEach((storyData, index) => {
-      const userNumber = storyData.userId.split('@')[0];
-      replyText += `${index + 1}. @${userNumber} || *${storyData.storyCount}* story\n`;
-    });
+    replyText += `\nTotal Users: ${usersWithStories.length}\n`;
+    replyText += `Cached: ${cacheStats.totalUsers}`;
+    console.log(replyText);
     await sReply(replyText);
   },
 };

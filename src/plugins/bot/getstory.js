@@ -8,10 +8,11 @@
 
 import fs from 'fs-extra';
 import { delay } from 'baileys';
+import log from '../../lib/logger.js';
 import config from '../../../config.js';
 import { generateFakeStory } from 'generator-fake';
 import { archimed } from '../../function/index.js';
-import { StoreStory } from '../../../database/index.js';
+import { store, StoreStory } from '../../../database/index.js';
 
 export const command = {
   name: 'getstory',
@@ -28,12 +29,11 @@ export const command = {
     const targetUserIndex = userIndex - 1;
     if (targetUserIndex >= usersWithStories.length) return await sReply(`Nomor urut ${userIndex} tidak valid. Hanya ada ${usersWithStories.length} pengguna dengan story.`);
     const targetJid = usersWithStories[targetUserIndex].userId;
-    const storyDocument = await StoreStory.findOne({ userId: targetJid }).lean();
-    if (!storyDocument || storyDocument.statuses.length === 0) return await sReply(`Pengguna @${targetJid.split('@')[0]} tidak lagi memiliki story.`, { mentions: [targetJid] });
-    const allStories = storyDocument.statuses;
+    const allStories = await store.getStatuses(targetJid);
+    if (!allStories || allStories.length === 0) return await sReply(`Pengguna @${targetJid.split('@')[0]} tidak lagi memiliki story.`);
     const selectedStories = archimed(ruleString, allStories);
     if (selectedStories.length === 0) return await sReply(`Tidak ada story yang cocok dengan aturan "${ruleString}".`);
-    await sReply(`Ditemukan ${selectedStories.length} story. Memulai pengiriman...`);
+    const sentMessageIds = [];
     for (const story of selectedStories) {
       if (story.type === 'extendedTextMessage') {
         const authorName = await fn.getName(story.sender) || story.pushName || 'Nama Tidak Diketahui';
@@ -55,12 +55,20 @@ export const command = {
         const mediaBuffer = await fn.getMediaBuffer(asu.message);
         await fn.sendMediaFromBuffer(toId, story.mime, mediaBuffer, story.body || '', m);
       }
-      await StoreStory.updateOne(
-        { userId: targetJid },
-        { $pull: { statuses: { 'key.id': story.key.id } } }
-      );
+      sentMessageIds.push(story.key.id);
       await delay(1500);
     }
-    await sReply(`Selesai mengirim dan menghapus ${selectedStories.length} story dari @${targetJid.split('@')[0]}.`);
+    if (sentMessageIds.length > 0) {
+      try {
+        await store.bulkDeleteStatuses(targetJid, sentMessageIds);
+        await StoreStory.updateOne(
+          { userId: targetJid },
+          { $pull: { statuses: { 'key.id': { $in: sentMessageIds } } } }
+        );
+        log(`Deleted ${sentMessageIds.length} stories from cache and DB for ${targetJid}`);
+      } catch (deleteError) {
+        log(`Error deleting stories: ${deleteError.message}`, true);
+      }
+    }
   }
 };

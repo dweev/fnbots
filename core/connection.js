@@ -18,7 +18,7 @@ import log, { pinoLogger } from '../src/lib/logger.js';
 import { fetch as nativeFetch } from '../src/addon/bridge.js';
 import { restartManager } from '../src/lib/restartManager.js';
 import { Settings, mongoStore, StoreGroupMetadata, OTPSession } from '../database/index.js';
-import { default as makeWASocket, jidNormalizedUser, Browsers, makeCacheableSignalKeyStore, fetchLatestWaWebVersion } from 'baileys';
+import { default as makeWASocket, jidNormalizedUser, Browsers, makeCacheableSignalKeyStore, fetchLatestWaWebVersion, isJidBroadcast } from 'baileys';
 
 let phoneNumber;
 let pairingStarted = false;
@@ -63,12 +63,25 @@ export async function createWASocket(dbSettings) {
   const authStore = await AuthStore();
   const { state, saveCreds } = authStore;
   const fn = makeWASocket({
+    qrTimeout: config.performance.qrTimeout,
+    connectTimeoutMs: config.performance.connectTimeoutMs,
+    keepAliveIntervalMs: config.performance.keepAliveIntervals,
+    defaultQueryTimeoutMs: undefined,
     logger: pinoLogger,
     version: global.version,
     browser: Browsers.macOS('Safari'),
-    syncFullHistory: true,
     emitOwnEvents: true,
+    retryRequestDelayMs: 1000,
+    maxMsgRetryCount: 5,
     auth: { creds: state.creds, keys: makeCacheableSignalKeyStore(state.keys, pinoLogger) },
+    transactionOpts: { maxCommitRetries: 5, delayBetweenTriesMs: 1000 },
+    markOnlineOnConnect: true,
+    linkPreviewImageThumbnailWidth: 192,
+    syncFullHistory: true,
+    fireInitQueries: true,
+    generateHighQualityLinkPreview: true,
+    shouldIgnoreJid: (jid) => { return isJidBroadcast(jid) && jid !== 'status@broadcast'; },
+    appStateMacVerification: { patch: true, snapshot: true },
   });
 
   fn.clearSession = authStore.clearSession;

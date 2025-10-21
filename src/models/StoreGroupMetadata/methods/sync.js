@@ -27,19 +27,5 @@ export const statics = {
       group = new this({ id: groupId, groupId: groupId });
     }
     return group.syncWithBaileys(baileysData);
-  },
-  async bulkUpsert(groupsArray) {
-    if (!groupsArray || groupsArray.length === 0) return;
-    const operations = groupsArray.map(group => ({
-      updateOne: {
-        filter: { groupId: group.id || group.groupId },
-        update: {
-          $set: group,
-          $setOnInsert: { createdAt: new Date() }
-        },
-        upsert: true
-      }
-    }));
-    return this.bulkWrite(operations, { ordered: false });
   }
 };

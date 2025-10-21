@@ -40,6 +40,10 @@ const groupMetadataSchema = new mongoose.Schema({
     required: true,
     unique: true
   },
+  notify: {
+    type: String,
+    default: ''
+  },
   addressingMode: {
     type: String,
     default: ''
@@ -52,7 +56,7 @@ const groupMetadataSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
-  subjectOwnerPhoneNumber: {
+  subjectOwnerPn: {
     type: String,
     default: ''
   },
@@ -68,7 +72,11 @@ const groupMetadataSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
-  ownerPhoneNumber: {
+  ownerPn: {
+    type: String,
+    default: ''
+  },
+  owner_country_code: {
     type: String,
     default: ''
   },
@@ -79,6 +87,18 @@ const groupMetadataSchema = new mongoose.Schema({
   descId: {
     type: String,
     default: ''
+  },
+  descOwner: {
+    type: String,
+    default: ''
+  },
+  descOwnerPn: {
+    type: String,
+    default: ''
+  },
+  descTime: {
+    type: Number,
+    default: 0
   },
   linkedParent: {
     type: String,

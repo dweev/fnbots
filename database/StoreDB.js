@@ -620,10 +620,6 @@ class DBStore {
     }
     return null;
   }
-  async clearGroupCacheByKey(groupId) {
-    await this.delRedis(`${REDIS_PREFIX.GROUP}${groupId}`);
-    this.updateQueues.groups.delete(groupId);
-  }
   clearGroupsCache() {
     this.updateQueues.groups.clear();
     log('Groups queue cleared');

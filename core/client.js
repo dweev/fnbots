@@ -8,7 +8,6 @@
 
 import path from 'path';
 import fs from 'fs-extra';
-import axios from 'axios';
 import config from '../config.js';
 import log from '../src/lib/logger.js';
 import { store } from '../database/index.js';
@@ -703,17 +702,21 @@ export async function clientBot(fn, dbSettings) {
   };
   fn.sendFromTiktok = async (jid, url, caption, quoted, options = {}) => {
     try {
-      const res = await axios({
-        method: 'get',
-        url: url,
-        responseType: 'arraybuffer',
-        family: config.security.networkFamily,
-        headers: { 'User-Agent': config.security.userAgent }
+      const response = await nativeFetch(url, {
+        method: 'GET',
+        headers: {
+          'User-Agent': config.security.userAgent,
+          'Referer': 'https://www.tiktok.com/'
+        }
       });
-      const mime = await detectMimeType(res.data, res.headers);
-      return await fn.sendMediaFromBuffer(jid, mime, res.data, caption, quoted, options);
+      if (!response.ok) throw new Error(`Download failed: ${response.status} ${response.statusText}`);
+      const buffer = await response.arrayBuffer();
+      const headers = {};
+      response.headers.forEach((value, key) => headers[key] = value);
+      const mime = await detectMimeType(buffer, headers);
+      return await fn.sendMediaFromBuffer(jid, mime, buffer, caption, quoted, options);
     } catch (error) {
-      if (error.message.includes('ECONNRESET')) {
+      if (error.message.includes('ECONNRESET') || error.message.includes('Connection reset')) {
         throw new Error('Gagal mengunduh dari TikTok: Koneksi direset. Coba lagi nanti.');
       } else {
         throw error;

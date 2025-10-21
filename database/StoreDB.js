@@ -140,17 +140,141 @@ class DBStore {
       log(`Redis SET error for ${key}: ${error.message}`, true);
     }
   }
+  sanitizeParticipants(participants) {
+    if (!Array.isArray(participants)) return [];
+    return participants.map(p => ({
+      id: p.id || p.jid,
+      jid: p.jid,
+      lid: p.lid || '',
+      admin: p.admin || null
+    }));
+  }
+  sanitizeGroupData(rawData, existing = null) {
+    const participants = this.sanitizeParticipants(rawData.participants || []);
+    const sanitized = {
+      id: rawData.id || rawData.groupId,
+      groupId: rawData.groupId || rawData.id,
+      notify: rawData.notify || '',
+      addressingMode: rawData.addressingMode || '',
+      subject: rawData.subject || '',
+      subjectOwner: rawData.subjectOwner || '',
+      subjectOwnerPn: rawData.subjectOwnerPn || '',
+      subjectTime: rawData.subjectTime || 0,
+      size: participants.length,
+      creation: rawData.creation || 0,
+      owner: rawData.owner || '',
+      ownerPn: rawData.ownerPn || '',
+      owner_country_code: rawData.owner_country_code || '',
+      desc: rawData.desc || '',
+      descId: rawData.descId || '',
+      descOwner: rawData.descOwner || '',
+      descOwnerPn: rawData.descOwnerPn || '',
+      descTime: rawData.descTime || 0,
+      linkedParent: rawData.linkedParent || '',
+      restrict: rawData.restrict || false,
+      announce: rawData.announce || false,
+      isCommunity: rawData.isCommunity || false,
+      isCommunityAnnounce: rawData.isCommunityAnnounce || false,
+      joinApprovalMode: rawData.joinApprovalMode || false,
+      memberAddMode: rawData.memberAddMode || false,
+      ephemeralDuration: rawData.ephemeralDuration || 0,
+      participants: participants,
+      lastUpdated: new Date(),
+      lastSynced: new Date()
+    };
+    if (existing) {
+      sanitized.updateCount = (existing.updateCount || 0) + 1;
+    } else {
+      sanitized.updateCount = 0;
+    }
+    return sanitized;
+  }
+  sanitizeContactData(rawData, existing = null) {
+    const sanitized = {
+      jid: rawData.jid,
+      name: rawData.name || '',
+      notify: rawData.notify || '',
+      verifiedName: rawData.verifiedName || '',
+      lid: rawData.lid || ''
+    };
+    if (existing) {
+      sanitized.updateCount = (existing.updateCount || 0) + 1;
+      sanitized.lastUpdated = new Date();
+    } else {
+      sanitized.updateCount = 0;
+      sanitized.createdAt = new Date();
+      sanitized.lastUpdated = new Date();
+    }
+    return sanitized;
+  }
+  hasParticipantsChanged(existingParticipants = [], updatedParticipants = []) {
+    if (existingParticipants.length !== updatedParticipants.length) {
+      return true;
+    }
+    const existingMap = new Map(
+      existingParticipants.map(p => [
+        p.id || p.jid,
+        { jid: p.jid, lid: p.lid || '', admin: p.admin || null }
+      ])
+    );
+    for (const updatedP of updatedParticipants) {
+      const key = updatedP.id || updatedP.jid;
+      const existing = existingMap.get(key);
+      if (!existing) {
+        return true;
+      }
+      if (existing.jid !== updatedP.jid ||
+        existing.lid !== (updatedP.lid || '') ||
+        existing.admin !== (updatedP.admin || null)) {
+        return true;
+      }
+    }
+    return false;
+  }
+  hasChanges(existing, updated, type) {
+    if (type === 'contacts') {
+      const fieldsToCheck = ['name', 'notify', 'verifiedName', 'lid'];
+      for (const field of fieldsToCheck) {
+        if (existing[field] !== updated[field]) {
+          return true;
+        }
+      }
+      return false;
+    }
+    if (type === 'groups') {
+      const primitiveFields = [
+        'subject', 'subjectOwner', 'subjectOwnerPn', 'subjectTime',
+        'owner', 'ownerPn', 'owner_country_code', 'desc', 'descOwner',
+        'descOwnerPn', 'descId', 'descTime', 'creation', 'size', 'restrict',
+        'announce', 'isCommunity', 'isCommunityAnnounce', 'notify', 'addressingMode',
+        'linkedParent', 'joinApprovalMode', 'memberAddMode', 'ephemeralDuration'
+      ];
+      for (const field of primitiveFields) {
+        const existingVal = existing[field];
+        const updatedVal = updated[field];
+        if (existingVal === null && updatedVal === null) continue;
+        if (existingVal !== updatedVal) {
+          return true;
+        }
+      }
+      if (this.hasParticipantsChanged(existing.participants, updated.participants)) {
+        return true;
+      }
+      return false;
+    }
+    return false;
+  }
   startBatchProcessor() {
     setInterval(() => this.flushAllBatches(), this.batchInterval);
   }
   async flushAllBatches() {
     if (!this.isConnected) return;
     await Promise.all([
-      this.flushBatch('contacts', StoreContact),
-      this.flushBatch('groups', StoreGroupMetadata)
+      this.flushBatch('contacts'),
+      this.flushBatch('groups')
     ]);
   }
-  async flushBatch(type, Model) {
+  async flushBatch(type) {
     while (this.queueLocks[type]) {
       await new Promise(resolve => setTimeout(resolve, 100));
     }
@@ -161,15 +285,10 @@ class DBStore {
       this.updateQueues[type].clear();
       const items = Array.from(queue.values());
       if (items.length > 0) {
-        const itemsToUpdate = await this.filterDirtyItems(type, items, Model);
-        if (itemsToUpdate.length > 0) {
-          await Model.bulkUpsert(itemsToUpdate);
-          this.stats.batchedWrites += itemsToUpdate.length;
-          this.stats.skippedWrites += (items.length - itemsToUpdate.length);
-          log(`Flushed ${itemsToUpdate.length}/${items.length} ${type} to database (${items.length - itemsToUpdate.length} skipped)`);
-        } else {
-          this.stats.skippedWrites += items.length;
-          log(`Skipped flush for ${items.length} ${type} (no changes detected)`);
+        if (type === 'groups') {
+          await this.bulkUpsertGroups(items);
+        } else if (type === 'contacts') {
+          await this.bulkUpsertContacts(items);
         }
       }
     } catch (error) {
@@ -179,61 +298,137 @@ class DBStore {
       this.queueLocks[type] = false;
     }
   }
-  async filterDirtyItems(type, items, Model) {
-    if (items.length === 0) return [];
+  async bulkUpsertGroups(groupsArray) {
+    if (!this.isConnected || !groupsArray || groupsArray.length === 0) {
+      return { upsertedCount: 0, modifiedCount: 0 };
+    }
     try {
-      const ids = items.map(item => {
-        if (type === 'contacts') return item.jid;
-        if (type === 'groups') return item.groupId;
-        return null;
-      }).filter(Boolean);
-      if (ids.length === 0) return items;
-      const queryField = type === 'contacts' ? 'jid' : 'groupId';
-      const existingRecords = await Model.find({
-        [queryField]: { $in: ids }
+      log(`Bulk upserting ${groupsArray.length} groups...`);
+      const groupIds = groupsArray.map(g => g.id || g.groupId);
+      const existingGroups = await StoreGroupMetadata.find({
+        groupId: { $in: groupIds }
       }).lean();
       const existingMap = new Map(
-        existingRecords.map(record => [
-          type === 'contacts' ? record.jid : record.groupId,
-          record
-        ])
+        existingGroups.map(g => [g.groupId, g])
       );
-      const dirtyItems = items.filter(item => {
-        const id = type === 'contacts' ? item.jid : item.groupId;
-        const existing = existingMap.get(id);
-        if (!existing) return true;
-        return this.hasChanges(existing, item, type);
+      const sanitizedGroups = groupsArray.map(rawGroup => {
+        const groupId = rawGroup.id || rawGroup.groupId;
+        const existing = existingMap.get(groupId);
+        return this.sanitizeGroupData(rawGroup, existing);
       });
-      return dirtyItems;
+      const dirtyGroups = sanitizedGroups.filter(updated => {
+        const existing = existingMap.get(updated.groupId);
+        return !existing || this.hasChanges(existing, updated, 'groups');
+      });
+      if (dirtyGroups.length === 0) {
+        log(`Skipped bulk upsert: no changes detected in ${groupsArray.length} groups`);
+        this.stats.skippedWrites += groupsArray.length;
+        return { upsertedCount: 0, modifiedCount: 0 };
+      }
+      const operations = dirtyGroups.map(group => ({
+        updateOne: {
+          filter: { groupId: group.groupId },
+          update: {
+            $set: group,
+            $setOnInsert: { createdAt: new Date() }
+          },
+          upsert: true
+        }
+      }));
+      const result = await StoreGroupMetadata.bulkWrite(operations, { ordered: false });
+      const pipeline = redis.pipeline();
+      for (const group of dirtyGroups) {
+        pipeline.set(
+          `${REDIS_PREFIX.GROUP}${group.groupId}`,
+          JSON.stringify(group),
+          'EX',
+          REDIS_TTL.GROUP
+        );
+      }
+      await pipeline.exec();
+      this.stats.batchedWrites += dirtyGroups.length;
+      this.stats.skippedWrites += (groupsArray.length - dirtyGroups.length);
+      log(`Bulk upsert complete: ${result.upsertedCount} inserted, ${result.modifiedCount} modified, ${groupsArray.length - dirtyGroups.length} skipped`);
+      log(`Cached ${dirtyGroups.length} groups in Redis`);
+      return result;
     } catch (error) {
-      log(`Dirty check error for ${type}: ${error.message}`, true);
-      return items;
+      this.stats.errors++;
+      log(`bulkUpsertGroups error: ${error.message}`, true);
+      throw error;
     }
   }
-  hasChanges(existing, updated, type) {
-    const fieldsToCheck = type === 'contacts' ? ['name', 'notify', 'verifiedName', 'lid'] : ['subject', 'subjectOwner', 'subjectTime', 'creation', 'owner', 'desc', 'descOwner', 'descId', 'restrict', 'announce', 'size', 'participants'];
-    for (const field of fieldsToCheck) {
-      const existingVal = existing[field];
-      const updatedVal = updated[field];
-      if (existingVal === null && updatedVal === null) continue;
-      if (Array.isArray(existingVal) && Array.isArray(updatedVal)) {
-        if (JSON.stringify(existingVal) !== JSON.stringify(updatedVal)) {
-          return true;
-        }
-        continue;
-      }
-      if (existingVal !== updatedVal) {
-        return true;
-      }
+  async bulkUpsertContacts(contactsArray) {
+    if (!this.isConnected || !contactsArray || contactsArray.length === 0) {
+      return { upsertedCount: 0, modifiedCount: 0 };
     }
-    return false;
+    try {
+      log(`Bulk upserting ${contactsArray.length} contacts...`);
+      const jids = contactsArray.map(c => c.jid);
+      const existingContacts = await StoreContact.find({ jid: { $in: jids } }).lean();
+      const existingMap = new Map(
+        existingContacts.map(c => [c.jid, c])
+      );
+      const sanitizedContacts = contactsArray.map(rawContact => {
+        const existing = existingMap.get(rawContact.jid);
+        return this.sanitizeContactData(rawContact, existing);
+      });
+      const dirtyContacts = sanitizedContacts.filter(updated => {
+        const existing = existingMap.get(updated.jid);
+        return !existing || this.hasChanges(existing, updated, 'contacts');
+      });
+      if (dirtyContacts.length === 0) {
+        log(`Skipped bulk upsert: no changes detected in ${contactsArray.length} contacts`);
+        this.stats.skippedWrites += contactsArray.length;
+        return { upsertedCount: 0, modifiedCount: 0 };
+      }
+      const operations = dirtyContacts.map(contact => ({
+        updateOne: {
+          filter: { jid: contact.jid },
+          update: {
+            $set: contact,
+            $setOnInsert: { createdAt: new Date() }
+          },
+          upsert: true
+        }
+      }));
+      const result = await StoreContact.bulkWrite(operations, { ordered: false });
+      const pipeline = redis.pipeline();
+      for (const contact of dirtyContacts) {
+        pipeline.set(
+          `${REDIS_PREFIX.CONTACT}${contact.jid}`,
+          JSON.stringify(contact),
+          'EX',
+          REDIS_TTL.CONTACT
+        );
+        if (contact.lid) {
+          pipeline.set(
+            `${REDIS_PREFIX.LID_TO_JID}${contact.lid}`,
+            contact.jid,
+            'EX',
+            REDIS_TTL.LID_MAPPING
+          );
+          pipeline.set(
+            `${REDIS_PREFIX.JID_TO_LID}${contact.jid}`,
+            contact.lid,
+            'EX',
+            REDIS_TTL.LID_MAPPING
+          );
+        }
+      }
+      await pipeline.exec();
+      this.stats.batchedWrites += dirtyContacts.length;
+      this.stats.skippedWrites += (contactsArray.length - dirtyContacts.length);
+      log(`Bulk upsert complete: ${result.upsertedCount} inserted, ${result.modifiedCount} modified, ${contactsArray.length - dirtyContacts.length} skipped`);
+      return result;
+    } catch (error) {
+      this.stats.errors++;
+      log(`bulkUpsertContacts error: ${error.message}`, true);
+      throw error;
+    }
   }
   async warmRedisCache() {
     try {
-      const activeGroups = await StoreGroupMetadata.find()
-        .sort({ lastUpdated: -1 })
-        .limit(50)
-        .lean();
+      const activeGroups = await StoreGroupMetadata.find().sort({ lastUpdated: -1 }).limit(50).lean();
       const groupPipeline = redis.pipeline();
       for (const group of activeGroups) {
         groupPipeline.set(
@@ -244,10 +439,7 @@ class DBStore {
         );
       }
       await groupPipeline.exec();
-      const recentContacts = await StoreContact.find({})
-        .sort({ updatedAt: -1 })
-        .limit(1000)
-        .lean();
+      const recentContacts = await StoreContact.find({}).sort({ updatedAt: -1 }).limit(5000).lean();
       const contactPipeline = redis.pipeline();
       for (const contact of recentContacts) {
         contactPipeline.set(
@@ -312,19 +504,13 @@ class DBStore {
         log(`Error fetching existing contact: ${error.message}`, true);
       }
     }
-    const updated = { ...(existing || {}), jid };
-    for (const key in data) {
-      if (data[key] !== undefined && data[key] !== null) {
-        updated[key] = data[key];
-      }
-    }
-    updated.jid = jid;
+    const merged = { ...(existing || {}), ...data, jid };
+    const updated = this.sanitizeContactData(merged, existing);
     if (existing && !this.hasChanges(existing, updated, 'contacts')) {
       this.stats.skippedWrites++;
       return;
     }
     await this.setRedis(redisKey, updated, REDIS_TTL.CONTACT);
-    delete updated._id;
     this.updateQueues.contacts.set(jid, updated);
     if (updated.lid) {
       await this.cacheLidMapping(updated.lid, jid);
@@ -378,7 +564,6 @@ class DBStore {
       this.stats.errors++;
       log(`Get array contacts error: ${error.message}`, true);
     }
-
     return [...foundInRedis, ...foundInDb];
   }
   async getGroupMetadata(groupId) {
@@ -412,13 +597,13 @@ class DBStore {
         log(`Error fetching existing group: ${error.message}`, true);
       }
     }
-    const updated = { ...(existing || {}), ...metadata, groupId };
+    const merged = { ...(existing || {}), ...metadata, groupId };
+    const updated = this.sanitizeGroupData(merged, existing);
     if (existing && !this.hasChanges(existing, updated, 'groups')) {
       this.stats.skippedWrites++;
       return;
     }
     await this.setRedis(redisKey, updated, REDIS_TTL.GROUP);
-    delete updated._id;
     this.updateQueues.groups.set(groupId, updated);
   }
   async syncGroupMetadata(fn, groupId) {
@@ -718,13 +903,250 @@ class DBStore {
         pendingGroups: this.updateQueues.groups.size,
         totalWrites: this.stats.batchedWrites,
         skippedWrites: this.stats.skippedWrites,
-        efficiency: this.stats.batchedWrites > 0
-          ? ((this.stats.skippedWrites / (this.stats.batchedWrites + this.stats.skippedWrites)) * 100).toFixed(2) + '%'
-          : '0%'
+        efficiency: this.stats.batchedWrites > 0 ? ((this.stats.skippedWrites / (this.stats.batchedWrites + this.stats.skippedWrites)) * 100).toFixed(2) + '%' : '0%'
       },
       errors: this.stats.errors,
       total
     };
+  }
+  async getAllGroups(projection = null) {
+    if (!this.isConnected) return [];
+    try {
+      const pattern = `${REDIS_PREFIX.GROUP}*`;
+      const groupKeys = [];
+      const stream = redis.scanStream({
+        match: pattern,
+        count: 100
+      });
+      await new Promise((resolve, reject) => {
+        stream.on('data', (keys) => {
+          groupKeys.push(...keys);
+        });
+        stream.on('end', resolve);
+        stream.on('error', reject);
+      });
+      if (groupKeys.length > 0) {
+        const cachedGroups = await this.mgetRedis(groupKeys);
+        const validGroups = cachedGroups.filter(g => g !== null);
+        if (validGroups.length > 0) {
+          this.stats.redisHits += validGroups.length;
+          log(`Cache hit: ${validGroups.length} groups from Redis`);
+          if (projection) {
+            return validGroups.map(group => {
+              const filtered = {};
+              for (const key in projection) {
+                if (projection[key] === 1 && group[key] !== undefined) {
+                  filtered[key] = group[key];
+                }
+              }
+              return filtered;
+            });
+          }
+          return validGroups;
+        }
+      }
+      this.stats.redisMisses++;
+      log('Cache miss: Fetching groups from database...');
+      const query = StoreGroupMetadata.find({});
+      if (projection) {
+        query.select(projection);
+      }
+      const groups = await query.lean();
+      this.stats.dbHits += groups.length;
+      if (groups.length > 0) {
+        const pipeline = redis.pipeline();
+        for (const group of groups) {
+          pipeline.set(
+            `${REDIS_PREFIX.GROUP}${group.groupId}`,
+            JSON.stringify(group),
+            'EX',
+            REDIS_TTL.GROUP
+          );
+        }
+        await pipeline.exec();
+        log(`Cached ${groups.length} groups in Redis`);
+      }
+      return groups;
+    } catch (error) {
+      this.stats.errors++;
+      log(`getAllGroups error: ${error.message}`, true);
+      return [];
+    }
+  }
+  async getArrayGroups(groupIds, projection = null) {
+    if (!this.isConnected || !groupIds || groupIds.length === 0) return [];
+    try {
+      const redisKeys = groupIds.map(id => `${REDIS_PREFIX.GROUP}${id}`);
+      const redisResults = await this.mgetRedis(redisKeys);
+      const foundInRedis = [];
+      const missingIds = [];
+      redisResults.forEach((result, index) => {
+        if (result) {
+          foundInRedis.push(result);
+        } else {
+          missingIds.push(groupIds[index]);
+        }
+      });
+      if (missingIds.length === 0) {
+        log(`Cache hit: ${foundInRedis.length}/${groupIds.length} groups`);
+        return foundInRedis;
+      }
+      log(`Partial cache miss: ${missingIds.length}/${groupIds.length} groups, fetching from DB...`);
+      const query = StoreGroupMetadata.find({ groupId: { $in: missingIds } });
+      if (projection) {
+        query.select(projection);
+      }
+      const foundInDb = await query.lean();
+      this.stats.dbHits += foundInDb.length;
+      if (foundInDb.length > 0) {
+        const pipeline = redis.pipeline();
+        for (const group of foundInDb) {
+          pipeline.set(
+            `${REDIS_PREFIX.GROUP}${group.groupId}`,
+            JSON.stringify(group),
+            'EX',
+            REDIS_TTL.GROUP
+          );
+        }
+        await pipeline.exec();
+        log(`Cached ${foundInDb.length} missing groups`);
+      }
+      return [...foundInRedis, ...foundInDb];
+    } catch (error) {
+      this.stats.errors++;
+      log(`getArrayGroups error: ${error.message}`, true);
+      return [];
+    }
+  }
+  async deleteGroup(groupId) {
+    if (!this.isConnected || !groupId) return false;
+    try {
+      log(`Deleting group: ${groupId}`);
+      await this.delRedis(`${REDIS_PREFIX.GROUP}${groupId}`);
+      this.updateQueues.groups.delete(groupId);
+      const deleteResult = await StoreGroupMetadata.deleteOne({ groupId });
+      const success = deleteResult.deletedCount > 0;
+      log(`Delete group ${groupId}: ${success ? 'success' : 'not found'}`);
+      return success;
+    } catch (error) {
+      this.stats.errors++;
+      log(`deleteGroup error: ${error.message}`, true);
+      return false;
+    }
+  }
+  async bulkDeleteGroups(groupIds) {
+    if (!this.isConnected || !groupIds || groupIds.length === 0) {
+      return { deletedCount: 0, errors: 0 };
+    }
+    try {
+      log(`Bulk deleting ${groupIds.length} groups...`);
+      const pipeline = redis.pipeline();
+      for (const groupId of groupIds) {
+        pipeline.del(`${REDIS_PREFIX.GROUP}${groupId}`);
+        this.updateQueues.groups.delete(groupId);
+      }
+      await pipeline.exec();
+      log(`Deleted ${groupIds.length} groups from Redis cache`);
+      const deleteResult = await StoreGroupMetadata.deleteMany({
+        groupId: { $in: groupIds }
+      });
+      log(`Deleted ${deleteResult.deletedCount}/${groupIds.length} groups from database`);
+      return {
+        deletedCount: deleteResult.deletedCount,
+        errors: 0
+      };
+    } catch (error) {
+      this.stats.errors++;
+      log(`bulkDeleteGroups error: ${error.message}`, true);
+      return {
+        deletedCount: 0,
+        errors: 1
+      };
+    }
+  }
+  async syncStaleGroups(activeGroupIds) {
+    if (!this.isConnected) return { removed: 0, errors: 0 };
+    try {
+      log('Starting stale group detection...');
+      const storedGroups = await this.getAllGroups({ groupId: 1 });
+      const storedGroupIds = storedGroups.map(g => g.groupId);
+      log(`Stored: ${storedGroupIds.length} groups, Active: ${activeGroupIds.size} groups`);
+      const staleGroupIds = storedGroupIds.filter(id => !activeGroupIds.has(id));
+      if (staleGroupIds.length === 0) {
+        log('No stale groups found. All data synchronized.');
+        return { removed: 0, errors: 0 };
+      }
+      log(`Detected ${staleGroupIds.length} stale groups. Starting cleanup...`);
+      const result = await this.bulkDeleteGroups(staleGroupIds);
+      log(`Stale group cleanup complete: ${result.deletedCount} removed`);
+      return {
+        removed: result.deletedCount,
+        errors: result.errors
+      };
+    } catch (error) {
+      this.stats.errors++;
+      log(`syncStaleGroups error: ${error.message}`, true);
+      return { removed: 0, errors: 1 };
+    }
+  }
+  async deleteContact(jid) {
+    if (!this.isConnected || !jid) return false;
+    try {
+      log(`Deleting contact: ${jid}`);
+      const contact = await this.getContact(jid);
+      await this.delRedis(`${REDIS_PREFIX.CONTACT}${jid}`);
+      if (contact?.lid) {
+        await this.delRedis(`${REDIS_PREFIX.LID_TO_JID}${contact.lid}`);
+        await this.delRedis(`${REDIS_PREFIX.JID_TO_LID}${jid}`);
+        log(`Deleted LID mappings for ${jid}`);
+      }
+      this.updateQueues.contacts.delete(jid);
+      const deleteResult = await StoreContact.deleteOne({ jid });
+      const success = deleteResult.deletedCount > 0;
+      log(`Delete contact ${jid}: ${success ? 'success' : 'not found'}`);
+      return success;
+    } catch (error) {
+      this.stats.errors++;
+      log(`deleteContact error: ${error.message}`, true);
+      return false;
+    }
+  }
+  async bulkDeleteContacts(jids) {
+    if (!this.isConnected || !jids || jids.length === 0) {
+      return { deletedCount: 0, errors: 0 };
+    }
+    try {
+      log(`Bulk deleting ${jids.length} contacts...`);
+      const contacts = await this.getArrayContacts(jids);
+      const pipeline = redis.pipeline();
+      for (const jid of jids) {
+        pipeline.del(`${REDIS_PREFIX.CONTACT}${jid}`);
+        this.updateQueues.contacts.delete(jid);
+      }
+      for (const contact of contacts) {
+        if (contact?.lid) {
+          pipeline.del(`${REDIS_PREFIX.LID_TO_JID}${contact.lid}`);
+          pipeline.del(`${REDIS_PREFIX.JID_TO_LID}${contact.jid}`);
+        }
+      }
+      await pipeline.exec();
+      log(`Deleted ${jids.length} contacts from Redis cache`);
+      const deleteResult = await StoreContact.deleteMany({
+        jid: { $in: jids }
+      });
+      log(`Deleted ${deleteResult.deletedCount}/${jids.length} contacts from database`);
+      return {
+        deletedCount: deleteResult.deletedCount,
+        errors: 0
+      };
+    } catch (error) {
+      this.stats.errors++;
+      log(`bulkDeleteContacts error: ${error.message}`, true);
+      return {
+        deletedCount: 0,
+        errors: 1
+      };
+    }
   }
 }
 

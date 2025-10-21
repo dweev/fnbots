@@ -17,7 +17,7 @@ import { parsePhoneNumber } from 'awesome-phonenumber';
 import log, { pinoLogger } from '../src/lib/logger.js';
 import { fetch as nativeFetch } from '../src/addon/bridge.js';
 import { restartManager } from '../src/lib/restartManager.js';
-import { Settings, store, StoreGroupMetadata, OTPSession } from '../database/index.js';
+import { Settings, store, OTPSession } from '../database/index.js';
 import { default as makeWASocket, jidNormalizedUser, Browsers, makeCacheableSignalKeyStore, fetchLatestWaWebVersion, isJidBroadcast } from 'baileys';
 
 let phoneNumber;
@@ -144,32 +144,26 @@ export async function createWASocket(dbSettings) {
           await Settings.updateSettings(dbSettings);
         }
         await log(`Connecting to WhatsApp...`);
-        const participatingGroups = await fn.groupFetchAllParticipating();
-        await log('Starting group data synchronization...');
         try {
-          const groupsToUpdate = Object.values(participatingGroups);
-          if (groupsToUpdate.length > 0) {
-            await StoreGroupMetadata.bulkUpsert(groupsToUpdate);
-          }
-          await log('Group metadata synchronization complete. Checking for stale groups...');
+          await log('Starting group data synchronization...');
+          const participatingGroups = await fn.groupFetchAllParticipating();
           const currentGroupIds = new Set(Object.keys(participatingGroups));
-          const storedMetadatas = await StoreGroupMetadata.find({}, { groupId: 1, _id: 0 }).lean();
-          const storedGroupIds = storedMetadatas.map(g => g.groupId);
-          const staleGroupIds = storedGroupIds.filter(id => !currentGroupIds.has(id));
-          if (staleGroupIds.length > 0) {
-            await log(`Mendeteksi ${staleGroupIds.length} grup usang. Memulai pembersihan...`);
-            const deleteResult = await StoreGroupMetadata.deleteMany({ groupId: { $in: staleGroupIds } });
-            await log(`Pembersihan database selesai: ${deleteResult.deletedCount} metadata grup usang telah dihapus.`);
-            for (const id of staleGroupIds) {
-              await store.clearGroupCacheByKey(id);
-            }
-            await log(`Cache Redis untuk ${staleGroupIds.length} grup usang telah dibersihkan...`);
-          } else {
-            await log('Synchronization completed. No stale groups found.');
+          const groupsToUpdate = Object.values(participatingGroups);
+          await log(`Fetched ${groupsToUpdate.length} active groups from WhatsApp`);
+          if (groupsToUpdate.length > 0) {
+            await store.bulkUpsertGroups(groupsToUpdate);
           }
+          await log('Checking for stale groups...');
+          const syncResult = await store.syncStaleGroups(currentGroupIds);
+          if (syncResult.removed > 0) {
+            await log(`Cleaned up ${syncResult.removed} stale groups`);
+          }
+          if (syncResult.errors > 0) {
+            await log(`${syncResult.errors} errors during cleanup`, true);
+          }
+          await log('Group synchronization completed successfully.');
         } catch (error) {
           await log(`Error during group sync: ${error}`, true);
-          await log(error, true);
         }
         await log(`WA Version: ${global.version.join('.')}`);
         await log(`BOT Number: ${jidNormalizedUser(fn.user.id).split('@')[0]}`);
@@ -177,9 +171,7 @@ export async function createWASocket(dbSettings) {
         await fn.storeLIDMapping().catch(err => log(`Background LID sync failed: ${err.message}`, true));
         await fn.resetRetryAttempts();
         setInterval(() => {
-          fn.storeLIDMapping().catch(err =>
-            log(`Periodic LID sync failed: ${err.message}`, true)
-          );
+          fn.storeLIDMapping().catch(err => log(`Periodic LID sync failed: ${err.message}`, true));
         }, 6 * 60 * 60 * 1000);
         setInterval(cleanupExpiredOTPSessions, config.performance.defaultInterval);
       }

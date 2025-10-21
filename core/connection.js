@@ -15,24 +15,13 @@ import { clientBot } from './client.js';
 import AuthStore from '../database/auth.js';
 import { parsePhoneNumber } from 'awesome-phonenumber';
 import log, { pinoLogger } from '../src/lib/logger.js';
+import { Settings, store } from '../database/index.js';
 import { fetch as nativeFetch } from '../src/addon/bridge.js';
 import { restartManager } from '../src/lib/restartManager.js';
-import { Settings, store, OTPSession } from '../database/index.js';
 import { default as makeWASocket, jidNormalizedUser, Browsers, makeCacheableSignalKeyStore, fetchLatestWaWebVersion, isJidBroadcast } from 'baileys';
 
 let phoneNumber;
 let pairingStarted = false;
-
-async function cleanupExpiredOTPSessions() {
-  try {
-    const cleanedCount = await OTPSession.cleanupExpired();
-    if (cleanedCount > 0) {
-      await log(`Membersihkan ${cleanedCount} sesi OTP yang kedaluwarsa.`);
-    }
-  } catch (error) {
-    await log(`Error membersihkan session OTP: ${error.message}`, true);
-  }
-}
 
 const pairingCode = process.argv.includes('--qr') ? false : process.argv.includes('--pairing-code') || config.usePairingCode;
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
@@ -68,8 +57,8 @@ export async function createWASocket(dbSettings) {
     keepAliveIntervalMs: config.performance.keepAliveIntervals,
     defaultQueryTimeoutMs: undefined,
     logger: pinoLogger,
-    version: global.version,
-    browser: Browsers.macOS('Safari'),
+    version: [2, 3000, 1028718893],
+    browser: Browsers.ubuntu('Chrome'),
     emitOwnEvents: true,
     retryRequestDelayMs: 1000,
     maxMsgRetryCount: 5,
@@ -173,7 +162,6 @@ export async function createWASocket(dbSettings) {
         setInterval(() => {
           fn.storeLIDMapping().catch(err => log(`Periodic LID sync failed: ${err.message}`, true));
         }, 6 * 60 * 60 * 1000);
-        setInterval(cleanupExpiredOTPSessions, config.performance.defaultInterval);
       }
       if (connection === 'close') {
         await log(`Connection closed. Code: ${statusCode}`);

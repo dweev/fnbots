@@ -112,13 +112,13 @@ const database = new DatabaseConnection();
 
 import redis from './redis.js';
 import store from './StoreDB.js';
+import OTPSession from './otpSession.js';
 import User from '../src/models/User/index.js';
 import Media from '../src/models/Media/index.js';
 import Group from '../src/models/Group/index.js';
 import Command from '../src/models/Command/index.js';
 import Settings from '../src/models/Settings/index.js';
 import Whitelist from '../src/models/Whitelist/index.js';
-import OTPSession from '../src/models/OTPSession/index.js';
 import StoreContact from '../src/models/StoreContact/index.js';
 import StoreGroupMetadata from '../src/models/StoreGroupMetadata/index.js';
 import { saveMediaStream, getMediaStream, deleteMedia, findMedia } from './hybrid.js';

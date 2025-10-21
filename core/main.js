@@ -93,8 +93,10 @@ function setupWhatsAppEventHandlers(fn) {
   fn.ev.on('groups.upsert', async (newMetas) => {
     for (const daget of newMetas) {
       const id = jidNormalizedUser(daget.id);
-      await mongoStore.updateGroupMetadata(id, daget);
+      log(`Bot dimasukkan ke grup ${id}. Menyinkronkan metadata...`);
+      await mongoStore.syncGroupMetadata(fn, id);
       if (daget.participants?.length) {
+        log(`Memperbarui kontak peserta untuk grup ${id}...`);
         const participantJids = daget.participants.map(p => jidNormalizedUser(p.id));
         const contacts = await mongoStore.getArrayContacts(participantJids);
         if (contacts) {

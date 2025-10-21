@@ -7,7 +7,7 @@
 // ─── Info ────────────────────────────────
 
 import { formatTimeAgo } from '../../function/index.js';
-import { StoreMessages, mongoStore } from '../../../database/index.js';
+import { StoreMessages, store } from '../../../database/index.js';
 
 export const command = {
   name: 'checkactivity',
@@ -17,7 +17,7 @@ export const command = {
   isCommandWithoutPayment: true,
   execute: async ({ m, toId, sReply }) => {
     if (!m.isGroup) return await sReply('Perintah ini hanya bisa digunakan di dalam grup.');
-    const groupMetadata = await mongoStore.getGroupMetadata(toId);
+    const groupMetadata = await store.getGroupMetadata(toId);
     const messagesData = await StoreMessages.findOne({ chatId: toId }).select('messages').lean();
     const presencesData = await StoreMessages.findOne({ chatId: toId }).select('presences').lean();
     if (!groupMetadata?.participants) return await sReply('Gagal mendapatkan data anggota grup.');

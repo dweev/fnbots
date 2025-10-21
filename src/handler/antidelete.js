@@ -55,16 +55,16 @@ function rehydrateBuffer(obj) {
 }
 
 class AntiDeletedHandler {
-  constructor(mongoStore, fn) {
-    this.mongoStore = mongoStore;
+  constructor(store, fn) {
+    this.store = store;
     this.fn = fn;
   }
   async handle(params) {
-    const { fn, m, toId, mongoStore } = params;
+    const { fn, m, toId, store } = params;
     if (m.type !== 'protocolMessage' || m.protocolMessage.type !== 0) return;
     const deletedMsgId = m.protocolMessage.key.id;
     const remoteJid = toId;
-    const rawOriginalMessage = await mongoStore.loadMessage(remoteJid, deletedMsgId);
+    const rawOriginalMessage = await store.loadMessage(remoteJid, deletedMsgId);
     const originalMessage = rehydrateBuffer(rawOriginalMessage);
     if (!originalMessage || originalMessage.fromMe) return;
     await this.processMessageByType(originalMessage, toId, fn);
@@ -76,7 +76,7 @@ class AntiDeletedHandler {
     const resolved = [];
     for (const jid of mentionedJids) {
       if (jid.endsWith('@lid')) {
-        const resolvedJid = await this.mongoStore.resolveJid(jid);
+        const resolvedJid = await this.store.resolveJid(jid);
         resolved.push(resolvedJid || jid);
       } else {
         resolved.push(jid);
@@ -248,6 +248,6 @@ class AntiDeletedHandler {
 }
 
 export const handleAntiDeleted = async (params) => {
-  const handler = new AntiDeletedHandler(params.mongoStore, params.fn);
+  const handler = new AntiDeletedHandler(params.store, params.fn);
   return await handler.handle(params);
 };

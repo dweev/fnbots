@@ -728,5 +728,5 @@ class DBStore {
   }
 }
 
-const mongoStore = new DBStore();
-export default mongoStore;
+const store = new DBStore();
+export default store;

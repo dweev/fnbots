@@ -9,7 +9,7 @@
 import log from './logger.js';
 import { jidNormalizedUser } from 'baileys';
 import { updateContact } from '../lib/contactManager.js';
-import { mongoStore, StoreGroupMetadata, Group } from '../../database/index.js';
+import { store, StoreGroupMetadata, Group } from '../../database/index.js';
 
 export default async function groupParticipantsUpdate({ id, participants, action }, fn) {
   log(`Event: group-participants.update | Aksi: ${action} | Grup: ${id}`);
@@ -23,12 +23,12 @@ export default async function groupParticipantsUpdate({ id, participants, action
       case 'add': {
         const groupData = await Group.findOne({ groupId: id }).lean();
         if (groupData?.welcome?.state) {
-          const metadata = await mongoStore.getGroupMetadata(id);
+          const metadata = await store.getGroupMetadata(id);
           for (const participant of participants) {
             const userId = getUserId(participant);
             let newMemberJid;
             if (userId.endsWith('@lid')) {
-              newMemberJid = await mongoStore.findJidByLid(userId);
+              newMemberJid = await store.findJidByLid(userId);
             } else {
               newMemberJid = jidNormalizedUser(userId);
             }
@@ -44,14 +44,14 @@ export default async function groupParticipantsUpdate({ id, participants, action
             }
           }
         }
-        await mongoStore.syncGroupMetadata(fn, id);
+        await store.syncGroupMetadata(fn, id);
         break;
       }
       case 'remove': {
         let isBotRemoved = false;
         for (const participant of participants) {
           const userId = getUserId(participant);
-          const leaveMemberJid = userId.endsWith('@lid') ? await mongoStore.findJidByLid(userId) : jidNormalizedUser(userId);
+          const leaveMemberJid = userId.endsWith('@lid') ? await store.findJidByLid(userId) : jidNormalizedUser(userId);
           if (leaveMemberJid && leaveMemberJid === botJid) {
             isBotRemoved = true;
             break;
@@ -60,17 +60,17 @@ export default async function groupParticipantsUpdate({ id, participants, action
         if (isBotRemoved) {
           log(`Bot dikeluarkan dari grup ${id}. Membersihkan metadata...`);
           await StoreGroupMetadata.deleteOne({ groupId: id });
-          mongoStore.clearGroupCacheByKey(id);
+          store.clearGroupCacheByKey(id);
           return;
         }
         const groupData = await Group.findOne({ groupId: id }).lean();
         if (groupData?.leave?.state) {
-          const metadata = await mongoStore.getGroupMetadata(id);
+          const metadata = await store.getGroupMetadata(id);
           for (const participant of participants) {
             const userId = getUserId(participant);
             let leaveMemberJid;
             if (userId.endsWith('@lid')) {
-              leaveMemberJid = await mongoStore.findJidByLid(userId);
+              leaveMemberJid = await store.findJidByLid(userId);
             } else {
               leaveMemberJid = jidNormalizedUser(userId);
             }
@@ -87,7 +87,7 @@ export default async function groupParticipantsUpdate({ id, participants, action
             }
           }
         }
-        await mongoStore.syncGroupMetadata(fn, id);
+        await store.syncGroupMetadata(fn, id);
         break;
       }
       case 'promote':
@@ -95,14 +95,14 @@ export default async function groupParticipantsUpdate({ id, participants, action
         let isBotAffected = false;
         for (const participant of participants) {
           const userId = getUserId(participant);
-          const affectedMemberJid = userId.endsWith('@lid') ? await mongoStore.findJidByLid(userId) : jidNormalizedUser(userId);
+          const affectedMemberJid = userId.endsWith('@lid') ? await store.findJidByLid(userId) : jidNormalizedUser(userId);
           if (affectedMemberJid && affectedMemberJid === botJid) {
             isBotAffected = true;
             break;
           }
         }
         if (isBotAffected) {
-          const freshMetadata = await mongoStore.syncGroupMetadata(fn, id);
+          const freshMetadata = await store.syncGroupMetadata(fn, id);
           if (freshMetadata) {
             const botParticipant = freshMetadata.participants.find(p => p.id === botJid || jidNormalizedUser(p.id) === botJid);
             if (action === 'promote' && botParticipant?.admin) {
@@ -113,7 +113,7 @@ export default async function groupParticipantsUpdate({ id, participants, action
           }
         } else {
           const newStatus = action === 'promote' ? 'admin' : null;
-          const currentMetadata = await mongoStore.getGroupMetadata(id);
+          const currentMetadata = await store.getGroupMetadata(id);
           if (currentMetadata && currentMetadata.participants) {
             let metadataChanged = false;
             currentMetadata.participants.forEach(p => {
@@ -124,14 +124,14 @@ export default async function groupParticipantsUpdate({ id, participants, action
               }
             });
             if (metadataChanged) {
-              await mongoStore.updateGroupMetadata(id, currentMetadata);
+              await store.updateGroupMetadata(id, currentMetadata);
             }
           }
         }
         break;
       }
     }
-    const finalMetadata = await mongoStore.getGroupMetadata(id);
+    const finalMetadata = await store.getGroupMetadata(id);
     if (finalMetadata && finalMetadata.participants) {
       for (const participant of finalMetadata.participants) {
         if (participant.id && participant.lid) {

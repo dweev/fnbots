@@ -15,7 +15,7 @@ import { jidNormalizedUser, delay } from 'baileys';
 import serializeMessage from './serializeMessage.js';
 import { handleAntiEdit } from '../handler/index.js';
 import handleGroupStubMessages from './handleGroupStubMessages.js';
-import { mongoStore, StoreMessages, StoreStory } from '../../database/index.js';
+import { store, StoreMessages, StoreStory } from '../../database/index.js';
 
 class CrotToLive extends Map {
   set(key, value, ttl) {
@@ -81,7 +81,7 @@ export default async function updateMessageUpsert(fn, message, dbSettings) {
             await fn.readMessages([m.key]);
           }
         }
-        mongoStore.addStatus(m.sender, m, config.performance.maxStoreSaved);
+        store.addStatus(m.sender, m, config.performance.maxStoreSaved);
         StoreStory.addStatus(m.sender, m, config.performance.maxStoreSaved).catch(err => log(err, true));
         return;
       } catch (error) {
@@ -90,7 +90,7 @@ export default async function updateMessageUpsert(fn, message, dbSettings) {
       return;
     }
     if (m.isEditedMessage && dbSettings.antiEditMessage) {
-      await handleAntiEdit({ mongoStore, fn, m, dbSettings });
+      await handleAntiEdit({ store, fn, m, dbSettings });
     }
     try {
       if (dbSettings.autoread) {
@@ -98,7 +98,7 @@ export default async function updateMessageUpsert(fn, message, dbSettings) {
       }
       if (duplexM.has(m.key.id)) return;
       duplexM.set(m.key.id, Date.now(), config.performance.defaultInterval);
-      mongoStore.updateMessages(m.chat, m, config.performance.maxStoreSaved);
+      store.updateMessages(m.chat, m, config.performance.maxStoreSaved);
       if (m.type === 'conversation' || m.type === 'extendedTextMessage') {
         if (m.body?.trim()) {
           const conversationData = {
@@ -110,12 +110,12 @@ export default async function updateMessageUpsert(fn, message, dbSettings) {
             quotedSender: m.quoted?.sender || null,
             keyId: m.key.id
           };
-          mongoStore.updateConversations(m.chat, conversationData, config.performance.maxStoreSaved);
+          store.updateConversations(m.chat, conversationData, config.performance.maxStoreSaved);
           StoreMessages.addConversation(m.chat, conversationData).catch(err => log(err, true));
         }
       }
       const dependencies = {
-        mongoStore,
+        store,
         dbSettings,
         ownerNumber: config.ownerNumber,
         version: global.version,

@@ -11,7 +11,7 @@ import fs from 'fs-extra';
 import axios from 'axios';
 import config from '../config.js';
 import log from '../src/lib/logger.js';
-import { mongoStore } from '../database/index.js';
+import { store } from '../database/index.js';
 import { tmpDir } from '../src/lib/tempManager.js';
 import { runJob } from '../src/worker/worker_manager.js';
 import { fileTypeFromBuffer, fileTypeFromFile } from 'file-type';
@@ -186,10 +186,10 @@ export async function clientBot(fn, dbSettings) {
       return fn.user?.name;
     }
     if (id.endsWith("g.us")) {
-      const metadata = await mongoStore.getGroupMetadata(id);
+      const metadata = await store.getGroupMetadata(id);
       return metadata ? metadata.subject : "none";
     } else {
-      const contact = await mongoStore.getContact(id);
+      const contact = await store.getContact(id);
       return (contact?.name || contact?.verifiedName || contact?.notify || "Unknown?");
     }
   };

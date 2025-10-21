@@ -6,7 +6,7 @@
 */
 // ─── Info ────────────────────────────────
 
-import { redis, mongoStore } from '../../../database/index.js';
+import { redis, store } from '../../../database/index.js';
 import { performanceManager } from '../../lib/performanceManager.js';
 
 export const command = {
@@ -18,7 +18,7 @@ export const command = {
   isEnabled: true,
   execute: async ({ sReply }) => {
     const stats = await performanceManager.getFullStatus();
-    const storeStats = mongoStore.getStats();
+    const storeStats = store.getStats();
     
     const cacheCounts = {
       contacts: 0,

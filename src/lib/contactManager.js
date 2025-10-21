@@ -7,19 +7,19 @@
 // ─── Info src/lib/contactManager.js ──────────────
 
 import log from './logger.js';
-import { mongoStore } from '../../database/index.js';
+import { store } from '../../database/index.js';
 
 export async function updateContact(jid, data = {}) {
   if (!jid || !jid.endsWith('@s.whatsapp.net')) return;
   try {
-    await mongoStore.updateContact(jid, data);
+    await store.updateContact(jid, data);
   } catch (error) {
     await log(error, true);
   }
 };
 export async function processContactUpdate(contact) {
   const idFromEvent = contact.id;
-  const trueJid = await mongoStore.resolveJid(idFromEvent);
+  const trueJid = await store.resolveJid(idFromEvent);
   if (!trueJid) return;
   const dataToUpdate = {};
   const nameToUpdate = contact.notify || contact.name;

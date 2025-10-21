@@ -17,7 +17,7 @@ import { parsePhoneNumber } from 'awesome-phonenumber';
 import log, { pinoLogger } from '../src/lib/logger.js';
 import { fetch as nativeFetch } from '../src/addon/bridge.js';
 import { restartManager } from '../src/lib/restartManager.js';
-import { Settings, mongoStore, StoreGroupMetadata, OTPSession } from '../database/index.js';
+import { Settings, store, StoreGroupMetadata, OTPSession } from '../database/index.js';
 import { default as makeWASocket, jidNormalizedUser, Browsers, makeCacheableSignalKeyStore, fetchLatestWaWebVersion, isJidBroadcast } from 'baileys';
 
 let phoneNumber;
@@ -161,7 +161,7 @@ export async function createWASocket(dbSettings) {
             const deleteResult = await StoreGroupMetadata.deleteMany({ groupId: { $in: staleGroupIds } });
             await log(`Pembersihan database selesai: ${deleteResult.deletedCount} metadata grup usang telah dihapus.`);
             for (const id of staleGroupIds) {
-              await mongoStore.clearGroupCacheByKey(id);
+              await store.clearGroupCacheByKey(id);
             }
             await log(`Cache Redis untuk ${staleGroupIds.length} grup usang telah dibersihkan...`);
           } else {

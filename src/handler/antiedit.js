@@ -54,12 +54,12 @@ function rehydrateBuffer(obj) {
 }
 
 class AntiEditHandler {
-  constructor(mongoStore, fn) {
-    this.mongoStore = mongoStore;
+  constructor(store, fn) {
+    this.store = store;
     this.fn = fn;
   }
   async handle(params) {
-    const { mongoStore, fn, m, dbSettings } = params;
+    const { store, fn, m, dbSettings } = params;
     if (!m.isEditedMessage || !dbSettings?.antiEditMessage) {
       return;
     }
@@ -69,7 +69,7 @@ class AntiEditHandler {
       const newText = editInfo.newText;
       const mediaType = editInfo.mediaType;
       const isMediaEdit = editInfo.isMediaEdit;
-      const originalMessage = await this.getOriginalMessage(mongoStore, m.chat, originalMessageId);
+      const originalMessage = await this.getOriginalMessage(store, m.chat, originalMessageId);
       if (!originalMessage) {
         await this.sendTextOnlyNotification(m, editInfo, isMediaEdit, mediaType, newText, fn);
         return;
@@ -85,9 +85,9 @@ class AntiEditHandler {
       log(`Error in anti-edit handler: ${error}`, true);
     }
   }
-  async getOriginalMessage(mongoStore, chatId, messageId) {
+  async getOriginalMessage(store, chatId, messageId) {
     try {
-      const rawOriginalMessage = await mongoStore.loadMessage(chatId, messageId);
+      const rawOriginalMessage = await store.loadMessage(chatId, messageId);
       if (!rawOriginalMessage || rawOriginalMessage.fromMe) {
         return;
       }
@@ -190,6 +190,6 @@ class AntiEditHandler {
 }
 
 export const handleAntiEdit = async (params) => {
-  const handler = new AntiEditHandler(params.mongoStore, params.fn);
+  const handler = new AntiEditHandler(params.store, params.fn);
   return await handler.handle(params);
 };

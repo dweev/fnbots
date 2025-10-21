@@ -111,7 +111,7 @@ class DatabaseConnection {
 const database = new DatabaseConnection();
 
 import redis from './redis.js';
-import mongoStore from './StoreDB.js';
+import store from './StoreDB.js';
 import User from '../src/models/User/index.js';
 import Media from '../src/models/Media/index.js';
 import Group from '../src/models/Group/index.js';
@@ -127,23 +127,23 @@ import DatabaseBot from '../src/models/DatabaseBot/index.js';
 import StoreStory from '../src/models/StoreStory/index.js';
 
 export {
-  database,
   User,
   Group,
   Media,
   Command,
   Settings,
   Whitelist,
-  mongoStore,
-  DatabaseBot,
-  StoreContact,
-  StoreGroupMetadata,
-  StoreMessages,
   StoreStory,
   OTPSession,
+  DatabaseBot,
+  StoreContact,
+  StoreMessages,
+  StoreGroupMetadata,
   saveMediaStream,
   getMediaStream,
   deleteMedia,
   findMedia,
+  database,
+  store,
   redis
 };

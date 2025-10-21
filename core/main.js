@@ -24,7 +24,7 @@ import { performanceManager } from '../src/lib/performanceManager.js';
 import { randomByte, initializeFuse } from '../src/function/index.js';
 import groupParticipantsUpdate from '../src/lib/groupParticipantsUpdate.js';
 import { updateContact, processContactUpdate } from '../src/lib/contactManager.js';
-import { database, Settings, mongoStore, StoreMessages } from '../database/index.js';
+import { database, Settings, store, StoreMessages } from '../database/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -57,7 +57,7 @@ async function ensureMongoDBRunning() {
 async function initializeDatabases() {
   try {
     await database.connect();
-    await mongoStore.connect();
+    await store.connect();
     dbSettings = await initializeDbSettings();
     pinoLogger.level = dbSettings.pinoLogger || 'silent';
     await log('Databases initialized successfully');
@@ -94,11 +94,11 @@ function setupWhatsAppEventHandlers(fn) {
     for (const daget of newMetas) {
       const id = jidNormalizedUser(daget.id);
       log(`Bot dimasukkan ke grup ${id}. Menyinkronkan metadata...`);
-      await mongoStore.syncGroupMetadata(fn, id);
+      await store.syncGroupMetadata(fn, id);
       if (daget.participants?.length) {
         log(`Memperbarui kontak peserta untuk grup ${id}...`);
         const participantJids = daget.participants.map(p => jidNormalizedUser(p.id));
-        const contacts = await mongoStore.getArrayContacts(participantJids);
+        const contacts = await store.getArrayContacts(participantJids);
         if (contacts) {
           const contactMap = new Map(contacts.map(c => [c.jid, c]));
           for (const participant of daget.participants) {
@@ -114,10 +114,10 @@ function setupWhatsAppEventHandlers(fn) {
   fn.ev.on('groups.update', async (updates) => {
     for (const newMeta of updates) {
       const id = jidNormalizedUser(newMeta.id);
-      await mongoStore.updateGroupMetadata(id, newMeta);
+      await store.updateGroupMetadata(id, newMeta);
       if (newMeta.participants?.length) {
         const participantJids = newMeta.participants.map(p => jidNormalizedUser(p.id));
-        const existingContacts = await mongoStore.getArrayContacts(participantJids);
+        const existingContacts = await store.getArrayContacts(participantJids);
         const contactMap = new Map(existingContacts.map(c => [c.jid, c]));
         for (const participant of newMeta.participants) {
           const contactJid = jidNormalizedUser(participant.id);
@@ -185,7 +185,7 @@ function setupWhatsAppEventHandlers(fn) {
     for (const participantId in update) {
       let resolvedJid;
       if (participantId.endsWith('@lid')) {
-        resolvedJid = await mongoStore.resolveJid(participantId);
+        resolvedJid = await store.resolveJid(participantId);
       } else {
         resolvedJid = jidNormalizedUser(participantId);
       }
@@ -195,7 +195,7 @@ function setupWhatsAppEventHandlers(fn) {
         lastSeen: Date.now()
       };
     }
-    mongoStore.updatePresences(id, resolvedPresences);
+    store.updatePresences(id, resolvedPresences);
     StoreMessages.updatePresences(id, resolvedPresences).catch(err => log(err, true));
   });
   fn.ev.on("call", (call) => {
@@ -215,11 +215,11 @@ async function starts() {
     await loadPlugins(path.join(__dirname, '..', 'src', 'plugins'));
     await initializeFuse();
     startPluginWatcher();
-    mongoStore.init();
+    store.init();
     const result = await createWASocket(dbSettings);
     fn = result.fn;
     authStore = result.authStore;
-    mongoStore.setAuthStore(authStore);
+    store.setAuthStore(authStore);
     await log('AuthStore injected into DBStore successfully');
     setupWhatsAppEventHandlers(fn);
     await performanceManager.initialize(fn, config, dbSettings);
@@ -239,8 +239,8 @@ signalHandler.register('database', async (signal) => {
     if (dbSettings) {
       await Settings.updateSettings(dbSettings);
     }
-    if (mongoStore) {
-      await mongoStore.disconnect();
+    if (store) {
+      await store.disconnect();
     }
     if (database?.isConnected) {
       await database.disconnect();

@@ -70,7 +70,7 @@ export const updateMyGroup = (newGroupList, newMemberlist) => {
   mygroup = newGroupList;
   mygroupMembers = newMemberlist;
 };
-export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, version, isSuggestion = false }) {
+export async function arfine(fn, m, { store, dbSettings, ownerNumber, version, isSuggestion = false }) {
   suggested = isSuggestion;
   await expiredCheck(fn, ownerNumber);
   await expiredVIPcheck(fn, ownerNumber);
@@ -585,7 +585,7 @@ export async function arfine(fn, m, { mongoStore, dbSettings, ownerNumber, versi
       }
     } else {
       if (dbSettings.antideleted === true) {
-        await handleAntiDeleted({ fn, m, toId, mongoStore });
+        await handleAntiDeleted({ fn, m, toId, store });
       };
       if (dbSettings.autojoin === true) {
         await handleAutoJoin({ m, fn, dbSettings, body, isSadmin, isMaster, isVIP, user, sReply, User });

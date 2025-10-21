@@ -7,7 +7,7 @@
 // ─── Info ────────────────────────────────
 
 import { parseSelector } from '../../function/index.js';
-import { mongoStore } from '../../../database/index.js';
+import { store } from '../../../database/index.js';
 
 export const command = {
   name: 'reject',
@@ -24,7 +24,7 @@ export const command = {
       const listPromises = pendingList.map(async (p, index) => {
         let jid;
         if (p.endsWith('@lid')) {
-          jid = await mongoStore.findJidByLid(p);
+          jid = await store.findJidByLid(p);
         } else {
           jid = p;
         }
@@ -50,7 +50,7 @@ export const command = {
     for (const lid of jidsToReject) {
       let jid;
       if (lid.endsWith('@lid')) {
-        jid = await mongoStore.findJidByLid(lid);
+        jid = await store.findJidByLid(lid);
       } else {
         jid = lid;
       }

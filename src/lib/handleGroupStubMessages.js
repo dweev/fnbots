@@ -9,7 +9,7 @@
 import log from './logger.js';
 import { updateContact } from '../lib/contactManager.js';
 import { jidNormalizedUser, WAMessageStubType } from 'baileys';
-import { mongoStore, Group, OTPSession } from '../../database/index.js';
+import { store, Group, OTPSession } from '../../database/index.js';
 
 function generateOTP() {
   return Math.floor(100000 + Math.random() * 900000).toString();
@@ -82,7 +82,7 @@ export default async function handleGroupStubMessages(fn, m) {
   }
   if (needsMetadataRefresh) {
     try {
-      const freshMetadata = await mongoStore.syncGroupMetadata(fn, m.chat);
+      const freshMetadata = await store.syncGroupMetadata(fn, m.chat);
       if (freshMetadata && freshMetadata.participants) {
         for (const participant of freshMetadata.participants) {
           const contactJid = jidNormalizedUser(participant.id);

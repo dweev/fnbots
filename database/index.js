@@ -110,12 +110,12 @@ class DatabaseConnection {
 
 const database = new DatabaseConnection();
 
-import redis from './redis.js';
-import store from './StoreDB.js';
-import OTPSession from './otpSession.js';
+import redis from '../src/cache/redis.js';
+import store from '../src/cache/StoreDB.js';
 import User from '../src/models/User/index.js';
 import Media from '../src/models/Media/index.js';
 import Group from '../src/models/Group/index.js';
+import OTPSession from '../src/cache/otpSession.js';
 import Command from '../src/models/Command/index.js';
 import Settings from '../src/models/Settings/index.js';
 import Whitelist from '../src/models/Whitelist/index.js';

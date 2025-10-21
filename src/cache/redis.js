@@ -4,10 +4,10 @@
 * Follow https://github.com/Terror-Machine
 * Feel Free To Use
 */
-// ─── Info database/redis.js ───────────────────────
+// ─── Info src/cache/redis.js ──────────────────────
 
 import Redis from 'ioredis';
-import log from '../src/lib/logger.js';
+import log from '../lib/logger.js';
 
 const redis = new Redis();
 

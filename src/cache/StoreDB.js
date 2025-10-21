@@ -4,12 +4,12 @@
 * Follow https://github.com/Terror-Machine
 * Feel Free To Use
 */
-// ─── Info database/StoreDB.js ─────────────────────
+// ─── Info src/cache/StoreDB.js ────────────────────
 
-import config from '../config.js';
-import log from '../src/lib/logger.js';
+import log from '../lib/logger.js';
+import config from '../../config.js';
 import { jidNormalizedUser } from 'baileys';
-import { StoreContact, StoreMessages, StoreGroupMetadata, redis } from './index.js';
+import { StoreContact, StoreMessages, StoreGroupMetadata, redis } from '../../database/index.js';
 
 const REDIS_TTL = {
   CONTACT: 86400,

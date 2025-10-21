@@ -4,10 +4,10 @@
 * Follow https://github.com/Terror-Machine
 * Feel Free To Use
 */
-// ─── Info database/otpSession.js ──────────────────────────────
+// ─── Info src/cache/otpSession.js ─────────────────────────────
 
-import { redis } from './index.js';
-import log from '../src/lib/logger.js';
+import log from '../lib/logger.js';
+import { redis } from '../../database/index.js';
 
 const REDIS_PREFIX = {
   SESSION: 'otp:session:',

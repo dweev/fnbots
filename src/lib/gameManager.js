@@ -18,7 +18,7 @@ class GameStateManager {
   }
   async startGame(serial) {
     if (this.isGameActive(serial)) {
-      throw new Error("⏳ Kamu masih memiliki permainan yang sedang berlangsung. Harap tunggu hingga selesai.");
+      throw new Error("Kamu masih memiliki permainan yang sedang berlangsung. Harap tunggu hingga selesai.");
     }
     this.activeGames.add(serial);
     this.gameStartTimes.set(serial, Date.now());

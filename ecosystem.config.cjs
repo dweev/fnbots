@@ -38,8 +38,7 @@ module.exports = {
       },
       env: {
         NODE_ENV: watchMode ? 'development' : 'production',
-        TZ: 'Asia/Jakarta',
-        NODE_OPTIONS: '--max-old-space-size=3072'
+        TZ: 'Asia/Jakarta'
       },
       exp_backoff_restart_delay: 100,
       listen_timeout: 10000,

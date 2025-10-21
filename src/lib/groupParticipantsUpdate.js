@@ -21,52 +21,30 @@ export default async function groupParticipantsUpdate({ id, participants, action
     };
     switch (action) {
       case 'add': {
-        let isBotAdded = false;
-        for (const participant of participants) {
-          const userId = getUserId(participant);
-          const addedMemberJid = userId.endsWith('@lid') ?
-            await mongoStore.findJidByLid(userId) : jidNormalizedUser(userId);
-          if (addedMemberJid && addedMemberJid === botJid) {
-            isBotAdded = true;
-            break;
-          }
-        }
-        if (isBotAdded) {
-          const freshMetadata = await mongoStore.syncGroupMetadata(fn, id);
-          if (freshMetadata) {
-            const botParticipant = freshMetadata.participants.find(p => p.id === botJid || jidNormalizedUser(p.id) === botJid);
-            if (botParticipant && botParticipant.admin) {
-              log(`Bot adalah admin di grup ${id}. Siap untuk operasi.`);
+        const groupData = await Group.findOne({ groupId: id }).lean();
+        if (groupData?.welcome?.state) {
+          const metadata = await mongoStore.getGroupMetadata(id);
+          for (const participant of participants) {
+            const userId = getUserId(participant);
+            let newMemberJid;
+            if (userId.endsWith('@lid')) {
+              newMemberJid = await mongoStore.findJidByLid(userId);
             } else {
-              log(`Bot bukan admin di grup ${id}.`);
+              newMemberJid = jidNormalizedUser(userId);
+            }
+            if (newMemberJid) {
+              await fn.handleGroupEventImage(id, {
+                memberJid: newMemberJid,
+                eventText: 'Selamat Datang Di',
+                subject: metadata.subject,
+                messageText: groupData.welcome.pesan
+              });
+            } else {
+              await log(`Gagal menemukan JID untuk ${userId}. Pesan dilewati.`);
             }
           }
-        } else {
-          const groupData = await Group.findOne({ groupId: id }).lean();
-          if (groupData?.welcome?.state) {
-            const metadata = await mongoStore.getGroupMetadata(id);
-            for (const participant of participants) {
-              const userId = getUserId(participant);
-              let newMemberJid;
-              if (userId.endsWith('@lid')) {
-                newMemberJid = await mongoStore.findJidByLid(userId);
-              } else {
-                newMemberJid = jidNormalizedUser(userId);
-              }
-              if (newMemberJid) {
-                await fn.handleGroupEventImage(id, {
-                  memberJid: newMemberJid,
-                  eventText: 'Selamat Datang Di',
-                  subject: metadata.subject,
-                  messageText: groupData.welcome.pesan
-                });
-              } else {
-                await log(`Gagal menemukan JID untuk ${userId}. Pesan dilewati.`);
-              }
-            }
-          }
-          await mongoStore.syncGroupMetadata(fn, id);
         }
+        await mongoStore.syncGroupMetadata(fn, id);
         break;
       }
       case 'remove': {
@@ -124,7 +102,15 @@ export default async function groupParticipantsUpdate({ id, participants, action
           }
         }
         if (isBotAffected) {
-          await mongoStore.syncGroupMetadata(fn, id);
+          const freshMetadata = await mongoStore.syncGroupMetadata(fn, id);
+          if (freshMetadata) {
+            const botParticipant = freshMetadata.participants.find(p => p.id === botJid || jidNormalizedUser(p.id) === botJid);
+            if (action === 'promote' && botParticipant?.admin) {
+              log(`Bot dijadikan admin di grup ${id}.`);
+            } else if (action === 'demote' && !botParticipant?.admin) {
+              log(`Bot dicopot sebagai admin di grup ${id}.`);
+            }
+          }
         } else {
           const newStatus = action === 'promote' ? 'admin' : null;
           const currentMetadata = await mongoStore.getGroupMetadata(id);

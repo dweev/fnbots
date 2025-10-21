@@ -15,12 +15,12 @@ export const command = {
   execute: async ({ fn, m, sReply, toId }) => {
     if (!m.isGroup) return await sReply(`Perintah ini hanya bisa digunakan di grup.`);
     const groupchat = await fn.groupMetadata(toId);
-    const { subject, subjectOwner, subjectOwnerPhoneNumber } = groupchat;
+    const { subject, subjectOwner, subjectOwnerPn } = groupchat;
     let creatorId;
-    if (subjectOwnerPhoneNumber === undefined) {
+    if (subjectOwnerPn === undefined) {
       creatorId = subjectOwner;
     } else {
-      creatorId = subjectOwnerPhoneNumber;
+      creatorId = subjectOwnerPn;
     }
     if (!creatorId) return await sReply(`Tidak dapat menemukan ID pembuat grup.`);
     const creatorNumber = creatorId.split('@')[0];

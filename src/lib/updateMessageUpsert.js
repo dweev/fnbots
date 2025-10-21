@@ -81,11 +81,18 @@ export default async function updateMessageUpsert(fn, message, dbSettings) {
             await fn.readMessages([m.key]);
           }
         }
-        store.addStatus(m.sender, m, config.performance.maxStoreSaved);
-        StoreStory.addStatus(m.sender, m, config.performance.maxStoreSaved).catch(err => log(err, true));
-        return;
+        const savePromises = [];
+        savePromises.push(
+          store.addStatus(m.sender, m, config.performance.maxStoreSaved)
+        );
+        savePromises.push(
+          StoreStory.addStatus(m.sender, m, config.performance.maxStoreSaved)
+            .catch(err => log(`MongoDB story save error: ${err.message}`, true))
+        );
+        await Promise.allSettled(savePromises);
+        log(`Story saved for ${m.sender} (messageId: ${m.key.id})`);
       } catch (error) {
-        await log(error, true);
+        await log(`Story handling error: ${error.message}`, true);
       }
       return;
     }

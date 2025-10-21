@@ -8,6 +8,7 @@
 
 import log from '../lib/logger.js';
 import config from '../../config.js';
+import StoryCache from './storyCache.js';
 import { jidNormalizedUser } from 'baileys';
 import { StoreContact, StoreMessages, StoreGroupMetadata, redis } from '../../database/index.js';
 
@@ -16,19 +17,17 @@ const REDIS_TTL = {
   GROUP: 3600,
   LID_MAPPING: 86400,
   MESSAGE: 1800,
-  PRESENCE: 300,
-  STATUS: 3600
+  PRESENCE: 300
 };
 
 const REDIS_PREFIX = {
-  CONTACT       : 'cache:contact:',
-  GROUP         : 'cache:groupmetadata:',
-  LID_TO_JID    : 'cache:getLIDForPN:',
-  JID_TO_LID    : 'cache:getPNForLID:',
-  MESSAGES      : 'cache:messages:',
-  CONVERSATIONS : 'cache:conversation:',
-  PRESENCE      : 'cache:presence:',
-  STATUS        : 'cache:storystatus:'
+  CONTACT: 'cache:contact:',
+  GROUP: 'cache:groupmetadata:',
+  LID_TO_JID: 'cache:getLIDForPN:',
+  JID_TO_LID: 'cache:getPNForLID:',
+  MESSAGES: 'cache:messages:',
+  CONVERSATIONS: 'cache:conversation:',
+  PRESENCE: 'cache:presence:'
 };
 
 class DBStore {
@@ -673,34 +672,6 @@ class DBStore {
       return null;
     }
   }
-  async getLidForJid(jid) {
-    if (!jid) return null;
-    const cached = await this.getRedisString(`${REDIS_PREFIX.JID_TO_LID}${jid}`);
-    if (cached) return cached;
-    if (this.authStore) {
-      try {
-        const lidFromAuth = await this.authStore.getLIDForPN(jid);
-        if (lidFromAuth) {
-          await this.cacheLidMapping(lidFromAuth, jid);
-          return lidFromAuth;
-        }
-      } catch (error) {
-        log(`AuthStore reverse lookup failed for JID ${jid}: ${error.message}`, true);
-      }
-    }
-    try {
-      const contact = await StoreContact.findOne({ jid }).lean();
-      const lid = contact?.lid || null;
-      if (lid) {
-        await this.cacheLidMapping(lid, jid);
-      }
-      return lid;
-    } catch (error) {
-      this.stats.errors++;
-      log(`Database reverse lookup failed for JID ${jid}: ${error.message}`, true);
-      return null;
-    }
-  }
   async updateMessages(chatId, message, maxSize = 50) {
     try {
       const key = `${REDIS_PREFIX.MESSAGES}${chatId}`;
@@ -761,32 +732,6 @@ class DBStore {
       return {};
     }
   }
-  async addStatus(userId, statusMessage, maxSize = 20) {
-    try {
-      const key = `${REDIS_PREFIX.STATUS}${userId}`;
-      await redis.rpush(key, JSON.stringify(statusMessage));
-      await redis.ltrim(key, -maxSize, -1);
-      await redis.expire(key, REDIS_TTL.STATUS);
-    } catch (error) {
-      log(`Add status error: ${error.message}`, true);
-    }
-  }
-  async deleteStatus(userId, messageId) {
-    try {
-      const key = `${REDIS_PREFIX.STATUS}${userId}`;
-      const statuses = await redis.lrange(key, 0, -1);
-      const filtered = statuses
-        .map(s => JSON.parse(s))
-        .filter(status => status.key.id !== messageId);
-      await redis.del(key);
-      if (filtered.length > 0) {
-        await redis.rpush(key, ...filtered.map(s => JSON.stringify(s)));
-        await redis.expire(key, REDIS_TTL.STATUS);
-      }
-    } catch (error) {
-      log(`Delete status error: ${error.message}`, true);
-    }
-  }
   async loadMessage(remoteJid, id) {
     try {
       const messages = await this.getMessages(remoteJid, 50);
@@ -818,8 +763,7 @@ class DBStore {
         `${REDIS_PREFIX.JID_TO_LID}*`,
         `${REDIS_PREFIX.MESSAGES}*`,
         `${REDIS_PREFIX.CONVERSATIONS}*`,
-        `${REDIS_PREFIX.PRESENCE}*`,
-        `${REDIS_PREFIX.STATUS}*`
+        `${REDIS_PREFIX.PRESENCE}*`
       ];
       for (const pattern of patterns) {
         const stream = redis.scanStream({ match: pattern, count: 100 });
@@ -1143,6 +1087,67 @@ class DBStore {
         errors: 1
       };
     }
+  }
+
+  async addStatus(userId, statusMessage, maxSize = 20) {
+    try {
+      await StoryCache.addStatus(userId, statusMessage, maxSize);
+    } catch (error) {
+      log(`Add status error: ${error.message}`, true);
+    }
+  }
+  async getStatuses(userId) {
+    try {
+      const cached = await StoryCache.getStatusesFromCache(userId);
+      if (cached !== null) {
+        return cached;
+      }
+      const { StoreStory } = await import('../../database/index.js');
+      const doc = await StoreStory.findOne({ userId }).lean();
+      const stories = doc?.statuses || [];
+      if (stories.length > 0) {
+        await StoryCache.populateCacheFromDB(userId, stories);
+      }
+      return stories;
+    } catch (error) {
+      log(`Get statuses error: ${error.message}`, true);
+      return [];
+    }
+  }
+  async getSpecificStatus(userId, messageId) {
+    try {
+      const cached = await StoryCache.getSpecificStatus(userId, messageId);
+      if (cached) {
+        return cached;
+      }
+      const { StoreStory } = await import('../../database/index.js');
+      const doc = await StoreStory.findOne({ userId }).lean();
+      const story = doc?.statuses?.find(s => s.key?.id === messageId);
+      return story || null;
+    } catch (error) {
+      log(`Get specific status error: ${error.message}`, true);
+      return null;
+    }
+  }
+  async deleteStatus(userId, messageId) {
+    try {
+      await StoryCache.deleteStatus(userId, messageId);
+    } catch (error) {
+      log(`Delete status error: ${error.message}`, true);
+    }
+  }
+  async bulkDeleteStatuses(userId, messageIds) {
+    try {
+      await StoryCache.bulkDeleteStatuses(userId, messageIds);
+    } catch (error) {
+      log(`Bulk delete statuses error: ${error.message}`, true);
+    }
+  }
+  async invalidateStoryCache(userId) {
+    return StoryCache.invalidateCache(userId);
+  }
+  async getStoryCacheStats() {
+    return StoryCache.getStats();
   }
 }
 

@@ -811,16 +811,50 @@ class UnifiedJobScheduler {
       const { exec } = await import('child_process');
       const util = await import('util');
       const execAsync = util.promisify(exec);
+      log('Starting weekly cleanup...');
       const chatResult = await StoreMessages.cleanupOldData();
+      log(`Cleaned up ${chatResult.deletedCount} old messages`);
       const storyResult = await StoreStory.cleanupOldData();
+      log(`Cleaned up ${storyResult.deletedCount} old stories from MongoDB`);
+      await this.syncStoryCacheWithDB();
       try {
         await execAsync('rm -rf ../logs/*');
+        log('Old logs cleaned up');
       } catch (logError) {
         log(`Log cleanup error: ${logError.message}`, true);
       }
-      log(`Weekly cleanup: ${chatResult.deletedCount} messages, ${storyResult.deletedCount} stories`);
+      log(`Weekly cleanup complete: ${chatResult.deletedCount} messages, ${storyResult.deletedCount} stories`);
     } catch (error) {
+      log(`Weekly cleanup error: ${error.message}`, true);
       throw error;
+    }
+  }
+  async syncStoryCacheWithDB() {
+    try {
+      const { StoreStory } = await import('../../database/index.js');
+      const { default: StoryCache } = await import('../cache/storyCache.js');
+      log('Syncing story cache with MongoDB...');
+      const cachedUserIds = await StoryCache.getUsersWithStories();
+      if (cachedUserIds.length === 0) {
+        log('No cached stories to sync');
+        return;
+      }
+      const dbUsers = await StoreStory.find({ 'statuses.0': { $exists: true } })
+        .select('userId')
+        .lean();
+      const dbUserIds = new Set(dbUsers.map(u => u.userId));
+      const staleUserIds = cachedUserIds.filter(userId => !dbUserIds.has(userId));
+      if (staleUserIds.length === 0) {
+        log('Story cache is in sync with MongoDB');
+        return;
+      }
+      log(`Found ${staleUserIds.length} stale cached users, invalidating...`);
+      for (const userId of staleUserIds) {
+        await StoryCache.invalidateCache(userId);
+      }
+      log(`Story cache sync complete: invalidated ${staleUserIds.length} stale entries`);
+    } catch (error) {
+      log(`Story cache sync error: ${error.message}`, true);
     }
   }
   calculateLimit(config, dbSettings, user) {

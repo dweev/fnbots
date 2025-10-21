@@ -14,16 +14,16 @@ export const command = {
   description: 'Memberikan informasi group.',
   aliases: ['infogroup', 'ginfo'],
   isCommandWithoutPayment: true,
-  execute: async ({ fn, m, isBotGroupAdmins, toId, sReply }) => {
+  execute: async ({ fn, m, isBotGroupAdmins, toId, sReply, sPesan }) => {
     if (!m.isGroup) return await sReply(`Perintah ini hanya bisa digunakan didalam group.`);
     if (!isBotGroupAdmins) return await sReply(`Perintah ini hanya bisa digunakan jika bot menjadi admin grup.`);
     const groupchat = await fn.groupMetadata(toId);
-    const { subject, subjectOwner, subjectOwnerPhoneNumber, creation, desc } = groupchat;
+    const { subject, subjectOwner, subjectOwnerPn, creation, desc } = groupchat;
     let creator;
-    if (subjectOwnerPhoneNumber === undefined) {
+    if (subjectOwnerPn === undefined) {
       creator = subjectOwner;
     } else {
-      creator = subjectOwnerPhoneNumber;
+      creator = subjectOwnerPn;
     }
     const memberCount = groupchat.participants.length;
     const subjectName = subject || 'Tidak diketahui';
@@ -36,6 +36,6 @@ export const command = {
     result += `👥 Jumlah Member: ${memberCount}\n`;
     if (desc) result += `📝 Deskripsi:\n${desc}\n`;
     result += `📅 Dibuat: ${createdDate} (${waktu(elapsed)} yang lalu)`;
-    await fn.sendPesan(toId, result, m);
+    await sPesan(result);
   }
 };

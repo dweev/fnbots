@@ -1,6 +1,5 @@
 import { jidNormalizedUser } from 'baileys';
 import { updateMyGroup } from '../../../core/handler.js';
-import { StoreGroupMetadata } from '../../../database/index.js';
 
 export const command = {
   name: 'listgroup',
@@ -8,9 +7,9 @@ export const command = {
   description: 'Menampilkan daftar semua grup dan memperbarui cache untuk remote command.',
   aliases: ['lg', 'grouplist', 'mygroup'],
   isCommandWithoutPayment: true,
-  execute: async ({ sReply, isSadmin, isMaster }) => {
+  execute: async ({ sReply, isSadmin, isMaster, store }) => {
     if (!(isSadmin || isMaster)) return;
-    const allGroups = await StoreGroupMetadata.find({}).lean();
+    const allGroups = await store.getAllGroups({ groupId: 1, subject: 1, participants: 1 });
     if (!allGroups || allGroups.length === 0) return sReply('Bot tidak berada di dalam grup manapun saat ini.');
     allGroups.sort((a, b) => (a.subject || '').localeCompare(b.subject || ''));
     const groupJids = [];
@@ -29,7 +28,7 @@ export const command = {
     replyText += allGroups.map((group, index) => {
       return `${index + 1}. *${group.subject}*\n   - ID: ${group.groupId}`;
     }).join('\n\n');
-    replyText += `\n\nCache untuk remote command (${groupJids.length} grup, ${Object.keys(groupMembers).length} data anggota) berhasil diperbarui.`;
+    replyText += `\n\nCache untuk remote command (${groupJids.length} grup) berhasil diperbarui.`;
     await sReply(replyText);
   }
 };

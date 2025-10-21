@@ -13,10 +13,10 @@ export const command = {
   category: 'vip',
   description: 'Mencari informasi berapa group yang sama antara bot dan target.',
   isCommandWithoutPayment: true,
-  execute: async ({ sReply, args, mentionedJidList, dbSettings }) => {
+  execute: async ({ sReply, args, mentionedJidList, dbSettings, store }) => {
     if (mentionedJidList.length !== 0) {
       for (const a of mentionedJidList) {
-        const groupsFound = await getCommonGroups(a);
+        const groupsFound = await getCommonGroups(store, a);
         let list = '';
         for (const grp of groupsFound) {
           list += `${grp.subject || grp.formattedTitle || 'Unnamed Group'}\n`;
@@ -25,7 +25,7 @@ export const command = {
       }
     } else if (args && args[0]) {
       const a = args[0].replace(/[^0-9]/g, '') + '@s.whatsapp.net';
-      const groupsFound = await getCommonGroups(a);
+      const groupsFound = await getCommonGroups(store, a);
       let list = '';
       for (const grp of groupsFound) {
         list += `${grp.subject || grp.formattedTitle || 'Unnamed Group'}\n`;

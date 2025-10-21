@@ -6,14 +6,12 @@
 */
 // ─── Info ────────────────────────────────
 
-import { store } from '../../../database/index.js';
-
 export const command = {
   name: 'requestjoin',
   category: 'manage',
   description: 'melihat permintaan masuk group',
   isCommandWithoutPayment: true,
-  execute: async ({ fn, m, sReply, isBotGroupAdmins, dbSettings, toId }) => {
+  execute: async ({ fn, m, sReply, isBotGroupAdmins, dbSettings, toId, store }) => {
     if (!m.isGroup) return await sReply(`Perintah ini hanya bisa digunakan didalam group.`);
     if (!isBotGroupAdmins) return await sReply(`Perintah ini hanya bisa digunakan jika bot menjadi admin grup.`);
     const pendingList = await fn.groupRequestParticipantsList(toId).then(a => a.map(b => b.jid));

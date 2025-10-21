@@ -8,14 +8,14 @@
 
 import { delay } from 'baileys';
 import log from '../../lib/logger.js';
-import { StoreGroupMetadata, Whitelist } from '../../../database/index.js';
+import { performanceManager } from '../../lib/performanceManager.js';
 
 export const command = {
   name: 'leaveallgroup',
   category: 'bot',
   description: 'Mengeluarkan bot dari semua grup dengan opsi mode dan teks perpisahan.',
   isCommandWithoutPayment: true,
-  execute: async ({ fn, args, toId, sReply }) => {
+  execute: async ({ fn, args, toId, sReply, store }) => {
     let mode = 'all';
     let farewellText = '';
     if (args.length > 0) {
@@ -31,10 +31,14 @@ export const command = {
       }
     }
     await sReply(`Mode terdeteksi: *${mode}*. Memulai proses keluar dari grup...`);
-    const allGroupMetadatas = await StoreGroupMetadata.find({}).select('groupId').lean();
+    const allGroupMetadatas = await store.getAllGroups({ groupId: 1 });
     const allGroupIds = allGroupMetadatas.map(g => g.groupId);
-    const whitelistedGroups = await Whitelist.find({ type: 'group' }).select('targetId').lean();
-    const whitelistIdSet = new Set(whitelistedGroups.map(w => w.targetId));
+    const whitelistIdSet = new Set();
+    for (const id of allGroupIds) {
+      if (await performanceManager.cache.warmWhitelistCache(id)) {
+        whitelistIdSet.add(id);
+      }
+    }
     let targetGroupIds = [];
     if (mode === 'free') {
       targetGroupIds = allGroupIds.filter(id => !whitelistIdSet.has(id));
@@ -52,8 +56,9 @@ export const command = {
       if (idGroup === toId) continue;
       try {
         if (farewellText) {
-          const res = await fn.groupMetadata(idGroup);
-          await fn.sendPesan(idGroup, farewellText, { ephemeralExpiration: res.ephemeralDuration });
+          const groupInfo = await store.getGroupMetadata(idGroup);
+          const expiration = groupInfo?.ephemeralDuration || 0;
+          await fn.sendPesan(idGroup, farewellText, { ephemeralExpiration: expiration });
           await delay(1000);
         }
         await fn.groupLeave(idGroup);

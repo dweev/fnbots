@@ -6,7 +6,6 @@
 */
 // ─── Info ────────────────────────────────
 
-import { store } from '../../../database/index.js';
 import { parseSelector } from '../../function/index.js';
 
 export const command = {
@@ -14,7 +13,7 @@ export const command = {
   category: 'manage',
   description: 'menerima permintaan masuk group dari calon member',
   isCommandWithoutPayment: true,
-  execute: async ({ fn, m, sReply, isBotGroupAdmins, dbSettings, toId, args }) => {
+  execute: async ({ fn, m, sReply, isBotGroupAdmins, dbSettings, toId, args, store }) => {
     if (!m.isGroup) return await sReply(`Perintah ini hanya bisa digunakan didalam group.`);
     if (!isBotGroupAdmins) return await sReply(`Perintah ini hanya bisa digunakan jika bot menjadi admin grup.`);
     const pendingList = await fn.groupRequestParticipantsList(toId).then(a => a.map(b => b.jid));

@@ -8,8 +8,8 @@
 
 import log from './logger.js';
 import { jidNormalizedUser } from 'baileys';
+import { store, Group } from '../../database/index.js';
 import { updateContact } from '../lib/contactManager.js';
-import { store, StoreGroupMetadata, Group } from '../../database/index.js';
 
 export default async function groupParticipantsUpdate({ id, participants, action }, fn) {
   log(`Event: group-participants.update | Aksi: ${action} | Grup: ${id}`);
@@ -59,8 +59,7 @@ export default async function groupParticipantsUpdate({ id, participants, action
         }
         if (isBotRemoved) {
           log(`Bot dikeluarkan dari grup ${id}. Membersihkan metadata...`);
-          await StoreGroupMetadata.deleteOne({ groupId: id });
-          store.clearGroupCacheByKey(id);
+          await store.deleteGroup(id);
           return;
         }
         const groupData = await Group.findOne({ groupId: id }).lean();

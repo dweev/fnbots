@@ -18,7 +18,7 @@ import dayjs from '../utils/dayjs.js';
 import { tmpDir } from '../lib/tempManager.js';
 import { pluginCache } from '../lib/plugins.js';
 import { fetch as nativeFetch } from '../addon/bridge.js';
-import { StoreMessages, User, StoreGroupMetadata } from '../../database/index.js';
+import { StoreMessages, User } from '../../database/index.js';
 
 let fuse;
 let allCmds           = [];
@@ -148,17 +148,27 @@ export async function checkCommandAccess(command, userData, user, maintenance) {
   }
   return { allowed: true };
 };
-export async function isUserVerified(m, dbSettings, StoreGroupMetadata, fn, sReply, hakIstimewa) {
+export async function isUserVerified(m, dbSettings, store, fn, sReply, hakIstimewa) {
   if (m.fromMe || hakIstimewa) return true;
   if (m.isGroup) return true;
   try {
-    const metadata = await StoreGroupMetadata.findOne({ groupId: dbSettings.groupIdentity }).lean();
-    if (!metadata) return true;
+    const verificationGroupId = dbSettings.groupIdentity;
+    if (!verificationGroupId) {
+      log('Verification skipped: groupIdentity not set in dbSettings.');
+      return true;
+    }
+    const metadata = await store.getGroupMetadata(verificationGroupId);
+    if (!metadata) {
+      log(`Verification skipped: Verification group ${verificationGroupId} not found in store.`);
+      return true;
+    }
     const isParticipant = metadata.participants.some(p => p.id === m.sender);
-    if (isParticipant) return true;
+    if (isParticipant) {
+      return true;
+    }
     const botParticipant = metadata.participants.find(p => p.id === m.botnumber);
     if (botParticipant && botParticipant.admin) {
-      const inviteCode = await fn.groupInviteCode(dbSettings.groupIdentity);
+      const inviteCode = await fn.groupInviteCode(verificationGroupId);
       await sReply(`Untuk menggunakan bot, Anda harus bergabung ke grup kami:\n\nhttps://chat.whatsapp.com/${inviteCode}`);
     } else {
       await sReply(`Untuk menggunakan bot, Anda harus bergabung ke grup kami:\n\n${dbSettings.linkIdentity}`);
@@ -645,10 +655,17 @@ export function getServerIp() {
   }
   return "127.0.0.1";
 };
-export async function getCommonGroups(userId) {
+export async function getCommonGroups(store, userId) {
   try {
-    const groups = await StoreGroupMetadata.find({ 'participants.id': userId }).lean();
-    return groups;
+    const allGroups = await store.getAllGroups({ 
+        groupId: 1, 
+        subject: 1, 
+        participants: 1 
+    });
+    const commonGroups = allGroups.filter(group => 
+      group.participants.some(p => p.id === userId)
+    );
+    return commonGroups;
   } catch (error) {
     await log(`Error_CommonGroups\n${error}`, true);
     return [];

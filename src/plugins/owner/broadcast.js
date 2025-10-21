@@ -9,7 +9,7 @@
 import { delay } from 'baileys';
 import log from '../../lib/logger.js';
 import config from '../../../config.js';
-import { StoreGroupMetadata, Whitelist } from '../../../database/index.js';
+import { performanceManager } from '../../lib/performanceManager.js';
 
 export const command = {
   name: 'broadcast',
@@ -17,7 +17,7 @@ export const command = {
   description: 'Mengirim pesan siaran ke grup yang ada di whitelist atau tidak.',
   aliases: ['bc'],
   isCommandWithoutPayment: true,
-  execute: async ({ args, dbSettings, fn, sReply }) => {
+  execute: async ({ args, dbSettings, fn, sReply, m, store }) => {
     let broadcastMode = 'all';
     let messageContent = args.join(' ');
     const firstArg = args[0]?.toLowerCase();
@@ -40,10 +40,14 @@ export const command = {
         `   (Kirim HANYA ke grup non-whitelist)`
       );
     }
-    const allGroupMetadatas = await StoreGroupMetadata.find({}).select('groupId').lean();
+    const allGroupMetadatas = await store.getAllGroups({ groupId: 1 });
     const allGroupIds = allGroupMetadatas.map(g => g.groupId);
-    const whitelistedGroups = await Whitelist.find({ type: 'group' }).select('targetId').lean();
-    const whitelistIdSet = new Set(whitelistedGroups.map(w => w.targetId));
+    const whitelistIdSet = new Set();
+    for (const id of allGroupIds) {
+      if (await performanceManager.cache.warmWhitelistCache(id)) {
+        whitelistIdSet.add(id);
+      }
+    }
     let targetGroups;
     if (broadcastMode === 'whitelist') {
       targetGroups = allGroupIds.filter(id => whitelistIdSet.has(id));
@@ -60,13 +64,13 @@ export const command = {
     let failedCount = 0;
     for (const idGroup of targetGroups) {
       try {
+        const groupInfo = await store.getGroupMetadata(idGroup);
+        const expiration = groupInfo?.ephemeralDuration || 0;
         if (whitelistIdSet.has(idGroup)) {
           const caption = `*${dbSettings.botName} Broadcast*\n\n${messageContent}`;
-          const res = await fn.groupMetadata(idGroup);
-          await fn.sendFilePath(idGroup, caption, config.paths.avatar, { ephemeralExpiration: res.ephemeralDuration });
+          await fn.sendFilePath(idGroup, caption, config.paths.avatar, { quoted: m, ephemeralExpiration: expiration });
         } else {
-          const res = await fn.groupMetadata(idGroup);
-          await fn.sendPesan(idGroup, messageContent, { ephemeralExpiration: res.ephemeralDuration });
+          await fn.sendPesan(idGroup, messageContent, { ephemeralExpiration: expiration });
         }
         successCount++;
         await delay(1500);

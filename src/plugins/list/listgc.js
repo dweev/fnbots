@@ -6,7 +6,6 @@
 */
 // ─── Info ────────────────────────────────
 
-import { StoreGroupMetadata } from '../../../database/index.js';
 import dayjs from '../../utils/dayjs.js';
 
 export const command = {
@@ -14,9 +13,9 @@ export const command = {
   category: 'list',
   description: 'Menampilkan semua daftar grup tempat bot berada.',
   isCommandWithoutPayment: true,
-  execute: async ({ sReply, isSadmin, isMaster }) => {
+  execute: async ({ sReply, isSadmin, isMaster, store }) => {
     if (!(isSadmin || isMaster)) return;
-    const allGroupMetadata = await StoreGroupMetadata.find({}).lean();
+    const allGroupMetadata = await store.getAllGroups({ owner: 1, ownerPn: 1, subject: 1, participants: 1, id: 1, creation: 1 });
     if (!allGroupMetadata || allGroupMetadata.length === 0) return await sReply('Saat ini bot tidak berada di dalam grup manapun.');
     let message = '';
     message += `┌─  G R O U P   L I S T\n`;
@@ -24,8 +23,13 @@ export const command = {
     message += `├ Total Grup : ${allGroupMetadata.length}\n`;
     message += `│\n`;
     allGroupMetadata.forEach((metadata, index) => {
+      let ownerJid;
+      if (metadata.owner.endsWith('@lid')) {
+        ownerJid = metadata.ownerPn || '';
+      } else {
+        ownerJid = metadata.owner || '';
+      }
       if (!metadata.subject) return;
-      const ownerJid = metadata.owner || '';
       let ownerMention = '-';
       if (ownerJid) {
         ownerMention = `@${ownerJid.split('@')[0]}`;

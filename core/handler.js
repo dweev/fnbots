@@ -19,7 +19,7 @@ import { runJob } from '../src/worker/worker_manager.js';
 import cooldownManager from '../src/lib/cooldownManager.js';
 import { restartManager } from '../src/lib/restartManager.js';
 import { performanceManager } from '../src/lib/performanceManager.js';
-import { User, Group, Settings, StoreGroupMetadata, OTPSession, Media, DatabaseBot, StoreMessages } from '../database/index.js';
+import { User, Group, Settings, OTPSession, Media, DatabaseBot, StoreMessages } from '../database/index.js';
 import { handleAntiDeleted, handleAutoJoin, handleAudioChanger, handleAutoSticker, handleChatbot, handleAutoDownload, handleGameBotResponse } from '../src/handler/index.js';
 import { color, msgs, mycmd, safeStringify, sendAndCleanupFile, waktu, checkCommandAccess, isUserVerified, textMatch1, textMatch2, expiredVIPcheck, expiredCheck, getSerial, getTxt } from '../src/function/index.js';
 
@@ -424,7 +424,7 @@ export async function arfine(fn, m, { store, dbSettings, ownerNumber, version, i
       const isAllowedByState = (maintenance && (isWhiteList || hakIstimewa)) || (!maintenance && (hakIstimewa || !userData.isMuted));
       if (!isAllowedByState) return;
       if (dbSettings.verify === true) {
-        const isVerified = await isUserVerified(m, dbSettings, StoreGroupMetadata, fn, sReply, hakIstimewa);
+        const isVerified = await isUserVerified(m, dbSettings, store, fn, sReply, hakIstimewa);
         if (!isVerified) return;
       }
       if (cooldownManager.isSpamming(serial)) return;
@@ -484,7 +484,7 @@ export async function arfine(fn, m, { store, dbSettings, ownerNumber, version, i
                     sessions, chessGame, othelloGame, ludoSessions, game41Sessions, gamematematika,
                     werewolfSessions, minesweeperSessions, ularTanggaSessions, tictactoeSessions,
                     samgongSessions, tebakkalimat, siapakahaku, ulartangga, tebakgame,
-                    sendRawWebpAsSticker, StoreMessages
+                    sendRawWebpAsSticker, StoreMessages, store
                   };
                   await command.execute(commandArgs);
                   commandFound = true;

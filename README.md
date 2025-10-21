@@ -6,7 +6,7 @@
 
 ## About The Project
 
-  * **This is an independent project and is NOT affiliated, endorsed, or supported by WhatsApp or Meta Platforms.** It is built using the [Baileys](https://www.npmjs.com/package/baileys) library from the [WhiskeySockets/Baileys](https://github.com/WhiskeySockets/Baileys) GitHub repository.
+  * **This is an independent project and is NOT affiliated, endorsed, or supported by WhatsApp or Meta Platforms.** It is built using the [Baileys](https://www.npmjs.com/package/baileys) library from the [WhiskeySockets/Baileys](https://github.com/WhiskeySockets/Baileys) GitHub repository with 1 server for 1 bot only. Or you can multiple with different folder project but i dont recommend for small servers.
 
 ### Core Philosophies
 
@@ -489,13 +489,6 @@ For ROOT users (running at systemd level), use the `system.sh` script to set up 
 sudo bash ./system.sh
 bot start
 ```
-
------
-
-### Special Thanks and Credits
-
-- [Baileys](https://github.com/WhiskeySockets/Baileys) — for providing the foundation for WhatsApp Web API implementation.
-- [Liora](https://github.com/naruyaizumi) — for valuable work on native C++ addon integration.
 
 -----
 

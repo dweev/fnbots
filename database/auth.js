@@ -12,7 +12,6 @@ import { BufferJSON, initAuthCreds, proto } from 'baileys';
 
 const BACKUP_CREDS_KEY = 'creds:backup';
 const RETRY_COUNT_KEY = 'session:retry_count';
-const SESSION_RESTORED_FLAG = 'session:needs_recreation';
 const REDIS_LOCK_TTL = 10;
 const REDIS_PREFIX = {
   LOCK: 'lock:auth:',
@@ -117,30 +116,6 @@ const resetRetryCount = async () => {
     await redis.del(RETRY_COUNT_KEY);
   } catch (error) {
     await log(`Failed to reset retry count: ${error.message}`, true);
-  }
-};
-const setSessionRecreationFlag = async () => {
-  try {
-    await redis.set(SESSION_RESTORED_FLAG, '1', 'EX', 300);
-    await log('Session recreation flag set');
-  } catch (error) {
-    await log(`Failed to set recreation flag: ${error.message}`, true);
-  }
-};
-const checkSessionRecreationFlag = async () => {
-  try {
-    const flag = await redis.get(SESSION_RESTORED_FLAG);
-    return flag === '1';
-  } catch {
-    return false;
-  }
-};
-const clearSessionRecreationFlag = async () => {
-  try {
-    await redis.del(SESSION_RESTORED_FLAG);
-    await log('Session recreation flag cleared');
-  } catch (error) {
-    await log(`Failed to clear recreation flag: ${error.message}`, true);
   }
 };
 const storeLIDMapping = async () => {
@@ -249,7 +224,6 @@ export default async function AuthStore() {
             k === REDIS_PREFIX.CREDS ||
             k === BACKUP_CREDS_KEY ||
             k === RETRY_COUNT_KEY ||
-            k === SESSION_RESTORED_FLAG ||
             k.startsWith('lid-mapping-')
           ) {
             return;
@@ -341,7 +315,6 @@ export default async function AuthStore() {
         const restored = await restoreCredsFromBackup();
         if (restored) {
           await incrementRetryCount();
-          await setSessionRecreationFlag();
           await log('Session keys cleared, creds restored. Flag set for session recreation...');
           return { success: true, shouldClearSession: false, attempt: currentRetry + 1 };
         }
@@ -352,12 +325,6 @@ export default async function AuthStore() {
         await incrementRetryCount();
         return { success: false, shouldClearSession: false };
       }
-    },
-    needsSessionRecreation: async () => {
-      return await checkSessionRecreationFlag();
-    },
-    completeSessionRecreation: async () => {
-      await clearSessionRecreationFlag();
     },
     resetRetryAttempts: async () => {
       await resetRetryCount();
@@ -383,7 +350,6 @@ export default async function AuthStore() {
         }
         await log(`Session cleared. Deleted ${keysToDelete.length} keys.`);
         await resetRetryCount();
-        await clearSessionRecreationFlag();
         Object.keys(creds).forEach(key => delete creds[key]);
         Object.assign(creds, initAuthCreds());
         await writeData(REDIS_PREFIX.CREDS, creds);

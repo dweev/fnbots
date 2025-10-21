@@ -65,8 +65,7 @@ export async function createWASocket(dbSettings) {
   const fn = makeWASocket({
     logger: pinoLogger,
     version: global.version,
-    browser: Browsers.macOS('Chrome'),
-    countryCode: 'ID',
+    browser: Browsers.macOS('Safari'),
     syncFullHistory: true,
     emitOwnEvents: true,
     auth: { creds: state.creds, keys: makeCacheableSignalKeyStore(state.keys, pinoLogger) },
@@ -78,8 +77,6 @@ export async function createWASocket(dbSettings) {
   fn.getLID = authStore.getLIDForPN;
   fn.restoreSession = authStore.restoreSession;
   fn.resetRetryAttempts = authStore.resetRetryAttempts;
-  fn.needsSessionRecreation = authStore.needsSessionRecreation;
-  fn.completeSessionRecreation = authStore.completeSessionRecreation;
 
   if (pairingCode && !phoneNumber && !fn.authState.creds.registered) {
     let numberToValidate = config.botNumber ? config.botNumber : dbSettings.botNumber;
@@ -164,25 +161,6 @@ export async function createWASocket(dbSettings) {
         await log(`WA Version: ${global.version.join('.')}`);
         await log(`BOT Number: ${jidNormalizedUser(fn.user.id).split('@')[0]}`);
         await log(`${dbSettings.botName} Success Connected to whatsapp...`);
-        const needsRecreation = await fn.needsSessionRecreation();
-        if (needsRecreation) {
-          await log('Detected restored session. Generating new session keys...');
-          try {
-            await fn.query({
-              tag: 'iq',
-              attrs: {
-                to: '@s.whatsapp.net',
-                type: 'get',
-                xmlns: 'encrypt',
-                id: fn.generateMessageTag()
-              }
-            });
-            await fn.completeSessionRecreation();
-            await log('New session keys generated successfully');
-          } catch (error) {
-            await log(`Session generation failed: ${error.message}`, true);
-          }
-        }
         await fn.storeLIDMapping().catch(err => log(`Background LID sync failed: ${err.message}`, true));
         await fn.resetRetryAttempts();
         setInterval(() => {

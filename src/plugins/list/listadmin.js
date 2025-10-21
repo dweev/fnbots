@@ -12,7 +12,7 @@ export const command = {
   description: 'Melihat daftar admin group.',
   aliases: ['adminlist'],
   isCommandWithoutPayment: true,
-  execute: async ({ fn, sReply, toId, m, isPrivileged }) => {
+  execute: async ({ fn, sReply, toId, m, isPrivileged, sPesan }) => {
     if (!isPrivileged) return;
     if (!m.isGroup) return await sReply(`Perintah ini hanya bisa digunakan di grup.`);
     const metadata = await fn.groupMetadata(toId);
@@ -21,6 +21,6 @@ export const command = {
       return a;
     }, []) || [];
     const adminListText = groupAdmins.map((admin, i) => `${i + 1}. @${admin.id.split('@')[0]}`).join('\n');
-    await fn.sendPesan(toId, `Daftar Admin Group: ${groupAdmins.length}\n\n` + adminListText, { ephemeralExpiration: m.expiration ?? 0 });
+    await sPesan(`Daftar Admin Group: ${groupAdmins.length}\n\n` + adminListText);
   }
 };

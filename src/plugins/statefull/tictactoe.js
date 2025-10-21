@@ -15,7 +15,7 @@ export const command = {
   description: 'Game Statefull tictactoe',
   isLimitGameCommand: true,
   aliases: ['g-tictactoe'],
-  execute: async ({ fn, m, user, toId, sReply, serial, tictactoeSessions }) => {
+  execute: async ({ m, user, toId, sReply, serial, tictactoeSessions, sPesan }) => {
     if (!m.isGroup) return await sReply("Permainan ini hanya bisa dimainkan di grup.");
     if (tictactoeSessions[toId]) return await sReply("Sudah ada permainan yang sedang berjalan di grup ini.");
     const startTTTTimeout = (idGroup) => {
@@ -42,7 +42,7 @@ export const command = {
       `Kamu mendapat giliran pertama. Sesi akan berakhir dalam 3 menit jika tidak aktif.\n` +
       `Ketik angka (1-9) untuk menempatkan 'X' Kamu.\n`;
     introText += formatTicTacToeBoard(initialBoard);
-    await fn.sendPesan(toId, introText, { ephemeralExpiration: m.expiration ?? 0 });
+    await sPesan(introText);
     await user.addXp();
   }
 };

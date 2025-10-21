@@ -12,7 +12,7 @@ export const command = {
   description: 'Menyebutkan semua anggota grup.',
   aliases: ['tagall', 'tag'],
   isCommandWithoutPayment: true,
-  execute: async ({ fn, m, toId, sReply }) => {
+  execute: async ({ fn, m, toId, sReply, sPesan }) => {
     if (!m.isGroup) return await sReply("Perintah ini hanya bisa digunakan di grup.");
     const groupMetadata = await fn.groupMetadata(toId);
     const mentions = groupMetadata.participants.map(member => member.id);
@@ -20,6 +20,6 @@ export const command = {
     mentions.forEach((jid, idx) => {
       message += `\n${idx + 1}. @${jid.split('@')[0]}`;
     });
-    await fn.sendPesan(toId, message, { ephemeralExpiration: m.expiration ?? 0 });
+    await sPesan(message);
   }
 };

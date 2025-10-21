@@ -15,7 +15,7 @@ export const command = {
   description: 'Game Statefull 41',
   isLimitGameCommand: true,
   aliases: ['g-41'],
-  execute: async ({ fn, m, user, toId, sReply, serial, game41Sessions }) => {
+  execute: async ({ fn, m, user, toId, sReply, serial, game41Sessions, sPesan }) => {
     if (!m.isGroup) return await sReply('Permainan 41 hanya bisa dimulai di dalam grup.');
     if (game41Sessions[toId]) return await sReply('Sudah ada permainan kartu 41 yang sedang berjalan di grup ini.');
     const gameDuration = 10 * 60 * 1000;
@@ -45,7 +45,7 @@ export const command = {
       `Kartu buangan pertama adalah [ ${discardPile[0].display} ].\n` +
       `Sesi ini akan berakhir dalam 10 menit.\n\n` +
       `Giliranmu! Kartu sudah saya kirim via DM.`;
-    await fn.sendPesan(toId, groupMessage, { ephemeralExpiration: m.expiration ?? 0 });
+    await sPesan(groupMessage);
     const privateMessage = `Ini kartumu untuk game di grup:\n\n${formatKartu(playerHand)}\n\n` +
       `Pilih aksimu di grup: *ambil dek* atau *ambil buangan*.`;
     const expiration = await fn.getEphemeralExpiration(playerId);

@@ -15,7 +15,7 @@ export const command = {
   description: 'Game Statefull samgong',
   isLimitGameCommand: true,
   aliases: ['g-samgong'],
-  execute: async ({ fn, m, user, toId, sReply, serial, samgongSessions }) => {
+  execute: async ({ fn, m, user, toId, sReply, serial, samgongSessions, sPesan }) => {
     if (!m.isGroup) return await sReply('Permainan Samgong hanya bisa dimulai di dalam grup.');
     if (samgongSessions[toId]) return await sReply('Sesi Samgong sudah berjalan di grup ini.');
     const startTimeout = (idGroup) => {
@@ -37,7 +37,7 @@ export const command = {
     const groupMessage = `Permainan Samgong (Gaya Hit/Stand) dimulai oleh @${playerId.split('@')[0]}!\n\n` +
       `Satu kartu Bandar terbuka: [ ${botHand[0].display} ]\n\n` +
       `Giliranmu, @${playerId.split('@')[0]}! Cek DM. Sesi akan berakhir dalam 5 menit jika tidak aktif.`;
-    await fn.sendPesan(toId, groupMessage, { ephemeralExpiration: m.expiration ?? 0 });
+    await sPesan(groupMessage);
     const privateMessage = `Ini kartumu (Total: *${calculateSamgongValue(playerHand)}*):\n${formatKartu(playerHand)}\n\n` +
       `Ketik *hit* untuk menambah kartu, atau *stand* untuk berhenti.`;
     const expiration = await fn.getEphemeralExpiration(playerId);

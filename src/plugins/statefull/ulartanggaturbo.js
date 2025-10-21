@@ -15,7 +15,7 @@ export const command = {
   description: 'Game Statefull ulartangga turbo',
   isLimitGameCommand: true,
   aliases: ['g-ulartangga-turbo'],
-  execute: async ({ fn, m, user, toId, sReply, serial, ularTanggaSessions }) => {
+  execute: async ({ m, user, toId, sReply, serial, ularTanggaSessions, sPesan }) => {
     if (!m.isGroup) return await sReply("Permainan ini hanya bisa dimainkan di grup.");
     if (ularTanggaSessions[toId]) return await sReply("Sudah ada permainan yang sedang berjalan. Ketik `stop` untuk berhenti.");
     const playerId = serial;
@@ -31,7 +31,7 @@ export const command = {
       `▫️ Menang dengan *mencapai atau melewati* kotak 50.\n` +
       `▫️ Sesi berakhir dalam 3 menit jika tidak aktif.\n\n` +
       `Kamu mendapat giliran pertama! Ketik *lempar* untuk melempar dadu.`;
-    await fn.sendPesan(toId, welcomeMessage, { ephemeralExpiration: m.expiration ?? 0 });
+    await sPesan(welcomeMessage);
     await user.addXp();
   }
 };

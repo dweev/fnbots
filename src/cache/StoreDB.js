@@ -8,27 +8,9 @@
 
 import log from '../lib/logger.js';
 import config from '../../config.js';
-import StoryCache from './cacheStory.js';
 import { jidNormalizedUser } from 'baileys';
-import { StoreContact, StoreMessages, StoreGroupMetadata, redis } from '../../database/index.js';
-
-const REDIS_TTL = {
-  CONTACT: 86400,
-  GROUP: 3600,
-  LID_MAPPING: 86400,
-  MESSAGE: 1800,
-  PRESENCE: 300
-};
-
-const REDIS_PREFIX = {
-  CONTACT: 'cache:contact:',
-  GROUP: 'cache:groupmetadata:',
-  LID_TO_JID: 'cache:getLIDForPN:',
-  JID_TO_LID: 'cache:getPNForLID:',
-  MESSAGES: 'cache:messages:',
-  CONVERSATIONS: 'cache:conversation:',
-  PRESENCE: 'cache:presence:'
-};
+import { GroupCache, ContactCache, MessageCache, StoryCache } from './index.js';
+import { StoreContact, StoreMessages, StoreGroupMetadata } from '../../database/index.js';
 
 class DBStore {
   constructor() {
@@ -74,70 +56,6 @@ class DBStore {
     await this.flushAllBatches();
     this.isConnected = false;
     log('Store disconnected');
-  }
-  async getRedis(key) {
-    try {
-      const data = await redis.get(key);
-      if (data) {
-        this.stats.redisHits++;
-        return JSON.parse(data);
-      }
-      this.stats.redisMisses++;
-      return null;
-    } catch (error) {
-      this.stats.errors++;
-      log(`Redis GET error for ${key}: ${error.message}`, true);
-      return null;
-    }
-  }
-  async setRedis(key, value, ttl) {
-    try {
-      await redis.set(key, JSON.stringify(value), 'EX', ttl);
-    } catch (error) {
-      this.stats.errors++;
-      log(`Redis SET error for ${key}: ${error.message}`, true);
-    }
-  }
-  async delRedis(key) {
-    try {
-      await redis.del(key);
-    } catch (error) {
-      log(`Redis DEL error for ${key}: ${error.message}`, true);
-    }
-  }
-  async mgetRedis(keys) {
-    try {
-      if (keys.length === 0) return [];
-      const results = await redis.mget(keys);
-      return results.map(r => r ? JSON.parse(r) : null);
-    } catch (error) {
-      this.stats.errors++;
-      log(`Redis MGET error: ${error.message}`, true);
-      return keys.map(() => null);
-    }
-  }
-  async getRedisString(key) {
-    try {
-      const data = await redis.get(key);
-      if (data) {
-        this.stats.redisHits++;
-        return data;
-      }
-      this.stats.redisMisses++;
-      return null;
-    } catch (error) {
-      this.stats.errors++;
-      log(`Redis GET error for ${key}: ${error.message}`, true);
-      return null;
-    }
-  }
-  async setRedisString(key, value, ttl) {
-    try {
-      await redis.set(key, value, 'EX', ttl);
-    } catch (error) {
-      this.stats.errors++;
-      log(`Redis SET error for ${key}: ${error.message}`, true);
-    }
   }
   sanitizeParticipants(participants) {
     if (!Array.isArray(participants)) return [];
@@ -335,20 +253,10 @@ class DBStore {
         }
       }));
       const result = await StoreGroupMetadata.bulkWrite(operations, { ordered: false });
-      const pipeline = redis.pipeline();
-      for (const group of dirtyGroups) {
-        pipeline.set(
-          `${REDIS_PREFIX.GROUP}${group.groupId}`,
-          JSON.stringify(group),
-          'EX',
-          REDIS_TTL.GROUP
-        );
-      }
-      await pipeline.exec();
+      await GroupCache.bulkAddGroups(dirtyGroups);
       this.stats.batchedWrites += dirtyGroups.length;
       this.stats.skippedWrites += (groupsArray.length - dirtyGroups.length);
       log(`Bulk upsert complete: ${result.upsertedCount} inserted, ${result.modifiedCount} modified, ${groupsArray.length - dirtyGroups.length} skipped`);
-      log(`Cached ${dirtyGroups.length} groups in Redis`);
       return result;
     } catch (error) {
       this.stats.errors++;
@@ -391,30 +299,7 @@ class DBStore {
         }
       }));
       const result = await StoreContact.bulkWrite(operations, { ordered: false });
-      const pipeline = redis.pipeline();
-      for (const contact of dirtyContacts) {
-        pipeline.set(
-          `${REDIS_PREFIX.CONTACT}${contact.jid}`,
-          JSON.stringify(contact),
-          'EX',
-          REDIS_TTL.CONTACT
-        );
-        if (contact.lid) {
-          pipeline.set(
-            `${REDIS_PREFIX.LID_TO_JID}${contact.lid}`,
-            contact.jid,
-            'EX',
-            REDIS_TTL.LID_MAPPING
-          );
-          pipeline.set(
-            `${REDIS_PREFIX.JID_TO_LID}${contact.jid}`,
-            contact.lid,
-            'EX',
-            REDIS_TTL.LID_MAPPING
-          );
-        }
-      }
-      await pipeline.exec();
+      await ContactCache.bulkAddContacts(dirtyContacts);
       this.stats.batchedWrites += dirtyContacts.length;
       this.stats.skippedWrites += (contactsArray.length - dirtyContacts.length);
       log(`Bulk upsert complete: ${result.upsertedCount} inserted, ${result.modifiedCount} modified, ${contactsArray.length - dirtyContacts.length} skipped`);
@@ -428,41 +313,9 @@ class DBStore {
   async warmRedisCache() {
     try {
       const activeGroups = await StoreGroupMetadata.find().sort({ lastUpdated: -1 }).limit(50).lean();
-      const groupPipeline = redis.pipeline();
-      for (const group of activeGroups) {
-        groupPipeline.set(
-          `${REDIS_PREFIX.GROUP}${group.groupId}`,
-          JSON.stringify(group),
-          'EX',
-          REDIS_TTL.GROUP
-        );
-      }
-      await groupPipeline.exec();
+      await GroupCache.bulkAddGroups(activeGroups);
       const recentContacts = await StoreContact.find({}).sort({ updatedAt: -1 }).limit(5000).lean();
-      const contactPipeline = redis.pipeline();
-      for (const contact of recentContacts) {
-        contactPipeline.set(
-          `${REDIS_PREFIX.CONTACT}${contact.jid}`,
-          JSON.stringify(contact),
-          'EX',
-          REDIS_TTL.CONTACT
-        );
-        if (contact.lid) {
-          contactPipeline.set(
-            `${REDIS_PREFIX.LID_TO_JID}${contact.lid}`,
-            contact.jid,
-            'EX',
-            REDIS_TTL.LID_MAPPING
-          );
-          contactPipeline.set(
-            `${REDIS_PREFIX.JID_TO_LID}${contact.jid}`,
-            contact.lid,
-            'EX',
-            REDIS_TTL.LID_MAPPING
-          );
-        }
-      }
-      await contactPipeline.exec();
+      await ContactCache.bulkAddContacts(recentContacts);
       log(`Redis cache warmed: ${activeGroups.length} groups, ${recentContacts.length} contacts`);
     } catch (error) {
       this.stats.errors++;
@@ -471,17 +324,17 @@ class DBStore {
   }
   async getContact(jid) {
     if (!this.isConnected) return null;
-    const redisKey = `${REDIS_PREFIX.CONTACT}${jid}`;
-    const fromRedis = await this.getRedis(redisKey);
-    if (fromRedis) return fromRedis;
+    const fromCache = await ContactCache.getContact(jid);
+    if (fromCache) {
+      this.stats.redisHits++;
+      return fromCache;
+    }
+    this.stats.redisMisses++;
     try {
       const contact = await StoreContact.findOne({ jid }).lean();
       this.stats.dbHits++;
       if (contact) {
-        await this.setRedis(redisKey, contact, REDIS_TTL.CONTACT);
-        if (contact.lid) {
-          await this.cacheLidMapping(contact.lid, contact.jid);
-        }
+        await ContactCache.addContact(jid, contact);
       } else {
         this.stats.dbMisses++;
       }
@@ -494,8 +347,7 @@ class DBStore {
   }
   async updateContact(jid, data) {
     if (!this.isConnected) return;
-    const redisKey = `${REDIS_PREFIX.CONTACT}${jid}`;
-    let existing = await this.getRedis(redisKey);
+    let existing = await ContactCache.getContact(jid);
     if (!existing) {
       try {
         existing = await StoreContact.findOne({ jid }).lean();
@@ -509,72 +361,82 @@ class DBStore {
       this.stats.skippedWrites++;
       return;
     }
-    await this.setRedis(redisKey, updated, REDIS_TTL.CONTACT);
+    await ContactCache.addContact(jid, updated);
     this.updateQueues.contacts.set(jid, updated);
-    if (updated.lid) {
-      await this.cacheLidMapping(updated.lid, jid);
-    }
   }
   async getArrayContacts(jids) {
     if (!this.isConnected || !jids || jids.length === 0) return [];
-    const redisKeys = jids.map(jid => `${REDIS_PREFIX.CONTACT}${jid}`);
-    const redisResults = await this.mgetRedis(redisKeys);
-    const foundInRedis = [];
-    const missingJids = [];
-    redisResults.forEach((result, index) => {
-      if (result) {
-        foundInRedis.push(result);
-      } else {
-        missingJids.push(jids[index]);
-      }
-    });
-    if (missingJids.length === 0) return foundInRedis;
+    const { contacts: foundInCache, missingJids } = await ContactCache.getArrayContacts(jids);
+    this.stats.redisHits += foundInCache.length;
+    this.stats.redisMisses += missingJids.length;
+    if (missingJids.length === 0) return foundInCache;
     let foundInDb = [];
     try {
       foundInDb = await StoreContact.find({ jid: { $in: missingJids } }).lean();
       this.stats.dbHits += foundInDb.length;
       if (foundInDb.length > 0) {
-        const pipeline = redis.pipeline();
-        for (const contact of foundInDb) {
-          pipeline.set(
-            `${REDIS_PREFIX.CONTACT}${contact.jid}`,
-            JSON.stringify(contact),
-            'EX',
-            REDIS_TTL.CONTACT
-          );
-          if (contact.lid) {
-            pipeline.set(
-              `${REDIS_PREFIX.LID_TO_JID}${contact.lid}`,
-              contact.jid,
-              'EX',
-              REDIS_TTL.LID_MAPPING
-            );
-            pipeline.set(
-              `${REDIS_PREFIX.JID_TO_LID}${contact.jid}`,
-              contact.lid,
-              'EX',
-              REDIS_TTL.LID_MAPPING
-            );
-          }
-        }
-        await pipeline.exec();
+        await ContactCache.bulkAddContacts(foundInDb);
       }
     } catch (error) {
       this.stats.errors++;
       log(`Get array contacts error: ${error.message}`, true);
     }
-    return [...foundInRedis, ...foundInDb];
+    return [...foundInCache, ...foundInDb];
+  }
+  async deleteContact(jid) {
+    if (!this.isConnected || !jid) return false;
+    try {
+      log(`Deleting contact: ${jid}`);
+      await ContactCache.deleteContact(jid);
+      this.updateQueues.contacts.delete(jid);
+      const deleteResult = await StoreContact.deleteOne({ jid });
+      const success = deleteResult.deletedCount > 0;
+      log(`Delete contact ${jid}: ${success ? 'success' : 'not found'}`);
+      return success;
+    } catch (error) {
+      this.stats.errors++;
+      log(`deleteContact error: ${error.message}`, true);
+      return false;
+    }
+  }
+  async bulkDeleteContacts(jids) {
+    if (!this.isConnected || !jids || jids.length === 0) {
+      return { deletedCount: 0, errors: 0 };
+    }
+    try {
+      log(`Bulk deleting ${jids.length} contacts...`);
+      await ContactCache.bulkDeleteContacts(jids);
+      for (const jid of jids) {
+        this.updateQueues.contacts.delete(jid);
+      }
+      const deleteResult = await StoreContact.deleteMany({ jid: { $in: jids } });
+      log(`Deleted ${deleteResult.deletedCount}/${jids.length} contacts from database`);
+      return {
+        deletedCount: deleteResult.deletedCount,
+        errors: 0
+      };
+    } catch (error) {
+      this.stats.errors++;
+      log(`bulkDeleteContacts error: ${error.message}`, true);
+      return {
+        deletedCount: 0,
+        errors: 1
+      };
+    }
   }
   async getGroupMetadata(groupId) {
     if (!this.isConnected) return null;
-    const redisKey = `${REDIS_PREFIX.GROUP}${groupId}`;
-    const fromRedis = await this.getRedis(redisKey);
-    if (fromRedis) return fromRedis;
+    const fromCache = await GroupCache.getGroup(groupId);
+    if (fromCache) {
+      this.stats.redisHits++;
+      return fromCache;
+    }
+    this.stats.redisMisses++;
     try {
       const metadata = await StoreGroupMetadata.findOne({ groupId }).lean();
       this.stats.dbHits++;
       if (metadata) {
-        await this.setRedis(redisKey, metadata, REDIS_TTL.GROUP);
+        await GroupCache.addGroup(groupId, metadata);
       } else {
         this.stats.dbMisses++;
       }
@@ -587,8 +449,7 @@ class DBStore {
   }
   async updateGroupMetadata(groupId, metadata) {
     if (!this.isConnected) return;
-    const redisKey = `${REDIS_PREFIX.GROUP}${groupId}`;
-    let existing = await this.getRedis(redisKey);
+    let existing = await GroupCache.getGroup(groupId);
     if (!existing) {
       try {
         existing = await StoreGroupMetadata.findOne({ groupId }).lean();
@@ -602,7 +463,7 @@ class DBStore {
       this.stats.skippedWrites++;
       return;
     }
-    await this.setRedis(redisKey, updated, REDIS_TTL.GROUP);
+    await GroupCache.addGroup(groupId, updated);
     this.updateQueues.groups.set(groupId, updated);
   }
   async syncGroupMetadata(fn, groupId) {
@@ -619,271 +480,25 @@ class DBStore {
     }
     return null;
   }
-  clearGroupsCache() {
-    this.updateQueues.groups.clear();
-    log('Groups queue cleared');
-  }
-  async cacheLidMapping(lid, jid) {
-    if (!lid || !jid) return;
-    try {
-      const pipeline = redis.pipeline();
-      pipeline.set(`${REDIS_PREFIX.LID_TO_JID}${lid}`, jid, 'EX', REDIS_TTL.LID_MAPPING);
-      pipeline.set(`${REDIS_PREFIX.JID_TO_LID}${jid}`, lid, 'EX', REDIS_TTL.LID_MAPPING);
-      await pipeline.exec();
-    } catch (error) {
-      log(`Cache LID mapping error: ${error.message}`, true);
-    }
-  }
-  async resolveJid(id) {
-    if (!id) return null;
-    if (id.endsWith('@s.whatsapp.net')) {
-      return jidNormalizedUser(id);
-    }
-    if (!id.endsWith('@lid')) {
-      return id;
-    }
-    return await this.findJidByLid(id);
-  }
-  async findJidByLid(lid) {
-    if (!lid) return null;
-    const cached = await this.getRedisString(`${REDIS_PREFIX.LID_TO_JID}${lid}`);
-    if (cached) return cached;
-    if (this.authStore) {
-      try {
-        const jidFromAuth = await this.authStore.getPNForLID(lid);
-        if (jidFromAuth) {
-          await this.cacheLidMapping(lid, jidFromAuth);
-          return jidFromAuth;
-        }
-      } catch (error) {
-        log(`AuthStore lookup failed for LID ${lid}: ${error.message}`, true);
-      }
-    }
-    try {
-      const contact = await StoreContact.findOne({ lid }).lean();
-      const jid = contact?.jid || null;
-      if (jid) {
-        await this.cacheLidMapping(lid, jid);
-      }
-      return jid;
-    } catch (error) {
-      this.stats.errors++;
-      log(`Database lookup failed for LID ${lid}: ${error.message}`, true);
-      return null;
-    }
-  }
-  async updateMessages(chatId, message, maxSize = 50) {
-    try {
-      const key = `${REDIS_PREFIX.MESSAGES}${chatId}`;
-      await redis.rpush(key, JSON.stringify(message));
-      await redis.ltrim(key, -maxSize, -1);
-      await redis.expire(key, REDIS_TTL.MESSAGE);
-    } catch (error) {
-      log(`Update messages error: ${error.message}`, true);
-    }
-  }
-  async getMessages(chatId, limit = 50) {
-    try {
-      const key = `${REDIS_PREFIX.MESSAGES}${chatId}`;
-      const messages = await redis.lrange(key, -limit, -1);
-      return messages.map(m => JSON.parse(m));
-    } catch (error) {
-      log(`Get messages error: ${error.message}`, true);
-      return [];
-    }
-  }
-  async updateConversations(chatId, conversation, maxSize = 200) {
-    try {
-      const key = `${REDIS_PREFIX.CONVERSATIONS}${chatId}`;
-      await redis.rpush(key, JSON.stringify(conversation));
-      await redis.ltrim(key, -maxSize, -1);
-      await redis.expire(key, REDIS_TTL.MESSAGE);
-    } catch (error) {
-      log(`Update conversations error: ${error.message}`, true);
-    }
-  }
-  async updatePresences(chatId, presenceUpdate) {
-    try {
-      const key = `${REDIS_PREFIX.PRESENCE}${chatId}`;
-      const fields = Object.entries(presenceUpdate).flat();
-      if (fields.length > 0) {
-        await redis.hmset(key, ...fields.map(f => typeof f === 'object' ? JSON.stringify(f) : f));
-        await redis.expire(key, REDIS_TTL.PRESENCE);
-      }
-    } catch (error) {
-      log(`Update presences error: ${error.message}`, true);
-    }
-  }
-  async getPresences(chatId) {
-    try {
-      const key = `${REDIS_PREFIX.PRESENCE}${chatId}`;
-      const data = await redis.hgetall(key);
-      const parsed = {};
-      for (const [k, v] of Object.entries(data)) {
-        try {
-          parsed[k] = JSON.parse(v);
-        } catch {
-          parsed[k] = v;
-        }
-      }
-      return parsed;
-    } catch (error) {
-      log(`Get presences error: ${error.message}`, true);
-      return {};
-    }
-  }
-  async loadMessage(remoteJid, id) {
-    try {
-      const messages = await this.getMessages(remoteJid, 50);
-      const messageFromCache = messages.find(msg => msg?.key?.id === id);
-      if (messageFromCache) return messageFromCache;
-    } catch (error) {
-      log(`Load message from Redis error: ${error.message}`, true);
-    }
-    try {
-      const chatHistory = await StoreMessages.findOne(
-        { chatId: remoteJid, 'messages.key.id': id },
-        { 'messages.$': 1 }
-      ).lean();
-      return chatHistory?.messages?.[0] || null;
-    } catch (error) {
-      this.stats.errors++;
-      log(`Load message error: ${error.message}`, true);
-      return null;
-    }
-  }
-  async clearCache() {
-    this.updateQueues.contacts.clear();
-    this.updateQueues.groups.clear();
-    try {
-      const patterns = [
-        `${REDIS_PREFIX.CONTACT}*`,
-        `${REDIS_PREFIX.GROUP}*`,
-        `${REDIS_PREFIX.LID_TO_JID}*`,
-        `${REDIS_PREFIX.JID_TO_LID}*`,
-        `${REDIS_PREFIX.MESSAGES}*`,
-        `${REDIS_PREFIX.CONVERSATIONS}*`,
-        `${REDIS_PREFIX.PRESENCE}*`
-      ];
-      for (const pattern of patterns) {
-        const stream = redis.scanStream({ match: pattern, count: 100 });
-        const keysToDelete = [];
-        stream.on('data', (keys) => {
-          stream.pause();
-          keysToDelete.push(...keys);
-          stream.resume();
-        });
-        await new Promise((resolve, reject) => {
-          stream.on('end', async () => {
-            try {
-              if (keysToDelete.length > 0) {
-                for (let i = 0; i < keysToDelete.length; i += 1000) {
-                  const batch = keysToDelete.slice(i, i + 1000);
-                  await redis.del(...batch);
-                }
-                log(`Deleted ${keysToDelete.length} keys for pattern ${pattern}`);
-              } else {
-                log(`No keys found for pattern ${pattern}`);
-              }
-              resolve();
-            } catch (error) {
-              reject(error);
-            }
-          });
-          stream.on('error', reject);
-        });
-      }
-      log('All caches cleared successfully');
-    } catch (error) {
-      this.stats.errors++;
-      log(`Failed to clear Redis cache: ${error.message}`, true);
-      throw error;
-    }
-  }
-  startCacheCleanup() {
-    setInterval(async () => {
-      await this.performMaintenance();
-    }, this.cacheCleanupInterval);
-  }
-  async performMaintenance() {
-    if (!this.isConnected) return;
-    try {
-      await this.flushAllBatches();
-    } catch (error) {
-      log(`Maintenance error: ${error.message}`, true);
-    }
-  }
-  async forceCleanup() {
-    log('Manual cleanup initiated');
-    await this.flushAllBatches();
-    await this.performMaintenance();
-  }
-  startStatsLogger() {
-    setInterval(() => {
-      const stats = this.getStats();
-      if (stats.total > 0) {
-        // log('Store Stats:', stats);
-      }
-    }, 30000);
-  }
-  getStats() {
-    const total = this.stats.redisHits + this.stats.redisMisses;
-    return {
-      redis: {
-        hits: this.stats.redisHits,
-        misses: this.stats.redisMisses,
-        hitRate: total > 0 ? (this.stats.redisHits / total * 100).toFixed(2) + '%' : '0%'
-      },
-      database: {
-        hits: this.stats.dbHits,
-        misses: this.stats.dbMisses
-      },
-      batches: {
-        pendingContacts: this.updateQueues.contacts.size,
-        pendingGroups: this.updateQueues.groups.size,
-        totalWrites: this.stats.batchedWrites,
-        skippedWrites: this.stats.skippedWrites,
-        efficiency: this.stats.batchedWrites > 0 ? ((this.stats.skippedWrites / (this.stats.batchedWrites + this.stats.skippedWrites)) * 100).toFixed(2) + '%' : '0%'
-      },
-      errors: this.stats.errors,
-      total
-    };
-  }
   async getAllGroups(projection = null) {
     if (!this.isConnected) return [];
     try {
-      const pattern = `${REDIS_PREFIX.GROUP}*`;
-      const groupKeys = [];
-      const stream = redis.scanStream({
-        match: pattern,
-        count: 100
-      });
-      await new Promise((resolve, reject) => {
-        stream.on('data', (keys) => {
-          groupKeys.push(...keys);
-        });
-        stream.on('end', resolve);
-        stream.on('error', reject);
-      });
-      if (groupKeys.length > 0) {
-        const cachedGroups = await this.mgetRedis(groupKeys);
-        const validGroups = cachedGroups.filter(g => g !== null);
-        if (validGroups.length > 0) {
-          this.stats.redisHits += validGroups.length;
-          log(`Cache hit: ${validGroups.length} groups from Redis`);
-          if (projection) {
-            return validGroups.map(group => {
-              const filtered = {};
-              for (const key in projection) {
-                if (projection[key] === 1 && group[key] !== undefined) {
-                  filtered[key] = group[key];
-                }
+      const cachedGroups = await GroupCache.getAllCachedGroups();
+      if (cachedGroups.length > 0) {
+        this.stats.redisHits += cachedGroups.length;
+        log(`Cache hit: ${cachedGroups.length} groups from Redis`);
+        if (projection) {
+          return cachedGroups.map(group => {
+            const filtered = {};
+            for (const key in projection) {
+              if (projection[key] === 1 && group[key] !== undefined) {
+                filtered[key] = group[key];
               }
-              return filtered;
-            });
-          }
-          return validGroups;
+            }
+            return filtered;
+          });
         }
+        return cachedGroups;
       }
       this.stats.redisMisses++;
       log('Cache miss: Fetching groups from database...');
@@ -894,16 +509,7 @@ class DBStore {
       const groups = await query.lean();
       this.stats.dbHits += groups.length;
       if (groups.length > 0) {
-        const pipeline = redis.pipeline();
-        for (const group of groups) {
-          pipeline.set(
-            `${REDIS_PREFIX.GROUP}${group.groupId}`,
-            JSON.stringify(group),
-            'EX',
-            REDIS_TTL.GROUP
-          );
-        }
-        await pipeline.exec();
+        await GroupCache.bulkAddGroups(groups);
         log(`Cached ${groups.length} groups in Redis`);
       }
       return groups;
@@ -916,20 +522,12 @@ class DBStore {
   async getArrayGroups(groupIds, projection = null) {
     if (!this.isConnected || !groupIds || groupIds.length === 0) return [];
     try {
-      const redisKeys = groupIds.map(id => `${REDIS_PREFIX.GROUP}${id}`);
-      const redisResults = await this.mgetRedis(redisKeys);
-      const foundInRedis = [];
-      const missingIds = [];
-      redisResults.forEach((result, index) => {
-        if (result) {
-          foundInRedis.push(result);
-        } else {
-          missingIds.push(groupIds[index]);
-        }
-      });
+      const { groups: foundInCache, missingIds } = await GroupCache.getArrayGroups(groupIds);
+      this.stats.redisHits += foundInCache.length;
+      this.stats.redisMisses += missingIds.length;
       if (missingIds.length === 0) {
-        log(`Cache hit: ${foundInRedis.length}/${groupIds.length} groups`);
-        return foundInRedis;
+        log(`Cache hit: ${foundInCache.length}/${groupIds.length} groups`);
+        return foundInCache;
       }
       log(`Partial cache miss: ${missingIds.length}/${groupIds.length} groups, fetching from DB...`);
       const query = StoreGroupMetadata.find({ groupId: { $in: missingIds } });
@@ -939,19 +537,10 @@ class DBStore {
       const foundInDb = await query.lean();
       this.stats.dbHits += foundInDb.length;
       if (foundInDb.length > 0) {
-        const pipeline = redis.pipeline();
-        for (const group of foundInDb) {
-          pipeline.set(
-            `${REDIS_PREFIX.GROUP}${group.groupId}`,
-            JSON.stringify(group),
-            'EX',
-            REDIS_TTL.GROUP
-          );
-        }
-        await pipeline.exec();
+        await GroupCache.bulkAddGroups(foundInDb);
         log(`Cached ${foundInDb.length} missing groups`);
       }
-      return [...foundInRedis, ...foundInDb];
+      return [...foundInCache, ...foundInDb];
     } catch (error) {
       this.stats.errors++;
       log(`getArrayGroups error: ${error.message}`, true);
@@ -962,7 +551,7 @@ class DBStore {
     if (!this.isConnected || !groupId) return false;
     try {
       log(`Deleting group: ${groupId}`);
-      await this.delRedis(`${REDIS_PREFIX.GROUP}${groupId}`);
+      await GroupCache.deleteGroup(groupId);
       this.updateQueues.groups.delete(groupId);
       const deleteResult = await StoreGroupMetadata.deleteOne({ groupId });
       const success = deleteResult.deletedCount > 0;
@@ -980,13 +569,10 @@ class DBStore {
     }
     try {
       log(`Bulk deleting ${groupIds.length} groups...`);
-      const pipeline = redis.pipeline();
+      await GroupCache.bulkDeleteGroups(groupIds);
       for (const groupId of groupIds) {
-        pipeline.del(`${REDIS_PREFIX.GROUP}${groupId}`);
         this.updateQueues.groups.delete(groupId);
       }
-      await pipeline.exec();
-      log(`Deleted ${groupIds.length} groups from Redis cache`);
       const deleteResult = await StoreGroupMetadata.deleteMany({
         groupId: { $in: groupIds }
       });
@@ -1029,66 +615,136 @@ class DBStore {
       return { removed: 0, errors: 1 };
     }
   }
-  async deleteContact(jid) {
-    if (!this.isConnected || !jid) return false;
-    try {
-      log(`Deleting contact: ${jid}`);
-      const contact = await this.getContact(jid);
-      await this.delRedis(`${REDIS_PREFIX.CONTACT}${jid}`);
-      if (contact?.lid) {
-        await this.delRedis(`${REDIS_PREFIX.LID_TO_JID}${contact.lid}`);
-        await this.delRedis(`${REDIS_PREFIX.JID_TO_LID}${jid}`);
-        log(`Deleted LID mappings for ${jid}`);
+  clearGroupsCache() {
+    this.updateQueues.groups.clear();
+    log('Groups queue cleared');
+  }
+  async cacheLidMapping(lid, jid) {
+    return await ContactCache.cacheLidMapping(lid, jid);
+  }
+  async resolveJid(id) {
+    if (!id) return null;
+    if (id.endsWith('@s.whatsapp.net')) {
+      return jidNormalizedUser(id);
+    }
+    if (!id.endsWith('@lid')) {
+      return id;
+    }
+    return await this.findJidByLid(id);
+  }
+  async findJidByLid(lid) {
+    if (!lid) return null;
+    const cached = await ContactCache.findJidByLid(lid);
+    if (cached) {
+      this.stats.redisHits++;
+      return cached;
+    }
+    this.stats.redisMisses++;
+    if (this.authStore) {
+      try {
+        const jidFromAuth = await this.authStore.getPNForLID(lid);
+        if (jidFromAuth) {
+          await ContactCache.cacheLidMapping(lid, jidFromAuth);
+          return jidFromAuth;
+        }
+      } catch (error) {
+        log(`AuthStore lookup failed for LID ${lid}: ${error.message}`, true);
       }
-      this.updateQueues.contacts.delete(jid);
-      const deleteResult = await StoreContact.deleteOne({ jid });
-      const success = deleteResult.deletedCount > 0;
-      log(`Delete contact ${jid}: ${success ? 'success' : 'not found'}`);
-      return success;
+    }
+    try {
+      const contact = await StoreContact.findOne({ lid }).lean();
+      const jid = contact?.jid || null;
+      if (jid) {
+        await ContactCache.cacheLidMapping(lid, jid);
+      }
+      return jid;
     } catch (error) {
       this.stats.errors++;
-      log(`deleteContact error: ${error.message}`, true);
+      log(`Database lookup failed for LID ${lid}: ${error.message}`, true);
+      return null;
+    }
+  }
+  async updateMessages(chatId, message, maxSize = 50) {
+    try {
+      await MessageCache.addMessage(chatId, message, maxSize);
+    } catch (error) {
+      log(`Update messages error: ${error.message}`, true);
+    }
+  }
+  async getMessages(chatId, limit = 50) {
+    try {
+      const cached = await MessageCache.getMessages(chatId, limit);
+      if (cached !== null) {
+        this.stats.redisHits++;
+        return cached;
+      }
+      this.stats.redisMisses++;
+      return [];
+    } catch (error) {
+      log(`Get messages error: ${error.message}`, true);
+      return [];
+    }
+  }
+  async loadMessage(remoteJid, id) {
+    try {
+      const messageFromCache = await MessageCache.getSpecificMessage(remoteJid, id);
+      if (messageFromCache) {
+        this.stats.redisHits++;
+        return messageFromCache;
+      }
+      this.stats.redisMisses++;
+    } catch (error) {
+      log(`Load message from Redis error: ${error.message}`, true);
+    }
+    try {
+      const chatHistory = await StoreMessages.findOne(
+        { chatId: remoteJid, 'messages.key.id': id },
+        { 'messages.$': 1 }
+      ).lean();
+      this.stats.dbHits++;
+      return chatHistory?.messages?.[0] || null;
+    } catch (error) {
+      this.stats.errors++;
+      log(`Load message error: ${error.message}`, true);
+      return null;
+    }
+  }
+  async updateConversations(chatId, conversation, maxSize = 200) {
+    try {
+      await MessageCache.addConversation(chatId, conversation, maxSize);
+    } catch (error) {
+      log(`Update conversations error: ${error.message}`, true);
+    }
+  }
+  async updatePresences(chatId, presenceUpdate) {
+    try {
+      await MessageCache.updatePresences(chatId, presenceUpdate);
+    } catch (error) {
+      log(`Update presences error: ${error.message}`, true);
+    }
+  }
+  async getPresences(chatId) {
+    try {
+      const presences = await MessageCache.getPresences(chatId);
+      if (presences && Object.keys(presences).length > 0) {
+        this.stats.redisHits++;
+      } else {
+        this.stats.redisMisses++;
+      }
+      return presences;
+    } catch (error) {
+      log(`Get presences error: ${error.message}`, true);
+      return {};
+    }
+  }
+  async deletePresence(chatId) {
+    try {
+      return await MessageCache.deletePresence(chatId);
+    } catch (error) {
+      log(`Delete presence error: ${error.message}`, true);
       return false;
     }
   }
-  async bulkDeleteContacts(jids) {
-    if (!this.isConnected || !jids || jids.length === 0) {
-      return { deletedCount: 0, errors: 0 };
-    }
-    try {
-      log(`Bulk deleting ${jids.length} contacts...`);
-      const contacts = await this.getArrayContacts(jids);
-      const pipeline = redis.pipeline();
-      for (const jid of jids) {
-        pipeline.del(`${REDIS_PREFIX.CONTACT}${jid}`);
-        this.updateQueues.contacts.delete(jid);
-      }
-      for (const contact of contacts) {
-        if (contact?.lid) {
-          pipeline.del(`${REDIS_PREFIX.LID_TO_JID}${contact.lid}`);
-          pipeline.del(`${REDIS_PREFIX.JID_TO_LID}${contact.jid}`);
-        }
-      }
-      await pipeline.exec();
-      log(`Deleted ${jids.length} contacts from Redis cache`);
-      const deleteResult = await StoreContact.deleteMany({
-        jid: { $in: jids }
-      });
-      log(`Deleted ${deleteResult.deletedCount}/${jids.length} contacts from database`);
-      return {
-        deletedCount: deleteResult.deletedCount,
-        errors: 0
-      };
-    } catch (error) {
-      this.stats.errors++;
-      log(`bulkDeleteContacts error: ${error.message}`, true);
-      return {
-        deletedCount: 0,
-        errors: 1
-      };
-    }
-  }
-
   async addStatus(userId, statusMessage, maxSize = 20) {
     try {
       await StoryCache.addStatus(userId, statusMessage, maxSize);
@@ -1100,11 +756,14 @@ class DBStore {
     try {
       const cached = await StoryCache.getStatusesFromCache(userId);
       if (cached !== null) {
+        this.stats.redisHits++;
         return cached;
       }
+      this.stats.redisMisses++;
       const { StoreStory } = await import('../../database/index.js');
       const doc = await StoreStory.findOne({ userId }).lean();
       const stories = doc?.statuses || [];
+      this.stats.dbHits++;
       if (stories.length > 0) {
         await StoryCache.populateCacheFromDB(userId, stories);
       }
@@ -1118,11 +777,14 @@ class DBStore {
     try {
       const cached = await StoryCache.getSpecificStatus(userId, messageId);
       if (cached) {
+        this.stats.redisHits++;
         return cached;
       }
+      this.stats.redisMisses++;
       const { StoreStory } = await import('../../database/index.js');
       const doc = await StoreStory.findOne({ userId }).lean();
       const story = doc?.statuses?.find(s => s.key?.id === messageId);
+      this.stats.dbHits++;
       return story || null;
     } catch (error) {
       log(`Get specific status error: ${error.message}`, true);
@@ -1151,10 +813,10 @@ class DBStore {
   }
   async getUsersWithStories() {
     try {
-      const cached = await this.getRedis('cache:users-with-stories');
-      if (cached) {
+      const cachedUsers = await StoryCache.getUsersWithStories();
+      if (cachedUsers.length > 0) {
         this.stats.redisHits++;
-        return cached;
+        return cachedUsers.map(userId => ({ userId, storyCount: 1 }));
       }
       this.stats.redisMisses++;
       const { StoreStory } = await import('../../database/index.js');
@@ -1171,7 +833,7 @@ class DBStore {
           }
         }
       ]);
-      await this.setRedis('cache:users-with-stories', usersWithStories, 60);
+      this.stats.dbHits++;
       return usersWithStories;
     } catch (error) {
       this.stats.errors++;
@@ -1179,10 +841,6 @@ class DBStore {
       return [];
     }
   }
-  async invalidateUsersWithStoriesCache() {
-    await this.delRedis('cache:users-with-stories');
-  }
-
   saveConversation(chatId, conversationData, maxSize) {
     try {
       this.updateConversations(chatId, conversationData, maxSize);
@@ -1214,11 +872,89 @@ class DBStore {
   async saveStoryStatus(userId, statusMessage, maxSize) {
     try {
       await this.addStatus(userId, statusMessage, maxSize);
-      await this.invalidateUsersWithStoriesCache();
     } catch (error) {
       this.stats.errors++;
       log(`saveStoryStatus error: ${error.message}`, true);
     }
+  }
+  async clearCache() {
+    this.updateQueues.contacts.clear();
+    this.updateQueues.groups.clear();
+    try {
+      await Promise.all([
+        ContactCache.clearAllCaches(),
+        GroupCache.clearAllCaches(),
+        MessageCache.clearAllCaches(),
+        StoryCache.clearAllCaches()
+      ]);
+      log('All caches cleared successfully');
+    } catch (error) {
+      this.stats.errors++;
+      log(`Failed to clear Redis cache: ${error.message}`, true);
+      throw error;
+    }
+  }
+  startCacheCleanup() {
+    setInterval(async () => {
+      await this.performMaintenance();
+    }, this.cacheCleanupInterval);
+  }
+  async performMaintenance() {
+    if (!this.isConnected) return;
+
+    try {
+      await this.flushAllBatches();
+    } catch (error) {
+      log(`Maintenance error: ${error.message}`, true);
+    }
+  }
+  async forceCleanup() {
+    log('Manual cleanup initiated');
+    await this.flushAllBatches();
+    await this.performMaintenance();
+  }
+  startStatsLogger() {
+    setInterval(async () => {
+      const stats = await this.getStats();
+      if (stats.total > 0) {
+        // log('Store Stats:', stats);
+      }
+    }, 30000);
+  }
+  async getStats() {
+    const total = this.stats.redisHits + this.stats.redisMisses;
+    const [contactStats, groupStats, messageStats, storyStats] = await Promise.all([
+      ContactCache.getStats(),
+      GroupCache.getStats(),
+      MessageCache.getStats(),
+      StoryCache.getStats()
+    ]);
+    return {
+      redis: {
+        hits: this.stats.redisHits,
+        misses: this.stats.redisMisses,
+        hitRate: total > 0 ? (this.stats.redisHits / total * 100).toFixed(2) + '%' : '0%'
+      },
+      database: {
+        hits: this.stats.dbHits,
+        misses: this.stats.dbMisses
+      },
+      batches: {
+        pendingContacts: this.updateQueues.contacts.size,
+        pendingGroups: this.updateQueues.groups.size,
+        totalWrites: this.stats.batchedWrites,
+        skippedWrites: this.stats.skippedWrites,
+        efficiency: this.stats.batchedWrites > 0 ? ((this.stats.skippedWrites / (this.stats.batchedWrites + this.stats.skippedWrites)) * 100).toFixed(2) + '%' : '0%'
+      },
+      cacheStats: {
+        contacts: contactStats,
+        groups: groupStats,
+        messages: messageStats,
+        stories: storyStats
+      },
+      errors: this.stats.errors,
+      total
+    };
   }
 }
 

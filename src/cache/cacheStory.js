@@ -4,7 +4,7 @@
 * Follow https://github.com/Terror-Machine
 * Feel Free To Use
 */
-// ─── Info src/cache/storyCache.js ─────────────────
+// ─── Info src/cache/cacheStory.js ─────────────────
 
 import log from '../lib/logger.js';
 import { redis } from '../../database/index.js';
@@ -47,7 +47,6 @@ class StoryCache {
           log(`Trimmed ${deleteIds.length} old stories for ${userId}`);
         }
       }
-      log(`Story cached for ${userId} (messageId: ${messageId})`);
       return true;
     } catch (error) {
       log(`Add status to Redis error: ${error.message}`, true);

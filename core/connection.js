@@ -18,7 +18,7 @@ import log, { pinoLogger } from '../src/lib/logger.js';
 import { Settings, store } from '../database/index.js';
 import { fetch as nativeFetch } from '../src/addon/bridge.js';
 import { restartManager } from '../src/lib/restartManager.js';
-import { default as makeWASocket, jidNormalizedUser, Browsers, makeCacheableSignalKeyStore, fetchLatestWaWebVersion, isJidBroadcast } from 'baileys';
+import { default as makeWASocket, jidNormalizedUser, fetchLatestWaWebVersion, isJidBroadcast } from 'baileys';
 
 let phoneNumber;
 let pairingStarted = false;
@@ -52,22 +52,20 @@ export async function createWASocket(dbSettings) {
   const authStore = await AuthStore();
   const { state, saveCreds } = authStore;
   const fn = makeWASocket({
+    auth: state,
+    logger: pinoLogger,
+    emitOwnEvents: true,
+    maxMsgRetryCount: 5,
+    syncFullHistory: true,
+    fireInitQueries: true,
+    retryRequestDelayMs: 1000,
+    markOnlineOnConnect: true,
+    defaultQueryTimeoutMs: undefined,
+    linkPreviewImageThumbnailWidth: 192,
+    generateHighQualityLinkPreview: true,
     qrTimeout: config.performance.qrTimeout,
     connectTimeoutMs: config.performance.connectTimeoutMs,
     keepAliveIntervalMs: config.performance.keepAliveIntervals,
-    defaultQueryTimeoutMs: undefined,
-    logger: pinoLogger,
-    version: [2, 3000, 1028718893],
-    browser: Browsers.ubuntu('Chrome'),
-    emitOwnEvents: true,
-    retryRequestDelayMs: 1000,
-    maxMsgRetryCount: 5,
-    auth: { creds: state.creds, keys: makeCacheableSignalKeyStore(state.keys, pinoLogger) },
-    markOnlineOnConnect: true,
-    linkPreviewImageThumbnailWidth: 192,
-    syncFullHistory: true,
-    fireInitQueries: true,
-    generateHighQualityLinkPreview: true,
     shouldIgnoreJid: (jid) => { return isJidBroadcast(jid) && jid !== 'status@broadcast'; }
   });
 

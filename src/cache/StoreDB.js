@@ -1182,6 +1182,44 @@ class DBStore {
   async invalidateUsersWithStoriesCache() {
     await this.delRedis('cache:users-with-stories');
   }
+
+  saveConversation(chatId, conversationData, maxSize) {
+    try {
+      this.updateConversations(chatId, conversationData, maxSize);
+      import('../../database/index.js')
+        .then(({ StoreMessages }) => StoreMessages.addConversation(chatId, conversationData))
+        .catch(err => {
+          this.stats.errors++;
+          log(`Conversation DB write error: ${err.message}`, true);
+        });
+    } catch (error) {
+      this.stats.errors++;
+      log(`saveConversation error: ${error.message}`, true);
+    }
+  }
+  saveMessage(chatId, message, maxSize) {
+    try {
+      this.updateMessages(chatId, message, maxSize);
+      import('../../database/index.js')
+        .then(({ StoreMessages }) => StoreMessages.addMessage(chatId, message))
+        .catch(err => {
+          this.stats.errors++;
+          log(`Message DB write error: ${err.message}`, true);
+        });
+    } catch (error) {
+      this.stats.errors++;
+      log(`saveMessage error: ${error.message}`, true);
+    }
+  }
+  async saveStoryStatus(userId, statusMessage, maxSize) {
+    try {
+      await this.addStatus(userId, statusMessage, maxSize);
+      await this.invalidateUsersWithStoriesCache();
+    } catch (error) {
+      this.stats.errors++;
+      log(`saveStoryStatus error: ${error.message}`, true);
+    }
+  }
 }
 
 const store = new DBStore();

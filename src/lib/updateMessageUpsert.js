@@ -11,11 +11,11 @@ import log from './logger.js';
 import config from '../../config.js';
 import { analyzeMessage } from 'safety-safe';
 import { arfine } from '../../core/handler.js';
+import { store } from '../../database/index.js';
 import { jidNormalizedUser, delay } from 'baileys';
 import serializeMessage from './serializeMessage.js';
 import { handleAntiEdit } from '../handler/index.js';
 import handleGroupStubMessages from './handleGroupStubMessages.js';
-import { store, StoreMessages, StoreStory } from '../../database/index.js';
 
 class CrotToLive extends Map {
   set(key, value, ttl) {
@@ -81,15 +81,7 @@ export default async function updateMessageUpsert(fn, message, dbSettings) {
             await fn.readMessages([m.key]);
           }
         }
-        const savePromises = [];
-        savePromises.push(
-          store.addStatus(m.sender, m, config.performance.maxStoreSaved)
-        );
-        savePromises.push(
-          StoreStory.addStatus(m.sender, m, config.performance.maxStoreSaved)
-            .catch(err => log(`MongoDB story save error: ${err.message}`, true))
-        );
-        await Promise.allSettled(savePromises);
+        await store.saveStoryStatus(m.sender, m, config.performance.maxStoreSaved);
         log(`Story saved for ${m.sender} (messageId: ${m.key.id})`);
       } catch (error) {
         await log(`Story handling error: ${error.message}`, true);
@@ -105,7 +97,7 @@ export default async function updateMessageUpsert(fn, message, dbSettings) {
       }
       if (duplexM.has(m.key.id)) return;
       duplexM.set(m.key.id, Date.now(), config.performance.defaultInterval);
-      store.updateMessages(m.chat, m, config.performance.maxStoreSaved);
+      store.saveMessage(m.chat, m, config.performance.maxStoreSaved);
       if (m.type === 'conversation' || m.type === 'extendedTextMessage') {
         if (m.body?.trim()) {
           const conversationData = {
@@ -117,8 +109,7 @@ export default async function updateMessageUpsert(fn, message, dbSettings) {
             quotedSender: m.quoted?.sender || null,
             keyId: m.key.id
           };
-          store.updateConversations(m.chat, conversationData, config.performance.maxStoreSaved);
-          StoreMessages.addConversation(m.chat, conversationData).catch(err => log(err, true));
+          store.saveConversation(m.chat, conversationData, config.performance.maxStoreSaved);
         }
       }
       const dependencies = {
@@ -129,7 +120,6 @@ export default async function updateMessageUpsert(fn, message, dbSettings) {
       };
       dependencies.isSuggestion = false;
       await arfine(fn, m, dependencies);
-      StoreMessages.addMessage(m.chat, m).catch(err => log(err, true));
     } catch (error) {
       await log(error, true);
     }

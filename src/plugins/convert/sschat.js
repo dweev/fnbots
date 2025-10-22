@@ -13,9 +13,9 @@ export const command = {
   category: 'convert',
   description: 'Membuat Fake Chat',
   isCommandWithoutPayment: true,
-  execute: async ({ fn, m, args, sReply, StoreMessages }) => {
+  execute: async ({ fn, m, args, sReply, store }) => {
     const count = parseInt(args[0]) || 5;
     if (count > 20) return await sReply("Jumlah percakapan tidak boleh lebih dari 20.");
-    await generateFakeChatWithQCGenerator(m, count, fn, StoreMessages);
+    await generateFakeChatWithQCGenerator(m, count, fn, store);
   }
 };

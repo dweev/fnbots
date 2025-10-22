@@ -12,7 +12,7 @@ import { tmpDir } from '../lib/tempManager.js';
 import { QuoteGenerator } from 'qc-generator-whatsapp';
 import { formatTimestampToHourMinute } from './index.js';
 
-export async function processAllTextFormatting(rawText, StoreMessages, fn) {
+export async function processAllTextFormatting(rawText, store, fn) {
   const combinedRegex = /@(\d{5,})|\*([^*]+)\*|_([^_]+)_|`([^`]+)`|\b((https?:\/\/|www\.)[^\s]+\/[^\s]*)/g;
   const matches = [];
   let match;
@@ -22,7 +22,7 @@ export async function processAllTextFormatting(rawText, StoreMessages, fn) {
     if (match[1]) {
       type = 'mention';
       const jid = match[1] + "@s.whatsapp.net";
-      const contact = await StoreMessages.findOne({ chatId: jid }).lean();
+      const contact = await store.getContact(jid);
       const fallbackMentionName = await fn.getName(jid);
       replacementText = "@" + (contact?.name || fallbackMentionName || "Unknown?");
     } else if (match[2]) {
@@ -90,21 +90,15 @@ export function getContrastColor(hexColor) {
   return luminance > 140 ? '#000000' : '#FFFFFF';
 }
 
-export async function generateFakeChatWithQCGenerator(m, count, fn, StoreMessages) {
+export async function generateFakeChatWithQCGenerator(m, count, fn, store) {
   const jid = m.key.remoteJid;
   const sReply = (content, options = {}) => fn.sendReply(jid, content, { quoted: m, ...options });
   try {
-    const chatData = await StoreMessages.findOne({ chatId: jid }).lean();
-    if (!chatData || !chatData.conversations || chatData.conversations.length === 0) {
-      throw new Error("Tidak ada percakapan yang tersimpan untuk chat ini.");
-    }
-    const filteredChats = chatData.conversations
-      .filter(c => c.keyId !== m.key.id)
-      .filter(c => !c.text || !c.text.includes('sschat'));
+    const chatData = await store.getConversations(jid, count);
+    if (!chatData || chatData.length === 0) throw new Error("Tidak ada percakapan yang tersimpan untuk chat ini.");
+    const filteredChats = chatData.filter(c => c.keyId !== m.key.id).filter(c => !c.text || !c.text.includes('sschat'));
     const selectedChats = filteredChats.slice(-count);
-    if (selectedChats.length === 0) {
-      throw new Error("Tidak ada percakapan yang bisa diambil.");
-    }
+    if (selectedChats.length === 0) throw new Error("Tidak ada percakapan yang bisa diambil.");
     const defaultAvatar = null;
     const messages = [];
     const tempAvatars = [];
@@ -112,7 +106,7 @@ export async function generateFakeChatWithQCGenerator(m, count, fn, StoreMessage
       await delay(500);
       const msg = selectedChats[i];
       const senderJid = msg.sender;
-      const senderContact = await StoreMessages.findOne({ chatId: senderJid }).lean();
+      const senderContact = await store.getContact(senderJid);
       const fallbackName = await fn.getName(senderJid);
       const senderName = senderContact?.name || msg.name || fallbackName || "Mukidi Slamet";
       let avatarBuffer;
@@ -124,7 +118,7 @@ export async function generateFakeChatWithQCGenerator(m, count, fn, StoreMessage
       tempAvatars.push(avatarBuffer);
       const { text: finalCleanText, entities: allEntities } = await processAllTextFormatting(
         msg.text || '',
-        StoreMessages,
+        store,
         fn
       );
       const messageObj = {
@@ -141,12 +135,12 @@ export async function generateFakeChatWithQCGenerator(m, count, fn, StoreMessage
         text: finalCleanText
       };
       if (msg.quoted && msg.quotedSender) {
-        const quotedContact = await StoreMessages.findOne({ chatId: msg.quotedSender }).lean();
+        const quotedContact = await store.getContact(msg.quotedSender);
         const fallbackQuotedName = await fn.getName(msg.quotedSender);
         const quotedSenderName = quotedContact?.name || fallbackQuotedName || "Yanto Baut";
         const { text: finalCleanQuotedText, entities: allQuotedEntities } = await processAllTextFormatting(
           msg.quoted || '',
-          StoreMessages,
+          store,
           fn
         );
         messageObj.replyMessage = {

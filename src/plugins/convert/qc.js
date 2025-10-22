@@ -14,7 +14,7 @@ export const command = {
   category: 'convert',
   description: 'Membuat Quote Chat',
   isCommandWithoutPayment: true,
-  execute: async ({ fn, m, quotedMsg, serial, arg, sReply, pushname, quotedParticipant, sendRawWebpAsSticker, StoreMessages, dbSettings }) => {
+  execute: async ({ fn, m, quotedMsg, serial, arg, sReply, pushname, quotedParticipant, sendRawWebpAsSticker, store, dbSettings }) => {
     const isQuotedText = quotedMsg && (quotedMsg?.type === 'extendedTextMessage' || quotedMsg?.type === 'conversation');
     const getProfilePic = async (jid) => {
       try {
@@ -25,7 +25,7 @@ export const command = {
       }
     };
     const processAllEntities = async (textToProcess) => {
-      const { text: finalCleanText, entities: allEntities } = await processAllTextFormatting(textToProcess, StoreMessages, fn);
+      const { text: finalCleanText, entities: allEntities } = await processAllTextFormatting(textToProcess, store, fn);
       return { text: finalCleanText, entities: allEntities };
     };
     const params = {

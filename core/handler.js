@@ -19,7 +19,7 @@ import { runJob } from '../src/worker/worker_manager.js';
 import cooldownManager from '../src/lib/cooldownManager.js';
 import { restartManager } from '../src/lib/restartManager.js';
 import { performanceManager } from '../src/lib/performanceManager.js';
-import { User, Group, Settings, OTPSession, Media, DatabaseBot, StoreMessages } from '../database/index.js';
+import { User, Group, Settings, OTPSession, Media, DatabaseBot } from '../database/index.js';
 import { handleAntiDeleted, handleAutoJoin, handleAudioChanger, handleAutoSticker, handleChatbot, handleAutoDownload, handleGameBotResponse } from '../src/handler/index.js';
 import { color, msgs, mycmd, safeStringify, sendAndCleanupFile, waktu, checkCommandAccess, isUserVerified, textMatch1, textMatch2, expiredVIPcheck, expiredCheck, getSerial, getTxt } from '../src/function/index.js';
 
@@ -72,8 +72,8 @@ export const updateMyGroup = (newGroupList, newMemberlist) => {
 };
 export async function arfine(fn, m, { store, dbSettings, ownerNumber, version, isSuggestion = false }) {
   suggested = isSuggestion;
-  await expiredCheck(fn, ownerNumber);
-  await expiredVIPcheck(fn, ownerNumber);
+  await expiredCheck(fn, ownerNumber, store);
+  await expiredVIPcheck(fn, ownerNumber, store);
 
   const serial = await getSerial(m);
   const botNumber = m.botnumber;
@@ -484,7 +484,7 @@ export async function arfine(fn, m, { store, dbSettings, ownerNumber, version, i
                     sessions, chessGame, othelloGame, ludoSessions, game41Sessions, gamematematika,
                     werewolfSessions, minesweeperSessions, ularTanggaSessions, tictactoeSessions,
                     samgongSessions, tebakkalimat, siapakahaku, ulartangga, tebakgame,
-                    sendRawWebpAsSticker, StoreMessages, store
+                    sendRawWebpAsSticker, store
                   };
                   await command.execute(commandArgs);
                   commandFound = true;

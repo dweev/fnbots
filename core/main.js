@@ -18,13 +18,13 @@ import log, { pinoLogger } from '../src/lib/logger.js';
 import { signalHandler } from '../src/lib/signalHandler.js';
 import { restartManager } from '../src/lib/restartManager.js';
 import startPluginWatcher from '../src/lib/watcherPlugins.js';
+import { database, Settings, store } from '../database/index.js';
 import updateMessageUpsert from '../src/lib/updateMessageUpsert.js';
 import { initializeDbSettings } from '../src/lib/settingsManager.js';
 import { performanceManager } from '../src/lib/performanceManager.js';
 import { randomByte, initializeFuse } from '../src/function/index.js';
 import groupParticipantsUpdate from '../src/lib/groupParticipantsUpdate.js';
 import { updateContact, processContactUpdate } from '../src/lib/contactManager.js';
-import { database, Settings, store, StoreMessages } from '../database/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -195,8 +195,7 @@ function setupWhatsAppEventHandlers(fn) {
         lastSeen: Date.now()
       };
     }
-    store.updatePresences(id, resolvedPresences);
-    StoreMessages.updatePresences(id, resolvedPresences).catch(err => log(err, true));
+    await store.updatePresences(id, resolvedPresences);
   });
   fn.ev.on("call", (call) => {
     const { id, status, from } = call[0];

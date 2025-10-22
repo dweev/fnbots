@@ -10,7 +10,7 @@ import log from '../lib/logger.js';
 import config from '../../config.js';
 import { jidNormalizedUser } from 'baileys';
 import { GroupCache, ContactCache, MessageCache, StoryCache } from './index.js';
-import { StoreContact, StoreMessages, StoreGroupMetadata } from '../../database/index.js';
+import { StoreContact, StoreMessages, StoreGroupMetadata, StoreStory } from '../../database/index.js';
 
 class DBStore {
   constructor() {
@@ -756,6 +756,76 @@ class DBStore {
       return [];
     }
   }
+  async getConversations(chatId, limit = 20) {
+    if (!this.isConnected) return [];
+    try {
+      const cached = await MessageCache.getConversations(chatId, limit);
+      if (cached !== null && cached.length > 0) {
+        this.stats.redisHits++;
+        return cached;
+      }
+      this.stats.redisMisses++;
+      const chatData = await StoreMessages.findOne({ chatId }).lean();
+      if (!chatData || !chatData.conversations || chatData.conversations.length === 0) {
+        this.stats.dbMisses++;
+        return [];
+      }
+      this.stats.dbHits++;
+      const conversations = chatData.conversations;
+      const conversationsToCache = conversations.slice(-limit);
+      if (conversationsToCache.length > 0) {
+        await MessageCache.populateCacheFromConversations(chatId, conversationsToCache, limit);
+      }
+      return conversationsToCache;
+    } catch (error) {
+      this.stats.errors++;
+      log(`Get conversations error: ${error.message}`, true);
+      return [];
+    }
+  }
+  async getPrivateChatStats() {
+    if (!this.isConnected) return [];
+    try {
+      const sortedUsers = await StoreMessages.aggregate([
+        {
+          $match: {
+            chatId: { $regex: /@s\.whatsapp\.net$/ }
+          }
+        },
+        {
+          $unwind: '$messages'
+        },
+        {
+          $match: {
+            'messages.fromMe': false,
+            'messages.sender': { $exists: true }
+          }
+        },
+        {
+          $match: {
+            'messages.type': { $nin: ['reactionMessage', 'protocolMessage'] }
+          }
+        },
+        {
+          $group: {
+            _id: '$messages.sender',
+            count: { $sum: 1 }
+          }
+        },
+        {
+          $sort: {
+            count: -1
+          }
+        }
+      ]);
+      this.stats.dbHits++;
+      return sortedUsers;
+    } catch (error) {
+      this.stats.errors++;
+      log(`Get private chat stats error: ${error.message}`, true);
+      return [];
+    }
+  }
   async loadMessage(remoteJid, id) {
     try {
       const messageFromCache = await MessageCache.getSpecificMessage(remoteJid, id);
@@ -790,8 +860,16 @@ class DBStore {
   async updatePresences(chatId, presenceUpdate) {
     try {
       await MessageCache.updatePresences(chatId, presenceUpdate);
+      import('../../database/index.js')
+        .then(({ StoreMessages }) => StoreMessages.updatePresences(chatId, presenceUpdate))
+        .catch(err => {
+          this.stats.errors++;
+          log(`Presence DB write error: ${err.message}`, true);
+        });
+      return true;
     } catch (error) {
       log(`Update presences error: ${error.message}`, true);
+      return false;
     }
   }
   async getPresences(chatId) {
@@ -831,7 +909,6 @@ class DBStore {
         return cached;
       }
       this.stats.redisMisses++;
-      const { StoreStory } = await import('../../database/index.js');
       const doc = await StoreStory.findOne({ userId }).lean();
       const stories = doc?.statuses || [];
       this.stats.dbHits++;
@@ -852,7 +929,6 @@ class DBStore {
         return cached;
       }
       this.stats.redisMisses++;
-      const { StoreStory } = await import('../../database/index.js');
       const doc = await StoreStory.findOne({ userId }).lean();
       const story = doc?.statuses?.find(s => s.key?.id === messageId);
       this.stats.dbHits++;
@@ -890,7 +966,6 @@ class DBStore {
         return cachedUsers.map(userId => ({ userId, storyCount: 1 }));
       }
       this.stats.redisMisses++;
-      const { StoreStory } = await import('../../database/index.js');
       const usersWithStories = await StoreStory.aggregate([
         {
           $project: {
@@ -912,32 +987,36 @@ class DBStore {
       return [];
     }
   }
-  saveConversation(chatId, conversationData, maxSize) {
+  async saveConversation(chatId, conversationData, maxSize = 200) {
     try {
-      this.updateConversations(chatId, conversationData, maxSize);
+      await this.updateConversations(chatId, conversationData, maxSize);
       import('../../database/index.js')
-        .then(({ StoreMessages }) => StoreMessages.addConversation(chatId, conversationData))
+        .then(({ StoreMessages }) => StoreMessages.addConversation(chatId, conversationData, maxSize))
         .catch(err => {
           this.stats.errors++;
           log(`Conversation DB write error: ${err.message}`, true);
         });
+      return true;
     } catch (error) {
       this.stats.errors++;
       log(`saveConversation error: ${error.message}`, true);
+      return false;
     }
   }
-  saveMessage(chatId, message, maxSize) {
+  async saveMessage(chatId, message, maxSize) {
     try {
-      this.updateMessages(chatId, message, maxSize);
+      await this.updateMessages(chatId, message, maxSize);
       import('../../database/index.js')
         .then(({ StoreMessages }) => StoreMessages.addMessage(chatId, message))
         .catch(err => {
           this.stats.errors++;
           log(`Message DB write error: ${err.message}`, true);
         });
+      return true;
     } catch (error) {
       this.stats.errors++;
       log(`saveMessage error: ${error.message}`, true);
+      return false;
     }
   }
   async saveStoryStatus(userId, statusMessage, maxSize) {

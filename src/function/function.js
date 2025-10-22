@@ -16,9 +16,9 @@ import config from '../../config.js';
 import speedTest from 'speedtest-net';
 import dayjs from '../utils/dayjs.js';
 import { tmpDir } from '../lib/tempManager.js';
+import { User } from '../../database/index.js';
 import { pluginCache } from '../lib/plugins.js';
 import { fetch as nativeFetch } from '../addon/bridge.js';
-import { StoreMessages, User } from '../../database/index.js';
 
 let fuse;
 let allCmds           = [];
@@ -519,39 +519,51 @@ export async function sendAndCleanupFile(fn, toId, localPath, m, dbSettings) {
     await fn.sendReply(toId, `Gagal mengirim file: ${error.message}`, { quoted: m });
   }
 };
-export async function expiredCheck(fn, ownerNumber) {
+export async function expiredCheck(fn, ownerNumber, store) {
   if (_checkPremium) return;
   _checkPremium = true;
   setInterval(async () => {
     const expiredUsers = await User.getExpiredPremiumUsers();
     for (const user of expiredUsers) {
-      const latestMessageFromOwner = await StoreMessages.getLatestMessage(ownerNumber[0]);
+      const messages = await store.getMessages(ownerNumber[0], 1);
+      const latestMessageFromOwner = messages && messages.length > 0 ? messages[0] : null;
       const notificationText = `Premium expired: @${user.userId.split('@')[0]}`;
       if (latestMessageFromOwner) {
         const expiration = await fn.getEphemeralExpiration(ownerNumber[0]);
-        await fn.sendPesan(ownerNumber[0], notificationText, { quoted: latestMessageFromOwner, ephemeralExpiration: expiration });
+        await fn.sendPesan(ownerNumber[0], notificationText, {
+          quoted: latestMessageFromOwner,
+          ephemeralExpiration: expiration
+        });
       } else {
         const expiration = await fn.getEphemeralExpiration(ownerNumber[0]);
-        await fn.sendPesan(ownerNumber[0], notificationText, { ephemeralExpiration: expiration });
+        await fn.sendPesan(ownerNumber[0], notificationText, {
+          ephemeralExpiration: expiration
+        });
       }
       await User.removePremium(user.userId);
     }
   }, config.performance.defaultInterval);
 };
-export async function expiredVIPcheck(fn, ownerNumber) {
+export async function expiredVIPcheck(fn, ownerNumber, store) {
   if (_checkVIP) return;
   _checkVIP = true;
   setInterval(async () => {
     const expiredUsers = await User.getExpiredVIPUsers();
     for (const user of expiredUsers) {
-      const latestMessageFromOwner = await StoreMessages.getLatestMessage(ownerNumber[0]);
+      const messages = await store.getMessages(ownerNumber[0], 1);
+      const latestMessageFromOwner = messages && messages.length > 0 ? messages[0] : null;
       const notificationText = `VIP expired: @${user.userId.split('@')[0]}`;
       if (latestMessageFromOwner) {
         const expiration = await fn.getEphemeralExpiration(ownerNumber[0]);
-        await fn.sendPesan(ownerNumber[0], notificationText, { quoted: latestMessageFromOwner, ephemeralExpiration: expiration });
+        await fn.sendPesan(ownerNumber[0], notificationText, {
+          quoted: latestMessageFromOwner,
+          ephemeralExpiration: expiration
+        });
       } else {
         const expiration = await fn.getEphemeralExpiration(ownerNumber[0]);
-        await fn.sendPesan(ownerNumber[0], notificationText, { ephemeralExpiration: expiration });
+        await fn.sendPesan(ownerNumber[0], notificationText, {
+          ephemeralExpiration: expiration
+        });
       }
       await User.removeVIP(user.userId);
     }

@@ -68,10 +68,28 @@ class MessageCache {
       pipeline.expire(key, REDIS_TTL.MESSAGE);
       pipeline.sadd(REDIS_PREFIX.CHAT_INDEX, chatId);
       await pipeline.exec();
-      log(`Message cache populated from DB for ${chatId} (${messagesToCache.length} messages)`);
       return true;
     } catch (error) {
       log(`Populate message cache from DB error: ${error.message}`, true);
+      return false;
+    }
+  }
+  static async populateCacheFromConversations(chatId, conversations, maxSize = 20) {
+    try {
+      if (!conversations || conversations.length === 0) {
+        return false;
+      }
+      const key = `${REDIS_PREFIX.CONVERSATIONS}${chatId}`;
+      const pipeline = redis.pipeline();
+      const conversationsToCache = conversations.slice(-maxSize);
+      for (const conversation of conversationsToCache) {
+        pipeline.rpush(key, JSON.stringify(conversation));
+      }
+      pipeline.expire(key, REDIS_TTL.CONVERSATION);
+      await pipeline.exec();
+      return true;
+    } catch (error) {
+      log(`Populate conversation cache from DB error: ${error.message}`, true);
       return false;
     }
   }
@@ -167,14 +185,11 @@ class MessageCache {
       const key = `${REDIS_PREFIX.PRESENCE}${chatId}`;
       const pipeline = redis.pipeline();
       for (const [jid, presenceData] of Object.entries(presenceUpdate)) {
-        const value = typeof presenceData === 'object'
-          ? JSON.stringify(presenceData)
-          : presenceData;
+        const value = typeof presenceData === 'object' ? JSON.stringify(presenceData) : presenceData;
         pipeline.hset(key, jid, value);
       }
       pipeline.expire(key, REDIS_TTL.PRESENCE);
       await pipeline.exec();
-      log(`Presence updated for chat: ${chatId} (${Object.keys(presenceUpdate).length} users)`);
       return true;
     } catch (error) {
       log(`Update presences error: ${error.message}`, true);

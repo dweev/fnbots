@@ -6,47 +6,14 @@
 */
 // ─── Info ────────────────────────────────
 
-import { StoreMessages } from '../../../database/index.js';
-
 export const command = {
   name: 'listpc',
   category: 'list',
   description: 'Menampilkan daftar chat pribadi (PC) berdasarkan jumlah pesan konten.',
   isCommandWithoutPayment: true,
-  execute: async ({ sReply, isSadmin, isMaster }) => {
+  execute: async ({ sReply, isSadmin, isMaster, store }) => {
     if (!(isSadmin || isMaster)) return;
-    const sortedUsers = await StoreMessages.aggregate([
-      {
-        $match: {
-          chatId: { $regex: /@s\.whatsapp\.net$/ }
-        }
-      },
-      {
-        $unwind: '$messages'
-      },
-      {
-        $match: {
-          'messages.fromMe': false,
-          'messages.sender': { $exists: true }
-        }
-      },
-      {
-        $match: {
-          'messages.type': { $nin: ['reactionMessage', 'protocolMessage'] }
-        }
-      },
-      {
-        $group: {
-          _id: '$messages.sender',
-          count: { $sum: 1 }
-        }
-      },
-      {
-        $sort: {
-          count: -1
-        }
-      }
-    ]);
+    const sortedUsers = await store.getPrivateChatStats();
     if (!sortedUsers || sortedUsers.length === 0) {
       return await sReply('Tidak ada pesan konten dari pengguna yang bisa dihitung.');
     }

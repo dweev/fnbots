@@ -7,7 +7,6 @@
 // ─── Info ────────────────────────────────
 
 import { formatTimeAgo } from '../../function/index.js';
-import { StoreMessages, store } from '../../../database/index.js';
 
 export const command = {
   name: 'checkactivity',
@@ -15,15 +14,13 @@ export const command = {
   description: 'Menampilkan laporan aktivitas semua anggota grup.',
   aliases: ['listmember'],
   isCommandWithoutPayment: true,
-  execute: async ({ m, toId, sReply }) => {
+  execute: async ({ m, toId, sReply, store }) => {
     if (!m.isGroup) return await sReply('Perintah ini hanya bisa digunakan di dalam grup.');
     const groupMetadata = await store.getGroupMetadata(toId);
-    const messagesData = await StoreMessages.findOne({ chatId: toId }).select('messages').lean();
-    const presencesData = await StoreMessages.findOne({ chatId: toId }).select('presences').lean();
+    const messages = await store.getMessages(toId, 1000);
+    const presences = await store.getPresences(toId);
     if (!groupMetadata?.participants) return await sReply('Gagal mendapatkan data anggota grup.');
     const participants = groupMetadata.participants;
-    const messages = messagesData?.messages || [];
-    const presences = presencesData?.presences || {};
     const messageCount = {};
     for (const msg of messages) {
       if (msg.sender && participants.some(p => p.id === msg.sender)) {
@@ -31,11 +28,11 @@ export const command = {
       }
     }
     const activityList = participants.map(p => {
-      const shortJid = p.id.replace('@s.whatsapp.net', '@s');
+      const jid = p.id;
       return {
-        id: p.id,
-        msgCount: messageCount[p.id] || 0,
-        lastSeen: presences[shortJid]?.whatsapp?.net?.lastSeen || 0
+        id: jid,
+        msgCount: messageCount[jid] || 0,
+        lastSeen: presences[jid]?.lastSeen || 0
       };
     });
     activityList.sort((a, b) => b.msgCount - a.msgCount);

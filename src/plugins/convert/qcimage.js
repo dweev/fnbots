@@ -15,7 +15,7 @@ export const command = {
   category: 'convert',
   description: 'Membuat Quote Chat',
   isCommandWithoutPayment: true,
-  execute: async ({ fn, m, quotedMsg, serial, sReply, arg, pushname, toId, dbSettings, StoreMessages }) => {
+  execute: async ({ fn, m, quotedMsg, serial, sReply, arg, pushname, toId, dbSettings, store }) => {
     const targetMsg = quotedMsg ? m.quoted || m : m.message;
     if (!targetMsg) return await sReply("Media tidak ditemukan.");
     const mime = targetMsg?.imageMessage?.mimetype || targetMsg?.stickerMessage?.mimetype;
@@ -29,7 +29,7 @@ export const command = {
     } catch {
       // log("lanjut");
     }
-    const { text: finalCleanText, entities: allEntities } = await processAllTextFormatting(arg, StoreMessages, fn);
+    const { text: finalCleanText, entities: allEntities } = await processAllTextFormatting(arg, store, fn);
     const params = {
       type: 'image',
       format: 'png',

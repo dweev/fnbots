@@ -7,7 +7,6 @@
 // ─── Info ────────────────────────────────
 
 import { formatTimeAgo } from '../../function/index.js';
-import { StoreMessages, store } from '../../../database/index.js';
 
 export const command = {
   name: 'checksider',
@@ -15,33 +14,32 @@ export const command = {
   description: 'Menampilkan laporan aktivitas sider anggota grup.',
   aliases: ['listsider'],
   isCommandWithoutPayment: true,
-  execute: async ({ m, toId, sReply }) => {
+  execute: async ({ m, toId, sReply, store }) => {
     if (!m.isGroup) return await sReply('Perintah ini hanya bisa digunakan di dalam grup.');
     const groupMetadata = await store.getGroupMetadata(toId);
-    const messagesData = await StoreMessages.findOne({ chatId: toId }).select('messages').lean();
-    const presencesData = await StoreMessages.findOne({ chatId: toId }).select('presences').lean();
+    const messages = await store.getMessages(toId, 1000);
+    const presences = await store.getPresences(toId);
     if (!groupMetadata?.participants) return await sReply('Gagal mendapatkan data anggota grup.');
     const participants = groupMetadata.participants;
-    const messages = messagesData?.messages || [];
-    const presences = presencesData?.presences || {};
     const messageCount = {};
-    messages.forEach(mes => {
-      if (mes.sender && participants.some(p => p.id === mes.sender)) {
-        messageCount[mes.sender] = (messageCount[mes.sender] || 0) + 1;
+    messages.forEach(msg => {
+      if (msg.sender && participants.some(p => p.id === msg.sender)) {
+        messageCount[msg.sender] = (messageCount[msg.sender] || 0) + 1;
       }
     });
     const activityList = participants.map(p => {
-      const shortJid = p.id.replace('@s.whatsapp.net', '@s');
+      const jid = p.id;
       return {
-        id: p.id,
-        msgCount: messageCount[p.id] || 0,
-        lastSeen: presences[shortJid]?.whatsapp?.net?.lastSeen || 0
+        id: jid,
+        msgCount: messageCount[jid] || 0,
+        lastSeen: presences[jid]?.lastSeen || 0
       };
     });
     const inactiveUsers = activityList.filter(user => user.msgCount === 0);
     inactiveUsers.sort((a, b) => a.lastSeen - b.lastSeen);
     if (!inactiveUsers.length) return await sReply('Tidak ada anggota yang belum mengirim pesan sama sekali.');
-    const resultText = `*Daftar Anggota Non-Aktif:*\n_${groupMetadata.subject}_\n\n` +
+    const resultText = `*Daftar Anggota Non-Aktif (Sider):*\n_${groupMetadata.subject}_\n\n` +
+      `Total: ${inactiveUsers.length} anggota\n\n` +
       inactiveUsers.map((user, i) => {
         const timeAgo = user.lastSeen ? formatTimeAgo(user.lastSeen) : 'tidak pernah online';
         return `${i + 1}. @${user.id.split('@')[0]}\n   - Terakhir Dilihat: ${timeAgo}`;

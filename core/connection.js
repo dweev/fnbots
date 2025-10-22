@@ -16,9 +16,8 @@ import AuthStore from '../database/auth.js';
 import { parsePhoneNumber } from 'awesome-phonenumber';
 import log, { pinoLogger } from '../src/lib/logger.js';
 import { Settings, store } from '../database/index.js';
-import { fetch as nativeFetch } from '../src/addon/bridge.js';
 import { restartManager } from '../src/lib/restartManager.js';
-import { default as makeWASocket, jidNormalizedUser, fetchLatestWaWebVersion, isJidBroadcast } from 'baileys';
+import { default as makeWASocket, jidNormalizedUser, fetchLatestBaileysVersion, makeCacheableSignalKeyStore } from 'baileys';
 
 let phoneNumber;
 let pairingStarted = false;
@@ -27,54 +26,28 @@ const pairingCode = process.argv.includes('--qr') ? false : process.argv.include
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 const question = (text) => new Promise((resolve) => rl.question(text, resolve));
 
-async function getBaileysVersion() {
-  try {
-    const { version } = await fetchLatestWaWebVersion();
-    return version;
-  } catch (error) {
-    await log(`Failed to fetch latest Baileys version, using fallback:\n${error.message}`, true);
-    const response = await nativeFetch("https://raw.githubusercontent.com/wppconnect-team/wa-version/main/versions.json");
-    if (!response.ok) throw new Error(`Fallback failed with status: ${response.status}`);
-    const data = await response.json();
-    const currentVersion = data.currentVersion;
-    if (!currentVersion) throw new Error("Versi saat ini tidak ditemukan dalam data fallback");
-    const versionParts = currentVersion.split('.');
-    if (versionParts.length < 3) throw new Error("Format versi fallback tidak valid");
-    const [major, minor] = versionParts.map(p => parseInt(p));
-    const build = parseInt(versionParts[2].split('-')[0]);
-    if (isNaN(major) || isNaN(minor) || isNaN(build)) throw new Error("Komponen versi fallback tidak valid");
-    return [major, minor, build];
-  }
-};
-
 export async function createWASocket(dbSettings) {
-  global.version = await getBaileysVersion();
+  const { version } = await fetchLatestBaileysVersion();
   const authStore = await AuthStore();
   const { state, saveCreds } = authStore;
   const fn = makeWASocket({
-    auth: state,
+    version,
     logger: pinoLogger,
-    emitOwnEvents: true,
-    maxMsgRetryCount: 5,
-    syncFullHistory: true,
-    fireInitQueries: true,
-    retryRequestDelayMs: 1000,
-    markOnlineOnConnect: true,
-    defaultQueryTimeoutMs: undefined,
-    linkPreviewImageThumbnailWidth: 192,
-    generateHighQualityLinkPreview: true,
-    qrTimeout: config.performance.qrTimeout,
-    connectTimeoutMs: config.performance.connectTimeoutMs,
-    keepAliveIntervalMs: config.performance.keepAliveIntervals,
-    shouldIgnoreJid: (jid) => { return isJidBroadcast(jid) && jid !== 'status@broadcast'; }
+    auth: {
+      creds: state.creds,
+      keys: makeCacheableSignalKeyStore(state.keys, pinoLogger),
+    },
+    generateHighQualityLinkPreview: true
   });
 
+  global.version = version;
+
   fn.clearSession = authStore.clearSession;
-  fn.storeLIDMapping = authStore.storeLIDMapping;
-  fn.getPN = authStore.getPNForLID;
-  fn.getLID = authStore.getLIDForPN;
   fn.restoreSession = authStore.restoreSession;
   fn.resetRetryAttempts = authStore.resetRetryAttempts;
+  fn.getPN = (lid) => store.getPNForLID(lid);
+  fn.getLID = (pn) => store.getLIDForPN(pn);
+  fn.resolveJid = (id) => store.resolveJid(id);
 
   if (pairingCode && !phoneNumber && !fn.authState.creds.registered) {
     let numberToValidate = config.botNumber ? config.botNumber : dbSettings.botNumber;
@@ -153,11 +126,7 @@ export async function createWASocket(dbSettings) {
         await log(`WA Version: ${global.version.join('.')}`);
         await log(`BOT Number: ${jidNormalizedUser(fn.user.id).split('@')[0]}`);
         await log(`${dbSettings.botName} Success Connected to whatsapp...`);
-        await fn.storeLIDMapping().catch(err => log(`Background LID sync failed: ${err.message}`, true));
         await fn.resetRetryAttempts();
-        setInterval(() => {
-          fn.storeLIDMapping().catch(err => log(`Periodic LID sync failed: ${err.message}`, true));
-        }, 6 * 60 * 60 * 1000);
       }
       if (connection === 'close') {
         await log(`Connection closed. Code: ${statusCode}`);

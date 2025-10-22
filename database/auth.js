@@ -6,8 +6,8 @@
 */
 // ─── Info database/auth.js ────────────────────────
 
+import { redis } from './index.js';
 import log from '../src/lib/logger.js';
-import { StoreContact, redis } from './index.js';
 import { BufferJSON, initAuthCreds, proto } from 'baileys';
 
 const BACKUP_CREDS_KEY = 'creds:backup';
@@ -118,72 +118,6 @@ const resetRetryCount = async () => {
     await log(`Failed to reset retry count: ${error.message}`, true);
   }
 };
-const storeLIDMapping = async () => {
-  try {
-    const stream = redis.scanStream({ match: 'lid-mapping-*', count: 100 });
-    const updates = [];
-    stream.on('data', async (keys) => {
-      for (const key of keys) {
-        const id = key.replace('lid-mapping-', '');
-        const value = await readData(key);
-        if (!value || typeof value !== 'string') continue;
-        let phoneNumber, lid;
-        if (id.endsWith('_reverse')) {
-          const lidNumber = id.replace('_reverse', '');
-          lid = lidNumber.includes('@') ? lidNumber : `${lidNumber}@lid`;
-          phoneNumber = value.includes('@') ? value : `${value}@s.whatsapp.net`;
-        } else {
-          phoneNumber = id.includes('@') ? id : `${id}@s.whatsapp.net`;
-          lid = value.includes('@') ? value : `${value}@lid`;
-        }
-        updates.push({ phoneNumber, lid });
-      }
-    });
-    stream.on('error', (err) => {
-      log(`Redis scan error: ${err.message}`, true);
-    });
-    await new Promise((resolve, reject) => {
-      stream.on('end', resolve);
-      stream.on('error', reject);
-    });
-    if (updates.length > 0) {
-      const jids = updates.map(u => u.phoneNumber);
-      const existingContacts = await StoreContact.find(
-        { jid: { $in: jids } },
-        { jid: 1, lid: 1, _id: 0 }
-      ).lean();
-      const existingMap = new Map(
-        existingContacts.map(c => [c.jid, c.lid])
-      );
-      const needsSync = updates.filter(({ phoneNumber, lid }) => {
-        const existingLid = existingMap.get(phoneNumber);
-        return !existingLid || existingLid !== lid;
-      });
-      if (needsSync.length > 0) {
-        const bulkOps = needsSync.map(({ phoneNumber, lid }) => ({
-          updateOne: {
-            filter: { jid: phoneNumber },
-            update: {
-              $setOnInsert: { jid: phoneNumber, createdAt: new Date() },
-              $set: { lid, lastUpdated: new Date() }
-            },
-            upsert: true
-          }
-        }));
-        const result = await StoreContact.bulkWrite(bulkOps, { ordered: false });
-        const totalSynced = result.upsertedCount + result.modifiedCount;
-        if (totalSynced > 0) {
-          await log(`Synced ${totalSynced}/${updates.length} lid-mappings (${updates.length - totalSynced} skipped)`);
-        }
-      } else {
-        await log(`All ${updates.length} lid-mappings already synced`);
-      }
-    }
-  } catch (error) {
-    await log(`Failed to sync lid-mappings: ${error.message}`, true);
-  }
-};
-
 export default async function AuthStore() {
   const creds = (await readData(REDIS_PREFIX.CREDS)) || initAuthCreds();
   const backupCredsToRedis = async () => {
@@ -219,15 +153,7 @@ export default async function AuthStore() {
       const keysToDelete = [];
       stream.on('data', (keys) => {
         keys.forEach(k => {
-          if (
-            k.startsWith(REDIS_PREFIX.LOCK) ||
-            k === REDIS_PREFIX.CREDS ||
-            k === BACKUP_CREDS_KEY ||
-            k === RETRY_COUNT_KEY ||
-            k.startsWith('lid-mapping-')
-          ) {
-            return;
-          }
+          if (k.startsWith(REDIS_PREFIX.LOCK) || k === REDIS_PREFIX.CREDS || k === BACKUP_CREDS_KEY || k === RETRY_COUNT_KEY || k.startsWith('cache:')) return;
           keysToDelete.push(k);
         });
       });
@@ -237,7 +163,7 @@ export default async function AuthStore() {
           const batch = keysToDelete.slice(i, i + 1000);
           await redis.del(batch);
         }
-        await log(`Cleared ${keysToDelete.length} session keys (creds preserved)`);
+        await log(`Cleared ${keysToDelete.length} session keys (creds & cache preserved)`);
       }
       return true;
     } catch (error) {
@@ -245,7 +171,6 @@ export default async function AuthStore() {
       return false;
     }
   };
-
   return {
     state: {
       creds,
@@ -359,44 +284,6 @@ export default async function AuthStore() {
         return false;
       }
     },
-    getLidMappings: async () => {
-      try {
-        return await StoreContact.find({}, { jid: 1, lid: 1, lastUpdated: 1, _id: 0 }).lean();
-      } catch (error) {
-        await log(`Failed to get LID mappings: ${error.message}`, true);
-        return [];
-      }
-    },
-    getLIDForPN: async (phoneNumber) => {
-      try {
-        const normalizedPN = phoneNumber.includes('@') ? phoneNumber : `${phoneNumber}@s.whatsapp.net`;
-        const pnNumber = normalizedPN.split('@')[0];
-        const lidFromRedis = await readData(`lid-mapping-${pnNumber}`);
-        if (typeof lidFromRedis === 'string') {
-          return lidFromRedis.includes('@') ? lidFromRedis : `${lidFromRedis}@lid`;
-        }
-        const contact = await StoreContact.findOne({ jid: normalizedPN }, { lid: 1, _id: 0 }).lean();
-        return contact?.lid || null;
-      } catch (error) {
-        await log(`Failed to get LID for PN ${phoneNumber}: ${error.message}`, true);
-        return null;
-      }
-    },
-    getPNForLID: async (lid) => {
-      try {
-        const normalizedLid = lid.includes('@') ? lid : `${lid}@lid`;
-        const lidNumber = normalizedLid.split('@')[0];
-        const pnFromRedis = await readData(`lid-mapping-${lidNumber}_reverse`);
-        if (typeof pnFromRedis === 'string') {
-          return pnFromRedis.includes('@') ? pnFromRedis : `${pnFromRedis}@s.whatsapp.net`;
-        }
-        const contact = await StoreContact.findOne({ lid: normalizedLid }, { jid: 1, _id: 0 }).lean();
-        return contact?.jid || null;
-      } catch (error) {
-        await log(`Failed to get PN for LID ${lid}: ${error.message}`, true);
-        return null;
-      }
-    },
     getSessionStats: async () => {
       try {
         const stream = redis.scanStream({ match: '*', count: 100 });
@@ -404,7 +291,7 @@ export default async function AuthStore() {
         stream.on('data', (keys) => {
           keys.forEach(key => {
             if (key.startsWith(REDIS_PREFIX.LOCK)) return;
-            const category = key.split('-')[0];
+            const category = key.split('-')[0].split(':')[0];
             keysByCategory[category] = (keysByCategory[category] || 0) + 1;
           });
         });
@@ -416,7 +303,6 @@ export default async function AuthStore() {
         await log(`Failed to get session stats: ${error.message}`, true);
         return [];
       }
-    },
-    storeLIDMapping
+    }
   };
-};
+}

@@ -31,7 +31,8 @@ class DBStore {
       dbMisses: 0,
       batchedWrites: 0,
       skippedWrites: 0,
-      errors: 0
+      errors: 0,
+      lidMappings: 0
     };
     this.isConnected = false;
     this.authStore = null;
@@ -314,9 +315,9 @@ class DBStore {
     try {
       const activeGroups = await StoreGroupMetadata.find().sort({ lastUpdated: -1 }).limit(50).lean();
       await GroupCache.bulkAddGroups(activeGroups);
-      const recentContacts = await StoreContact.find({}).sort({ updatedAt: -1 }).limit(5000).lean();
+      const recentContacts = await StoreContact.find({}).sort({ lastUpdated: -1 }).limit(5000).lean();
       await ContactCache.bulkAddContacts(recentContacts);
-      log(`Redis cache warmed: ${activeGroups.length} groups, ${recentContacts.length} contacts`);
+      log(`Redis cache warmed: ${activeGroups.length} groups, ${recentContacts.length} contacts (persistent)`);
     } catch (error) {
       this.stats.errors++;
       log(`Cache warming error: ${error.message}`, true);
@@ -424,6 +425,106 @@ class DBStore {
       };
     }
   }
+  async handleLIDMapping(lid, jid) {
+    const normalizedLid = lid?.includes('@') ? lid : lid ? `${lid}@lid` : null;
+    const normalizedJid = jid?.includes('@') ? jid : jid ? `${jid}@s.whatsapp.net` : null;
+    if (!normalizedLid && !normalizedJid) return;
+    try {
+      if (normalizedLid && normalizedJid) {
+        await ContactCache.cacheLidMapping(normalizedLid, normalizedJid);
+        this.stats.lidMappings++;
+      }
+      let existing = null;
+      if (normalizedJid) {
+        existing = await ContactCache.getContact(normalizedJid);
+      }
+      if (!existing && (normalizedJid || normalizedLid)) {
+        try {
+          const query = {};
+          if (normalizedJid) query.jid = normalizedJid;
+          else if (normalizedLid) query.lid = normalizedLid;
+          existing = await StoreContact.findOne(query).lean();
+        } catch (error) {
+          log(`Error fetching contact for LID mapping: ${error.message}`, true);
+        }
+      }
+      const merged = {
+        ...(existing || {}),
+        ...(normalizedJid && { jid: normalizedJid }),
+        ...(normalizedLid && { lid: normalizedLid })
+      };
+      if (merged.jid) {
+        const sanitized = this.sanitizeContactData(merged, existing);
+        await ContactCache.addContact(merged.jid, sanitized);
+        this.updateQueues.contacts.set(merged.jid, sanitized);
+        log(`LID mapping queued: ${normalizedLid || 'null'} ↔ ${normalizedJid || 'null'}`);
+      }
+    } catch (error) {
+      this.stats.errors++;
+      log(`handleLIDMapping error: ${error.message}`, true);
+    }
+  }
+  async resolveJid(id) {
+    if (!id) return null;
+    if (id.endsWith('@s.whatsapp.net')) {
+      return jidNormalizedUser(id);
+    }
+    if (!id.endsWith('@lid')) {
+      return id;
+    }
+    return await this.findJidByLid(id);
+  }
+  async findJidByLid(lid) {
+    if (!lid) return null;
+    const cached = await ContactCache.findJidByLid(lid);
+    if (cached) {
+      this.stats.redisHits++;
+      return cached;
+    }
+    this.stats.redisMisses++;
+    try {
+      const contact = await StoreContact.findOne({ lid }).lean();
+      const jid = contact?.jid || null;
+      if (jid) {
+        await ContactCache.cacheLidMapping(lid, jid);
+        this.stats.dbHits++;
+      } else {
+        this.stats.dbMisses++;
+      }
+      return jid;
+    } catch (error) {
+      this.stats.errors++;
+      log(`Database lookup failed for LID ${lid}: ${error.message}`, true);
+      return null;
+    }
+  }
+  async getLIDForPN(phoneNumber) {
+    const normalizedPN = phoneNumber?.includes('@') ? phoneNumber : `${phoneNumber}@s.whatsapp.net`;
+    const cachedLid = await ContactCache.findLidByJid(normalizedPN);
+    if (cachedLid) {
+      this.stats.redisHits++;
+      return cachedLid;
+    }
+    this.stats.redisMisses++;
+    try {
+      const contact = await StoreContact.findOne({ jid: normalizedPN }).lean();
+      const lid = contact?.lid || null;
+      if (lid) {
+        await ContactCache.cacheLidMapping(lid, normalizedPN);
+        this.stats.dbHits++;
+      } else {
+        this.stats.dbMisses++;
+      }
+      return lid;
+    } catch (error) {
+      this.stats.errors++;
+      log(`getLIDForPN error: ${error.message}`, true);
+      return null;
+    }
+  }
+  async getPNForLID(lid) {
+    return await this.findJidByLid(lid);
+  }
   async getGroupMetadata(groupId) {
     if (!this.isConnected) return null;
     const fromCache = await GroupCache.getGroup(groupId);
@@ -486,7 +587,6 @@ class DBStore {
       const cachedGroups = await GroupCache.getAllCachedGroups();
       if (cachedGroups.length > 0) {
         this.stats.redisHits += cachedGroups.length;
-        log(`Cache hit: ${cachedGroups.length} groups from Redis`);
         if (projection) {
           return cachedGroups.map(group => {
             const filtered = {};
@@ -526,7 +626,6 @@ class DBStore {
       this.stats.redisHits += foundInCache.length;
       this.stats.redisMisses += missingIds.length;
       if (missingIds.length === 0) {
-        log(`Cache hit: ${foundInCache.length}/${groupIds.length} groups`);
         return foundInCache;
       }
       log(`Partial cache miss: ${missingIds.length}/${groupIds.length} groups, fetching from DB...`);
@@ -618,51 +717,6 @@ class DBStore {
   clearGroupsCache() {
     this.updateQueues.groups.clear();
     log('Groups queue cleared');
-  }
-  async cacheLidMapping(lid, jid) {
-    return await ContactCache.cacheLidMapping(lid, jid);
-  }
-  async resolveJid(id) {
-    if (!id) return null;
-    if (id.endsWith('@s.whatsapp.net')) {
-      return jidNormalizedUser(id);
-    }
-    if (!id.endsWith('@lid')) {
-      return id;
-    }
-    return await this.findJidByLid(id);
-  }
-  async findJidByLid(lid) {
-    if (!lid) return null;
-    const cached = await ContactCache.findJidByLid(lid);
-    if (cached) {
-      this.stats.redisHits++;
-      return cached;
-    }
-    this.stats.redisMisses++;
-    if (this.authStore) {
-      try {
-        const jidFromAuth = await this.authStore.getPNForLID(lid);
-        if (jidFromAuth) {
-          await ContactCache.cacheLidMapping(lid, jidFromAuth);
-          return jidFromAuth;
-        }
-      } catch (error) {
-        log(`AuthStore lookup failed for LID ${lid}: ${error.message}`, true);
-      }
-    }
-    try {
-      const contact = await StoreContact.findOne({ lid }).lean();
-      const jid = contact?.jid || null;
-      if (jid) {
-        await ContactCache.cacheLidMapping(lid, jid);
-      }
-      return jid;
-    } catch (error) {
-      this.stats.errors++;
-      log(`Database lookup failed for LID ${lid}: ${error.message}`, true);
-      return null;
-    }
   }
   async updateMessages(chatId, message, maxSize = 50) {
     try {
@@ -901,7 +955,6 @@ class DBStore {
   }
   async performMaintenance() {
     if (!this.isConnected) return;
-
     try {
       await this.flushAllBatches();
     } catch (error) {
@@ -946,6 +999,7 @@ class DBStore {
         skippedWrites: this.stats.skippedWrites,
         efficiency: this.stats.batchedWrites > 0 ? ((this.stats.skippedWrites / (this.stats.batchedWrites + this.stats.skippedWrites)) * 100).toFixed(2) + '%' : '0%'
       },
+      lidMappings: this.stats.lidMappings,
       cacheStats: {
         contacts: contactStats,
         groups: groupStats,

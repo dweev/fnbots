@@ -9,15 +9,10 @@
 import log from '../lib/logger.js';
 import { redis } from '../../database/index.js';
 
-const REDIS_TTL = {
-  CONTACT: 24 * 60 * 60,
-  LID_MAPPING: 24 * 60 * 60
-};
-
 const REDIS_PREFIX = {
   CONTACT: 'cache:contact:',
-  LID_TO_JID: 'cache:getLIDForPN:',
-  JID_TO_LID: 'cache:getPNForLID:',
+  LID_TO_JID: 'cache:lid2jid:',
+  JID_TO_LID: 'cache:jid2lid:',
   CONTACT_INDEX: 'cache:contact:index'
 };
 
@@ -26,22 +21,11 @@ class ContactCache {
     try {
       const key = `${REDIS_PREFIX.CONTACT}${jid}`;
       const pipeline = redis.pipeline();
-      pipeline.set(key, JSON.stringify(contactData), 'EX', REDIS_TTL.CONTACT);
+      pipeline.set(key, JSON.stringify(contactData));
       pipeline.sadd(REDIS_PREFIX.CONTACT_INDEX, jid);
-      pipeline.expire(REDIS_PREFIX.CONTACT_INDEX, REDIS_TTL.CONTACT);
       if (contactData.lid) {
-        pipeline.set(
-          `${REDIS_PREFIX.LID_TO_JID}${contactData.lid}`,
-          jid,
-          'EX',
-          REDIS_TTL.LID_MAPPING
-        );
-        pipeline.set(
-          `${REDIS_PREFIX.JID_TO_LID}${jid}`,
-          contactData.lid,
-          'EX',
-          REDIS_TTL.LID_MAPPING
-        );
+        pipeline.set(`${REDIS_PREFIX.LID_TO_JID}${contactData.lid}`, jid);
+        pipeline.set(`${REDIS_PREFIX.JID_TO_LID}${jid}`, contactData.lid);
       }
       await pipeline.exec();
       return true;
@@ -54,10 +38,7 @@ class ContactCache {
     try {
       const key = `${REDIS_PREFIX.CONTACT}${jid}`;
       const data = await redis.get(key);
-      if (!data) {
-        log(`Cache miss for contact: ${jid}`);
-        return null;
-      }
+      if (!data) return null;
       return JSON.parse(data);
     } catch (error) {
       log(`Get contact from cache error: ${error.message}`, true);
@@ -66,7 +47,9 @@ class ContactCache {
   }
   static async getArrayContacts(jids) {
     try {
-      if (!jids || jids.length === 0) return [];
+      if (!jids || jids.length === 0) {
+        return { contacts: [], missingJids: [] };
+      }
       const keys = jids.map(jid => `${REDIS_PREFIX.CONTACT}${jid}`);
       const results = await redis.mget(keys);
       const contacts = [];
@@ -78,7 +61,6 @@ class ContactCache {
           missingJids.push(jids[index]);
         }
       });
-      log(`Cache hit: ${contacts.length}/${jids.length} contacts`);
       return { contacts, missingJids };
     } catch (error) {
       log(`Get array contacts from cache error: ${error.message}`, true);
@@ -93,28 +75,36 @@ class ContactCache {
       const pipeline = redis.pipeline();
       for (const contact of contactsArray) {
         const key = `${REDIS_PREFIX.CONTACT}${contact.jid}`;
-        pipeline.set(key, JSON.stringify(contact), 'EX', REDIS_TTL.CONTACT);
+        pipeline.set(key, JSON.stringify(contact));
         pipeline.sadd(REDIS_PREFIX.CONTACT_INDEX, contact.jid);
         if (contact.lid) {
-          pipeline.set(
-            `${REDIS_PREFIX.LID_TO_JID}${contact.lid}`,
-            contact.jid,
-            'EX',
-            REDIS_TTL.LID_MAPPING
-          );
-          pipeline.set(
-            `${REDIS_PREFIX.JID_TO_LID}${contact.jid}`,
-            contact.lid,
-            'EX',
-            REDIS_TTL.LID_MAPPING
-          );
+          pipeline.set(`${REDIS_PREFIX.LID_TO_JID}${contact.lid}`, contact.jid);
+          pipeline.set(`${REDIS_PREFIX.JID_TO_LID}${contact.jid}`, contact.lid);
         }
       }
       await pipeline.exec();
-      log(`Bulk cached ${contactsArray.length} contacts`);
+      log(`Bulk cached ${contactsArray.length} contacts (persistent)`);
       return true;
     } catch (error) {
       log(`Bulk add contacts to cache error: ${error.message}`, true);
+      return false;
+    }
+  }
+  static async updateContact(jid, updates) {
+    try {
+      const existing = await this.getContact(jid);
+      if (!existing) {
+        return await this.addContact(jid, { jid, ...updates });
+      }
+      const merged = {
+        ...existing,
+        ...updates,
+        jid,
+        lastUpdated: new Date()
+      };
+      return await this.addContact(jid, merged);
+    } catch (error) {
+      log(`Update contact cache error: ${error.message}`, true);
       return false;
     }
   }
@@ -176,11 +166,6 @@ class ContactCache {
   static async findLidByJid(jid) {
     try {
       const lid = await redis.get(`${REDIS_PREFIX.JID_TO_LID}${jid}`);
-      if (lid) {
-        log(`Cache hit for JID mapping: ${jid} -> ${lid}`);
-      } else {
-        log(`Cache miss for JID mapping: ${jid}`);
-      }
       return lid;
     } catch (error) {
       log(`Find LID by JID error: ${error.message}`, true);
@@ -191,8 +176,8 @@ class ContactCache {
     try {
       if (!lid || !jid) return false;
       const pipeline = redis.pipeline();
-      pipeline.set(`${REDIS_PREFIX.LID_TO_JID}${lid}`, jid, 'EX', REDIS_TTL.LID_MAPPING);
-      pipeline.set(`${REDIS_PREFIX.JID_TO_LID}${jid}`, lid, 'EX', REDIS_TTL.LID_MAPPING);
+      pipeline.set(`${REDIS_PREFIX.LID_TO_JID}${lid}`, jid);
+      pipeline.set(`${REDIS_PREFIX.JID_TO_LID}${jid}`, lid);
       await pipeline.exec();
       return true;
     } catch (error) {
@@ -259,17 +244,17 @@ class ContactCache {
       const jids = await this.getAllCachedJids();
       const stats = {
         totalContacts: jids.length,
+        persistent: true,
+        sampleSize: Math.min(100, jids.length),
         contacts: []
       };
       for (const jid of jids.slice(0, 100)) {
-        const key = `${REDIS_PREFIX.CONTACT}${jid}`;
-        const ttl = await redis.ttl(key);
         const contact = await this.getContact(jid);
         stats.contacts.push({
           jid,
           name: contact?.name || '',
           hasLid: !!contact?.lid,
-          ttl: ttl > 0 ? ttl : 0
+          lid: contact?.lid || null
         });
       }
       return stats;
@@ -277,8 +262,33 @@ class ContactCache {
       log(`Get contact cache stats error: ${error.message}`, true);
       return {
         totalContacts: 0,
+        persistent: true,
         contacts: []
       };
+    }
+  }
+  static async getMemoryUsage() {
+    try {
+      const jids = await this.getAllCachedJids();
+      let totalSize = 0;
+      const sampleSize = Math.min(100, jids.length);
+      for (const jid of jids.slice(0, sampleSize)) {
+        const contact = await this.getContact(jid);
+        if (contact) {
+          totalSize += JSON.stringify(contact).length;
+        }
+      }
+      const avgSize = totalSize / sampleSize;
+      const estimatedTotal = avgSize * jids.length;
+      return {
+        totalContacts: jids.length,
+        avgContactSize: Math.round(avgSize),
+        estimatedTotalBytes: Math.round(estimatedTotal),
+        estimatedTotalMB: (estimatedTotal / (1024 * 1024)).toFixed(2)
+      };
+    } catch (error) {
+      log(`Get memory usage error: ${error.message}`, true);
+      return null;
     }
   }
 }

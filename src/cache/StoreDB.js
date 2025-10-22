@@ -425,6 +425,23 @@ class DBStore {
       };
     }
   }
+  async getAllContacts() {
+    if (!this.isConnected) return [];
+    try {
+      const contacts = await StoreContact.find({
+        jid: { $regex: /@s\.whatsapp\.net$/ }
+      }).lean();
+      this.stats.dbHits += contacts.length;
+      if (contacts.length > 0) {
+        await ContactCache.bulkAddContacts(contacts);
+      }
+      return contacts;
+    } catch (error) {
+      this.stats.errors++;
+      log(`getAllContacts error: ${error.message}`, true);
+      return [];
+    }
+  }
   async handleLIDMapping(lid, jid) {
     const normalizedLid = lid?.includes('@') ? lid : lid ? `${lid}@lid` : null;
     const normalizedJid = jid?.includes('@') ? jid : jid ? `${jid}@s.whatsapp.net` : null;

@@ -82,7 +82,7 @@
     "translatte": "^3.0.1",
     "uglify-js": "^3.19.3",
     "wait-port": "^1.1.0",
-    "yt-spotify-dl": "^0.0.1"
+    "yt-spotify-dl": "^1.0.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.38.0",

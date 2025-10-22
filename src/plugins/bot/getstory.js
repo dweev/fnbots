@@ -49,7 +49,7 @@ export const command = {
           username: authorName,
           profilePicBuffer: profilePicBuffer
         });
-        await fn.sendMediaFromBuffer(toId, story.mime, resBuffer, story.body || '', m);
+        await fn.sendMediaFromBuffer(toId, 'image/png', resBuffer, story.body || '', m);
       } else if (['imageMessage', 'videoMessage', 'audioMessage'].includes(story.type)) {
         const asu = JSON.parse(JSON.stringify(story));
         const mediaBuffer = await fn.getMediaBuffer(asu.message);

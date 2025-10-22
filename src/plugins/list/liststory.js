@@ -6,8 +6,6 @@
 */
 // ─── Info ────────────────────────────────
 
-import { StoreStory } from '../../../database/index.js';
-
 export const command = {
   name: 'liststory',
   category: 'list',
@@ -15,19 +13,7 @@ export const command = {
   isCommandWithoutPayment: true,
   execute: async ({ sReply, isSadmin, store }) => {
     if (!isSadmin) return;
-    const usersWithStories = await StoreStory.aggregate([
-      {
-        $project: {
-          userId: 1,
-          storyCount: { $size: "$statuses" }
-        }
-      },
-      {
-        $match: {
-          storyCount: { $gt: 0 }
-        }
-      }
-    ]);
+    const usersWithStories = await store.getUsersWithStories();
     if (!usersWithStories || usersWithStories.length === 0) return await sReply('Saat ini tidak ada pengguna yang memiliki story aktif di database.');
     const cacheStats = await store.getStoryCacheStats();
     let replyText = '*Daftar Story Pengguna Aktif*\n\n';
@@ -42,7 +28,6 @@ export const command = {
     }
     replyText += `\nTotal Users: ${usersWithStories.length}\n`;
     replyText += `Cached: ${cacheStats.totalUsers}`;
-    console.log(replyText);
     await sReply(replyText);
   },
 };

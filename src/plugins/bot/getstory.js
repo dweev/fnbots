@@ -12,19 +12,18 @@ import log from '../../lib/logger.js';
 import config from '../../../config.js';
 import { generateFakeStory } from 'generator-fake';
 import { archimed } from '../../function/index.js';
-import { store, StoreStory } from '../../../database/index.js';
 
 export const command = {
   name: 'getstory',
   category: 'bot',
   description: 'Mengambil story dari kontak bot dan menghapusnya dari daftar.',
   isCommandWithoutPayment: true,
-  execute: async ({ fn, m, toId, args, dbSettings, sReply }) => {
+  execute: async ({ fn, m, toId, args, dbSettings, sReply, store }) => {
     if (args.length < 2) return await sReply(`Format salah.\nContoh: ${dbSettings.rname}getstory 1 1-3`);
     const userIndex = parseInt(args[0], 10);
     const ruleString = args.slice(1).join(' ');
     if (isNaN(userIndex) || userIndex <= 0) return await sReply('Nomor urut pengguna harus angka valid > 0.');
-    const usersWithStories = await StoreStory.find({ 'statuses.0': { $exists: true } }).select('userId').lean();
+    const usersWithStories = await store.getUsersWithStories();
     if (usersWithStories.length === 0) return await sReply('Tidak ada pengguna dengan story aktif di database.');
     const targetUserIndex = userIndex - 1;
     if (targetUserIndex >= usersWithStories.length) return await sReply(`Nomor urut ${userIndex} tidak valid. Hanya ada ${usersWithStories.length} pengguna dengan story.`);
@@ -61,10 +60,7 @@ export const command = {
     if (sentMessageIds.length > 0) {
       try {
         await store.bulkDeleteStatuses(targetJid, sentMessageIds);
-        await StoreStory.updateOne(
-          { userId: targetJid },
-          { $pull: { statuses: { 'key.id': { $in: sentMessageIds } } } }
-        );
+        await store.invalidateUsersWithStoriesCache();
         log(`Deleted ${sentMessageIds.length} stories from cache and DB for ${targetJid}`);
       } catch (deleteError) {
         log(`Error deleting stories: ${deleteError.message}`, true);

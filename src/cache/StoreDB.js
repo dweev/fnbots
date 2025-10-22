@@ -1149,6 +1149,39 @@ class DBStore {
   async getStoryCacheStats() {
     return StoryCache.getStats();
   }
+  async getUsersWithStories() {
+    try {
+      const cached = await this.getRedis('cache:users-with-stories');
+      if (cached) {
+        this.stats.redisHits++;
+        return cached;
+      }
+      this.stats.redisMisses++;
+      const { StoreStory } = await import('../../database/index.js');
+      const usersWithStories = await StoreStory.aggregate([
+        {
+          $project: {
+            userId: 1,
+            storyCount: { $size: "$statuses" }
+          }
+        },
+        {
+          $match: {
+            storyCount: { $gt: 0 }
+          }
+        }
+      ]);
+      await this.setRedis('cache:users-with-stories', usersWithStories, 60);
+      return usersWithStories;
+    } catch (error) {
+      this.stats.errors++;
+      log(`getUsersWithStories error: ${error.message}`, true);
+      return [];
+    }
+  }
+  async invalidateUsersWithStoriesCache() {
+    await this.delRedis('cache:users-with-stories');
+  }
 }
 
 const store = new DBStore();

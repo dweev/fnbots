@@ -63,14 +63,12 @@ export async function createWASocket(dbSettings) {
     retryRequestDelayMs: 1000,
     maxMsgRetryCount: 5,
     auth: { creds: state.creds, keys: makeCacheableSignalKeyStore(state.keys, pinoLogger) },
-    transactionOpts: { maxCommitRetries: 5, delayBetweenTriesMs: 1000 },
     markOnlineOnConnect: true,
     linkPreviewImageThumbnailWidth: 192,
     syncFullHistory: true,
     fireInitQueries: true,
     generateHighQualityLinkPreview: true,
-    shouldIgnoreJid: (jid) => { return isJidBroadcast(jid) && jid !== 'status@broadcast'; },
-    appStateMacVerification: { patch: true, snapshot: true },
+    shouldIgnoreJid: (jid) => { return isJidBroadcast(jid) && jid !== 'status@broadcast'; }
   });
 
   fn.clearSession = authStore.clearSession;

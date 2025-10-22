@@ -832,7 +832,7 @@ class UnifiedJobScheduler {
   async syncStoryCacheWithDB() {
     try {
       const { StoreStory } = await import('../../database/index.js');
-      const { default: StoryCache } = await import('../cache/storyCache.js');
+      const { default: StoryCache } = await import('../cache/cacheStory.js');
       log('Syncing story cache with MongoDB...');
       const cachedUserIds = await StoryCache.getUsersWithStories();
       if (cachedUserIds.length === 0) {

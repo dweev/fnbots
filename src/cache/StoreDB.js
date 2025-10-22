@@ -8,7 +8,7 @@
 
 import log from '../lib/logger.js';
 import config from '../../config.js';
-import StoryCache from './storyCache.js';
+import StoryCache from './cacheStory.js';
 import { jidNormalizedUser } from 'baileys';
 import { StoreContact, StoreMessages, StoreGroupMetadata, redis } from '../../database/index.js';
 

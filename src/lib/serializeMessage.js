@@ -97,8 +97,23 @@ export default async function serializeMessage(fn, msg) {
     if (isStatus) {
       const p = msg.key.participant;
       const pAlt = msg.key.remoteJidAlt;
-      const authorJid = p?.endsWith('@s.whatsapp.net') ? jidNormalizedUser(p) : (pAlt?.endsWith('@s.whatsapp.net') ? jidNormalizedUser(pAlt) : null);
-      const authorLid = p?.endsWith('@lid') ? p : (pAlt?.endsWith('@lid') ? pAlt : null);
+      let authorJid = null;
+      let authorLid = null;
+      if (p?.endsWith('@s.whatsapp.net')) {
+        authorJid = jidNormalizedUser(p);
+      } else if (p?.endsWith('@lid')) {
+        authorLid = p;
+      }
+      if (!authorJid && !authorLid) {
+        if (pAlt?.endsWith('@s.whatsapp.net')) {
+          authorJid = jidNormalizedUser(pAlt);
+        } else if (pAlt?.endsWith('@lid')) {
+          authorLid = pAlt;
+        }
+      }
+      if (authorLid && !authorJid) {
+        authorJid = await store.resolveJid(authorLid);
+      }
       m.participant = authorJid || authorLid;
       mfrom = m.participant;
       mchat = m.participant;
@@ -106,6 +121,10 @@ export default async function serializeMessage(fn, msg) {
       m.key.participantAlt = authorLid;
       if (authorJid && authorLid) {
         senderJid = authorJid;
+        senderLid = authorLid;
+      } else if (authorJid) {
+        senderJid = authorJid;
+      } else if (authorLid) {
         senderLid = authorLid;
       }
     } else if (m.isGroup) {

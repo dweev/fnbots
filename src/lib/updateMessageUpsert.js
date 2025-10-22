@@ -82,7 +82,6 @@ export default async function updateMessageUpsert(fn, message, dbSettings) {
           }
         }
         await store.saveStoryStatus(m.sender, m, config.performance.maxStoreSaved);
-        log(`Story saved for ${m.sender} (messageId: ${m.key.id})`);
       } catch (error) {
         await log(`Story handling error: ${error.message}`, true);
       }

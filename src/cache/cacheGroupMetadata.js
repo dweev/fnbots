@@ -62,7 +62,6 @@ class GroupCache {
           missingIds.push(groupIds[index]);
         }
       });
-      log(`Cache hit: ${groups.length}/${groupIds.length} groups`);
       return { groups, missingIds };
     } catch (error) {
       log(`Get array groups from cache error: ${error.message}`, true);

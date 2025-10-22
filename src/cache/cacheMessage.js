@@ -48,7 +48,6 @@ class MessageCache {
         return null;
       }
       const parsed = messages.map(m => JSON.parse(m));
-      log(`Cache hit for messages: ${chatId} (${parsed.length} messages)`);
       return parsed;
     } catch (error) {
       log(`Get messages from cache error: ${error.message}`, true);

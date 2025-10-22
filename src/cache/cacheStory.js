@@ -63,7 +63,6 @@ class StoryCache {
       }
       const stories = Object.values(cached).map(data => JSON.parse(data));
       stories.sort((a, b) => (b.messageTimestamp || 0) - (a.messageTimestamp || 0));
-      log(`Cache hit for stories: ${userId} (${stories.length} stories)`);
       return stories;
     } catch (error) {
       log(`Get statuses from cache error: ${error.message}`, true);

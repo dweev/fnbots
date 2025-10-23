@@ -60,7 +60,6 @@ export const command = {
     if (sentMessageIds.length > 0) {
       try {
         await store.bulkDeleteStatuses(targetJid, sentMessageIds);
-        log(`Deleted ${sentMessageIds.length} stories from cache and DB for ${targetJid}`);
       } catch (deleteError) {
         log(`Error deleting stories: ${deleteError.message}`, true);
       }

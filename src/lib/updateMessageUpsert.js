@@ -65,6 +65,9 @@ export default async function updateMessageUpsert(fn, message, dbSettings) {
     if (m.key.remoteJid === 'status@broadcast') {
       if (m.messageStubType === 2) return;
       try {
+        if (m.type === 'protocolMessage' && m.protocolMessage?.type === 'REVOKE' && m.protocolMessage?.key?.remoteJid === 'status@broadcast') {
+          return;
+        }
         if (m.key.remoteJid && m.key.participant) {
           if (dbSettings.autolikestory) {
             await fn.sendMessage(

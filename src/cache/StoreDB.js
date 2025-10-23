@@ -50,14 +50,25 @@ class DBStore {
     this.authStore = null;
     this.fn = null;
   }
+
+  // ─── Info Initialization ──────────────────────────
+  /*
+  * Created with ❤️ and 💦 By FN
+  * Follow https://github.com/Terror-Machine
+  * Feel Free To Use
+  */
+  // ─── Info Initialization Methods ──────────────────
+
   setAuthStore(authStore) {
     this.authStore = authStore;
     log('AuthStore injected into DBStore');
   }
+
   setSocket(fn) {
     this.fn = fn;
     log('Socket injected into DBStore');
   }
+
   init() {
     this.startBatchProcessor();
     this.startCacheCleanup();
@@ -65,6 +76,7 @@ class DBStore {
     this.startCacheRefresh();
     this.startCircuitBreakerReset();
   }
+
   async connect() {
     this.isConnected = true;
     log("Warming up Redis cache...");
@@ -72,11 +84,21 @@ class DBStore {
     log('Redis + MongoDB ready');
     return this;
   }
+
   async disconnect() {
     await this.flushAllBatches();
     this.isConnected = false;
     log('Store disconnected');
   }
+
+  // ─── Info Circuit Breaker ─────────────────────────
+  /*
+  * Created with ❤️ and 💦 By FN
+  * Follow https://github.com/Terror-Machine
+  * Feel Free To Use
+  */
+  // ─── Info Circuit Breaker Methods ─────────────────
+
   checkCircuitBreaker() {
     if (this.circuitBreaker.state === 'OPEN') {
       const now = Date.now();
@@ -89,6 +111,7 @@ class DBStore {
       }
     }
   }
+
   recordCircuitBreakerSuccess() {
     if (this.circuitBreaker.state === 'HALF_OPEN') {
       this.circuitBreaker.state = 'CLOSED';
@@ -96,6 +119,7 @@ class DBStore {
       log('Circuit breaker reset to CLOSED');
     }
   }
+
   recordCircuitBreakerFailure() {
     this.circuitBreaker.failures++;
     this.circuitBreaker.lastFailure = Date.now();
@@ -105,6 +129,7 @@ class DBStore {
       log(`Circuit breaker tripped: ${this.circuitBreaker.failures} failures`, true);
     }
   }
+
   startCircuitBreakerReset() {
     setInterval(() => {
       if (this.circuitBreaker.state === 'CLOSED' && this.circuitBreaker.failures > 0) {
@@ -112,6 +137,15 @@ class DBStore {
       }
     }, 60000);
   }
+
+  // ─── Info Data Sanitization ───────────────────────
+  /*
+  * Created with ❤️ and 💦 By FN
+  * Follow https://github.com/Terror-Machine
+  * Feel Free To Use
+  */
+  // ─── Info Data Sanitization Methods ───────────────
+
   sanitizeParticipants(participants) {
     if (!Array.isArray(participants)) return [];
     return participants.map(p => ({
@@ -121,6 +155,7 @@ class DBStore {
       admin: p.admin || null
     }));
   }
+
   sanitizeGroupData(rawData, existing = null) {
     const participants = this.sanitizeParticipants(rawData.participants || []);
     const sanitized = {
@@ -161,6 +196,7 @@ class DBStore {
     }
     return sanitized;
   }
+
   sanitizeContactData(rawData, existing = null) {
     const sanitized = {
       jid: rawData.jid,
@@ -179,6 +215,15 @@ class DBStore {
     }
     return sanitized;
   }
+
+  // ─── Info Change Detection ────────────────────────
+  /*
+  * Created with ❤️ and 💦 By FN
+  * Follow https://github.com/Terror-Machine
+  * Feel Free To Use
+  */
+  // ─── Info Change Detection Methods ────────────────
+
   hasParticipantsChanged(existingParticipants = [], updatedParticipants = []) {
     if (existingParticipants.length !== updatedParticipants.length) {
       return true;
@@ -203,6 +248,7 @@ class DBStore {
     }
     return false;
   }
+
   hasChanges(existing, updated, type) {
     if (type === 'contacts') {
       const fieldsToCheck = ['name', 'notify', 'verifiedName', 'lid'];
@@ -236,9 +282,19 @@ class DBStore {
     }
     return false;
   }
+
+  // ─── Info Batch Processing ───────────────────────
+  /*
+  * Created with ❤️ and 💦 By FN
+  * Follow https://github.com/Terror-Machine
+  * Feel Free To Use
+  */
+  // ─── Info Batch Processing Methods ────────────────
+
   startBatchProcessor() {
     setInterval(() => this.flushAllBatches(), this.batchInterval);
   }
+
   startCacheRefresh() {
     setInterval(async () => {
       if (!this.isConnected || !this.fn) return;
@@ -258,6 +314,7 @@ class DBStore {
       }
     }, 23 * 60 * 60 * 1000);
   }
+
   async flushAllBatches() {
     if (!this.isConnected) return;
     await Promise.all([
@@ -265,6 +322,7 @@ class DBStore {
       this.flushBatch('groups')
     ]);
   }
+
   async flushBatch(type) {
     while (this.queueLocks[type]) {
       await new Promise(resolve => setTimeout(resolve, 100));
@@ -289,6 +347,15 @@ class DBStore {
       this.queueLocks[type] = false;
     }
   }
+
+  // ─── Info Group Operations ────────────────────────
+  /*
+  * Created with ❤️ and 💦 By FN
+  * Follow https://github.com/Terror-Machine
+  * Feel Free To Use
+  */
+  // ─── Info Group Operations Methods ────────────────
+
   async bulkUpsertGroups(groupsArray) {
     if (!this.isConnected || !groupsArray || groupsArray.length === 0) {
       return { upsertedCount: 0, modifiedCount: 0 };
@@ -346,6 +413,274 @@ class DBStore {
       throw error;
     }
   }
+
+  async getGroupMetadata(groupId) {
+    if (!this.isConnected) return null;
+    const fromCache = await GroupCache.getGroup(groupId);
+    if (fromCache) {
+      this.stats.redisHits++;
+      return fromCache;
+    }
+    this.stats.redisMisses++;
+    if (this.pendingFetches.has(groupId)) {
+      this.stats.coalescedRequests++;
+      log(`Coalescing fetch request for group: ${groupId}`);
+      return await this.pendingFetches.get(groupId);
+    }
+    const fetchPromise = this._fetchGroupMetadata(groupId);
+    this.pendingFetches.set(groupId, fetchPromise);
+    try {
+      const metadata = await fetchPromise;
+      return metadata;
+    } finally {
+      this.pendingFetches.delete(groupId);
+    }
+  }
+
+  async _fetchGroupMetadata(groupId) {
+    try {
+      let metadata = await StoreGroupMetadata.findOne({ groupId }).lean();
+      if (!metadata) {
+        this.stats.dbMisses++;
+        if (this.fn) {
+          try {
+            this.checkCircuitBreaker();
+            const freshMetadata = await this.fn.groupMetadata(groupId);
+            if (freshMetadata) {
+              await this.updateGroupMetadata(groupId, freshMetadata);
+              metadata = freshMetadata;
+              this.recordCircuitBreakerSuccess();
+              log(`Fetched fresh metadata for group: ${groupId}`);
+            }
+          } catch (fetchError) {
+            this.recordCircuitBreakerFailure();
+            log(`Failed to fetch metadata from WA: ${fetchError.message}`, true);
+            throw fetchError;
+          }
+        }
+      } else {
+        this.stats.dbHits++;
+        if (this.fn) {
+          this._refreshGroupInBackground(groupId).catch(err => {
+            log(`Background refresh failed: ${err.message}`, true);
+          });
+        }
+      }
+      if (metadata) {
+        await GroupCache.addGroup(groupId, metadata);
+      }
+      return metadata;
+    } catch (error) {
+      this.stats.errors++;
+      log(`_fetchGroupMetadata error: ${error.message}`, true);
+      throw error;
+    }
+  }
+
+  async _refreshGroupInBackground(groupId) {
+    try {
+      this.checkCircuitBreaker();
+      const freshMetadata = await this.fn.groupMetadata(groupId);
+      if (freshMetadata) {
+        await this.updateGroupMetadata(groupId, freshMetadata);
+        this.recordCircuitBreakerSuccess();
+        log(`Background refresh complete: ${groupId}`);
+      }
+    } catch (error) {
+      this.recordCircuitBreakerFailure();
+      log(`Background refresh silent fail: ${error.message}`, true);
+    }
+  }
+
+  async updateGroupMetadata(groupId, metadata) {
+    if (!this.isConnected) return;
+    let existing = await GroupCache.getGroup(groupId);
+    if (!existing) {
+      try {
+        existing = await StoreGroupMetadata.findOne({ groupId }).lean();
+      } catch (error) {
+        log(`Error fetching existing group: ${error.message}`, true);
+      }
+    }
+    const merged = { ...(existing || {}), ...metadata, groupId };
+    const updated = this.sanitizeGroupData(merged, existing);
+    if (existing && !this.hasChanges(existing, updated, 'groups')) {
+      this.stats.skippedWrites++;
+      return;
+    }
+    await GroupCache.addGroup(groupId, updated);
+    this.updateQueues.groups.set(groupId, updated);
+  }
+
+  async syncGroupMetadata(fn, groupId) {
+    if (!fn || !groupId) return null;
+    try {
+      this.checkCircuitBreaker();
+      const freshMetadata = await fn.groupMetadata(groupId);
+      if (freshMetadata) {
+        await this.updateGroupMetadata(groupId, freshMetadata);
+        this.recordCircuitBreakerSuccess();
+        return freshMetadata;
+      }
+    } catch (error) {
+      this.stats.errors++;
+      this.recordCircuitBreakerFailure();
+      log(`Sync group metadata error: ${error.message}`, true);
+    }
+    return null;
+  }
+
+  async getAllGroups(projection = null) {
+    if (!this.isConnected) return [];
+    try {
+      const cachedGroups = await GroupCache.getAllCachedGroups();
+      if (cachedGroups.length > 0) {
+        this.stats.redisHits += cachedGroups.length;
+        if (projection) {
+          return cachedGroups.map(group => {
+            const filtered = {};
+            for (const key in projection) {
+              if (projection[key] === 1 && group[key] !== undefined) {
+                filtered[key] = group[key];
+              }
+            }
+            return filtered;
+          });
+        }
+        return cachedGroups;
+      }
+      this.stats.redisMisses++;
+      log('Cache miss: Fetching groups from database...');
+      const query = StoreGroupMetadata.find({});
+      if (projection) {
+        query.select(projection);
+      }
+      const groups = await query.lean();
+      this.stats.dbHits += groups.length;
+      if (groups.length > 0) {
+        await GroupCache.bulkAddGroups(groups);
+        log(`Cached ${groups.length} groups in Redis`);
+      }
+      return groups;
+    } catch (error) {
+      this.stats.errors++;
+      log(`getAllGroups error: ${error.message}`, true);
+      return [];
+    }
+  }
+
+  async getArrayGroups(groupIds, projection = null) {
+    if (!this.isConnected || !groupIds || groupIds.length === 0) return [];
+    try {
+      const { groups: foundInCache, missingIds } = await GroupCache.getArrayGroups(groupIds);
+      this.stats.redisHits += foundInCache.length;
+      this.stats.redisMisses += missingIds.length;
+      if (missingIds.length === 0) {
+        return foundInCache;
+      }
+      log(`Partial cache miss: ${missingIds.length}/${groupIds.length} groups, fetching from DB...`);
+      const query = StoreGroupMetadata.find({ groupId: { $in: missingIds } });
+      if (projection) {
+        query.select(projection);
+      }
+      const foundInDb = await query.lean();
+      this.stats.dbHits += foundInDb.length;
+      if (foundInDb.length > 0) {
+        await GroupCache.bulkAddGroups(foundInDb);
+        log(`Cached ${foundInDb.length} missing groups`);
+      }
+      return [...foundInCache, ...foundInDb];
+    } catch (error) {
+      this.stats.errors++;
+      log(`getArrayGroups error: ${error.message}`, true);
+      return [];
+    }
+  }
+
+  async deleteGroup(groupId) {
+    if (!this.isConnected || !groupId) return false;
+    try {
+      log(`Deleting group: ${groupId}`);
+      await GroupCache.deleteGroup(groupId);
+      this.updateQueues.groups.delete(groupId);
+      const deleteResult = await StoreGroupMetadata.deleteOne({ groupId });
+      const success = deleteResult.deletedCount > 0;
+      log(`Delete group ${groupId}: ${success ? 'success' : 'not found'}`);
+      return success;
+    } catch (error) {
+      this.stats.errors++;
+      log(`deleteGroup error: ${error.message}`, true);
+      return false;
+    }
+  }
+
+  async bulkDeleteGroups(groupIds) {
+    if (!this.isConnected || !groupIds || groupIds.length === 0) {
+      return { deletedCount: 0, errors: 0 };
+    }
+    try {
+      log(`Bulk deleting ${groupIds.length} groups...`);
+      await GroupCache.bulkDeleteGroups(groupIds);
+      for (const groupId of groupIds) {
+        this.updateQueues.groups.delete(groupId);
+      }
+      const deleteResult = await StoreGroupMetadata.deleteMany({
+        groupId: { $in: groupIds }
+      });
+      log(`Deleted ${deleteResult.deletedCount}/${groupIds.length} groups from database`);
+      return {
+        deletedCount: deleteResult.deletedCount,
+        errors: 0
+      };
+    } catch (error) {
+      this.stats.errors++;
+      log(`bulkDeleteGroups error: ${error.message}`, true);
+      return {
+        deletedCount: 0,
+        errors: 1
+      };
+    }
+  }
+
+  async syncStaleGroups(activeGroupIds) {
+    if (!this.isConnected) return { removed: 0, errors: 0 };
+    try {
+      log('Starting stale group detection...');
+      const storedGroups = await this.getAllGroups({ groupId: 1 });
+      const storedGroupIds = storedGroups.map(g => g.groupId);
+      log(`Stored: ${storedGroupIds.length} groups, Active: ${activeGroupIds.size} groups`);
+      const staleGroupIds = storedGroupIds.filter(id => !activeGroupIds.has(id));
+      if (staleGroupIds.length === 0) {
+        log('No stale groups found. All data synchronized.');
+        return { removed: 0, errors: 0 };
+      }
+      log(`Detected ${staleGroupIds.length} stale groups. Starting cleanup...`);
+      const result = await this.bulkDeleteGroups(staleGroupIds);
+      log(`Stale group cleanup complete: ${result.deletedCount} removed`);
+      return {
+        removed: result.deletedCount,
+        errors: result.errors
+      };
+    } catch (error) {
+      this.stats.errors++;
+      log(`syncStaleGroups error: ${error.message}`, true);
+      return { removed: 0, errors: 1 };
+    }
+  }
+
+  clearGroupsCache() {
+    this.updateQueues.groups.clear();
+    log('Groups queue cleared');
+  }
+
+  // ─── Info Contact Operations ──────────────────────
+  /*
+  * Created with ❤️ and 💦 By FN
+  * Follow https://github.com/Terror-Machine
+  * Feel Free To Use
+  */
+  // ─── Info Contact Operations Methods ──────────────
+
   async bulkUpsertContacts(contactsArray) {
     if (!this.isConnected || !contactsArray || contactsArray.length === 0) {
       return { upsertedCount: 0, modifiedCount: 0 };
@@ -400,6 +735,7 @@ class DBStore {
       throw error;
     }
   }
+
   async warmRedisCache() {
     try {
       const activeGroups = await StoreGroupMetadata.find().sort({ lastUpdated: -1 }).limit(50).lean();
@@ -412,6 +748,7 @@ class DBStore {
       log(`Cache warming error: ${error.message}`, true);
     }
   }
+
   async getContact(jid) {
     if (!this.isConnected) return null;
     const fromCache = await ContactCache.getContact(jid);
@@ -435,6 +772,7 @@ class DBStore {
       return null;
     }
   }
+
   async updateContact(jid, data) {
     if (!this.isConnected) return;
     let existing = await ContactCache.getContact(jid);
@@ -454,6 +792,7 @@ class DBStore {
     await ContactCache.addContact(jid, updated);
     this.updateQueues.contacts.set(jid, updated);
   }
+
   async getArrayContacts(jids) {
     if (!this.isConnected || !jids || jids.length === 0) return [];
     const { contacts: foundInCache, missingJids } = await ContactCache.getArrayContacts(jids);
@@ -473,6 +812,7 @@ class DBStore {
     }
     return [...foundInCache, ...foundInDb];
   }
+
   async deleteContact(jid) {
     if (!this.isConnected || !jid) return false;
     try {
@@ -489,6 +829,7 @@ class DBStore {
       return false;
     }
   }
+
   async bulkDeleteContacts(jids) {
     if (!this.isConnected || !jids || jids.length === 0) {
       return { deletedCount: 0, errors: 0 };
@@ -514,6 +855,7 @@ class DBStore {
       };
     }
   }
+
   async getAllContacts() {
     if (!this.isConnected) return [];
     try {
@@ -531,6 +873,15 @@ class DBStore {
       return [];
     }
   }
+
+  // ─── Info LID & JID Resolution ────────────────────
+  /*
+  * Created with ❤️ and 💦 By FN
+  * Follow https://github.com/Terror-Machine
+  * Feel Free To Use
+  */
+  // ─── Info LID & JID Resolution Methods ────────────
+
   async handleLIDMapping(lid, jid) {
     const normalizedLid = lid?.includes('@') ? lid : lid ? `${lid}@lid` : null;
     const normalizedJid = jid?.includes('@') ? jid : jid ? `${jid}@s.whatsapp.net` : null;
@@ -577,6 +928,7 @@ class DBStore {
       this.lidMappingLocks.delete(lockKey);
     }
   }
+
   async resolveJid(id) {
     if (!id) return null;
     if (id.endsWith('@s.whatsapp.net')) {
@@ -587,6 +939,7 @@ class DBStore {
     }
     return await this.findJidByLid(id);
   }
+
   async batchResolveJids(ids) {
     if (!ids || ids.length === 0) return [];
     const results = [];
@@ -644,6 +997,7 @@ class DBStore {
     }
     return results;
   }
+
   async findJidByLid(lid) {
     if (!lid) return null;
     const cached = await ContactCache.findJidByLid(lid);
@@ -668,6 +1022,7 @@ class DBStore {
       return null;
     }
   }
+
   async getLIDForPN(phoneNumber) {
     const normalizedPN = phoneNumber?.includes('@') ? phoneNumber : `${phoneNumber}@s.whatsapp.net`;
     const cachedLid = await ContactCache.findLidByJid(normalizedPN);
@@ -692,264 +1047,33 @@ class DBStore {
       return null;
     }
   }
+
   async getPNForLID(lid) {
     return await this.findJidByLid(lid);
   }
-  async getGroupMetadata(groupId) {
-    if (!this.isConnected) return null;
-    const fromCache = await GroupCache.getGroup(groupId);
-    if (fromCache) {
-      this.stats.redisHits++;
-      return fromCache;
-    }
-    this.stats.redisMisses++;
-    if (this.pendingFetches.has(groupId)) {
-      this.stats.coalescedRequests++;
-      log(`Coalescing fetch request for group: ${groupId}`);
-      return await this.pendingFetches.get(groupId);
-    }
-    const fetchPromise = this._fetchGroupMetadata(groupId);
-    this.pendingFetches.set(groupId, fetchPromise);
-    try {
-      const metadata = await fetchPromise;
-      return metadata;
-    } finally {
-      this.pendingFetches.delete(groupId);
-    }
-  }
-  async _fetchGroupMetadata(groupId) {
-    try {
-      let metadata = await StoreGroupMetadata.findOne({ groupId }).lean();
-      if (!metadata) {
-        this.stats.dbMisses++;
-        if (this.fn) {
-          try {
-            this.checkCircuitBreaker();
-            const freshMetadata = await this.fn.groupMetadata(groupId);
-            if (freshMetadata) {
-              await this.updateGroupMetadata(groupId, freshMetadata);
-              metadata = freshMetadata;
-              this.recordCircuitBreakerSuccess();
-              log(`Fetched fresh metadata for group: ${groupId}`);
-            }
-          } catch (fetchError) {
-            this.recordCircuitBreakerFailure();
-            log(`Failed to fetch metadata from WA: ${fetchError.message}`, true);
-            throw fetchError;
-          }
-        }
-      } else {
-        this.stats.dbHits++;
-        if (this.fn) {
-          this._refreshGroupInBackground(groupId).catch(err => {
-            log(`Background refresh failed: ${err.message}`, true);
-          });
-        }
-      }
-      if (metadata) {
-        await GroupCache.addGroup(groupId, metadata);
-      }
-      return metadata;
-    } catch (error) {
-      this.stats.errors++;
-      log(`_fetchGroupMetadata error: ${error.message}`, true);
-      throw error;
-    }
-  }
-  async _refreshGroupInBackground(groupId) {
-    try {
-      this.checkCircuitBreaker();
-      const freshMetadata = await this.fn.groupMetadata(groupId);
-      if (freshMetadata) {
-        await this.updateGroupMetadata(groupId, freshMetadata);
-        this.recordCircuitBreakerSuccess();
-        log(`Background refresh complete: ${groupId}`);
-      }
-    } catch (error) {
-      this.recordCircuitBreakerFailure();
-      log(`Background refresh silent fail: ${error.message}`, true);
-    }
-  }
-  async updateGroupMetadata(groupId, metadata) {
-    if (!this.isConnected) return;
-    let existing = await GroupCache.getGroup(groupId);
-    if (!existing) {
-      try {
-        existing = await StoreGroupMetadata.findOne({ groupId }).lean();
-      } catch (error) {
-        log(`Error fetching existing group: ${error.message}`, true);
-      }
-    }
-    const merged = { ...(existing || {}), ...metadata, groupId };
-    const updated = this.sanitizeGroupData(merged, existing);
-    if (existing && !this.hasChanges(existing, updated, 'groups')) {
-      this.stats.skippedWrites++;
-      return;
-    }
-    await GroupCache.addGroup(groupId, updated);
-    this.updateQueues.groups.set(groupId, updated);
-  }
-  async syncGroupMetadata(fn, groupId) {
-    if (!fn || !groupId) return null;
-    try {
-      this.checkCircuitBreaker();
-      const freshMetadata = await fn.groupMetadata(groupId);
-      if (freshMetadata) {
-        await this.updateGroupMetadata(groupId, freshMetadata);
-        this.recordCircuitBreakerSuccess();
-        return freshMetadata;
-      }
-    } catch (error) {
-      this.stats.errors++;
-      this.recordCircuitBreakerFailure();
-      log(`Sync group metadata error: ${error.message}`, true);
-    }
-    return null;
-  }
-  async getAllGroups(projection = null) {
-    if (!this.isConnected) return [];
-    try {
-      const cachedGroups = await GroupCache.getAllCachedGroups();
-      if (cachedGroups.length > 0) {
-        this.stats.redisHits += cachedGroups.length;
-        if (projection) {
-          return cachedGroups.map(group => {
-            const filtered = {};
-            for (const key in projection) {
-              if (projection[key] === 1 && group[key] !== undefined) {
-                filtered[key] = group[key];
-              }
-            }
-            return filtered;
-          });
-        }
-        return cachedGroups;
-      }
-      this.stats.redisMisses++;
-      log('Cache miss: Fetching groups from database...');
-      const query = StoreGroupMetadata.find({});
-      if (projection) {
-        query.select(projection);
-      }
-      const groups = await query.lean();
-      this.stats.dbHits += groups.length;
-      if (groups.length > 0) {
-        await GroupCache.bulkAddGroups(groups);
-        log(`Cached ${groups.length} groups in Redis`);
-      }
-      return groups;
-    } catch (error) {
-      this.stats.errors++;
-      log(`getAllGroups error: ${error.message}`, true);
-      return [];
-    }
-  }
-  async getArrayGroups(groupIds, projection = null) {
-    if (!this.isConnected || !groupIds || groupIds.length === 0) return [];
-    try {
-      const { groups: foundInCache, missingIds } = await GroupCache.getArrayGroups(groupIds);
-      this.stats.redisHits += foundInCache.length;
-      this.stats.redisMisses += missingIds.length;
-      if (missingIds.length === 0) {
-        return foundInCache;
-      }
-      log(`Partial cache miss: ${missingIds.length}/${groupIds.length} groups, fetching from DB...`);
-      const query = StoreGroupMetadata.find({ groupId: { $in: missingIds } });
-      if (projection) {
-        query.select(projection);
-      }
-      const foundInDb = await query.lean();
-      this.stats.dbHits += foundInDb.length;
-      if (foundInDb.length > 0) {
-        await GroupCache.bulkAddGroups(foundInDb);
-        log(`Cached ${foundInDb.length} missing groups`);
-      }
-      return [...foundInCache, ...foundInDb];
-    } catch (error) {
-      this.stats.errors++;
-      log(`getArrayGroups error: ${error.message}`, true);
-      return [];
-    }
-  }
-  async deleteGroup(groupId) {
-    if (!this.isConnected || !groupId) return false;
-    try {
-      log(`Deleting group: ${groupId}`);
-      await GroupCache.deleteGroup(groupId);
-      this.updateQueues.groups.delete(groupId);
-      const deleteResult = await StoreGroupMetadata.deleteOne({ groupId });
-      const success = deleteResult.deletedCount > 0;
-      log(`Delete group ${groupId}: ${success ? 'success' : 'not found'}`);
-      return success;
-    } catch (error) {
-      this.stats.errors++;
-      log(`deleteGroup error: ${error.message}`, true);
-      return false;
-    }
-  }
-  async bulkDeleteGroups(groupIds) {
-    if (!this.isConnected || !groupIds || groupIds.length === 0) {
-      return { deletedCount: 0, errors: 0 };
-    }
-    try {
-      log(`Bulk deleting ${groupIds.length} groups...`);
-      await GroupCache.bulkDeleteGroups(groupIds);
-      for (const groupId of groupIds) {
-        this.updateQueues.groups.delete(groupId);
-      }
-      const deleteResult = await StoreGroupMetadata.deleteMany({
-        groupId: { $in: groupIds }
-      });
-      log(`Deleted ${deleteResult.deletedCount}/${groupIds.length} groups from database`);
-      return {
-        deletedCount: deleteResult.deletedCount,
-        errors: 0
-      };
-    } catch (error) {
-      this.stats.errors++;
-      log(`bulkDeleteGroups error: ${error.message}`, true);
-      return {
-        deletedCount: 0,
-        errors: 1
-      };
-    }
-  }
-  async syncStaleGroups(activeGroupIds) {
-    if (!this.isConnected) return { removed: 0, errors: 0 };
-    try {
-      log('Starting stale group detection...');
-      const storedGroups = await this.getAllGroups({ groupId: 1 });
-      const storedGroupIds = storedGroups.map(g => g.groupId);
-      log(`Stored: ${storedGroupIds.length} groups, Active: ${activeGroupIds.size} groups`);
-      const staleGroupIds = storedGroupIds.filter(id => !activeGroupIds.has(id));
-      if (staleGroupIds.length === 0) {
-        log('No stale groups found. All data synchronized.');
-        return { removed: 0, errors: 0 };
-      }
-      log(`Detected ${staleGroupIds.length} stale groups. Starting cleanup...`);
-      const result = await this.bulkDeleteGroups(staleGroupIds);
-      log(`Stale group cleanup complete: ${result.deletedCount} removed`);
-      return {
-        removed: result.deletedCount,
-        errors: result.errors
-      };
-    } catch (error) {
-      this.stats.errors++;
-      log(`syncStaleGroups error: ${error.message}`, true);
-      return { removed: 0, errors: 1 };
-    }
-  }
-  clearGroupsCache() {
-    this.updateQueues.groups.clear();
-    log('Groups queue cleared');
-  }
+
+  // ─── Info Message Operations ──────────────────────
+  /*
+  * Created with ❤️ and 💦 By FN
+  * Follow https://github.com/Terror-Machine
+  * Feel Free To Use
+  */
+  // ─── Info Message Operations Methods ──────────────
+
   async updateMessages(chatId, message, maxSize = 50) {
     try {
       await MessageCache.addMessage(chatId, message, maxSize);
+      import('../../database/index.js')
+        .then(({ StoreMessages }) => StoreMessages.addMessage(chatId, message))
+        .catch(err => {
+          this.stats.errors++;
+          log(`Message DB write error: ${err.message}`, true);
+        });
     } catch (error) {
       log(`Update messages error: ${error.message}`, true);
     }
   }
+
   async getMessages(chatId, limit = 50) {
     try {
       const cached = await MessageCache.getMessages(chatId, limit);
@@ -964,6 +1088,7 @@ class DBStore {
       return [];
     }
   }
+
   async getConversations(chatId, limit = 20) {
     if (!this.isConnected) return [];
     try {
@@ -991,6 +1116,7 @@ class DBStore {
       return [];
     }
   }
+
   async getPrivateChatStats() {
     if (!this.isConnected) return [];
     try {
@@ -1034,6 +1160,7 @@ class DBStore {
       return [];
     }
   }
+
   async loadMessage(remoteJid, id) {
     try {
       const messageFromCache = await MessageCache.getSpecificMessage(remoteJid, id);
@@ -1058,13 +1185,51 @@ class DBStore {
       return null;
     }
   }
+
   async updateConversations(chatId, conversation, maxSize = 200) {
     try {
       await MessageCache.addConversation(chatId, conversation, maxSize);
+      import('../../database/index.js')
+        .then(({ StoreMessages }) => StoreMessages.addConversation(chatId, conversation, maxSize))
+        .catch(err => {
+          this.stats.errors++;
+          log(`Conversation DB write error: ${err.message}`, true);
+        });
     } catch (error) {
       log(`Update conversations error: ${error.message}`, true);
     }
   }
+
+  async saveConversation(chatId, conversationData, maxSize = 200) {
+    try {
+      await this.updateConversations(chatId, conversationData, maxSize);
+      return true;
+    } catch (error) {
+      this.stats.errors++;
+      log(`saveConversation error: ${error.message}`, true);
+      return false;
+    }
+  }
+
+  async saveMessage(chatId, message, maxSize) {
+    try {
+      await this.updateMessages(chatId, message, maxSize);
+      return true;
+    } catch (error) {
+      this.stats.errors++;
+      log(`saveMessage error: ${error.message}`, true);
+      return false;
+    }
+  }
+
+  // ─── Info Presence Operations ─────────────────────
+  /*
+  * Created with ❤️ and 💦 By FN
+  * Follow https://github.com/Terror-Machine
+  * Feel Free To Use
+  */
+  // ─── Info Presence Operations Methods ─────────────
+
   async updatePresences(chatId, presenceUpdate) {
     try {
       await MessageCache.updatePresences(chatId, presenceUpdate);
@@ -1080,6 +1245,7 @@ class DBStore {
       return false;
     }
   }
+
   async getPresences(chatId) {
     try {
       const presences = await MessageCache.getPresences(chatId);
@@ -1094,6 +1260,7 @@ class DBStore {
       return {};
     }
   }
+
   async deletePresence(chatId) {
     try {
       return await MessageCache.deletePresence(chatId);
@@ -1102,13 +1269,29 @@ class DBStore {
       return false;
     }
   }
+
+  // ─── Info Story Operations ────────────────────────
+  /*
+  * Created with ❤️ and 💦 By FN
+  * Follow https://github.com/Terror-Machine
+  * Feel Free To Use
+  */
+  // ─── Info Story Operations Methods ────────────────
+
   async addStatus(userId, statusMessage, maxSize = 20) {
     try {
       await StoryCache.addStatus(userId, statusMessage, maxSize);
+      import('../../database/index.js')
+        .then(({ StoreStory }) => StoreStory.addStatus(userId, statusMessage, maxSize))
+        .catch(err => {
+          this.stats.errors++;
+          log(`Story DB write error: ${err.message}`, true);
+        });
     } catch (error) {
       log(`Add status error: ${error.message}`, true);
     }
   }
+
   async getStatuses(userId) {
     try {
       const cached = await StoryCache.getStatusesFromCache(userId);
@@ -1129,6 +1312,7 @@ class DBStore {
       return [];
     }
   }
+
   async getSpecificStatus(userId, messageId) {
     try {
       const cached = await StoryCache.getSpecificStatus(userId, messageId);
@@ -1146,26 +1330,46 @@ class DBStore {
       return null;
     }
   }
+
   async deleteStatus(userId, messageId) {
     try {
       await StoryCache.deleteStatus(userId, messageId);
+      import('../../database/index.js')
+        .then(({ StoreStory }) => StoreStory.deleteStatus(userId, messageId))
+        .catch(err => {
+          this.stats.errors++;
+          log(`Story DB delete error: ${err.message}`, true);
+        });
     } catch (error) {
       log(`Delete status error: ${error.message}`, true);
     }
   }
+
   async bulkDeleteStatuses(userId, messageIds) {
     try {
       await StoryCache.bulkDeleteStatuses(userId, messageIds);
+      import('../../database/index.js')
+        .then(({ StoreStory }) => StoreStory.bulkDeleteStatuses(userId, messageIds))
+        .then(result => {
+          log(`Bulk deleted ${result.modifiedCount} stories from DB for ${userId}`);
+        })
+        .catch(err => {
+          this.stats.errors++;
+          log(`Bulk story DB delete error: ${err.message}`, true);
+        });
     } catch (error) {
       log(`Bulk delete statuses error: ${error.message}`, true);
     }
   }
+
   async invalidateStoryCache(userId) {
     return StoryCache.invalidateCache(userId);
   }
+
   async getStoryCacheStats() {
     return StoryCache.getStats();
   }
+
   async getUsersWithStories() {
     try {
       const cachedUsers = await StoryCache.getUsersWithStories();
@@ -1195,38 +1399,7 @@ class DBStore {
       return [];
     }
   }
-  async saveConversation(chatId, conversationData, maxSize = 200) {
-    try {
-      await this.updateConversations(chatId, conversationData, maxSize);
-      import('../../database/index.js')
-        .then(({ StoreMessages }) => StoreMessages.addConversation(chatId, conversationData, maxSize))
-        .catch(err => {
-          this.stats.errors++;
-          log(`Conversation DB write error: ${err.message}`, true);
-        });
-      return true;
-    } catch (error) {
-      this.stats.errors++;
-      log(`saveConversation error: ${error.message}`, true);
-      return false;
-    }
-  }
-  async saveMessage(chatId, message, maxSize) {
-    try {
-      await this.updateMessages(chatId, message, maxSize);
-      import('../../database/index.js')
-        .then(({ StoreMessages }) => StoreMessages.addMessage(chatId, message))
-        .catch(err => {
-          this.stats.errors++;
-          log(`Message DB write error: ${err.message}`, true);
-        });
-      return true;
-    } catch (error) {
-      this.stats.errors++;
-      log(`saveMessage error: ${error.message}`, true);
-      return false;
-    }
-  }
+
   async saveStoryStatus(userId, statusMessage, maxSize) {
     try {
       await this.addStatus(userId, statusMessage, maxSize);
@@ -1235,6 +1408,15 @@ class DBStore {
       log(`saveStoryStatus error: ${error.message}`, true);
     }
   }
+
+  // ─── Info Cache Management ────────────────────────
+  /*
+  * Created with ❤️ and 💦 By FN
+  * Follow https://github.com/Terror-Machine
+  * Feel Free To Use
+  */
+  // ─── Info Cache Management Methods ────────────────
+
   async clearCache() {
     this.updateQueues.contacts.clear();
     this.updateQueues.groups.clear();
@@ -1252,11 +1434,13 @@ class DBStore {
       throw error;
     }
   }
+
   startCacheCleanup() {
     setInterval(async () => {
       await this.performMaintenance();
     }, this.cacheCleanupInterval);
   }
+
   async performMaintenance() {
     if (!this.isConnected) return;
     try {
@@ -1265,11 +1449,21 @@ class DBStore {
       log(`Maintenance error: ${error.message}`, true);
     }
   }
+
   async forceCleanup() {
     log('Manual cleanup initiated');
     await this.flushAllBatches();
     await this.performMaintenance();
   }
+
+  // ─── Info Statistics & Monitoring ─────────────────
+  /*
+  * Created with ❤️ and 💦 By FN
+  * Follow https://github.com/Terror-Machine
+  * Feel Free To Use
+  */
+  // ─── Info Statistics & Monitoring Methods ─────────
+
   startStatsLogger() {
     setInterval(async () => {
       const stats = await this.getStats();
@@ -1278,6 +1472,7 @@ class DBStore {
       }
     }, 30000);
   }
+
   async getStats() {
     const total = this.stats.redisHits + this.stats.redisMisses;
     const [contactStats, groupStats, messageStats, storyStats] = await Promise.all([

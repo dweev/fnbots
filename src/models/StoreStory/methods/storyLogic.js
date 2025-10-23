@@ -30,6 +30,21 @@ export const statics = {
       { $pull: { statuses: { 'key.id': messageId } } }
     );
   },
+  bulkDeleteStatuses(userId, messageIds) {
+    if (!messageIds || messageIds.length === 0) {
+      return Promise.resolve({ modifiedCount: 0 });
+    }
+    return this.updateOne(
+      { userId: userId },
+      {
+        $pull: {
+          statuses: {
+            'key.id': { $in: messageIds }
+          }
+        }
+      }
+    );
+  },
   async cleanupOldData() {
     const FIFTEEN_DAYS_AGO = new Date(Date.now() - config.performance.fifteenDays);
     return this.deleteMany({ lastUpdatedAt: { $lt: FIFTEEN_DAYS_AGO } });

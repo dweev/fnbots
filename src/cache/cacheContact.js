@@ -83,7 +83,6 @@ class ContactCache {
         }
       }
       await pipeline.exec();
-      log(`Bulk cached ${contactsArray.length} contacts (persistent)`);
       return true;
     } catch (error) {
       log(`Bulk add contacts to cache error: ${error.message}`, true);

@@ -197,13 +197,11 @@ class UnifiedCacheManager {
       const { default: GroupCache } = await import('../cache/cacheGroupMetadata.js');
       const { store } = await import('../../database/index.js');
       const groups = await GroupCache.getAllCachedGroupIds();
-      log(`Found ${groups.length} groups to warm`);
       if (groups.length === 0) {
         log('No groups found in cache, skipping metadata warming');
         return;
       }
       const groupMetadatas = await store.getArrayGroups(groups);
-      log(`Fetched ${groupMetadatas.length} group metadata from store`);
       let cachedCount = 0;
       for (const metadata of groupMetadatas) {
         if (metadata) {
@@ -211,7 +209,6 @@ class UnifiedCacheManager {
           cachedCount++;
         }
       }
-      log(`Cached ${cachedCount} group metadata in LRU`);
       const contacts = new Set();
       for (const metadata of groupMetadatas) {
         if (metadata?.participants) {

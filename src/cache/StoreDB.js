@@ -742,7 +742,7 @@ class DBStore {
       await GroupCache.bulkAddGroups(activeGroups);
       const recentContacts = await StoreContact.find({}).sort({ lastUpdated: -1 }).limit(5000).lean();
       await ContactCache.bulkAddContacts(recentContacts);
-      log(`Redis cache warmed: ${activeGroups.length} groups, ${recentContacts.length} contacts (persistent)`);
+      log(`Redis cache warmed: ${activeGroups.length} groups, ${recentContacts.length} contacts`);
     } catch (error) {
       this.stats.errors++;
       log(`Cache warming error: ${error.message}`, true);

@@ -106,7 +106,6 @@ class GroupCache {
         }
       }
       await pipeline.exec();
-      log(`Bulk cached ${groupsArray.length} groups`);
       return true;
     } catch (error) {
       log(`Bulk add groups to cache error: ${error.message}`, true);

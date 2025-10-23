@@ -20,11 +20,7 @@ function ensureBuffer(data) {
 }
 
 function isWebP(buffer) {
-  return (
-    buffer.length >= 12 &&
-    buffer.slice(0, 4).toString() === "RIFF" &&
-    buffer.slice(8, 12).toString() === "WEBP"
-  );
+  return (buffer.length >= 12 && buffer.slice(0, 4).toString() === "RIFF" && buffer.slice(8, 12).toString() === "WEBP");
 }
 
 function hasExifMetadata(buffer) {
@@ -41,26 +37,28 @@ function hasExifMetadata(buffer) {
   return false;
 }
 
-export default async function createNativeSticker({ mediaBuffer, ...options }) {
-  if (!mediaBuffer) {
-    throw new Error('mediaBuffer is required in worker');
-  }
+export default async function createNativeSticker({ mediaBuffer, packName, authorName, crop, forceUpdateExif = false, ...otherOptions }) {
+  if (!mediaBuffer) throw new Error('mediaBuffer is required in worker');
   const finalBuffer = ensureBuffer(mediaBuffer);
+  const stickerOptions = {
+    packName: packName || 'Sticker Pack',
+    authorName: authorName || 'Author',
+    crop: crop ?? false,
+    ...otherOptions
+  };
   const isAlreadyWebP = isWebP(finalBuffer);
+  const hasExif = hasExifMetadata(finalBuffer);
   let result;
-  if (isAlreadyWebP && hasExifMetadata(finalBuffer)) {
-    result = finalBuffer;
-  } else if (isAlreadyWebP) {
-    result = await addExifNative(finalBuffer, options);
+  if (isAlreadyWebP) {
+    if (hasExif && !forceUpdateExif) {
+      result = finalBuffer;
+    } else {
+      result = await addExifNative(finalBuffer, stickerOptions);
+    }
   } else {
-    result = await stickerNative(finalBuffer, options);
+    result = await stickerNative(finalBuffer, stickerOptions);
   }
-  if (!result || !Buffer.isBuffer(result)) {
-    throw new Error(`Native function returned invalid data: ${typeof result}`);
-  }
-  if (result.length === 0) {
-    throw new Error('Native function returned empty buffer');
-  }
-
+  if (!result || !Buffer.isBuffer(result)) throw new Error(`Native function returned invalid data: ${typeof result}`);
+  if (result.length === 0) throw new Error('Native function returned empty buffer');
   return result;
 }

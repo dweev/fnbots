@@ -1,10 +1,10 @@
-// ─── Info ────────────────────────────────
+// ─── Info ────────────────────────────────────
 /*
 * Created with ❤️ and 💦 By FN
 * Follow https://github.com/Terror-Machine
 * Feel Free To Use
 */
-// ─── Info ────────────────────────────────
+// ─── Info ────────────────────────────────────
 
 import config from '../../../config.js';
 import { runJob } from '../../worker/worker_manager.js';
@@ -23,13 +23,15 @@ export const command = {
       crop: false
     };
     let buffer;
+    let hasCustomWatermark = false;
     const hasCropFlag = args.some(a => a === '--crop');
     if (hasCropFlag) {
       pack.crop = true;
       args = args.filter(a => a !== '--crop');
-      arg = args.join(' ');
+      arg = args.join(' ').trim();
     }
-    if (args[0]?.match(/^https?:\/\//)) {
+    const isURL = args.length > 0 && /^https?:\/\/.+/i.test(args[0]);
+    if (isURL) {
       try {
         const response = await nativeFetch(args[0], {
           timeout: config.performance.axiosTimeout
@@ -41,16 +43,33 @@ export const command = {
       }
     } else {
       if (arg && arg.includes('|')) {
-        const parts = arg.split('|').map(s => s.trim());
-        if (parts.length >= 2 && parts[0] && parts[1]) {
-          pack.packName = parts[0];
-          pack.authorName = parts[1];
+        const pipeIndex = arg.indexOf('|');
+        const leftPart = arg.substring(0, pipeIndex).trim();
+        const rightPart = arg.substring(pipeIndex + 1).trim();
+        if (leftPart && rightPart) {
+          pack.packName = leftPart;
+          pack.authorName = rightPart;
+          hasCustomWatermark = true;
         } else {
-          return await sReply('Format watermark salah! Gunakan: nama|author\nContoh: .s MyPack|FN\nAtau reply media tanpa text untuk watermark default.');
+          return await sReply(
+            'Format watermark salah! Pastikan kedua bagian terisi.\n' +
+            'Contoh: .s MyPack|FN\n' +
+            'Atau reply media tanpa text untuk watermark default.'
+          );
         }
       }
       const targetMsg = quotedMsg ? m.quoted || m : m.message;
-      if (!targetMsg) return await sReply("Balas gambar/video atau kirim media dengan caption .sticker\n\nContoh penggunaan:\n- .s (reply media)\n- .s --crop\n- .s nama|author\n- .s https://url.com/image.jpg\n- .s nama|author --crop");
+      if (!targetMsg) {
+        return await sReply(
+          "Balas gambar/video atau kirim media dengan caption .sticker\n\n" +
+          "Contoh penggunaan:\n" +
+          "- .s (reply media)\n" +
+          "- .s --crop\n" +
+          "- .s nama|author\n" +
+          "- .s https://url.com/image.jpg\n" +
+          "- .s nama|author --crop"
+        );
+      }
       const isMedia = !!(targetMsg.imageMessage || targetMsg.videoMessage || targetMsg.stickerMessage);
       if (!isMedia) return await sReply("Media tidak valid! Pastikan yang Anda balas adalah gambar atau video.");
       buffer = await fn.getMediaBuffer(targetMsg);
@@ -62,9 +81,16 @@ export const command = {
     if (!buffer || buffer.length < 100) return await sReply("Ukuran media tidak valid atau gagal diunduh.");
     const stickerBuffer = await runJob('stickerNative', {
       mediaBuffer: buffer,
-      ...pack
+      packName: pack.packName,
+      authorName: pack.authorName,
+      crop: pack.crop,
+      forceUpdateExif: hasCustomWatermark
     });
     if (!Buffer.isBuffer(stickerBuffer) || stickerBuffer.length === 0) return await sReply('Worker gagal menghasilkan buffer stiker yang valid.');
-    await fn.sendMessage(toId, { sticker: stickerBuffer }, { quoted: m, ephemeralExpiration: m.expiration ?? 0 });
+    await fn.sendMessage(
+      toId,
+      { sticker: stickerBuffer },
+      { quoted: m, ephemeralExpiration: m.expiration ?? 0 }
+    );
   }
 };

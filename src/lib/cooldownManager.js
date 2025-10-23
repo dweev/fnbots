@@ -252,6 +252,15 @@ class CooldownManager {
       }
     };
   }
+  canSendAfkNotification(groupId) {
+    const lastTime = this.groupCooldowns.get(groupId);
+    const now = Date.now();
+    if (!lastTime || (now - lastTime >= config.performance.groupCooldownMS)) {
+      this.groupCooldowns.set(groupId, now);
+      return true;
+    }
+    return false;
+  }
 }
 
 export const cooldownManager = new CooldownManager();

@@ -10,7 +10,6 @@ import util from 'util';
 import path from 'path';
 import { delay } from 'baileys';
 import config from '../config.js';
-import { LRUCache } from 'lru-cache';
 import log from '../src/lib/logger.js';
 import dayjs from '../src/utils/dayjs.js';
 import { exec as cp_exec } from 'child_process';
@@ -25,11 +24,6 @@ import { color, msgs, mycmd, safeStringify, sendAndCleanupFile, waktu, checkComm
 
 const exec = util.promisify(cp_exec);
 const localFilePrefix = config.localPrefix;
-const groupAfkCooldowns = new LRUCache({
-  max: 1000,
-  ttl: config.performance.groupCooldownMS,
-  updateAgeOnGet: false
-});
 
 const yts                     = [];
 const tebaklirik              = {};
@@ -297,8 +291,6 @@ export async function arfine(fn, m, { store, dbSettings, ownerNumber, version, i
   };
   try {
     if (m.isGroup && !isCmd && groupData) {
-      const currentTime = Date.now();
-      const lastResponseTimeInGroup = groupAfkCooldowns.get(toId);
       if (groupData.antiHidetag) {
         if (m.mentionedJid?.length === m.metadata.participants.length && !isPrivileged) {
           await fn.sendMessage(toId, { delete: { remoteJid: toId, fromMe: false, id: id, participant: serial } });
@@ -372,26 +364,25 @@ export async function arfine(fn, m, { store, dbSettings, ownerNumber, version, i
           }
         }
       }
-      if (!lastResponseTimeInGroup || (currentTime - lastResponseTimeInGroup >= config.performance.groupCooldownMS)) {
-        const afkUsersToSend = [];
-        const uniqueMentionedJidList = [...new Set(mentionedJidList)];
-        for (const ment of uniqueMentionedJidList) {
-          if (groupData.checkAfkUser(ment)) {
-            const afkData = groupData.getAfkData(ment);
-            if (afkData) {
-              const userTag = await fn.getName(ment) || ment.split('@')[0];
-              const waktuAfk = dayjs(afkData.time).tz('Asia/Jakarta').format('DD/MM/YYYY HH:mm:ss');
-              afkUsersToSend.push({
-                userTag,
-                waktu: waktuAfk,
-                reason: afkData.reason || 'Tidak ada alasan',
-                jid: ment
-              });
-            }
+      const afkUsersToSend = [];
+      const uniqueMentionedJidList = [...new Set(mentionedJidList)];
+      for (const ment of uniqueMentionedJidList) {
+        if (groupData.checkAfkUser(ment)) {
+          const afkData = groupData.getAfkData(ment);
+          if (afkData) {
+            const userTag = await fn.getName(ment) || ment.split('@')[0];
+            const waktuAfk = dayjs(afkData.time).tz('Asia/Jakarta').format('DD/MM/YYYY HH:mm:ss');
+            afkUsersToSend.push({
+              userTag,
+              waktu: waktuAfk,
+              reason: afkData.reason || 'Tidak ada alasan',
+              jid: ment
+            });
           }
         }
-        if (afkUsersToSend.length > 0) {
-          groupAfkCooldowns.set(toId, Date.now());
+      }
+      if (afkUsersToSend.length > 0) {
+        if (cooldownManager.canSendAfkNotification(toId)) {
           let groupMessage = '┌ ❏ *PENGGUNA SEDANG AFK*\n│\n';
           afkUsersToSend.forEach(user => {
             groupMessage += `│ • Pengguna: ${user.userTag}\n`;

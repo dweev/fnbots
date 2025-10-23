@@ -57,23 +57,28 @@ export const command = {
     };
 
     const stream = redis.scanStream({ match: 'cache:*', count: 1000 });
+    const allKeys = [];
 
     await new Promise((resolve, reject) => {
       stream.on('data', (keys) => {
-        keys.forEach(key => {
-          if (key.startsWith('cache:contact:')) cacheCounts.contacts++;
-          else if (key.startsWith('cache:groupmetadata:')) cacheCounts.groups++;
-          else if (key.startsWith('cache:lid2jid:')) cacheCounts.lidToJid++;
-          else if (key.startsWith('cache:jid2lid:')) cacheCounts.jidToLid++;
-          else if (key.startsWith('cache:messages:')) cacheCounts.messages++;
-          else if (key.startsWith('cache:conversation:')) cacheCounts.conversations++;
-          else if (key.startsWith('cache:presence:')) cacheCounts.presence++;
-          else if (key.startsWith('cache:story:')) cacheCounts.status++;
-        });
+        allKeys.push(...keys);
       });
       stream.on('end', resolve);
       stream.on('error', reject);
     });
+
+    allKeys.forEach(key => {
+      if (key.startsWith('cache:contact:')) cacheCounts.contacts++;
+      else if (key.startsWith('cache:groupmetadata:')) cacheCounts.groups++;
+      else if (key.startsWith('cache:lid2jid:')) cacheCounts.lidToJid++;
+      else if (key.startsWith('cache:jid2lid:')) cacheCounts.jidToLid++;
+      else if (key.startsWith('cache:messages:')) cacheCounts.messages++;
+      else if (key.startsWith('cache:conversation:')) cacheCounts.conversations++;
+      else if (key.startsWith('cache:presence:')) cacheCounts.presence++;
+      else if (key.startsWith('cache:story:')) cacheCounts.status++;
+    });
+
+    cacheCounts.presence = messageStats.totalPresenceChats || 0;
 
     const uptimeHours = Math.floor(perfFullStatus.uptime / 3600);
     const uptimeMinutes = Math.floor((perfFullStatus.uptime % 3600) / 60);

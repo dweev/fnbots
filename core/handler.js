@@ -402,7 +402,11 @@ export async function arfine(fn, m, { store, dbSettings, ownerNumber, version, i
           await sReply(groupMessage);
           for (const user of afkUsersToSend) {
             try {
-              const groupName = await fn.getName(toId) || 'sebuah grup';
+              let metadata = await performanceManager.cache.warmGroupMetadataCache(toId);
+              if (!metadata) {
+                metadata = await store.getGroupMetadata(toId);
+              }
+              const groupName = metadata?.subject || 'sebuah grup';
               const currentTime = dayjs().tz('Asia/Jakarta').format('DD/MM/YYYY HH:mm:ss');
               const notificationMsg = `*Notifikasi AFK*\n\n` +
                 `Seseorang men-tag kamu di grup *${groupName}*:\n` +

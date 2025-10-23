@@ -22,6 +22,16 @@ class DBStore {
       contacts: false,
       groups: false
     };
+    this.pendingFetches = new Map();
+    this.lidMappingLocks = new Map();
+    this.jidResolutionCache = new Map();
+    this.circuitBreaker = {
+      failures: 0,
+      lastFailure: 0,
+      threshold: 5,
+      timeout: 30000,
+      state: 'CLOSED'
+    };
     this.batchInterval = 2000;
     this.cacheCleanupInterval = config.performance.cacheCleanup;
     this.stats = {
@@ -32,7 +42,9 @@ class DBStore {
       batchedWrites: 0,
       skippedWrites: 0,
       errors: 0,
-      lidMappings: 0
+      lidMappings: 0,
+      coalescedRequests: 0,
+      circuitBreakerTrips: 0
     };
     this.isConnected = false;
     this.authStore = null;
@@ -51,6 +63,7 @@ class DBStore {
     this.startCacheCleanup();
     this.startStatsLogger();
     this.startCacheRefresh();
+    this.startCircuitBreakerReset();
   }
   async connect() {
     this.isConnected = true;
@@ -63,6 +76,41 @@ class DBStore {
     await this.flushAllBatches();
     this.isConnected = false;
     log('Store disconnected');
+  }
+  checkCircuitBreaker() {
+    if (this.circuitBreaker.state === 'OPEN') {
+      const now = Date.now();
+      if (now - this.circuitBreaker.lastFailure > this.circuitBreaker.timeout) {
+        this.circuitBreaker.state = 'HALF_OPEN';
+        this.circuitBreaker.failures = 0;
+        log('Circuit breaker entering HALF_OPEN state');
+      } else {
+        throw new Error('Circuit breaker is OPEN');
+      }
+    }
+  }
+  recordCircuitBreakerSuccess() {
+    if (this.circuitBreaker.state === 'HALF_OPEN') {
+      this.circuitBreaker.state = 'CLOSED';
+      this.circuitBreaker.failures = 0;
+      log('Circuit breaker reset to CLOSED');
+    }
+  }
+  recordCircuitBreakerFailure() {
+    this.circuitBreaker.failures++;
+    this.circuitBreaker.lastFailure = Date.now();
+    if (this.circuitBreaker.failures >= this.circuitBreaker.threshold) {
+      this.circuitBreaker.state = 'OPEN';
+      this.stats.circuitBreakerTrips++;
+      log(`Circuit breaker tripped: ${this.circuitBreaker.failures} failures`, true);
+    }
+  }
+  startCircuitBreakerReset() {
+    setInterval(() => {
+      if (this.circuitBreaker.state === 'CLOSED' && this.circuitBreaker.failures > 0) {
+        this.circuitBreaker.failures = Math.max(0, this.circuitBreaker.failures - 1);
+      }
+    }, 60000);
   }
   sanitizeParticipants(participants) {
     if (!Array.isArray(participants)) return [];
@@ -245,45 +293,53 @@ class DBStore {
     if (!this.isConnected || !groupsArray || groupsArray.length === 0) {
       return { upsertedCount: 0, modifiedCount: 0 };
     }
+    const BATCH_SIZE = 500;
+    let totalUpserted = 0;
+    let totalModified = 0;
     try {
-      log(`Bulk upserting ${groupsArray.length} groups...`);
-      const groupIds = groupsArray.map(g => g.id || g.groupId);
-      const existingGroups = await StoreGroupMetadata.find({
-        groupId: { $in: groupIds }
-      }).lean();
-      const existingMap = new Map(
-        existingGroups.map(g => [g.groupId, g])
-      );
-      const sanitizedGroups = groupsArray.map(rawGroup => {
-        const groupId = rawGroup.id || rawGroup.groupId;
-        const existing = existingMap.get(groupId);
-        return this.sanitizeGroupData(rawGroup, existing);
-      });
-      const dirtyGroups = sanitizedGroups.filter(updated => {
-        const existing = existingMap.get(updated.groupId);
-        return !existing || this.hasChanges(existing, updated, 'groups');
-      });
-      if (dirtyGroups.length === 0) {
-        log(`Skipped bulk upsert: no changes detected in ${groupsArray.length} groups`);
-        this.stats.skippedWrites += groupsArray.length;
-        return { upsertedCount: 0, modifiedCount: 0 };
-      }
-      const operations = dirtyGroups.map(group => ({
-        updateOne: {
-          filter: { groupId: group.groupId },
-          update: {
-            $set: group,
-            $setOnInsert: { createdAt: new Date() }
-          },
-          upsert: true
+      log(`Bulk upserting ${groupsArray.length} groups in batches of ${BATCH_SIZE}...`);
+      for (let i = 0; i < groupsArray.length; i += BATCH_SIZE) {
+        const chunk = groupsArray.slice(i, i + BATCH_SIZE);
+        const chunkIds = chunk.map(g => g.id || g.groupId);
+        const existingGroups = await StoreGroupMetadata.find({
+          groupId: { $in: chunkIds }
+        }).lean();
+        const existingMap = new Map(
+          existingGroups.map(g => [g.groupId, g])
+        );
+        const sanitizedGroups = chunk.map(rawGroup => {
+          const groupId = rawGroup.id || rawGroup.groupId;
+          const existing = existingMap.get(groupId);
+          return this.sanitizeGroupData(rawGroup, existing);
+        });
+        const dirtyGroups = sanitizedGroups.filter(updated => {
+          const existing = existingMap.get(updated.groupId);
+          return !existing || this.hasChanges(existing, updated, 'groups');
+        });
+        if (dirtyGroups.length === 0) {
+          this.stats.skippedWrites += chunk.length;
+          continue;
         }
-      }));
-      const result = await StoreGroupMetadata.bulkWrite(operations, { ordered: false });
-      await GroupCache.bulkAddGroups(dirtyGroups);
-      this.stats.batchedWrites += dirtyGroups.length;
-      this.stats.skippedWrites += (groupsArray.length - dirtyGroups.length);
-      log(`Bulk upsert complete: ${result.upsertedCount} inserted, ${result.modifiedCount} modified, ${groupsArray.length - dirtyGroups.length} skipped`);
-      return result;
+        const operations = dirtyGroups.map(group => ({
+          updateOne: {
+            filter: { groupId: group.groupId },
+            update: {
+              $set: group,
+              $setOnInsert: { createdAt: new Date() }
+            },
+            upsert: true
+          }
+        }));
+        const result = await StoreGroupMetadata.bulkWrite(operations, { ordered: false });
+        await GroupCache.bulkAddGroups(dirtyGroups);
+        totalUpserted += result.upsertedCount;
+        totalModified += result.modifiedCount;
+        this.stats.batchedWrites += dirtyGroups.length;
+        this.stats.skippedWrites += (chunk.length - dirtyGroups.length);
+        log(`Batch ${Math.floor(i / BATCH_SIZE) + 1}: ${result.upsertedCount} inserted, ${result.modifiedCount} modified`);
+      }
+      log(`Bulk upsert complete: ${totalUpserted} inserted, ${totalModified} modified`);
+      return { upsertedCount: totalUpserted, modifiedCount: totalModified };
     } catch (error) {
       this.stats.errors++;
       log(`bulkUpsertGroups error: ${error.message}`, true);
@@ -294,42 +350,50 @@ class DBStore {
     if (!this.isConnected || !contactsArray || contactsArray.length === 0) {
       return { upsertedCount: 0, modifiedCount: 0 };
     }
+    const BATCH_SIZE = 500;
+    let totalUpserted = 0;
+    let totalModified = 0;
     try {
-      log(`Bulk upserting ${contactsArray.length} contacts...`);
-      const jids = contactsArray.map(c => c.jid);
-      const existingContacts = await StoreContact.find({ jid: { $in: jids } }).lean();
-      const existingMap = new Map(
-        existingContacts.map(c => [c.jid, c])
-      );
-      const sanitizedContacts = contactsArray.map(rawContact => {
-        const existing = existingMap.get(rawContact.jid);
-        return this.sanitizeContactData(rawContact, existing);
-      });
-      const dirtyContacts = sanitizedContacts.filter(updated => {
-        const existing = existingMap.get(updated.jid);
-        return !existing || this.hasChanges(existing, updated, 'contacts');
-      });
-      if (dirtyContacts.length === 0) {
-        log(`Skipped bulk upsert: no changes detected in ${contactsArray.length} contacts`);
-        this.stats.skippedWrites += contactsArray.length;
-        return { upsertedCount: 0, modifiedCount: 0 };
-      }
-      const operations = dirtyContacts.map(contact => ({
-        updateOne: {
-          filter: { jid: contact.jid },
-          update: {
-            $set: contact,
-            $setOnInsert: { createdAt: new Date() }
-          },
-          upsert: true
+      log(`Bulk upserting ${contactsArray.length} contacts in batches of ${BATCH_SIZE}...`);
+      for (let i = 0; i < contactsArray.length; i += BATCH_SIZE) {
+        const chunk = contactsArray.slice(i, i + BATCH_SIZE);
+        const jids = chunk.map(c => c.jid);
+        const existingContacts = await StoreContact.find({ jid: { $in: jids } }).lean();
+        const existingMap = new Map(
+          existingContacts.map(c => [c.jid, c])
+        );
+        const sanitizedContacts = chunk.map(rawContact => {
+          const existing = existingMap.get(rawContact.jid);
+          return this.sanitizeContactData(rawContact, existing);
+        });
+        const dirtyContacts = sanitizedContacts.filter(updated => {
+          const existing = existingMap.get(updated.jid);
+          return !existing || this.hasChanges(existing, updated, 'contacts');
+        });
+        if (dirtyContacts.length === 0) {
+          this.stats.skippedWrites += chunk.length;
+          continue;
         }
-      }));
-      const result = await StoreContact.bulkWrite(operations, { ordered: false });
-      await ContactCache.bulkAddContacts(dirtyContacts);
-      this.stats.batchedWrites += dirtyContacts.length;
-      this.stats.skippedWrites += (contactsArray.length - dirtyContacts.length);
-      log(`Bulk upsert complete: ${result.upsertedCount} inserted, ${result.modifiedCount} modified, ${contactsArray.length - dirtyContacts.length} skipped`);
-      return result;
+        const operations = dirtyContacts.map(contact => ({
+          updateOne: {
+            filter: { jid: contact.jid },
+            update: {
+              $set: contact,
+              $setOnInsert: { createdAt: new Date() }
+            },
+            upsert: true
+          }
+        }));
+        const result = await StoreContact.bulkWrite(operations, { ordered: false });
+        await ContactCache.bulkAddContacts(dirtyContacts);
+        totalUpserted += result.upsertedCount;
+        totalModified += result.modifiedCount;
+        this.stats.batchedWrites += dirtyContacts.length;
+        this.stats.skippedWrites += (chunk.length - dirtyContacts.length);
+        log(`Batch ${Math.floor(i / BATCH_SIZE) + 1}: ${result.upsertedCount} inserted, ${result.modifiedCount} modified`);
+      }
+      log(`Bulk upsert complete: ${totalUpserted} inserted, ${totalModified} modified`);
+      return { upsertedCount: totalUpserted, modifiedCount: totalModified };
     } catch (error) {
       this.stats.errors++;
       log(`bulkUpsertContacts error: ${error.message}`, true);
@@ -471,6 +535,11 @@ class DBStore {
     const normalizedLid = lid?.includes('@') ? lid : lid ? `${lid}@lid` : null;
     const normalizedJid = jid?.includes('@') ? jid : jid ? `${jid}@s.whatsapp.net` : null;
     if (!normalizedLid && !normalizedJid) return;
+    const lockKey = normalizedJid || normalizedLid;
+    while (this.lidMappingLocks.has(lockKey)) {
+      await new Promise(resolve => setTimeout(resolve, 50));
+    }
+    this.lidMappingLocks.set(lockKey, true);
     try {
       if (normalizedLid && normalizedJid) {
         await ContactCache.cacheLidMapping(normalizedLid, normalizedJid);
@@ -504,6 +573,8 @@ class DBStore {
     } catch (error) {
       this.stats.errors++;
       log(`handleLIDMapping error: ${error.message}`, true);
+    } finally {
+      this.lidMappingLocks.delete(lockKey);
     }
   }
   async resolveJid(id) {
@@ -515,6 +586,63 @@ class DBStore {
       return id;
     }
     return await this.findJidByLid(id);
+  }
+  async batchResolveJids(ids) {
+    if (!ids || ids.length === 0) return [];
+    const results = [];
+    const toResolve = [];
+    for (const id of ids) {
+      if (!id) {
+        results.push(null);
+        continue;
+      }
+      if (id.endsWith('@s.whatsapp.net')) {
+        results.push(jidNormalizedUser(id));
+        continue;
+      }
+      if (!id.endsWith('@lid')) {
+        results.push(id);
+        continue;
+      }
+      const cached = this.jidResolutionCache.get(id);
+      if (cached) {
+        results.push(cached);
+        continue;
+      }
+      toResolve.push(id);
+      results.push(null);
+    }
+    if (toResolve.length === 0) return results;
+    const cacheResults = await ContactCache.batchFindJidByLid(toResolve);
+    const stillMissing = [];
+    for (let i = 0; i < toResolve.length; i++) {
+      const lid = toResolve[i];
+      const jid = cacheResults[i];
+      if (jid) {
+        this.jidResolutionCache.set(lid, jid);
+        const idx = ids.indexOf(lid);
+        if (idx !== -1) results[idx] = jid;
+      } else {
+        stillMissing.push(lid);
+      }
+    }
+    if (stillMissing.length > 0) {
+      try {
+        const dbContacts = await StoreContact.find({ lid: { $in: stillMissing } }).lean();
+        for (const contact of dbContacts) {
+          if (contact.jid && contact.lid) {
+            this.jidResolutionCache.set(contact.lid, contact.jid);
+            await ContactCache.cacheLidMapping(contact.lid, contact.jid);
+            const idx = ids.indexOf(contact.lid);
+            if (idx !== -1) results[idx] = contact.jid;
+          }
+        }
+      } catch (error) {
+        this.stats.errors++;
+        log(`Batch DB lookup failed: ${error.message}`, true);
+      }
+    }
+    return results;
   }
   async findJidByLid(lid) {
     if (!lid) return null;
@@ -575,26 +703,48 @@ class DBStore {
       return fromCache;
     }
     this.stats.redisMisses++;
+    if (this.pendingFetches.has(groupId)) {
+      this.stats.coalescedRequests++;
+      log(`Coalescing fetch request for group: ${groupId}`);
+      return await this.pendingFetches.get(groupId);
+    }
+    const fetchPromise = this._fetchGroupMetadata(groupId);
+    this.pendingFetches.set(groupId, fetchPromise);
+    try {
+      const metadata = await fetchPromise;
+      return metadata;
+    } finally {
+      this.pendingFetches.delete(groupId);
+    }
+  }
+  async _fetchGroupMetadata(groupId) {
     try {
       let metadata = await StoreGroupMetadata.findOne({ groupId }).lean();
-      if (!metadata || !this.fn) {
-        if (metadata) {
-          this.stats.dbHits++;
-        } else {
-          this.stats.dbMisses++;
-        }
-      } else if (this.fn) {
-        try {
-          const freshMetadata = await this.fn.groupMetadata(groupId);
-          if (freshMetadata) {
-            await this.updateGroupMetadata(groupId, freshMetadata);
-            metadata = freshMetadata;
-            log(`Fetched fresh metadata for group: ${groupId}`);
+      if (!metadata) {
+        this.stats.dbMisses++;
+        if (this.fn) {
+          try {
+            this.checkCircuitBreaker();
+            const freshMetadata = await this.fn.groupMetadata(groupId);
+            if (freshMetadata) {
+              await this.updateGroupMetadata(groupId, freshMetadata);
+              metadata = freshMetadata;
+              this.recordCircuitBreakerSuccess();
+              log(`Fetched fresh metadata for group: ${groupId}`);
+            }
+          } catch (fetchError) {
+            this.recordCircuitBreakerFailure();
+            log(`Failed to fetch metadata from WA: ${fetchError.message}`, true);
+            throw fetchError;
           }
-        } catch (fetchError) {
-          log(`Failed to fetch fresh metadata, using DB: ${fetchError.message}`, true);
         }
+      } else {
         this.stats.dbHits++;
+        if (this.fn) {
+          this._refreshGroupInBackground(groupId).catch(err => {
+            log(`Background refresh failed: ${err.message}`, true);
+          });
+        }
       }
       if (metadata) {
         await GroupCache.addGroup(groupId, metadata);
@@ -602,8 +752,22 @@ class DBStore {
       return metadata;
     } catch (error) {
       this.stats.errors++;
-      log(`Get group metadata error: ${error.message}`, true);
-      return null;
+      log(`_fetchGroupMetadata error: ${error.message}`, true);
+      throw error;
+    }
+  }
+  async _refreshGroupInBackground(groupId) {
+    try {
+      this.checkCircuitBreaker();
+      const freshMetadata = await this.fn.groupMetadata(groupId);
+      if (freshMetadata) {
+        await this.updateGroupMetadata(groupId, freshMetadata);
+        this.recordCircuitBreakerSuccess();
+        log(`Background refresh complete: ${groupId}`);
+      }
+    } catch (error) {
+      this.recordCircuitBreakerFailure();
+      log(`Background refresh silent fail: ${error.message}`, true);
     }
   }
   async updateGroupMetadata(groupId, metadata) {
@@ -628,13 +792,16 @@ class DBStore {
   async syncGroupMetadata(fn, groupId) {
     if (!fn || !groupId) return null;
     try {
+      this.checkCircuitBreaker();
       const freshMetadata = await fn.groupMetadata(groupId);
       if (freshMetadata) {
         await this.updateGroupMetadata(groupId, freshMetadata);
+        this.recordCircuitBreakerSuccess();
         return freshMetadata;
       }
     } catch (error) {
       this.stats.errors++;
+      this.recordCircuitBreakerFailure();
       log(`Sync group metadata error: ${error.message}`, true);
     }
     return null;
@@ -1136,7 +1303,12 @@ class DBStore {
         skippedWrites: this.stats.skippedWrites,
         efficiency: this.stats.batchedWrites > 0 ? ((this.stats.skippedWrites / (this.stats.batchedWrites + this.stats.skippedWrites)) * 100).toFixed(2) + '%' : '0%'
       },
-      lidMappings: this.stats.lidMappings,
+      optimization: {
+        lidMappings: this.stats.lidMappings,
+        coalescedRequests: this.stats.coalescedRequests,
+        circuitBreakerTrips: this.stats.circuitBreakerTrips,
+        circuitBreakerState: this.circuitBreaker.state
+      },
       cacheStats: {
         contacts: contactStats,
         groups: groupStats,

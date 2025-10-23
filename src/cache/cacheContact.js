@@ -163,6 +163,17 @@ class ContactCache {
       return null;
     }
   }
+  static async batchFindJidByLid(lids) {
+    try {
+      if (!lids || lids.length === 0) return [];
+      const keys = lids.map(lid => `${REDIS_PREFIX.LID_TO_JID}${lid}`);
+      const results = await redis.mget(keys);
+      return results;
+    } catch (error) {
+      log(`Batch find JID by LID error: ${error.message}`, true);
+      return lids.map(() => null);
+    }
+  }
   static async findLidByJid(jid) {
     try {
       const lid = await redis.get(`${REDIS_PREFIX.JID_TO_LID}${jid}`);
@@ -182,6 +193,24 @@ class ContactCache {
       return true;
     } catch (error) {
       log(`Cache LID mapping error: ${error.message}`, true);
+      return false;
+    }
+  }
+  static async batchCacheLidMapping(mappings) {
+    try {
+      if (!mappings || mappings.length === 0) return false;
+      const pipeline = redis.pipeline();
+      for (const { lid, jid } of mappings) {
+        if (lid && jid) {
+          pipeline.set(`${REDIS_PREFIX.LID_TO_JID}${lid}`, jid);
+          pipeline.set(`${REDIS_PREFIX.JID_TO_LID}${jid}`, lid);
+        }
+      }
+      await pipeline.exec();
+      log(`Batch cached ${mappings.length} LID mappings`);
+      return true;
+    } catch (error) {
+      log(`Batch cache LID mapping error: ${error.message}`, true);
       return false;
     }
   }

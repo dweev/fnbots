@@ -15,19 +15,39 @@ const REDIS_TTL = {
 
 const REDIS_PREFIX = {
   GROUP: 'cache:groupmetadata:',
-  GROUP_INDEX: 'cache:group:index'
+  GROUP_INDEX: 'cache:group:index',
+  HOT_GROUP: 'cache:hotgroup:'
 };
 
 class GroupCache {
+  static hotGroupThreshold = 10;
+  static hotGroupStats = new Map();
+  static recordAccess(groupId) {
+    const current = this.hotGroupStats.get(groupId) || 0;
+    this.hotGroupStats.set(groupId, current + 1);
+    if (this.hotGroupStats.size > 1000) {
+      const entries = Array.from(this.hotGroupStats.entries());
+      entries.sort((a, b) => b[1] - a[1]);
+      this.hotGroupStats = new Map(entries.slice(0, 500));
+    }
+  }
+  static isHotGroup(groupId) {
+    const accessCount = this.hotGroupStats.get(groupId) || 0;
+    return accessCount >= this.hotGroupThreshold;
+  }
   static async addGroup(groupId, groupData) {
     try {
       const key = `${REDIS_PREFIX.GROUP}${groupId}`;
       const pipeline = redis.pipeline();
-      pipeline.set(key, JSON.stringify(groupData), 'EX', REDIS_TTL.GROUP);
+      const ttl = this.isHotGroup(groupId) ? REDIS_TTL.GROUP * 2 : REDIS_TTL.GROUP;
+      pipeline.set(key, JSON.stringify(groupData), 'EX', ttl);
       pipeline.sadd(REDIS_PREFIX.GROUP_INDEX, groupId);
       pipeline.expire(REDIS_PREFIX.GROUP_INDEX, REDIS_TTL.GROUP);
+      if (this.isHotGroup(groupId)) {
+        pipeline.set(`${REDIS_PREFIX.HOT_GROUP}${groupId}`, '1', 'EX', ttl);
+      }
       await pipeline.exec();
-      log(`Group cached: ${groupId}`);
+      log(`Group cached: ${groupId}${this.isHotGroup(groupId) ? ' (hot)' : ''}`);
       return true;
     } catch (error) {
       log(`Add group to cache error: ${error.message}`, true);
@@ -36,6 +56,7 @@ class GroupCache {
   }
   static async getGroup(groupId) {
     try {
+      this.recordAccess(groupId);
       const key = `${REDIS_PREFIX.GROUP}${groupId}`;
       const data = await redis.get(key);
       if (!data) {
@@ -50,7 +71,7 @@ class GroupCache {
   }
   static async getArrayGroups(groupIds) {
     try {
-      if (!groupIds || groupIds.length === 0) return [];
+      if (!groupIds || groupIds.length === 0) return { groups: [], missingIds: [] };
       const keys = groupIds.map(id => `${REDIS_PREFIX.GROUP}${id}`);
       const results = await redis.mget(keys);
       const groups = [];
@@ -77,8 +98,12 @@ class GroupCache {
       for (const group of groupsArray) {
         const groupId = group.groupId || group.id;
         const key = `${REDIS_PREFIX.GROUP}${groupId}`;
-        pipeline.set(key, JSON.stringify(group), 'EX', REDIS_TTL.GROUP);
+        const ttl = this.isHotGroup(groupId) ? REDIS_TTL.GROUP * 2 : REDIS_TTL.GROUP;
+        pipeline.set(key, JSON.stringify(group), 'EX', ttl);
         pipeline.sadd(REDIS_PREFIX.GROUP_INDEX, groupId);
+        if (this.isHotGroup(groupId)) {
+          pipeline.set(`${REDIS_PREFIX.HOT_GROUP}${groupId}`, '1', 'EX', ttl);
+        }
       }
       await pipeline.exec();
       log(`Bulk cached ${groupsArray.length} groups`);
@@ -91,10 +116,13 @@ class GroupCache {
   static async deleteGroup(groupId) {
     try {
       const key = `${REDIS_PREFIX.GROUP}${groupId}`;
+      const hotKey = `${REDIS_PREFIX.HOT_GROUP}${groupId}`;
       const pipeline = redis.pipeline();
       pipeline.del(key);
+      pipeline.del(hotKey);
       pipeline.srem(REDIS_PREFIX.GROUP_INDEX, groupId);
       await pipeline.exec();
+      this.hotGroupStats.delete(groupId);
       log(`Group deleted from cache: ${groupId}`);
       return true;
     } catch (error) {
@@ -110,7 +138,9 @@ class GroupCache {
       const pipeline = redis.pipeline();
       for (const groupId of groupIds) {
         pipeline.del(`${REDIS_PREFIX.GROUP}${groupId}`);
+        pipeline.del(`${REDIS_PREFIX.HOT_GROUP}${groupId}`);
         pipeline.srem(REDIS_PREFIX.GROUP_INDEX, groupId);
+        this.hotGroupStats.delete(groupId);
       }
       await pipeline.exec();
       log(`Bulk deleted ${groupIds.length} groups from cache`);
@@ -198,25 +228,34 @@ class GroupCache {
   static async clearAllCaches() {
     try {
       log('Clearing all group caches...');
-      const pattern = `${REDIS_PREFIX.GROUP}*`;
-      const stream = redis.scanStream({ match: pattern, count: 100 });
-      const keysToDelete = [];
-      await new Promise((resolve, reject) => {
-        stream.on('data', (keys) => {
-          keysToDelete.push(...keys);
+      const patterns = [
+        `${REDIS_PREFIX.GROUP}*`,
+        `${REDIS_PREFIX.HOT_GROUP}*`
+      ];
+      let totalDeleted = 0;
+      for (const pattern of patterns) {
+        const stream = redis.scanStream({ match: pattern, count: 100 });
+        const keysToDelete = [];
+
+        await new Promise((resolve, reject) => {
+          stream.on('data', (keys) => {
+            keysToDelete.push(...keys);
+          });
+          stream.on('end', resolve);
+          stream.on('error', reject);
         });
-        stream.on('end', resolve);
-        stream.on('error', reject);
-      });
-      if (keysToDelete.length > 0) {
-        for (let i = 0; i < keysToDelete.length; i += 1000) {
-          const batch = keysToDelete.slice(i, i + 1000);
-          await redis.del(...batch);
+        if (keysToDelete.length > 0) {
+          for (let i = 0; i < keysToDelete.length; i += 1000) {
+            const batch = keysToDelete.slice(i, i + 1000);
+            await redis.del(...batch);
+          }
+          totalDeleted += keysToDelete.length;
         }
-        log(`Cleared ${keysToDelete.length} group cache keys`);
       }
       await redis.del(REDIS_PREFIX.GROUP_INDEX);
-      return keysToDelete.length;
+      this.hotGroupStats.clear();
+      log(`Cleared ${totalDeleted} group cache keys`);
+      return totalDeleted;
     } catch (error) {
       log(`Clear all group caches error: ${error.message}`, true);
       return 0;
@@ -225,19 +264,24 @@ class GroupCache {
   static async getStats() {
     try {
       const groupIds = await this.getAllCachedGroupIds();
+      const hotGroups = Array.from(this.hotGroupStats.entries()).filter(([_, count]) => count >= this.hotGroupThreshold).map(([groupId]) => groupId);
       const stats = {
         totalGroups: groupIds.length,
+        hotGroups: hotGroups.length,
         groups: []
       };
       for (const groupId of groupIds.slice(0, 50)) {
         const key = `${REDIS_PREFIX.GROUP}${groupId}`;
         const ttl = await redis.ttl(key);
         const group = await this.getGroup(groupId);
+        const accessCount = this.hotGroupStats.get(groupId) || 0;
         stats.groups.push({
           groupId,
           subject: group?.subject || '',
           participantCount: group?.participants?.length || 0,
-          ttl: ttl > 0 ? ttl : 0
+          ttl: ttl > 0 ? ttl : 0,
+          accessCount,
+          isHot: accessCount >= this.hotGroupThreshold
         });
       }
       return stats;
@@ -245,6 +289,7 @@ class GroupCache {
       log(`Get group cache stats error: ${error.message}`, true);
       return {
         totalGroups: 0,
+        hotGroups: 0,
         groups: []
       };
     }
@@ -288,13 +333,23 @@ class GroupCache {
   static async refreshGroupTTL(groupId) {
     try {
       const key = `${REDIS_PREFIX.GROUP}${groupId}`;
-      await redis.expire(key, REDIS_TTL.GROUP);
+      const ttl = this.isHotGroup(groupId) ? REDIS_TTL.GROUP * 2 : REDIS_TTL.GROUP;
+      await redis.expire(key, ttl);
       log(`Refreshed TTL for group: ${groupId}`);
       return true;
     } catch (error) {
       log(`Refresh group TTL error: ${error.message}`, true);
       return false;
     }
+  }
+  static getHotGroupStats() {
+    return {
+      totalTracked: this.hotGroupStats.size,
+      hotGroups: Array.from(this.hotGroupStats.entries())
+        .filter(([_, count]) => count >= this.hotGroupThreshold)
+        .sort((a, b) => b[1] - a[1])
+        .map(([groupId, count]) => ({ groupId, accessCount: count }))
+    };
   }
 }
 

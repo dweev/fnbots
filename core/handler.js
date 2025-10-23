@@ -421,21 +421,24 @@ export async function arfine(fn, m, { store, dbSettings, ownerNumber, version, i
       }
     }
     if (isCmd) {
+      if (cooldownManager.isSpamming(serial)) return;
+      if (cooldownManager.isBanned(serial)) return;
       const isAllowedByState = (maintenance && (isWhiteList || hakIstimewa)) || (!maintenance && (hakIstimewa || !userData.isMuted));
       if (!isAllowedByState) return;
       if (dbSettings.verify === true) {
         const isVerified = await isUserVerified(m, dbSettings, store, fn, sReply, hakIstimewa);
         if (!isVerified) return;
       }
-      if (cooldownManager.isSpamming(serial)) return;
-      if (cooldownManager.isBanned(serial)) return;
       const cooldownTime = config.performance.commandCooldown;
-      if (!isSadmin) {
-        const cooldownResult = cooldownManager.trySetCooldown(serial, cooldownTime);
-        if (!cooldownResult.allowed) {
+      if (!isSadmin && !isMaster) {
+        const now = Date.now();
+        const lastExec = cooldownManager.getUserCooldown(serial);
+        const elapsed = now - lastExec;
+        if (elapsed < cooldownTime) {
+          const remaining = Math.ceil((cooldownTime - elapsed) / 1000);
           if (!cooldownManager.isSpamming(serial)) {
             cooldownManager.addToSpamSet(serial);
-            return sReply(`*Hei @${serial.split('@')[0]}, tunggu ${cooldownResult.remaining}s!*`);
+            return sReply(`*Hei @${serial.split('@')[0]}, tunggu ${remaining}s!*`);
           } else if (!cooldownManager.isBanned(serial)) {
             cooldownManager.addToBanSet(serial);
             const durationText = waktu(config.performance.banDuration / 1000);
@@ -466,9 +469,7 @@ export async function arfine(fn, m, { store, dbSettings, ownerNumber, version, i
             const commandName = currentCommand.split(' ')[0].toLowerCase();
             const command = pluginCache.commands.get(commandName);
             if (command) {
-              if (!command.isEnabled && !userData.isSadmin) {
-                continue;
-              }
+              if (!command.isEnabled && !userData.isSadmin) continue;
               try {
                 const accessResult = await checkCommandAccess(command, userData, user, maintenance);
                 if (accessResult.allowed) {
@@ -555,6 +556,7 @@ export async function arfine(fn, m, { store, dbSettings, ownerNumber, version, i
         const result = await cooldownManager.addToQueue(async () => {
           return await executeCommandChain(chainingCommands);
         }, serial);
+        if (!isSadmin && !isMaster) cooldownManager.trySetCooldown(serial, cooldownTime);
         if (result.failedCommands.length > 0 && !result.hasTimeout) {
           if (dbSettings.autocorrect === 2 && !suggested) {
             const correctedCommands = [];
@@ -572,15 +574,17 @@ export async function arfine(fn, m, { store, dbSettings, ownerNumber, version, i
               await cooldownManager.addToQueue(async () => {
                 return await executeCommandChain(correctedCommands);
               }, serial);
+              if (!isSadmin && !isMaster) cooldownManager.trySetCooldown(serial, cooldownTime);
             }
           } else if (dbSettings.autocorrect === 1 && !m._textmatch_done) {
             await textMatch1(fn, m, result.failedCommands, toId);
             m._textmatch_done = true;
           }
         }
-      } catch {
-        if (!isSadmin) {
-          cooldownManager.userCooldowns.delete(serial);
+      } catch (error) {
+        log(error, true);
+        if (error.message && !error.message.includes('timeout')) {
+          await sReply(`Terjadi kesalahan: ${error.message}`);
         }
       }
     } else {

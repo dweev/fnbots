@@ -62,7 +62,6 @@ class CooldownManager {
     }
     return this.userQueues.get(userId);
   }
-
   checkMediaSpam(userId) {
     const now = Date.now();
     const tracking = this.mediaSpamTracking.get(userId);
@@ -115,7 +114,7 @@ class CooldownManager {
     try {
       if (userId) {
         const userQueue = this.getUserQueue(userId);
-        return await userQueue.add(async () => {
+        const result = await userQueue.add(async () => {
           try {
             return await task();
           } catch (error) {
@@ -126,6 +125,12 @@ class CooldownManager {
             throw error;
           }
         });
+        if (userQueue.size === 0 && userQueue.pending === 0) {
+          userQueue.pause();
+          userQueue.clear();
+          this.userQueues.delete(userId);
+        }
+        return result;
       }
       return await this.commandQueue.add(async () => {
         try {
@@ -139,41 +144,34 @@ class CooldownManager {
         }
       });
     } catch (error) {
+      if (userId && this.userQueues.has(userId)) {
+        const userQueue = this.userQueues.get(userId);
+        if (userQueue.size === 0 && userQueue.pending === 0) {
+          userQueue.pause();
+          userQueue.clear();
+          this.userQueues.delete(userId);
+        }
+      }
       throw error;
     }
   }
   setupCleanupInterval() {
     this.cleanupIntervalId = setInterval(() => {
       this.cleanupUserCooldowns();
-      this.cleanupUserQueues();
     }, 5 * 60 * 1000);
   }
   cleanupUserCooldowns() {
     const now = Date.now();
-    const cooldownTime = config.performance.commandCooldown || 25;
+    const maxIdleTime = 10 * 60 * 1000;
     let removedCount = 0;
     this.userCooldowns.forEach((timestamp, userId) => {
-      if (now - timestamp > cooldownTime * 10) {
+      if (now - timestamp > maxIdleTime) {
         this.userCooldowns.delete(userId);
         removedCount++;
       }
     });
     if (removedCount > 0) {
       log(`Cleaned up ${removedCount} expired user cooldowns`);
-    }
-  }
-  cleanupUserQueues() {
-    let removedCount = 0;
-    this.userQueues.forEach((queue, userId) => {
-      if (queue.size === 0 && queue.pending === 0) {
-        queue.pause();
-        queue.clear();
-        this.userQueues.delete(userId);
-        removedCount++;
-      }
-    });
-    if (removedCount > 0) {
-      log(`Cleaned up ${removedCount} idle user queues`);
     }
   }
   registerShutdownHandler() {

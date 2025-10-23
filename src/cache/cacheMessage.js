@@ -10,9 +10,9 @@ import log from '../lib/logger.js';
 import { redis } from '../../database/index.js';
 
 const REDIS_TTL = {
-  MESSAGE: 30 * 60,
-  CONVERSATION: 30 * 60,
-  PRESENCE: 300
+  MESSAGE: 60 * 60 * 24,
+  CONVERSATION: 60 * 60 * 24,
+  PRESENCE: 60 * 60 * 24
 };
 
 const REDIS_PREFIX = {

@@ -10,7 +10,7 @@ import log from '../lib/logger.js';
 import { redis } from '../../database/index.js';
 
 const REDIS_TTL = {
-  STORY: 7 * 24 * 60 * 60,
+  STORY: 60 * 60 * 24,
 };
 
 const REDIS_PREFIX = {

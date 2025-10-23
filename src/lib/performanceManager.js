@@ -22,10 +22,10 @@ const PERFORMANCE_CONFIG = {
   CACHE_SYNC_INTERVAL: 5000,
   BATCH_SIZE: 100,
   CACHE_SIZES: {
-    whitelist: { max: 1000, ttl: 300000 },
-    groupData: { max: 500, ttl: 60000 },
-    groupMetadata: { max: 200, ttl: 3600000 },
-    contactData: { max: 5000, ttl: 3600000, updateAgeOnGet: true }
+    whitelist       : { max: 1000, ttl: 86400000, updateAgeOnGet: false },
+    groupData       : { max: 1000, ttl: 86400000, updateAgeOnGet: false },
+    groupMetadata   : { max: 1000, ttl: 86400000, updateAgeOnGet: false },
+    contactData     : { max: 5000, ttl: 86400000, updateAgeOnGet: true }
   },
   MEMORY_CHECK_INTERVAL: 6000000,
   MEMORY_THRESHOLD: 0.8,

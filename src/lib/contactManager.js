@@ -54,6 +54,7 @@ export async function batchUpdateContacts(contacts) {
   const validContacts = contacts.filter(({ jid }) =>
     jid && typeof jid === 'string' && jid.endsWith('@s.whatsapp.net')
   );
+  if (validContacts.length === 0) return;
   const updatePromises = validContacts.map(({ jid, data }) =>
     updateContact(jid, data).catch(err => {
       log(`Batch update failed for ${jid}: ${err.message}`, true);
@@ -62,42 +63,56 @@ export async function batchUpdateContacts(contacts) {
   await Promise.allSettled(updatePromises);
 }
 
-export async function processContactUpdate(contact) {
-  if (!contact || !contact.id) return;
-  const idFromEvent = contact.id;
-  const trueJid = await store.resolveJid(idFromEvent);
-  if (!trueJid || !trueJid.endsWith('@s.whatsapp.net')) return;
-  const dataToUpdate = {};
-  const nameToUpdate = contact.notify || contact.name;
-  if (idFromEvent.endsWith('@lid')) {
-    dataToUpdate.lid = idFromEvent;
-  }
-  if (nameToUpdate) {
-    dataToUpdate.name = nameToUpdate;
-  }
-  if (Object.keys(dataToUpdate).length === 0) return;
-  await updateContact(trueJid, dataToUpdate);
-}
-
 export async function batchProcessContactUpdates(contacts) {
   if (!contacts || contacts.length === 0) return;
-  const resolvePromises = contacts.map(async (contact) => {
-    if (!contact || !contact.id) return null;
+  const personalContacts = contacts.filter(contact =>
+    contact && contact.id && contact.id.endsWith('@s.whatsapp.net')
+  );
+  if (personalContacts.length === 0) return;
+  const resolvePromises = personalContacts.map(async (contact) => {
     const idFromEvent = contact.id;
     const trueJid = await store.resolveJid(idFromEvent);
     if (!trueJid || !trueJid.endsWith('@s.whatsapp.net')) return null;
     const dataToUpdate = {};
-    const nameToUpdate = contact.notify || contact.name;
+    const nameToUpdate = contact.notify || contact.name || contact.verifiedName;
     if (idFromEvent.endsWith('@lid')) {
       dataToUpdate.lid = idFromEvent;
     }
+    if (contact.lid) {
+      dataToUpdate.lid = contact.lid;
+    }
     if (nameToUpdate) {
       dataToUpdate.name = nameToUpdate;
+      dataToUpdate.notify = nameToUpdate;
     }
-    if (Object.keys(dataToUpdate).length === 0) return null;
+    if (contact.verifiedName) {
+      dataToUpdate.verifiedName = contact.verifiedName;
+    }
+    if (Object.keys(dataToUpdate).length === 0) {
+      dataToUpdate.jid = trueJid;
+      dataToUpdate.name = '';
+    }
     return { jid: trueJid, data: dataToUpdate };
   });
   const resolved = await Promise.all(resolvePromises);
   const validContacts = resolved.filter(c => c !== null);
-  await batchUpdateContacts(validContacts);
+  if (validContacts.length > 0) {
+    await batchUpdateContacts(validContacts);
+  }
 }
+
+function cleanupStaleLocks(maxAge = 30000) {
+  const now = Date.now();
+  let cleaned = 0;
+  for (const [jid, timestamp] of updateLocks.entries()) {
+    if (now - timestamp > maxAge) {
+      updateLocks.delete(jid);
+      cleaned++;
+    }
+  }
+  if (cleaned > 0) {
+    log(`Cleaned up ${cleaned} stale locks`);
+  }
+}
+
+setInterval(() => cleanupStaleLocks(), 5 * 60 * 1000);

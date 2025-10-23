@@ -10,8 +10,8 @@ import process from 'process';
 import config from '../config.js';
 import { fileURLToPath } from 'url';
 import path, { dirname } from 'path';
-import { jidNormalizedUser } from 'baileys';
 import { createWASocket } from './connection.js';
+import { jidNormalizedUser, proto } from 'baileys';
 import { tmpDir } from '../src/lib/tempManager.js';
 import { loadPlugins } from '../src/lib/plugins.js';
 import log, { pinoLogger } from '../src/lib/logger.js';
@@ -69,7 +69,26 @@ async function initializeDatabases() {
 
 function setupWhatsAppEventHandlers(fn) {
   fn.ev.on('messaging-history.set', async (event) => {
-    await batchProcessContactUpdates(event.contacts);
+    if (!event) {
+      console.error('Received empty event');
+      return;
+    }
+    const {
+      contacts = [],
+      messages = [],
+      syncType
+    } = event;
+    if (syncType === proto.HistorySync.HistorySyncType.ON_DEMAND) {
+      console.log('received on-demand history sync, messages=', messages.length);
+    }
+    console.log(`recv ${contacts.length} contacts, ${messages.length} msgs`);
+    try {
+      if (contacts.length > 0) {
+        await batchProcessContactUpdates(contacts);
+      }
+    } catch (error) {
+      console.error('Error batch processing contacts:', error);
+    }
   });
   fn.ev.on('contacts.upsert', async (contacts) => {
     await batchProcessContactUpdates(contacts);

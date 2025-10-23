@@ -9,12 +9,13 @@
 import log from './logger.js';
 import { store } from '../../database/index.js';
 import { updateContact } from '../lib/contactManager.js';
+import { performanceManager } from './performanceManager.js';
 import { normalizeMentionsInBody, unwrapMessage } from '../function/index.js';
 import { jidNormalizedUser, getDevice, areJidsSameUser, getContentType } from 'baileys';
 
 export default async function serializeMessage(fn, msg) {
   try {
-    const botNumber = fn.decodeJid(fn.user?.id);
+    const botNumber = fn.decodeJid(fn?.user?.id);
     let groupAdmins = [];
     let mfrom = null;
     let mchat = null;
@@ -38,7 +39,7 @@ export default async function serializeMessage(fn, msg) {
     if (msg.messageStubType) {
       m.messageStubType = msg.messageStubType;
       const rawParams = msg.messageStubParameters || [];
-      m.messageStubParameters = await Promise.all(rawParams.map(param => store.resolveJid(param)));
+      m.messageStubParameters = await store.batchResolveJids(rawParams);
       return m;
     }
     if (!msg || !msg.message) return null;
@@ -166,7 +167,7 @@ export default async function serializeMessage(fn, msg) {
     }
     if (senderJid && senderLid) {
       try {
-        const contactName = msg.pushName || (await store.getContact(senderJid))?.name || await fn.getName(senderJid);
+        const contactName = msg.pushName || (await performanceManager.cache.warmContactCache(senderJid))?.name || (await performanceManager.cache.warmContactCache(senderJid))?.notify || await fn.getName(senderJid);
         await updateContact(senderJid, { lid: senderLid, name: contactName });
       } catch (error) {
         log(`Error updating contact: ${error}`, true);
@@ -212,7 +213,7 @@ export default async function serializeMessage(fn, msg) {
       const kamuCrot = m.message[m.type] || m.message;
       const originalBody = m.message?.conversation || kamuCrot?.text || kamuCrot?.conversation || kamuCrot?.caption || kamuCrot?.selectedButtonId || kamuCrot?.singleSelectReply?.selectedRowId || kamuCrot?.selectedId || kamuCrot?.contentText || kamuCrot?.selectedDisplayText || kamuCrot?.title || kamuCrot?.name || '';
       const rawMentionedJid = kamuCrot?.contextInfo?.mentionedJid || [];
-      m.mentionedJid = await Promise.all(rawMentionedJid.map(mentionId => store.resolveJid(mentionId)));
+      m.mentionedJid = await store.batchResolveJids(rawMentionedJid);
       m.body = normalizeMentionsInBody(originalBody, rawMentionedJid, m.mentionedJid);
       m.device = getDevice(m.key.id);
       m.expiration = kamuCrot?.contextInfo?.expiration || 0;
@@ -266,7 +267,7 @@ export default async function serializeMessage(fn, msg) {
           }
           if (akuCrot?.contextInfo) {
             const rawQuotedMentionedJid = akuCrot.contextInfo.mentionedJid || [];
-            const resolvedJids = await Promise.all(rawQuotedMentionedJid.map(mentionId => store.resolveJid(mentionId)));
+            const resolvedJids = await store.batchResolveJids(rawQuotedMentionedJid);
             m.quoted.mentionedJid = resolvedJids;
             akuCrot.contextInfo.mentionedJid = resolvedJids;
             let quotedBody = akuCrot?.text || akuCrot?.caption || akuCrot?.conversation || akuCrot?.selectedButtonId || akuCrot?.singleSelectReply?.selectedRowId || akuCrot?.selectedId || akuCrot?.contentText || akuCrot?.selectedDisplayText || akuCrot?.title || akuCrot?.name || m.quoted.caption || m.quoted.conversation || m.quoted.contentText || m.quoted.selectedDisplayText || m.quoted.title || '';
@@ -277,7 +278,8 @@ export default async function serializeMessage(fn, msg) {
             m.quoted.body = akuCrot?.text || akuCrot?.caption || akuCrot?.conversation || akuCrot?.selectedButtonId || akuCrot?.singleSelectReply?.selectedRowId || akuCrot?.selectedId || akuCrot?.contentText || akuCrot?.selectedDisplayText || akuCrot?.title || akuCrot?.name || m.quoted.caption || m.quoted.conversation || m.quoted.contentText || m.quoted.selectedDisplayText || m.quoted.title || '';
           }
           m.quoted.expiration = akuCrot?.contextInfo?.expiration || 0;
-          m.quoted.pushName = await fn.getName(m.quoted.sender);
+          const quotedContact = await performanceManager.cache.warmContactCache(m.quoted.sender);
+          m.quoted.pushName = quotedContact?.name || quotedContact?.notify || await fn.getName(m.quoted.sender);
           if (m.quoted.isMedia) {
             m.quoted.mime = akuCrot?.mimetype;
             m.quoted.size = akuCrot?.fileLength;

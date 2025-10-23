@@ -219,7 +219,8 @@ async function starts() {
     fn = result.fn;
     authStore = result.authStore;
     store.setAuthStore(authStore);
-    await log('AuthStore injected into DBStore successfully');
+    store.setSocket(fn);
+    await log('Socket and AuthStore injected into DBStore successfully');
     setupWhatsAppEventHandlers(fn);
     await performanceManager.initialize(fn, config, dbSettings);
   } catch (error) {

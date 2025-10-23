@@ -36,15 +36,21 @@ class DBStore {
     };
     this.isConnected = false;
     this.authStore = null;
+    this.fn = null;
   }
   setAuthStore(authStore) {
     this.authStore = authStore;
     log('AuthStore injected into DBStore');
   }
+  setSocket(fn) {
+    this.fn = fn;
+    log('Socket injected into DBStore');
+  }
   init() {
     this.startBatchProcessor();
     this.startCacheCleanup();
     this.startStatsLogger();
+    this.startCacheRefresh();
   }
   async connect() {
     this.isConnected = true;
@@ -184,6 +190,25 @@ class DBStore {
   }
   startBatchProcessor() {
     setInterval(() => this.flushAllBatches(), this.batchInterval);
+  }
+  startCacheRefresh() {
+    setInterval(async () => {
+      if (!this.isConnected || !this.fn) return;
+      try {
+        log('Running scheduled group cache refresh...');
+        const participatingGroups = await this.fn.groupFetchAllParticipating();
+        if (participatingGroups && Object.keys(participatingGroups).length > 0) {
+          const groupsToUpdate = Object.values(participatingGroups);
+          const currentGroupIds = new Set(Object.keys(participatingGroups));
+          await this.bulkUpsertGroups(groupsToUpdate);
+          const syncResult = await this.syncStaleGroups(currentGroupIds);
+          log(`Cache refresh complete: ${groupsToUpdate.length} groups updated, ${syncResult.removed} stale removed`);
+        }
+      } catch (error) {
+        this.stats.errors++;
+        log(`Scheduled cache refresh error: ${error.message}`, true);
+      }
+    }, 23 * 60 * 60 * 1000);
   }
   async flushAllBatches() {
     if (!this.isConnected) return;
@@ -551,12 +576,28 @@ class DBStore {
     }
     this.stats.redisMisses++;
     try {
-      const metadata = await StoreGroupMetadata.findOne({ groupId }).lean();
-      this.stats.dbHits++;
+      let metadata = await StoreGroupMetadata.findOne({ groupId }).lean();
+      if (!metadata || !this.fn) {
+        if (metadata) {
+          this.stats.dbHits++;
+        } else {
+          this.stats.dbMisses++;
+        }
+      } else if (this.fn) {
+        try {
+          const freshMetadata = await this.fn.groupMetadata(groupId);
+          if (freshMetadata) {
+            await this.updateGroupMetadata(groupId, freshMetadata);
+            metadata = freshMetadata;
+            log(`Fetched fresh metadata for group: ${groupId}`);
+          }
+        } catch (fetchError) {
+          log(`Failed to fetch fresh metadata, using DB: ${fetchError.message}`, true);
+        }
+        this.stats.dbHits++;
+      }
       if (metadata) {
         await GroupCache.addGroup(groupId, metadata);
-      } else {
-        this.stats.dbMisses++;
       }
       return metadata;
     } catch (error) {

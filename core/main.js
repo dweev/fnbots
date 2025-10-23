@@ -24,7 +24,7 @@ import { initializeDbSettings } from '../src/lib/settingsManager.js';
 import { performanceManager } from '../src/lib/performanceManager.js';
 import { randomByte, initializeFuse } from '../src/function/index.js';
 import groupParticipantsUpdate from '../src/lib/groupParticipantsUpdate.js';
-import { updateContact, processContactUpdate } from '../src/lib/contactManager.js';
+import { updateContact, batchProcessContactUpdates } from '../src/lib/contactManager.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -69,19 +69,13 @@ async function initializeDatabases() {
 
 function setupWhatsAppEventHandlers(fn) {
   fn.ev.on('messaging-history.set', async (event) => {
-    for (const contact of event.contacts) {
-      await processContactUpdate(contact);
-    }
+    await batchProcessContactUpdates(event.contacts);
   });
   fn.ev.on('contacts.upsert', async (contacts) => {
-    for (const contact of contacts) {
-      await processContactUpdate(contact);
-    }
+    await batchProcessContactUpdates(contacts);
   });
   fn.ev.on('contacts.update', async (updates) => {
-    for (const contact of updates) {
-      await processContactUpdate(contact);
-    }
+    await batchProcessContactUpdates(updates);
   });
   fn.ev.on('messages.upsert', async (message) => {
     if (message.type !== 'notify') return;
@@ -101,12 +95,18 @@ function setupWhatsAppEventHandlers(fn) {
         const contacts = await store.getArrayContacts(participantJids);
         if (contacts) {
           const contactMap = new Map(contacts.map(c => [c.jid, c]));
+          const contactUpdates = [];
           for (const participant of daget.participants) {
             const contactJid = jidNormalizedUser(participant.id);
             const contact = contactMap.get(contactJid);
             const contactName = contact?.name || contact?.notify || 'Unknown';
-            await updateContact(contactJid, { lid: participant.lid, name: contactName });
+            contactUpdates.push({
+              jid: contactJid,
+              data: { lid: participant.lid, name: contactName }
+            });
           }
+          const { batchUpdateContacts } = await import('../src/lib/contactManager.js');
+          await batchUpdateContacts(contactUpdates);
         }
       }
     }
@@ -119,12 +119,18 @@ function setupWhatsAppEventHandlers(fn) {
         const participantJids = newMeta.participants.map(p => jidNormalizedUser(p.id));
         const existingContacts = await store.getArrayContacts(participantJids);
         const contactMap = new Map(existingContacts.map(c => [c.jid, c]));
+        const contactUpdates = [];
         for (const participant of newMeta.participants) {
           const contactJid = jidNormalizedUser(participant.id);
           const existingContact = contactMap.get(contactJid);
           const contactName = existingContact?.name || existingContact?.notify || 'Unknown';
-          await updateContact(contactJid, { lid: participant.lid, name: contactName });
+          contactUpdates.push({
+            jid: contactJid,
+            data: { lid: participant.lid, name: contactName }
+          });
         }
+        const { batchUpdateContacts } = await import('../src/lib/contactManager.js');
+        await batchUpdateContacts(contactUpdates);
       }
     }
   });
@@ -182,18 +188,28 @@ function setupWhatsAppEventHandlers(fn) {
   fn.ev.on('presence.update', async ({ id, presences: update }) => {
     if (!id.endsWith('@g.us')) return;
     const resolvedPresences = {};
+    const jidsToResolve = [];
     for (const participantId in update) {
-      let resolvedJid;
       if (participantId.endsWith('@lid')) {
-        resolvedJid = await store.resolveJid(participantId);
+        jidsToResolve.push(participantId);
       } else {
-        resolvedJid = jidNormalizedUser(participantId);
+        resolvedPresences[jidNormalizedUser(participantId)] = {
+          ...update[participantId],
+          lastSeen: Date.now()
+        };
       }
-      if (!resolvedJid) continue;
-      resolvedPresences[resolvedJid] = {
-        ...update[participantId],
-        lastSeen: Date.now()
-      };
+    }
+    if (jidsToResolve.length > 0) {
+      const resolved = await store.batchResolveJids(jidsToResolve);
+      jidsToResolve.forEach((lid, idx) => {
+        const resolvedJid = resolved[idx];
+        if (resolvedJid) {
+          resolvedPresences[resolvedJid] = {
+            ...update[lid],
+            lastSeen: Date.now()
+          };
+        }
+      });
     }
     await store.updatePresences(id, resolvedPresences);
   });
@@ -223,6 +239,7 @@ async function starts() {
     await log('Socket and AuthStore injected into DBStore successfully');
     setupWhatsAppEventHandlers(fn);
     await performanceManager.initialize(fn, config, dbSettings);
+    await performanceManager.cache.warmHotDataOnStartup();
   } catch (error) {
     await log(error, true);
     await restartManager.restart("Failed to load database store", performanceManager);

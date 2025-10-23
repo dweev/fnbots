@@ -24,6 +24,8 @@ const PERFORMANCE_CONFIG = {
   CACHE_SIZES: {
     whitelist: { max: 1000, ttl: 300000 },
     groupData: { max: 500, ttl: 60000 },
+    groupMetadata: { max: 200, ttl: 3600000 },
+    contactData: { max: 5000, ttl: 3600000, updateAgeOnGet: true }
   },
   MEMORY_CHECK_INTERVAL: 6000000,
   MEMORY_THRESHOLD: 0.8,
@@ -40,6 +42,8 @@ class UnifiedCacheManager {
   constructor() {
     this.whitelistCache = new LRUCache(PERFORMANCE_CONFIG.CACHE_SIZES.whitelist);
     this.groupDataCache = new LRUCache(PERFORMANCE_CONFIG.CACHE_SIZES.groupData);
+    this.groupMetadataCache = new LRUCache(PERFORMANCE_CONFIG.CACHE_SIZES.groupMetadata);
+    this.contactDataCache = new LRUCache(PERFORMANCE_CONFIG.CACHE_SIZES.contactData);
     this.globalStatsCache = {
       totalHits: 0,
       lastSync: Date.now()
@@ -154,6 +158,93 @@ class UnifiedCacheManager {
       }
     }
     return this.groupDataCache.get(groupId);
+  }
+  async warmGroupMetadataCache(groupId) {
+    if (!this.groupMetadataCache.has(groupId)) {
+      try {
+        const { store } = await import('../../database/index.js');
+        const metadata = await store.getGroupMetadata(groupId);
+        if (metadata) {
+          this.groupMetadataCache.set(groupId, metadata);
+        }
+        return metadata;
+      } catch (error) {
+        log(`Error warming group metadata cache for ${groupId}:\n${error}`, true);
+        return null;
+      }
+    }
+    return this.groupMetadataCache.get(groupId);
+  }
+  async warmContactCache(jid) {
+    if (!this.contactDataCache.has(jid)) {
+      try {
+        const { store } = await import('../../database/index.js');
+        const contact = await store.getContact(jid);
+        if (contact) {
+          this.contactDataCache.set(jid, contact);
+        }
+        return contact;
+      } catch (error) {
+        log(`Error warming contact cache for ${jid}:\n${error}`, true);
+        return null;
+      }
+    }
+    return this.contactDataCache.get(jid);
+  }
+  async warmHotDataOnStartup() {
+    try {
+      log('Warming hot data into LRU cache...');
+      const { default: GroupCache } = await import('../cache/cacheGroupMetadata.js');
+      const { store } = await import('../../database/index.js');
+      const groups = await GroupCache.getAllCachedGroupIds();
+      log(`Found ${groups.length} groups to warm`);
+      if (groups.length === 0) {
+        log('No groups found in cache, skipping metadata warming');
+        return;
+      }
+      const groupMetadatas = await store.getArrayGroups(groups);
+      log(`Fetched ${groupMetadatas.length} group metadata from store`);
+      let cachedCount = 0;
+      for (const metadata of groupMetadatas) {
+        if (metadata) {
+          this.groupMetadataCache.set(metadata.groupId || metadata.id, metadata);
+          cachedCount++;
+        }
+      }
+      log(`Cached ${cachedCount} group metadata in LRU`);
+      const contacts = new Set();
+      for (const metadata of groupMetadatas) {
+        if (metadata?.participants) {
+          metadata.participants.forEach(p => {
+            if (p.id) contacts.add(p.id);
+            if (p.jid) contacts.add(p.jid);
+          });
+        }
+      }
+      const contactArray = Array.from(contacts);
+      log(`Found ${contactArray.length} unique contacts from group participants`);
+      for (let i = 0; i < contactArray.length; i += 100) {
+        const batch = contactArray.slice(i, i + 100);
+        const contactData = await store.getArrayContacts(batch);
+        for (const contact of contactData) {
+          if (contact) {
+            this.contactDataCache.set(contact.jid, contact);
+          }
+        }
+      }
+      log(`LRU cache warmed: ${cachedCount} groups, ${contactArray.length} contacts`);
+    } catch (error) {
+      log(`Warm cache error: ${error}`, true);
+    }
+  }
+  invalidateGroupMetadataCache(groupId) {
+    this.groupMetadataCache.delete(groupId);
+  }
+  invalidateGroupDataCache(groupId) {
+    this.groupDataCache.delete(groupId);
+  }
+  invalidateContactCache(jid) {
+    this.contactDataCache.delete(jid);
   }
   async syncToDatabase() {
     return this.syncQueue.add(async () => {
@@ -564,11 +655,11 @@ class UnifiedCacheManager {
           pendingHits: this.globalStatsCache.totalHits,
           lastSync: new Date(this.globalStatsCache.lastSync).toISOString()
         },
-        whitelist: {
-          size: this.whitelistCache.size
-        },
-        groupData: {
-          size: this.groupDataCache.size
+        lruCaches: {
+          whitelist: { size: this.whitelistCache.size, max: this.whitelistCache.max },
+          groupData: { size: this.groupDataCache.size, max: this.groupDataCache.max },
+          groupMetadata: { size: this.groupMetadataCache.size, max: this.groupMetadataCache.max },
+          contactData: { size: this.contactDataCache.size, max: this.contactDataCache.max }
         },
         performance: {
           lastSync: new Date(this.lastSyncTime).toISOString(),
@@ -584,8 +675,12 @@ class UnifiedCacheManager {
           pendingHits: this.globalStatsCache.totalHits,
           lastSync: new Date(this.globalStatsCache.lastSync).toISOString()
         },
-        whitelist: { size: this.whitelistCache.size },
-        groupData: { size: this.groupDataCache.size },
+        lruCaches: {
+          whitelist: { size: this.whitelistCache.size, max: this.whitelistCache.max },
+          groupData: { size: this.groupDataCache.size, max: this.groupDataCache.max },
+          groupMetadata: { size: this.groupMetadataCache.size, max: this.groupMetadataCache.max },
+          contactData: { size: this.contactDataCache.size, max: this.contactDataCache.max }
+        },
         performance: {
           lastSync: new Date(this.lastSyncTime).toISOString(),
           queueSize: this.syncQueue.size,
@@ -639,6 +734,8 @@ class UnifiedCacheManager {
       this.globalStatsCache.totalHits = 0;
       this.whitelistCache.clear();
       this.groupDataCache.clear();
+      this.groupMetadataCache.clear();
+      this.contactDataCache.clear();
       log('All caches cleared.');
     } catch (error) {
       log(`Error clearing caches: ${error}`, true);
@@ -839,9 +936,7 @@ class UnifiedJobScheduler {
         log('No cached stories to sync');
         return;
       }
-      const dbUsers = await StoreStory.find({ 'statuses.0': { $exists: true } })
-        .select('userId')
-        .lean();
+      const dbUsers = await StoreStory.find({ 'statuses.0': { $exists: true } }).select('userId').lean();
       const dbUserIds = new Set(dbUsers.map(u => u.userId));
       const staleUserIds = cachedUserIds.filter(userId => !dbUserIds.has(userId));
       if (staleUserIds.length === 0) {

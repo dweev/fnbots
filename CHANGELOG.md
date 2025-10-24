@@ -2,9 +2,35 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.0.9] - 2025-10-24
+
+### 🚀 What's Changed
+- chore: bump version to 3.0.9 in package.json ([b6316b3](https://github.com/Terror-Machine/fnbots/commit/b6316b33a6c760b56729e3fc3146a587554f05a1))
+- feat: implement active verification cache for group member verification commands ([fc22315](https://github.com/Terror-Machine/fnbots/commit/fc2231589840b92d195857666860dc488483cd6c))
+- refactor: streamline session data handling and improve error logging ([9e66ed9](https://github.com/Terror-Machine/fnbots/commit/9e66ed9cbf0457c91218c475f578297b97ef6534))
+- fix: remove unnecessary prefix from exit log message for clarity ([d1be71c](https://github.com/Terror-Machine/fnbots/commit/d1be71c1f8faf9f825b46e920f55ee4a647cd827))
+- chore: update dependencies to latest versions for improved stability and security ([3614903](https://github.com/Terror-Machine/fnbots/commit/36149031c4dc6419018534c005432633b62594cc))
+- feat: enhance contact update handling with improved validation and error logging ([f4f10e1](https://github.com/Terror-Machine/fnbots/commit/f4f10e125a59a1ece8e7c4adfe0589fdcaaef91d))
+- feat: remove redundant logging for bulk cache operations in StoreDB, ContactCache, and GroupCache ([bfac194](https://github.com/Terror-Machine/fnbots/commit/bfac194787dd88f4956f56ce5b85605499a8ac05))
+- feat: add protocol message handling and bulk delete functionality ([c346ea8](https://github.com/Terror-Machine/fnbots/commit/c346ea8cecfa2e4b7ec62b0c1c7d20378ca9a0a3))
+- feat: implement cooldown management for AFK notifications in groups ([3e9d6cb](https://github.com/Terror-Machine/fnbots/commit/3e9d6cbaf4226d03e3ab7dfc8d67fe4613848a2e))
+- feat: update cache TTL values to 24 hours for improved data retention ([cfa355d](https://github.com/Terror-Machine/fnbots/commit/cfa355d2499c2084e522b9a93fc4d5720d20f8b5))
+- feat: refactor cache statistics collection for improved key handling and performance ([a052f66](https://github.com/Terror-Machine/fnbots/commit/a052f6620632f4c5a5ac94ae841e402de72f7766))
+- feat: enhance sticker command with improved argument handling and custom watermark support ([fbb85ea](https://github.com/Terror-Machine/fnbots/commit/fbb85ead58f927bb2ce9be253a640422076221d3))
+- feat: enhance cache statistics command with detailed performance metrics and improved data retrieval ([496313c](https://github.com/Terror-Machine/fnbots/commit/496313caa8ad79f5a2591373aa1df6fb934a6f7e))
+- feat: optimize contact updates with batch processing and enhance presence resolution ([86e7cf8](https://github.com/Terror-Machine/fnbots/commit/86e7cf8a4088547651df92665c347f249999e583))
+- feat: enhance group name retrieval with cached metadata fallback ([93de87f](https://github.com/Terror-Machine/fnbots/commit/93de87f8d61fbe197ec92280117ddfbe0fc6eb72))
+- feat: enhance message serialization with batch JID resolution and contact caching ([ba5bfeb](https://github.com/Terror-Machine/fnbots/commit/ba5bfeb7e859e8a671f9514846afb8b8b5c23e69))
+- feat: enhance group participant management with caching and batch contact updates ([e337877](https://github.com/Terror-Machine/fnbots/commit/e3378770f0e455490fd467be26136efe961ccfea))
+- feat: enhance cache management by adding group metadata and contact data caches with warming functions ([3dbd6d7](https://github.com/Terror-Machine/fnbots/commit/3dbd6d7b1446fc8e7df4a6404ed8a41f33c9d42e))
+- feat: implement locking mechanism for contact updates and enhance batch processing ([d8870a3](https://github.com/Terror-Machine/fnbots/commit/d8870a39a952030f73b181bc3b10f1120d811a45))
+- feat: implement circuit breaker for group metadata fetching and enhance caching with batch operations ([f70ef56](https://github.com/Terror-Machine/fnbots/commit/f70ef563fd3e3c9a36cf25da41fbb79e33465f32))
+- refactor: optimize cooldown management and cleanup logic for better performance ([23e2408](https://github.com/Terror-Machine/fnbots/commit/23e2408a192479eca905e6c8c7d46e137fdb941f))
+
 ## [3.0.8] - 2025-10-22
 
 ### 🚀 What's Changed
+- chore(release): update CHANGELOG.md for v3.0.8 ([8a1026b](https://github.com/Terror-Machine/fnbots/commit/8a1026bd2fc2fe310f5fc357ab60872a18a37487))
 - refactor: replace StoreMessages with store in various functions for improved consistency and performance ([9eb9c48](https://github.com/Terror-Machine/fnbots/commit/9eb9c48c00aab7e47e9f3e4ef77bc9f653909652))
 - feat: add getAllContacts method to retrieve and cache WhatsApp contacts ([eefddcc](https://github.com/Terror-Machine/fnbots/commit/eefddcc5121f63aa05a1ff5fde536db938a38da3))
 - refactor: streamline LID mapping and caching logic in contact management ([49578f9](https://github.com/Terror-Machine/fnbots/commit/49578f9cc9642753c2d7f88e72ced072f819ce83))

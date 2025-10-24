@@ -6,7 +6,7 @@
 */
 // ─── Info ────────────────────────────────
 
-import { Group } from '../../../database/index.js';
+import { Group, OTPSession, redis } from '../../../database/index.js';
 
 export const command = {
   name: 'verifymember',
@@ -22,11 +22,13 @@ export const command = {
     if (command.toLowerCase() === 'on') {
       group.verifyMember = true;
       await group.save();
+      await redis.set('cache:group:has_active_verification', 'true');
       await sReply('Mode verifikasi member telah *diaktifkan* untuk grup ini.');
       await reactDone();
     } else if (command.toLowerCase() === 'off') {
       group.verifyMember = false;
       await group.save();
+      await OTPSession.refreshVerificationCache();
       await sReply('Mode verifikasi member telah *dinonaktifkan* untuk grup ini.');
       await reactDone();
     }

@@ -247,6 +247,9 @@ export async function arfine(fn, m, { store, dbSettings, ownerNumber, version, i
     }
   }
   if (!m.isGroup) {
+    const hasActiveVerification = await OTPSession.hasAnyActiveVerification(Group);
+    if (!hasActiveVerification) return;
+    if (!serial || !serial.includes('@s.whatsapp.net')) return;
     const otpSession = await OTPSession.getSession(serial);
     if (otpSession) {
       const verificationResult = await OTPSession.verifyOTP(serial, body);

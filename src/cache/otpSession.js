@@ -12,32 +12,98 @@ import { redis } from '../../database/index.js';
 const REDIS_PREFIX = {
   SESSION: 'otp:session:',
   BLOCKED: 'otp:blocked:',
-  USER_SESSIONS: 'otp:user:'
+  USER_SESSIONS: 'otp:user:',
+  VERIFICATION_CACHE: 'cache:group:has_active_verification'
 };
 
 const OTP_TTL = 5 * 60;
 const BLOCK_TTL = 60 * 60;
 
 class OTPSession {
+  static async hasAnyActiveVerification(Group) {
+    try {
+      const cached = await redis.get(REDIS_PREFIX.VERIFICATION_CACHE);
+
+      if (cached !== null) {
+        return cached === 'true';
+      }
+
+      const count = await Group.countDocuments({
+        verifyMember: true,
+        isActive: true
+      });
+
+      const hasActive = count > 0;
+      await redis.set(REDIS_PREFIX.VERIFICATION_CACHE, hasActive.toString());
+
+      await log(`GroupVerification cache initialized: ${hasActive}`);
+
+      return hasActive;
+    } catch (error) {
+      await log(`Error checking active verification: ${error.message}`, true);
+      return false;
+    }
+  }
+
+  static async invalidateVerificationCache() {
+    try {
+      await redis.del(REDIS_PREFIX.VERIFICATION_CACHE);
+      await log('GroupVerification cache invalidated');
+      return true;
+    } catch (error) {
+      await log(`Error invalidating verification cache: ${error.message}`, true);
+      return false;
+    }
+  }
+
+  static async refreshVerificationCache(Group) {
+    try {
+      await this.invalidateVerificationCache();
+      return await this.hasAnyActiveVerification(Group);
+    } catch (error) {
+      await log(`Error refreshing verification cache: ${error.message}`, true);
+      return false;
+    }
+  }
+
+  static async getVerificationCacheStatus() {
+    try {
+      const cached = await redis.get(REDIS_PREFIX.VERIFICATION_CACHE);
+      return {
+        isCached: cached !== null,
+        value: cached === 'true',
+        rawValue: cached
+      };
+    } catch (error) {
+      await log(`Error getting cache status: ${error.message}`, true);
+      return { isCached: false, value: false, rawValue: null };
+    }
+  }
+
   static validateUserId(userId) {
     if (!userId || !userId.includes('@s.whatsapp.net')) {
       throw new Error('User ID must be a valid WhatsApp JID');
     }
   }
+
   static validateGroupId(groupId) {
     if (!groupId || !groupId.endsWith('@g.us')) {
       throw new Error('Group ID must end with @g.us');
     }
   }
+
   static getSessionKey(userId, groupId) {
     return `${REDIS_PREFIX.SESSION}${userId}:${groupId}`;
   }
+
   static getBlockedKey(userId) {
     return `${REDIS_PREFIX.BLOCKED}${userId}`;
   }
+
   static getUserSessionsKey(userId) {
     return `${REDIS_PREFIX.USER_SESSIONS}${userId}`;
   }
+
   static async createSession(userId, groupId, otp) {
     try {
       this.validateUserId(userId);
@@ -61,13 +127,13 @@ class OTPSession {
       pipeline.sadd(userSessionsKey, groupId);
       pipeline.expire(userSessionsKey, OTP_TTL);
       await pipeline.exec();
-      log(`OTP session created: ${userId} -> ${groupId}`);
+      await log(`OTP session created: ${userId} -> ${groupId}`);
       return sessionData;
     } catch (error) {
-      log(`Create OTP session error: ${error.message}`, true);
       throw error;
     }
   }
+
   static async verifyOTP(userId, inputOTP) {
     try {
       this.validateUserId(userId);
@@ -103,7 +169,7 @@ class OTPSession {
       if (session.otp === inputOTP) {
         await redis.del(sessionKey);
         await redis.srem(userSessionsKey, session.groupId);
-        log(`OTP verified successfully: ${userId}`);
+        await log(`OTP verified successfully: ${userId}`);
         return {
           success: true,
           groupId: session.groupId,
@@ -122,7 +188,7 @@ class OTPSession {
           reason: 'MAX_ATTEMPTS_EXCEEDED'
         }), 'EX', BLOCK_TTL);
         await pipeline.exec();
-        log(`User blocked due to max attempts: ${userId}`);
+        await log(`User blocked due to max attempts: ${userId}`);
         return {
           success: false,
           reason: 'MAX_ATTEMPTS_EXCEEDED',
@@ -136,7 +202,7 @@ class OTPSession {
         'EX',
         ttl > 0 ? ttl : OTP_TTL
       );
-      log(`Wrong OTP attempt ${session.attempts}/4: ${userId}`);
+      await log(`Wrong OTP attempt ${session.attempts}/4: ${userId}`);
       return {
         success: false,
         reason: 'WRONG_OTP',
@@ -144,13 +210,17 @@ class OTPSession {
         remainingAttempts: 4 - session.attempts
       };
     } catch (error) {
-      log(`Verify OTP error: ${error.message}`, true);
+      await log(`Verify OTP error: ${error.message}`, true);
       throw error;
     }
   }
+
   static async getSession(userId) {
     try {
-      this.validateUserId(userId);
+      if (!userId || typeof userId !== 'string' || !userId.includes('@s.whatsapp.net')) {
+        return null;
+      }
+
       const blockedKey = this.getBlockedKey(userId);
       const isBlocked = await redis.exists(blockedKey);
       if (isBlocked) {
@@ -179,10 +249,13 @@ class OTPSession {
       }
       return null;
     } catch (error) {
-      log(`Get session error: ${error.message}`, true);
+      if (!error.message.includes('valid WhatsApp JID')) {
+        await log(`Get session error: ${error}`, true);
+      }
       return null;
     }
   }
+
   static async deleteSession(userId, groupId = null) {
     try {
       this.validateUserId(userId);
@@ -193,7 +266,7 @@ class OTPSession {
         pipeline.del(sessionKey);
         pipeline.srem(userSessionsKey, groupId);
         await pipeline.exec();
-        log(`OTP session deleted: ${userId} -> ${groupId}`);
+        await log(`OTP session deleted: ${userId} -> ${groupId}`);
         return true;
       }
       const groupIds = await redis.smembers(userSessionsKey);
@@ -205,15 +278,16 @@ class OTPSession {
         }
         pipeline.del(userSessionsKey);
         await pipeline.exec();
-        log(`All OTP sessions deleted for user: ${userId}`);
+        await log(`All OTP sessions deleted for user: ${userId}`);
         return true;
       }
       return false;
     } catch (error) {
-      log(`Delete session error: ${error.message}`, true);
+      await log(`Delete session error: ${error.message}`, true);
       return false;
     }
   }
+
   static async getBlockedUsers() {
     try {
       const pattern = `${REDIS_PREFIX.BLOCKED}*`;
@@ -245,25 +319,27 @@ class OTPSession {
       }
       return blockedUsers;
     } catch (error) {
-      log(`Get blocked users error: ${error.message}`, true);
+      await log(`Get blocked users error: ${error.message}`, true);
       return [];
     }
   }
+
   static async unblockUser(userId) {
     try {
       this.validateUserId(userId);
       const blockedKey = this.getBlockedKey(userId);
       const result = await redis.del(blockedKey);
       if (result > 0) {
-        log(`User unblocked: ${userId}`);
+        await log(`User unblocked: ${userId}`);
         return true;
       }
       return false;
     } catch (error) {
-      log(`Unblock user error: ${error.message}`, true);
+      await log(`Unblock user error: ${error.message}`, true);
       return false;
     }
   }
+
   static async getAllSessions() {
     try {
       const pattern = `${REDIS_PREFIX.SESSION}*`;
@@ -293,10 +369,11 @@ class OTPSession {
       }
       return sessions;
     } catch (error) {
-      log(`Get all sessions error: ${error.message}`, true);
+      await log(`Get all sessions error: ${error.message}`, true);
       return [];
     }
   }
+
   static async getStats() {
     try {
       const [sessions, blocked] = await Promise.all([
@@ -310,7 +387,7 @@ class OTPSession {
         blocked: blocked
       };
     } catch (error) {
-      log(`Get stats error: ${error.message}`, true);
+      await log(`Get stats error: ${error.message}`, true);
       return {
         activeSessions: 0,
         blockedUsers: 0,

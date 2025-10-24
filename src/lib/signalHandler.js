@@ -27,7 +27,7 @@ class SignalHandler {
     });
     process.once('exit', async (code) => {
       if (!this.isShuttingDown) {
-        console.log(`[EXIT] Process exiting with code: ${code}`);
+        console.log(`Process exiting with code: ${code}`);
         await this.executeShutdown('EXIT');
       }
     });

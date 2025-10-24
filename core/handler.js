@@ -14,6 +14,7 @@ import log from '../src/lib/logger.js';
 import dayjs from '../src/utils/dayjs.js';
 import { exec as cp_exec } from 'child_process';
 import { pluginCache } from '../src/lib/plugins.js';
+import errorTracker from '../src/lib/errorTracker.js';
 import { runJob } from '../src/worker/worker_manager.js';
 import cooldownManager from '../src/lib/cooldownManager.js';
 import { restartManager } from '../src/lib/restartManager.js';
@@ -468,7 +469,9 @@ export async function arfine(fn, m, { store, dbSettings, ownerNumber, version, i
             const command = pluginCache.commands.get(commandName);
             if (command) {
               if (command.isEnabled === false && !isSadmin && !isMaster) {
-                await sReply(`Perintah *${command.name}* sedang dinonaktifkan.`);
+                const isAutoDisabled = await errorTracker.isCommandDisabled(commandName);
+                const disabledMsg = isAutoDisabled ? `Perintah *${command.name}* dinonaktifkan otomatis karena error berulang.` : `Perintah *${command.name}* sedang dinonaktifkan.`;
+                await sReply(disabledMsg);
                 continue;
               }
               try {
@@ -489,6 +492,7 @@ export async function arfine(fn, m, { store, dbSettings, ownerNumber, version, i
                     sendRawWebpAsSticker, store
                   };
                   await command.execute(commandArgs);
+                  await errorTracker.resetError(commandName);
                   commandFound = true;
                   const userUpdates = {
                     $inc: {
@@ -529,8 +533,38 @@ export async function arfine(fn, m, { store, dbSettings, ownerNumber, version, i
                   }
                 }
               } catch (error) {
-                await sReply(`Terjadi kesalahan saat menjalankan perintah "${command.name}": \n${error.message}`);
+                const errorDetails = await errorTracker.trackError(
+                  commandName,
+                  error.message,
+                  error.stack
+                );
+                log(`Command "${commandName}" error (${errorDetails.errorCount}/${errorTracker.MAX_CONSECUTIVE_ERRORS}): ${error.message}`, true);
                 log(error, true);
+                if (errorDetails.shouldDisable) {
+                  const disabled = await errorTracker.disableCommand(commandName);
+                  if (disabled) {
+                    const report = await errorTracker.generateErrorReport(commandName, errorDetails);
+                    for (const ownerJid of ownerNumber) {
+                      try {
+                        const expiration = await fn.getEphemeralExpiration(ownerJid);
+                        await fn.sendPesan(ownerJid, report, {
+                          ephemeralExpiration: expiration
+                        });
+                      } catch (notifError) {
+                        log(`Failed to send error report to ${ownerJid}: ${notifError.message}`, true);
+                      }
+                    }
+                    await sReply(
+                      `Perintah *${command.name}* telah dinonaktifkan otomatis karena mengalami ${errorDetails.errorCount} error berturut-turut.\n\n` +
+                      `Admin telah diberitahu tentang masalah ini.`
+                    );
+                  }
+                } else {
+                  await sReply(
+                    `Terjadi kesalahan saat menjalankan perintah "${command.name}":\n${error.message}\n\n` +
+                    `_Error count: ${errorDetails.errorCount}/${errorTracker.MAX_CONSECUTIVE_ERRORS}_`
+                  );
+                }
                 failedCommands.push(currentCommand);
               }
             } else {

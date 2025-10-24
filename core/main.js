@@ -14,6 +14,7 @@ import { createWASocket } from './connection.js';
 import { jidNormalizedUser, proto } from 'baileys';
 import { tmpDir } from '../src/lib/tempManager.js';
 import { loadPlugins } from '../src/lib/plugins.js';
+import errorTracker from '../src/lib/errorTracker.js';
 import log, { pinoLogger } from '../src/lib/logger.js';
 import { signalHandler } from '../src/lib/signalHandler.js';
 import { restartManager } from '../src/lib/restartManager.js';
@@ -259,6 +260,7 @@ async function starts() {
     setupWhatsAppEventHandlers(fn);
     await performanceManager.initialize(fn, config, dbSettings);
     await performanceManager.cache.warmHotDataOnStartup();
+    errorTracker.initialize(performanceManager);
   } catch (error) {
     await log(error, true);
     await restartManager.restart("Failed to load database store", performanceManager);
@@ -268,6 +270,7 @@ async function starts() {
 signalHandler.register('database', async (signal) => {
   await log(`${signal}: Database cleanup initiated...`);
   try {
+    await errorTracker.shutdown();
     if (authStore) {
       await authStore.saveCreds();
       await log('Credentials saved');

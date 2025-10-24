@@ -149,7 +149,8 @@ export const loadPlugins = async (pluginPath) => {
           }
           const commandData = {
             ...dbCommand.toObject(),
-            execute: cmd.execute
+            execute: cmd.execute,
+            isEnabled: dbCommand.isEnabled
           };
           pluginCache.commands.set(cmdName, commandData);
           pluginCache.helpMap.get(categoryName).set(cmdName, cmdName);

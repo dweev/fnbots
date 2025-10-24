@@ -467,7 +467,10 @@ export async function arfine(fn, m, { store, dbSettings, ownerNumber, version, i
             const commandName = currentCommand.split(' ')[0].toLowerCase();
             const command = pluginCache.commands.get(commandName);
             if (command) {
-              if (!command.isEnabled && !userData.isSadmin) continue;
+              if (command.isEnabled === false && !isSadmin && !isMaster) {
+                await sReply(`Perintah *${command.name}* sedang dinonaktifkan.`);
+                continue;
+              }
               try {
                 const accessResult = await checkCommandAccess(command, userData, user, maintenance);
                 if (accessResult.allowed) {

@@ -6,6 +6,7 @@
 */
 // ─── Info ────────────────────────────────
 
+import log from '../../lib/logger.js';
 import { pluginCache } from '../../lib/plugins.js';
 import { Command } from '../../../database/index.js';
 
@@ -38,19 +39,33 @@ export const command = {
     const newState = state === 'on';
     const commandDoc = await findCommandInDb(targetIdentifier);
     if (!commandDoc) return sReply(`Perintah atau alias '${targetIdentifier}' tidak ditemukan di database.`);
-    await Command.updateOne({ _id: commandDoc._id }, { $set: { isEnabled: newState } });
-    const cachedCommand = pluginCache.commands.get(commandDoc.name);
-    if (cachedCommand) {
-      cachedCommand.isEnabled = newState;
-      const allIdentifiers = [commandDoc.name, ...(commandDoc.aliases || [])];
-      allIdentifiers.forEach(id => {
-        const cmd = pluginCache.commands.get(id);
-        if (cmd) {
-          cmd.isEnabled = newState;
-        }
-      });
+    try {
+      await Command.updateOne(
+        { _id: commandDoc._id },
+        { $set: { isEnabled: newState } }
+      );
+      log(`Plugin ${commandDoc.name} set to isEnabled=${newState}`);
+    } catch (error) {
+      log(`Error updating command in database: ${error.message}`, true);
+      return sReply(`Gagal menyimpan perubahan ke database: ${error.message}`);
+    }
+    const allIdentifiers = [commandDoc.name, ...(commandDoc.aliases || [])];
+    let updatedCount = 0;
+    for (const identifier of allIdentifiers) {
+      const idLower = identifier.toLowerCase();
+      const cachedCmd = pluginCache.commands.get(idLower);
+      if (cachedCmd) {
+        cachedCmd.isEnabled = newState;
+        updatedCount++;
+      }
     }
     const statusText = newState ? 'diaktifkan' : 'dinonaktifkan';
-    await sReply(`Berhasil, perintah *${commandDoc.name}* telah ${statusText}.`);
+    const aliasInfo = commandDoc.aliases?.length > 0 ? ` (termasuk ${commandDoc.aliases.length} alias)` : '';
+    await sReply(
+      `Berhasil!\n\n` +
+      `Perintah: *${commandDoc.name}*${aliasInfo}\n` +
+      `Status: *${statusText.toUpperCase()}*\n` +
+      `Cache updated: ${updatedCount} entries`
+    );
   }
 };

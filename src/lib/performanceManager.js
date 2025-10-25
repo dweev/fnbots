@@ -64,7 +64,12 @@ class UnifiedCacheManager {
     this.syncMutex = new Mutex();
     this.syncQueue = new PQueue({ concurrency: 1 });
     this.syncJob = null;
+    this.socketRef = null;
     this.validateMemorySettings();
+  }
+  setSocketReference(socket) {
+    this.socketRef = socket;
+    log('Socket reference stored in cache manager');
   }
   validateMemorySettings() {
     if (this.memorySettings.checkInterval < 10000) {
@@ -610,7 +615,7 @@ class UnifiedCacheManager {
   }
   async restartDueToMemory(reason) {
     this.stopMemoryMonitoring();
-    await restartManager.restart(`Memory monitor: ${reason}`);
+    await restartManager.restart(`Memory monitor: ${reason}`, { cache: this }, this.socketRef);
   }
   async getStats() {
     try {
@@ -805,9 +810,7 @@ class UnifiedJobScheduler {
             log('Socket disconnected, attempting restart', true);
             this.restarting = true;
             try {
-              await restartManager.restart('Socket disconnected', {
-                cache: this.cacheManager
-              });
+              await restartManager.restart('Socket disconnected', { cache: this.cacheManager }, fn);
             } catch (restartError) {
               log(`Restart failed: ${restartError.message}`, true);
               this.restarting = false;
@@ -1006,6 +1009,7 @@ class UnifiedPerformanceManager {
     }
     log('Initializing performance manager with native cron');
     await this.cacheManager.loadMemorySettings();
+    this.cacheManager.setSocketReference(fn);
     this.cacheManager.startSyncTimer();
     this.jobScheduler.setupStandardJobs(fn, config, dbSettings);
     this.setupGracefulShutdown();

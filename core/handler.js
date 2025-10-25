@@ -198,11 +198,11 @@ export async function arfine(fn, m, { store, dbSettings, ownerNumber, version, i
     dbSettings.restartId = m.from;
     await Settings.updateSettings(dbSettings);
     await reactDone();
-    await restartManager.restart("Manual restart", performanceManager);
+    await restartManager.restart("Manual restart", performanceManager, fn);
   } else if (body?.toLowerCase().trim() === "shutdown") {
     if (!isSadmin && !isMaster) return;
     await reactDone();
-    await restartManager.shutdown(performanceManager);
+    await restartManager.shutdown(performanceManager, fn);
   }
 
   const selfMode = dbSettings.self;

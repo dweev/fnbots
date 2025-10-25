@@ -263,7 +263,7 @@ async function starts() {
     errorTracker.initialize(performanceManager);
   } catch (error) {
     await log(error, true);
-    await restartManager.restart("Failed to load database store", performanceManager);
+    await restartManager.restart("Failed to load database store", performanceManager, fn);
   }
 };
 
@@ -297,7 +297,7 @@ process.on('uncaughtException', async (error) => {
   await log(`Uncaught Exception: ${error}`);
   await log(error, true);
   await performanceManager.cache.forceSync();
-  await restartManager.shutdown(performanceManager);
+  await restartManager.shutdown(performanceManager, fn);
 });
 
 try {

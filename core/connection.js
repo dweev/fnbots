@@ -17,7 +17,7 @@ import { parsePhoneNumber } from 'awesome-phonenumber';
 import log, { pinoLogger } from '../src/lib/logger.js';
 import { Settings, store } from '../database/index.js';
 import { restartManager } from '../src/lib/restartManager.js';
-import { default as makeWASocket, jidNormalizedUser, fetchLatestBaileysVersion, makeCacheableSignalKeyStore } from 'baileys';
+import { default as makeWASocket, jidNormalizedUser, fetchLatestBaileysVersion, Browsers, isJidBroadcast, makeCacheableSignalKeyStore } from 'baileys';
 
 let phoneNumber;
 let pairingStarted = false;
@@ -31,20 +31,39 @@ export async function createWASocket(dbSettings) {
   const authStore = await AuthStore();
   const { state, saveCreds } = authStore;
   const fn = makeWASocket({
-    version,
+    version: version,
     logger: pinoLogger,
+    printQRInTerminal: false,
     auth: {
       creds: state.creds,
-      keys: makeCacheableSignalKeyStore(state.keys, pinoLogger),
+      keys: makeCacheableSignalKeyStore(state.keys, pinoLogger)
     },
-    generateHighQualityLinkPreview: true
+    generateHighQualityLinkPreview: true,
+    linkPreviewImageThumbnailWidth: 192,
+    shouldIgnoreJid: (jid) => {
+      return isJidBroadcast(jid) && jid !== 'status@broadcast';
+    },
+    browser: Browsers.ubuntu('Chrome'),
+    defaultQueryTimeoutMs: undefined,
+    markOnlineOnConnect: false,
+    retryRequestDelayMs: 500,
+    shouldSyncHistoryMessage: () => true,
+    maxMsgRetryCount: 5,
+    emitOwnEvents: true,
+    fireInitQueries: true,
+    transactionOpts: {
+      maxCommitRetries: 10,
+      delayBetweenTriesMs: 3000
+    },
+    connectTimeoutMs: 60_000,
+    keepAliveIntervalMs: 30_000,
+    enableAutoSessionRecreation: true,
+    enableRecentMessageCache: true
   });
 
   global.version = version;
 
   fn.clearSession = authStore.clearSession;
-  fn.restoreSession = authStore.restoreSession;
-  fn.resetRetryAttempts = authStore.resetRetryAttempts;
   fn.getPN = (lid) => store.getPNForLID(lid);
   fn.getLID = (pn) => store.getLIDForPN(pn);
   fn.resolveJid = (id) => store.resolveJid(id);
@@ -126,53 +145,35 @@ export async function createWASocket(dbSettings) {
         await log(`WA Version: ${global.version.join('.')}`);
         await log(`BOT Number: ${jidNormalizedUser(fn.user.id).split('@')[0]}`);
         await log(`${dbSettings.botName} Success Connected to whatsapp...`);
-        await fn.resetRetryAttempts();
       }
       if (connection === 'close') {
         await log(`Connection closed. Code: ${statusCode}`);
-        const errorMessage = lastDisconnect?.error?.message || '';
-        if (errorMessage.includes('QR refs attempts ended')) {
-          await log('Pairing code timeout. Silakan restart dan input code lebih cepat.', true);
-          return await restartManager.restart('Pairing code timeout', (await import('../src/lib/performanceManager.js')).performanceManager);
-        }
-        const code = [401, 402, 403, 411, 503];
-        if (code.includes(statusCode)) {
+        const fatalCodes = [401, 402, 403, 411];
+        const transientCodes = [408, 429, 440, 500, 503];
+        if (fatalCodes.includes(statusCode)) {
+          await log(`Fatal auth error (${statusCode}). Clearing session...`, true);
           dbSettings.botNumber = null;
           await authStore.clearSession();
           await Settings.updateSettings(dbSettings);
           restartManager.forceExit(1);
-        } else if (statusCode === 500) {
-          const restoreResult = await fn.restoreSession(5);
-          if (restoreResult.shouldClearSession) {
-            await log('Max retry attempts reached. Clearing session...', true);
-            dbSettings.botNumber = null;
-            await authStore.clearSession();
-            await Settings.updateSettings(dbSettings);
-            restartManager.forceExit(1);
-          } else if (restoreResult.success) {
-            await log(`Session restored (attempt ${restoreResult.attempt}). Restarting...`);
-            await restartManager.restart(`Session restored, reconnecting (attempt ${restoreResult.attempt})`, (await import('../src/lib/performanceManager.js')).performanceManager);
-          } else {
-            await log(`Session restore failed (attempt ${restoreResult.attempt}). Retrying...`);
-            await restartManager.restart(`Retry connection (attempt ${restoreResult.attempt})`, (await import('../src/lib/performanceManager.js')).performanceManager);
-          }
+        } else if (transientCodes.includes(statusCode)) {
+          await log(`Temporary disconnect (${statusCode}). Reconnecting in 10s...`);
+          await new Promise(res => setTimeout(res, 10_000));
+          restartManager.restart(`Reconnecting after code ${statusCode}`, (await import('../src/lib/performanceManager.js')).performanceManager);
         } else {
-          await restartManager.restart(`Connection closed: ${statusCode}`, (await import('../src/lib/performanceManager.js')).performanceManager);
+          await log(`Unexpected close (${statusCode}). Restarting...`);
+          await restartManager.restart(`Restart after unknown code ${statusCode}`, (await import('../src/lib/performanceManager.js')).performanceManager);
         }
       }
       if (isNewLogin) await log(`New device detected, session restarted!`);
-      if (qr) {
-        if (!pairingCode) {
-          log('Scan QR berikut:');
-          qrcode.generate(qr, { small: true }, (qrcodeString) => {
-            const qrStr = String(qrcodeString);
-            log(`\n${qrStr}`);
-          });
-        }
+      if (qr && !pairingCode) {
+        log('Scan QR berikut:');
+        qrcode.generate(qr, { small: true }, (qrcodeString) => {
+          log(`\n${String(qrcodeString)}`);
+        });
       }
     } catch (error) {
       await log(`Connection update error: ${error}`, true);
-      await log(error, true);
     }
   });
   return { fn, authStore };

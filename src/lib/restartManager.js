@@ -11,7 +11,7 @@ import { delay } from 'baileys';
 import { spawn } from 'child_process';
 
 const MAX_RESTART_ATTEMPTS = 5;
-const RESTART_DELAY_MS = 6000;
+const BASE_DELAY_MS = 5000;
 
 const isPm2 = process.env.pm_id !== undefined || process.env.NODE_APP_INSTANCE !== undefined;
 
@@ -29,35 +29,52 @@ class RestartManager {
       log(`Bot restarted. Attempt: ${this.currentAttempts}/${MAX_RESTART_ATTEMPTS}`);
     }
   }
+
   getAttempts() {
     return this.currentAttempts;
   }
+
   reset() {
     if (this.currentAttempts > 0) {
       log(`Connection stable. Resetting restart counter.`);
       this.currentAttempts = 0;
     }
   }
+
   isMaxAttemptsReached() {
     return this.currentAttempts >= MAX_RESTART_ATTEMPTS;
   }
+
+  computeDelay(attempt) {
+    const exponential = BASE_DELAY_MS * Math.pow(2, attempt - 1);
+    const capped = Math.min(exponential, 60_000);
+    return capped;
+  }
+
   async restart(reason, performanceManager = null) {
     if (this.isRestarting) {
       log('Restart already in progress, ignoring duplicate request.');
       return;
     }
     this.isRestarting = true;
+
     const nextAttempt = this.currentAttempts + 1;
+    const delayTime = this.computeDelay(nextAttempt);
+
     if (nextAttempt > MAX_RESTART_ATTEMPTS) {
       await log(`FATAL: Max restart attempts reached (${MAX_RESTART_ATTEMPTS})`);
       await log(`Reason: ${reason}`);
       if (performanceManager) {
-        await performanceManager.cache.forceSync();
+        await performanceManager.cache.forceSync().catch(e =>
+          log(`Cache sync failed before exit: ${e.message}`, true)
+        );
       }
       process.exit(1);
     }
+
     await log(`Restart triggered: ${reason}`);
-    await log(`Attempt ${nextAttempt}/${MAX_RESTART_ATTEMPTS} in ${RESTART_DELAY_MS / 1000}s...`);
+    await log(`Attempt ${nextAttempt}/${MAX_RESTART_ATTEMPTS} in ${(delayTime / 1000).toFixed(1)}s...`);
+
     if (performanceManager) {
       try {
         await performanceManager.cache.forceSync();
@@ -66,7 +83,9 @@ class RestartManager {
         log(`Cache sync failed: ${error.message}`, true);
       }
     }
-    await delay(RESTART_DELAY_MS);
+
+    await delay(delayTime);
+
     if (isPm2) {
       process.exit(1);
     } else {
@@ -82,6 +101,7 @@ class RestartManager {
       process.exit(0);
     }
   }
+
   async shutdown(performanceManager = null) {
     if (this.isRestarting) {
       log('Shutdown already in progress.');
@@ -111,6 +131,7 @@ class RestartManager {
       process.exit(0);
     }
   }
+
   forceExit(code = 1) {
     log(`Force exit with code ${code}`);
     process.exit(code);

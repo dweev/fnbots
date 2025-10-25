@@ -37,6 +37,7 @@ export const command = {
       user.limitgame.current = user.isPremium ? dbSettings.limitCountPrem : dbSettings.limitGame;
       user.limit.warned = false;
       user.limitgame.warned = false;
+      user.gacha = true;
       await user.save();
       await sReply(`Limit untuk @${userId.split('@')[0]} berhasil direset.`);
       return;
@@ -55,7 +56,8 @@ export const command = {
                 'limit.current': user.isPremium ? dbSettings.limitCountPrem : dbSettings.limitCount,
                 'limitgame.current': user.isPremium ? dbSettings.limitCountPrem : dbSettings.limitGame,
                 'limit.warned': false,
-                'limitgame.warned': false
+                'limitgame.warned': false,
+                'gacha': true
               }
             }
           }
@@ -89,6 +91,7 @@ export const command = {
       user.limitgame.current = user.isPremium ? dbSettings.limitCountPrem : dbSettings.limitGame;
       user.limit.warned = false;
       user.limitgame.warned = false;
+      user.gacha = true;
       await user.save();
       await sReply(`Limit untuk @${userId.split('@')[0]} berhasil direset.`);
       return;

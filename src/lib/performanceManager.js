@@ -883,7 +883,7 @@ class UnifiedJobScheduler {
                 'limit.warnedLimit': false,
                 'limitgame.current': this.calculateGameLimit(config, dbSettings, user),
                 'limitgame.warnedLimit': false,
-                gacha: true
+                'gacha': true
               }
             }
           }

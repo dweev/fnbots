@@ -249,37 +249,38 @@ export async function arfine(fn, m, { store, dbSettings, ownerNumber, version, i
   }
   if (!m.isGroup) {
     const hasActiveVerification = await OTPSession.hasAnyActiveVerification(Group);
-    if (!hasActiveVerification) return;
     if (!serial || !serial.includes('@s.whatsapp.net')) return;
-    const otpSession = await OTPSession.getSession(serial);
-    if (otpSession) {
-      const verificationResult = await OTPSession.verifyOTP(serial, body);
-      switch (verificationResult.reason) {
-        case 'OTP_VERIFIED': {
-          await sPesan('Verifikasi berhasil!\n\nPermintaan Anda telah diteruskan ke Admin untuk persetujuan akhir. Mohon tunggu.');
-          const adminNotification =
-            `*Permintaan Bergabung Baru*\n\n` +
-            `Pengguna: @${serial.split('@')[0]}\n` +
-            `Status: Berhasil verifikasi OTP\n\n` +
-            `Untuk menyetujui, kirim perintah:\n` +
-            `\`${dbSettings.rname}requestjoin\``;
-          await fn.sendPesan(verificationResult.groupId, adminNotification, m);
-          break;
+    if (hasActiveVerification) {
+      const otpSession = await OTPSession.getSession(serial);
+      if (otpSession) {
+        const verificationResult = await OTPSession.verifyOTP(serial, body);
+        switch (verificationResult.reason) {
+          case 'OTP_VERIFIED': {
+            await sPesan('Verifikasi berhasil!\n\nPermintaan Anda telah diteruskan ke Admin untuk persetujuan akhir. Mohon tunggu.');
+            const adminNotification =
+              `*Permintaan Bergabung Baru*\n\n` +
+              `Pengguna: @${serial.split('@')[0]}\n` +
+              `Status: Berhasil verifikasi OTP\n\n` +
+              `Untuk menyetujui, kirim perintah:\n` +
+              `\`${dbSettings.rname}requestjoin\``;
+            await fn.sendPesan(verificationResult.groupId, adminNotification, m);
+            break;
+          }
+          case 'WRONG_OTP': {
+            const remaining = 4 - verificationResult.attempts;
+            await sPesan(`Kode OTP salah!\n\nPercobaan: ${verificationResult.attempts}/4\nSisa kesempatan: ${remaining}`);
+            break;
+          }
+          case 'MAX_ATTEMPTS_EXCEEDED':
+            await sPesan(`*Akses Ditolak*\n\nAnda telah gagal verifikasi OTP sebanyak 4 kali.\nAkun Anda diBanned dari group untuk mencegah hal hal yang tidak diinginkan!`);
+            await Group.banMember(serial);
+            await log(`User ${serial} diBanned dari group karena gagal verifikasi OTP lebih dari 4x`, true);
+            break;
+          case 'SESSION_NOT_FOUND':
+            break;
         }
-        case 'WRONG_OTP': {
-          const remaining = 4 - verificationResult.attempts;
-          await sPesan(`Kode OTP salah!\n\nPercobaan: ${verificationResult.attempts}/4\nSisa kesempatan: ${remaining}`);
-          break;
-        }
-        case 'MAX_ATTEMPTS_EXCEEDED':
-          await sPesan(`*Akses Ditolak*\n\nAnda telah gagal verifikasi OTP sebanyak 4 kali.\nAkun Anda diBanned dari group untuk mencegah hal hal yang tidak diinginkan!`);
-          await Group.banMember(serial);
-          await log(`User ${serial} diBanned dari group karena gagal verifikasi OTP lebih dari 4x`, true);
-          break;
-        case 'SESSION_NOT_FOUND':
-          break;
+        return;
       }
-      return;
     }
   }
   

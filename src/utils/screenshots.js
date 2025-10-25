@@ -1,3 +1,11 @@
+// ─── Info ───────────────────────────────────────
+/*
+* Created with ❤️ and 💦 By FN
+* Follow https://github.com/Terror-Machine
+* Feel Free To Use
+*/
+// ─── Info src/utils/screenshots.js ──────────────
+
 import { chromium, devices } from 'playwright';
 
 export async function screenshotWeb(targetUrl, options = {}) {

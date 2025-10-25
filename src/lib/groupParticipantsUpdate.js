@@ -38,6 +38,7 @@ async function getCachedMetadata(groupId) {
     return null;
   }
 }
+
 async function invalidateMetadataCache(groupId) {
   try {
     performanceManager.cache.invalidateGroupMetadataCache(groupId);
@@ -48,17 +49,21 @@ async function invalidateMetadataCache(groupId) {
     log(`Error invalidating cache for ${groupId}: ${error}`, true);
   }
 }
+
 async function resolveParticipantJids(participants) {
   const jids = participants.map(p => {
     if (typeof p === 'string') return p;
-    return p.id || p.phoneNumber;
+    return p.phoneNumber || p.id;
   });
   const resolved = await store.batchResolveJids(jids);
-  return participants.map((p, idx) => ({
-    original: p,
-    jid: resolved[idx],
-    lid: jids[idx]?.endsWith('@lid') ? jids[idx] : null
-  }));
+  return participants.map((p, idx) => {
+    const originalId = typeof p === 'string' ? p : (p.phoneNumber || p.id);
+    return {
+      original: p,
+      jid: resolved[idx],
+      lid: originalId?.endsWith('@lid') ? originalId : (typeof p === 'object' ? p.lid : null)
+    };
+  });
 }
 
 export default async function groupParticipantsUpdate({ id, participants, action }, fn) {
@@ -135,9 +140,10 @@ export default async function groupParticipantsUpdate({ id, participants, action
           await invalidateMetadataCache(id);
           const freshMetadata = await store.syncGroupMetadata(fn, id);
           if (freshMetadata) {
-            const botParticipant = freshMetadata.participants.find(p =>
-              p.id === botJid || jidNormalizedUser(p.id) === botJid
-            );
+            const botParticipant = freshMetadata.participants.find(p => {
+              const participantJid = p.phoneNumber || p.id;
+              return participantJid === botJid || jidNormalizedUser(participantJid) === botJid;
+            });
             if (action === 'promote' && botParticipant?.admin) {
               log(`Bot dijadikan admin di grup ${id}.`);
             } else if (action === 'demote' && !botParticipant?.admin) {
@@ -154,7 +160,8 @@ export default async function groupParticipantsUpdate({ id, participants, action
             let metadataChanged = false;
             const affectedJids = resolvedParticipants.map(p => p.jid).filter(Boolean);
             currentMetadata.participants.forEach(p => {
-              if (affectedJids.includes(p.id)) {
+              const participantJid = p.phoneNumber || p.id;
+              if (affectedJids.includes(participantJid)) {
                 p.admin = newStatus;
                 metadataChanged = true;
               }
@@ -174,11 +181,19 @@ export default async function groupParticipantsUpdate({ id, participants, action
     const finalMetadata = await getCachedMetadata(id);
     if (finalMetadata && finalMetadata.participants) {
       const contactUpdates = finalMetadata.participants
-        .filter(p => p.id && p.lid)
-        .map(p => ({
-          jid: p.id,
-          data: { lid: p.lid }
-        }));
+        .filter(p => {
+          const hasJid = p.phoneNumber || (p.id && p.id.includes('@s.whatsapp.net'));
+          const hasLid = p.lid || (p.id && p.id.includes('@lid'));
+          return hasJid && hasLid;
+        })
+        .map(p => {
+          const jid = p.phoneNumber || (p.id?.includes('@s.whatsapp.net') ? p.id : null);
+          const lid = p.lid || (p.id?.includes('@lid') ? p.id : null);
+          return {
+            jid: jid,
+            data: { lid: lid }
+          };
+        });
       if (contactUpdates.length > 0) {
         await batchUpdateContacts(contactUpdates);
       }

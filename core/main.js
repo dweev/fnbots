@@ -111,18 +111,38 @@ function setupWhatsAppEventHandlers(fn) {
       await store.syncGroupMetadata(fn, id);
       if (daget.participants?.length) {
         log(`Memperbarui kontak peserta untuk grup ${id}...`);
-        const participantJids = daget.participants.map(p => jidNormalizedUser(p.id));
+        const participantJids = daget.participants.map(p => {
+          if (p.phoneNumber) return p.phoneNumber;
+          if (p.id && p.id.includes('@s.whatsapp.net')) return p.id;
+          return p.id;
+        });
         const contacts = await store.getArrayContacts(participantJids);
         if (contacts) {
           const contactMap = new Map(contacts.map(c => [c.jid, c]));
           const contactUpdates = [];
           for (const participant of daget.participants) {
-            const contactJid = jidNormalizedUser(participant.id);
+            let contactJid;
+            if (participant.phoneNumber) {
+              contactJid = participant.phoneNumber;
+            } else if (participant.id && participant.id.includes('@s.whatsapp.net')) {
+              contactJid = participant.id;
+            } else {
+              contactJid = participant.id;
+            }
+            let contactLid;
+            if (participant.lid) {
+              contactLid = participant.lid;
+            } else if (participant.id && participant.id.includes('@lid')) {
+              contactLid = participant.id;
+            }
             const contact = contactMap.get(contactJid);
             const contactName = contact?.name || contact?.notify || 'Unknown';
             contactUpdates.push({
               jid: contactJid,
-              data: { lid: participant.lid, name: contactName }
+              data: {
+                lid: contactLid,
+                name: contactName
+              }
             });
           }
           const { batchUpdateContacts } = await import('../src/lib/contactManager.js');
@@ -136,21 +156,43 @@ function setupWhatsAppEventHandlers(fn) {
       const id = jidNormalizedUser(newMeta.id);
       await store.updateGroupMetadata(id, newMeta);
       if (newMeta.participants?.length) {
-        const participantJids = newMeta.participants.map(p => jidNormalizedUser(p.id));
-        const existingContacts = await store.getArrayContacts(participantJids);
-        const contactMap = new Map(existingContacts.map(c => [c.jid, c]));
-        const contactUpdates = [];
-        for (const participant of newMeta.participants) {
-          const contactJid = jidNormalizedUser(participant.id);
-          const existingContact = contactMap.get(contactJid);
-          const contactName = existingContact?.name || existingContact?.notify || 'Unknown';
-          contactUpdates.push({
-            jid: contactJid,
-            data: { lid: participant.lid, name: contactName }
-          });
+        const participantJids = newMeta.participants.map(p => {
+          if (p.phoneNumber) return p.phoneNumber;
+          if (p.id && p.id.includes('@s.whatsapp.net')) return p.id;
+          return p.id;
+        });
+        const contacts = await store.getArrayContacts(participantJids);
+        if (contacts) {
+          const contactMap = new Map(contacts.map(c => [c.jid, c]));
+          const contactUpdates = [];
+          for (const participant of newMeta.participants) {
+            let contactJid;
+            if (participant.phoneNumber) {
+              contactJid = participant.phoneNumber;
+            } else if (participant.id && participant.id.includes('@s.whatsapp.net')) {
+              contactJid = participant.id;
+            } else {
+              contactJid = participant.id;
+            }
+            let contactLid;
+            if (participant.lid) {
+              contactLid = participant.lid;
+            } else if (participant.id && participant.id.includes('@lid')) {
+              contactLid = participant.id;
+            }
+            const contact = contactMap.get(contactJid);
+            const contactName = contact?.name || contact?.notify || 'Unknown';
+            contactUpdates.push({
+              jid: contactJid,
+              data: {
+                lid: contactLid,
+                name: contactName
+              }
+            });
+          }
+          const { batchUpdateContacts } = await import('../src/lib/contactManager.js');
+          await batchUpdateContacts(contactUpdates);
         }
-        const { batchUpdateContacts } = await import('../src/lib/contactManager.js');
-        await batchUpdateContacts(contactUpdates);
       }
     }
   });

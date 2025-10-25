@@ -13,7 +13,7 @@ const participantSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  jid: {
+  phoneNumber: {
     type: String,
     required: true
   },

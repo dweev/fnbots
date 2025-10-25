@@ -17,7 +17,7 @@ import { fileTypeFromBuffer, fileTypeFromFile } from 'file-type';
 import { randomByte, getBuffer, getSizeMedia } from '../src/function/index.js';
 import { convert as convertNative, fetch as nativeFetch } from '../src/addon/bridge.js';
 import { MediaValidationError, MediaProcessingError, MediaSizeError } from '../src/lib/errorManager.js';
-import { jidNormalizedUser, generateWAMessage, generateWAMessageFromContent, downloadContentFromMessage, jidDecode, jidEncode, getBinaryNodeChildString, getBinaryNodeChildren, getBinaryNodeChild, proto, WAMessageAddressingMode } from 'baileys';
+import { jidNormalizedUser, generateWAMessage, generateWAMessageFromContent, downloadContentFromMessage, jidDecode, jidEncode, getBinaryNodeChildString, getBinaryNodeChildren, getBinaryNodeChild, proto, WAMessageAddressingMode, isLidUser, isPnUser } from 'baileys';
 
 const createQuotedOptions = (quoted, options = {}) => {
   const ephemeralExpiration = options?.ephemeralExpiration
@@ -558,10 +558,10 @@ export async function clientBot(fn, dbSettings) {
       memberAddMode,
       participants: getBinaryNodeChildren(group, 'participant').map(({ attrs }) => {
         return {
-          id: attrs.jid.endsWith('@lid') ? attrs.phone_number : attrs.jid,
-          jid: attrs.jid.endsWith('@lid') ? attrs.phone_number : attrs.jid,
-          lid: attrs.jid.endsWith('@lid') ? attrs.jid : attrs.lid,
-          admin: attrs.type || null
+          id: attrs.jid,
+          phoneNumber: isLidUser(attrs.jid) && isPnUser(attrs.phone_number) ? attrs.phone_number : undefined,
+          lid: isPnUser(attrs.jid) && isLidUser(attrs.lid) ? attrs.lid : undefined,
+          admin: (attrs.type || null)
         };
       }),
       ephemeralDuration: eph ? +eph : undefined
@@ -683,7 +683,7 @@ export async function clientBot(fn, dbSettings) {
     });
     const outputPath = await tmpDir.createTempFileWithContent(imageBuffer, 'png');
     const formattedMessage = messageText.replace(/@user/g, `@${memberNum}`);
-    const res = await fn.groupMetadata(idGroup);
+    const res = await store.getGroupMetadata(idGroup);
     await fn.sendFilePath(idGroup, formattedMessage, outputPath, { ephemeralExpiration: res.ephemeralDuration });
   };
   fn.profileImageBuffer = async (jid, type = 'image') => {

@@ -218,8 +218,19 @@ class UnifiedCacheManager {
       for (const metadata of groupMetadatas) {
         if (metadata?.participants) {
           metadata.participants.forEach(p => {
-            if (p.id) contacts.add(p.id);
-            if (p.jid) contacts.add(p.jid);
+            let jid;
+            if (p.phoneNumber) {
+              jid = p.phoneNumber;
+            } else if (p.id && p.id.includes('@s.whatsapp.net')) {
+              jid = p.id;
+            } else if (p.id) {
+              if (!p.id.includes('@lid')) {
+                jid = p.id;
+              }
+            }
+            if (jid && jid.includes('@s.whatsapp.net')) {
+              contacts.add(jid);
+            }
           });
         }
       }

@@ -148,12 +148,28 @@ class DBStore {
 
   sanitizeParticipants(participants) {
     if (!Array.isArray(participants)) return [];
-    return participants.map(p => ({
-      id: p.id || p.jid,
-      jid: p.jid,
-      lid: p.lid || '',
-      admin: p.admin || null
-    }));
+    return participants.map(p => {
+      let jid;
+      if (p.phoneNumber) {
+        jid = p.phoneNumber;
+      } else if (p.id && p.id.includes('@s.whatsapp.net')) {
+        jid = p.id;
+      } else {
+        jid = p.id;
+      }
+      let lid = '';
+      if (p.lid) {
+        lid = p.lid;
+      } else if (p.id && p.id.includes('@lid')) {
+        lid = p.id;
+      }
+      return {
+        id: jid,
+        phoneNumber: jid,
+        lid: lid,
+        admin: p.admin || null
+      };
+    });
   }
 
   sanitizeGroupData(rawData, existing = null) {
@@ -229,20 +245,30 @@ class DBStore {
       return true;
     }
     const existingMap = new Map(
-      existingParticipants.map(p => [
-        p.id || p.jid,
-        { jid: p.jid, lid: p.lid || '', admin: p.admin || null }
-      ])
+      existingParticipants.map(p => {
+        const key = p.phoneNumber || p.id;
+        return [
+          key,
+          {
+            phoneNumber: p.phoneNumber || p.id,
+            lid: p.lid || '',
+            admin: p.admin || null
+          }
+        ];
+      })
     );
     for (const updatedP of updatedParticipants) {
-      const key = updatedP.id || updatedP.jid;
+      const key = updatedP.phoneNumber || updatedP.id;
       const existing = existingMap.get(key);
       if (!existing) {
         return true;
       }
-      if (existing.jid !== updatedP.jid ||
-        existing.lid !== (updatedP.lid || '') ||
-        existing.admin !== (updatedP.admin || null)) {
+      const updatedPhoneNumber = updatedP.phoneNumber || updatedP.id;
+      const updatedLid = updatedP.lid || '';
+      const updatedAdmin = updatedP.admin || null;
+      if (existing.phoneNumber !== updatedPhoneNumber ||
+        existing.lid !== updatedLid ||
+        existing.admin !== updatedAdmin) {
         return true;
       }
     }

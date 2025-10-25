@@ -14,10 +14,10 @@ export const command = {
   description: 'Memberi peringatan kepada anggota grup dan mengeluarkannya jika melewati batas.',
   aliases: ['warning'],
   isCommandWithoutPayment: true,
-  execute: async ({ fn, m, toId, sReply, ar, quotedMsg, mentionedJidList, quotedParticipant, arg, dbSettings }) => {
+  execute: async ({ fn, m, toId, sReply, ar, quotedMsg, mentionedJidList, quotedParticipant, arg, dbSettings, store }) => {
     if (!m.isGroup) return await sReply('Perintah ini hanya bisa digunakan di grup!');
     if (!arg) return await sReply(`Gagal. Balas atau mention pengguna untuk memberi peringatan, atau gunakan ${dbSettings.rname}warn set on/off untuk mengatur fitur.`);
-    const metadata = await fn.groupMetadata(toId);
+    const metadata = await store.getGroupMetadata(toId);
     const groupAdmins = metadata?.participants?.filter(p => p.admin).map(p => p.id) || [];
     const group = await Group.ensureGroup(toId);
     const subCommand = ar[0]?.toLowerCase();

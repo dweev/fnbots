@@ -15,10 +15,10 @@ export const command = {
   category: 'manage',
   description: 'Mengeluarkan semua anggota grup yang bukan admin atau tidak memiliki status khusus (Master/VIP/Premium).',
   isCommandWithoutPayment: true,
-  execute: async ({ fn, m, toId, sReply, isBotGroupAdmins, botNumber, ownerNumber }) => {
+  execute: async ({ fn, m, toId, sReply, isBotGroupAdmins, botNumber, ownerNumber, store }) => {
     if (!m.isGroup) return await sReply('Perintah ini hanya bisa digunakan di dalam grup.');
     if (!isBotGroupAdmins) return await sReply('Bot harus menjadi admin untuk menjalankan perintah ini.');
-    const groupMetadata = await fn.groupMetadata(toId);
+    const groupMetadata = await store.getGroupMetadata(toId);
     const allMemberIds = groupMetadata.participants.map(p => p.id);
     const groupAdminIds = new Set(
       groupMetadata.participants

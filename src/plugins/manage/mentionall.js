@@ -12,9 +12,9 @@ export const command = {
   description: 'Menyebutkan semua anggota grup.',
   aliases: ['tagall', 'tag'],
   isCommandWithoutPayment: true,
-  execute: async ({ fn, m, toId, sReply, sPesan }) => {
+  execute: async ({ m, toId, sReply, sPesan, store }) => {
     if (!m.isGroup) return await sReply("Perintah ini hanya bisa digunakan di grup.");
-    const groupMetadata = await fn.groupMetadata(toId);
+    const groupMetadata = await store.getGroupMetadata(toId);
     const mentions = groupMetadata.participants.map(member => member.id);
     let message = "📢 MENTIONALL MEMBER\n";
     mentions.forEach((jid, idx) => {

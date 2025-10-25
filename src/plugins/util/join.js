@@ -13,7 +13,7 @@ export const command = {
   category: 'util',
   description: 'Menginstruksikan bot agar masuk ke dalam grup',
   isCommandWithoutPayment: true,
-  execute: async ({ fn, dbSettings, arg, args, sReply, isMaster, isSadmin }) => {
+  execute: async ({ fn, dbSettings, arg, args, sReply, isMaster, isSadmin, store }) => {
     if (dbSettings.autojoin === true) return;
     if (!arg) {
       return await sReply(`Silakan berikan link undangan grup WhatsApp yang ingin Kamu masuki.\nContoh: ${dbSettings.sname}join https://chat.whatsapp.com/abc123xyz`);
@@ -25,7 +25,7 @@ export const command = {
       if (!joinApprovalMode) {
         await fn.groupAcceptInvite(inviteCode);
         if (!restrict) {
-          const res = await fn.groupMetadata(id);
+          const res = await store.getGroupMetadata(id);
           await fn.sendPesan(id, `Halo warga grup *${subject}*!\nTerima kasih sudah mengundang ${dbSettings.botname}.`, { ephemeralExpiration: res.ephemeralDuration ?? 0 }); 
         }
         if (isSadmin || isMaster) {

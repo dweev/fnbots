@@ -204,7 +204,7 @@ export async function createWASocket(dbSettings) {
         if (dbSettings.restartState) {
           dbSettings.restartState = false;
           if (dbSettings.restartId?.includes('@g.us')) {
-            const res = await fn.groupMetadata(dbSettings.restartId);
+            const res = await store.getGroupMetadata(dbSettings.restartId);
             await fn.sendPesan(dbSettings.restartId, `✅ Restart sukses`, { ephemeralExpiration: res.ephemeralDuration });
           } else if (dbSettings.restartId?.includes('@s.whatsapp.net')) {
             const expiration = await fn.getEphemeralExpiration(dbSettings.restartId);

@@ -175,13 +175,7 @@ export default async function serializeMessage(fn, msg) {
     }
     if (m.isGroup) {
       try {
-        let metadata = await store.getGroupMetadata(mchat);
-        if (!metadata) {
-          metadata = await fn.groupMetadata(mchat);
-          if (metadata) {
-            await store.updateGroupMetadata(mchat, metadata);
-          }
-        }
+        const metadata = await store.getGroupMetadata(mchat);
         m.metadata = metadata?.toJSON ? metadata.toJSON() : metadata;
         if (m.metadata?.participants) {
           m.metadata.participants = m.metadata.participants.map(p => ({

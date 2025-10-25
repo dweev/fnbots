@@ -12,9 +12,9 @@ export const command = {
   description: 'Mendapatkan info creator group',
   aliases: ['gcreator'],
   isCommandWithoutPayment: true,
-  execute: async ({ fn, m, sReply, toId }) => {
+  execute: async ({ fn, m, sReply, toId, store }) => {
     if (!m.isGroup) return await sReply(`Perintah ini hanya bisa digunakan di grup.`);
-    const groupchat = await fn.groupMetadata(toId);
+    const groupchat = await store.getGroupMetadata(toId);
     const { subject, subjectOwner, subjectOwnerPn } = groupchat;
     let creatorId;
     if (subjectOwnerPn === undefined) {

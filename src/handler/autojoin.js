@@ -7,6 +7,7 @@
 // ─── Info src/handler/autojoin.js ─────────────────
 
 import log from '../lib/logger.js';
+import { store } from '../../database/index.js';
 
 class AutoJoinHandler {
   constructor(fn, User) {
@@ -63,7 +64,7 @@ class AutoJoinHandler {
         await fn.groupAcceptInvite(inviteCode);
         if (!restrict) {
           const greetingMessage = `Halo warga grup *${subject}*!\nTerima kasih sudah mengundang ${dbSettings.botname}.`;
-          const res = await fn.groupMetadata(groupId);
+          const res = await store.getGroupMetadata(groupId);
           await fn.sendPesan(groupId, greetingMessage, { ephemeralExpiration: res.ephemeralDuration });
         }
         await sReply("Berhasil join grup.");
@@ -88,7 +89,7 @@ class AutoJoinHandler {
         await fn.groupAcceptInvite(inviteCode);
         if (!restrict) {
           const greetingMessage = `Halo warga grup *${subject}*!\nTerima kasih sudah mengundang ${dbSettings.botname}.`;
-          const res = await fn.groupMetadata(groupId);
+          const res = await store.getGroupMetadata(groupId);
           await fn.sendPesan(groupId, greetingMessage, { ephemeralExpiration: res.ephemeralDuration });
         }
         await sReply("Berhasil join grup.");

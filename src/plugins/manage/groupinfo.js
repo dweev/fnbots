@@ -14,10 +14,10 @@ export const command = {
   description: 'Memberikan informasi group.',
   aliases: ['infogroup', 'ginfo'],
   isCommandWithoutPayment: true,
-  execute: async ({ fn, m, isBotGroupAdmins, toId, sReply, sPesan }) => {
+  execute: async ({ m, isBotGroupAdmins, toId, sReply, sPesan, store }) => {
     if (!m.isGroup) return await sReply(`Perintah ini hanya bisa digunakan didalam group.`);
     if (!isBotGroupAdmins) return await sReply(`Perintah ini hanya bisa digunakan jika bot menjadi admin grup.`);
-    const groupchat = await fn.groupMetadata(toId);
+    const groupchat = await store.getGroupMetadata(toId);
     const { subject, subjectOwner, subjectOwnerPn, creation, desc } = groupchat;
     let creator;
     if (subjectOwnerPn === undefined) {

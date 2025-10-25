@@ -14,7 +14,7 @@ export const command = {
   description: 'Mengelola grup yang diizinkan menggunakan bot (whitelist).',
   aliases: ['aksesgrup', 'whitelistgroup', 'whitelistgrup'],
   isCommandWithoutPayment: true,
-  execute: async ({ fn, m, sReply, reactDone, args, dbSettings }) => {
+  execute: async ({ fn, m, sReply, reactDone, args, dbSettings, store }) => {
     const subcmd = args[0];
     const target = args.slice(1).join(" ");
     if (subcmd === "reset") {
@@ -56,7 +56,7 @@ export const command = {
         let i = 1;
         for (const whitelist of whitelistedGroups) {
           try {
-            const groupMeta = await fn.groupMetadata(whitelist.targetId);
+            const groupMeta = await store.getGroupMetadata(whitelist.targetId);
             list += `${i++}. ${groupMeta.subject}\n \`${whitelist.targetId}\`\n`;
           } catch {
             list += `${i++}. Tidak dapat membaca metadata\n \`${whitelist.targetId}\`\n`;

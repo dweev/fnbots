@@ -11,7 +11,7 @@ export const command = {
   category: 'vip',
   description: 'Memblokir user dari bot',
   isCommandWithoutPayment: true,
-  execute: async ({ fn, toId, arg, dbSettings, quotedMsg, mentionedJidList, quotedParticipant, sReply }) => {
+  execute: async ({ fn, toId, arg, dbSettings, quotedMsg, mentionedJidList, quotedParticipant, sReply, store }) => {
     const targets = [];
     if (quotedMsg) {
       targets.push(quotedParticipant);
@@ -24,7 +24,7 @@ export const command = {
     }
     const blocked = [];
     const failed = [];
-    const metadata = await fn.groupMetadata(toId);
+    const metadata = await store.getGroupMetadata(toId);
     const groupAdmins = metadata?.participants?.reduce((a, b) => {
       if (b.admin) a.push({ id: b.id, admin: b.admin });
       return a;

@@ -14,7 +14,7 @@ export const command = {
   category: 'manage',
   description: 'Matikan/aktifkan bot di group',
   isCommandWithoutPayment: true,
-  execute: async ({ fn, m, args, sReply, toId, dbSettings, reactDone, isSadmin, isMaster }) => {
+  execute: async ({ m, args, sReply, toId, dbSettings, reactDone, isSadmin, isMaster, store }) => {
     if (!m.isGroup) return await sReply(`Perintah ini hanya bisa digunakan didalam group.`);
     const group = await Group.ensureGroup(toId);
     const status = args[0]?.toLowerCase();
@@ -47,7 +47,7 @@ export const command = {
             isAnnounce: false,
             isRestrict: false
           };
-          const metadata = await fn.groupMetadata(groupId);
+          const metadata = await store.getGroupMetadata(groupId);
           groupInfo = {
             name: metadata.subject || groupInfo.name,
             memberCount: metadata.size || groupInfo.memberCount,

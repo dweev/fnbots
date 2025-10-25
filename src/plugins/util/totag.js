@@ -15,12 +15,12 @@ export const command = {
   description: 'Meneruskan pesan yang dikutip sambil menandai semua anggota grup.',
   aliases: ['ttg'],
   isCommandWithoutPayment: true,
-  execute: async ({ fn, m, toId, quotedMsg, reactFail }) => {
+  execute: async ({ fn, m, toId, quotedMsg, reactFail, store }) => {
     if (!m.isGroup || !quotedMsg) {
       await reactFail();
       return;
     }
-    const groupMetadata = await fn.groupMetadata(toId);
+    const groupMetadata = await store.getGroupMetadata(toId);
     await fn.sendMessage(toId, {
       forward: proto.WebMessageInfo.create({
         key: m.quoted.key,

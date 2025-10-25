@@ -12,7 +12,7 @@ export const command = {
   description: 'Mengeluarkan anggota dari grup.',
   aliases: ['tendang', 'pancal', 'gajul'],
   isCommandWithoutPayment: true,
-  execute: async ({ fn, m, toId, sReply, isBotGroupAdmins, quotedMsg, mentionedJidList, ownerNumber, reactDone }) => {
+  execute: async ({ fn, m, toId, sReply, isBotGroupAdmins, quotedMsg, mentionedJidList, ownerNumber, reactDone, store }) => {
     if (!m.isGroup) return await sReply(`Perintah ini hanya bisa digunakan di grup.`);
     if (!isBotGroupAdmins) return await sReply(`Bot harus menjadi admin grup untuk menjalankan perintah ini.`);
     const targets = [];
@@ -24,7 +24,7 @@ export const command = {
       return await sReply(`Gunakan perintah ini dengan membalas pesan atau tag @user yang ingin di-kick.`);
     }
     const failedUsers = [];
-    const metadata = await fn.groupMetadata(toId);
+    const metadata = await store.getGroupMetadata(toId);
     const groupAdmins = metadata?.participants?.filter(p => p.admin) || [];
     for (const jid of targets) {
       if (groupAdmins.some(admin => admin.id === jid) || ownerNumber.includes(jid)) {

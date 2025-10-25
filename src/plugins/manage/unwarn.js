@@ -14,9 +14,9 @@ export const command = {
   description: 'Mengurangi peringatan anggota grup.',
   aliases: ['unwarning'],
   isCommandWithoutPayment: true,
-  execute: async ({ fn, m, toId, sReply, quotedMsg, mentionedJidList, quotedParticipant }) => {
+  execute: async ({ m, toId, sReply, quotedMsg, mentionedJidList, quotedParticipant, store }) => {
     if (!m.isGroup) return await sReply('Perintah ini hanya bisa digunakan di dalam grup!');
-    const metadata = await fn.groupMetadata(toId);
+    const metadata = await store.getGroupMetadata(toId);
     const groupAdmins = metadata?.participants?.filter(p => p.admin).map(p => p.id) || [];
     if (!groupAdmins.includes(m.sender)) return await sReply('Hanya admin yang dapat menggunakan perintah ini!');
     let targets = [];

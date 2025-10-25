@@ -11,10 +11,10 @@ export const command = {
   category: 'manage',
   description: 'Mengatur nama group',
   isCommandWithoutPayment: true,
-  execute: async ({ fn, toId, sReply, isBotGroupAdmins, serial, arg, m }) => {
+  execute: async ({ fn, toId, sReply, isBotGroupAdmins, serial, arg, m, store }) => {
     if (!m.isGroup) return await sReply(`Perintah ini hanya bisa digunakan didalam group.`);
     if (!isBotGroupAdmins) return await sReply(`Perintah ini hanya bisa digunakan jika bot menjadi admin grup.`);
-    const groupchat = await fn.groupMetadata(toId);
+    const groupchat = await store.getGroupMetadata(toId);
     const oldName = groupchat.subject || 'Tidak diketahui';
     const newName = arg.trim();
     if (!newName || newName.length > 100) return await sReply(`Nama grup harus diisi dan maksimal 100 karakter.`);

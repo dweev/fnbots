@@ -13,117 +13,167 @@ export const command = {
   category: 'master',
   description: 'List semua Signal session keys untuk debugging',
   isCommandWithoutPayment: true,
-  execute: async ({ sReply }) => {
-    try {
-      const stream = redis.scanStream({
-        match: 'session-*',
-        count: 100
-      });
-      const sessionKeys = [];
+  execute: async ({ sReply, args }) => {
+    const debugMode = args[0] === 'debug';
+    const showAll = args[0] === 'all';
+    const stream = redis.scanStream({
+      match: 'sessions:session-*',
+      count: 100
+    });
+    const sessionKeys = [];
+    await new Promise((resolve, reject) => {
       stream.on('data', (keys) => {
         sessionKeys.push(...keys);
       });
-      await new Promise(resolve => stream.on('end', resolve));
-      if (sessionKeys.length === 0) {
-        await sReply('Tidak ada Signal session yang tersimpan');
-        return;
-      }
-      const sessionsWithInfo = await Promise.all(
-        sessionKeys.map(async (key) => {
-          try {
-            const idletime = await redis.object('IDLETIME', key);
-            const ttl = await redis.ttl(key);
-            const lastAccess = Date.now() - (idletime * 1000);
-            return {
-              key,
-              updatedAt: new Date(lastAccess),
-              ttl
-            };
-          } catch {
-            return {
-              key,
-              updatedAt: new Date(),
-              ttl: -1
-            };
-          }
-        })
-      );
-      const jidMap = {};
-      sessionsWithInfo.forEach(s => {
-        const cleaned = s.key.replace('session-', '');
-        const separatorMatch = cleaned.match(/^(\d+)([-:_](.+))?$/);
-        if (separatorMatch) {
-          const jid = separatorMatch[1];
-          const deviceSuffix = separatorMatch[3] || 'main';
-          if (!jidMap[jid]) {
-            jidMap[jid] = {
-              jid: jid,
-              devices: [],
-              lastUpdate: s.updatedAt
-            };
-          }
-          jidMap[jid].devices.push({
-            suffix: deviceSuffix,
-            fullKey: cleaned,
-            updatedAt: s.updatedAt,
-            ttl: s.ttl
-          });
-          if (s.updatedAt > jidMap[jid].lastUpdate) {
-            jidMap[jid].lastUpdate = s.updatedAt;
-          }
-        }
-      });
-      const uniqueJids = Object.values(jidMap).sort((a, b) =>
-        new Date(b.lastUpdate) - new Date(a.lastUpdate)
-      );
-      let response = `*DAFTAR SIGNAL SESSIONS (REDIS)*\n`;
-      response += `Total: ${uniqueJids.length} unique JIDs\n`;
-      response += `Total devices: ${sessionKeys.length}\n\n`;
-      uniqueJids.forEach((jidData, i) => {
-        const date = new Date(jidData.lastUpdate).toLocaleString('id-ID', {
-          day: '2-digit',
-          month: '2-digit',
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit'
-        });
-        response += `${i + 1}. *${jidData.jid}*\n`;
-        response += `   Devices: ${jidData.devices.length}\n`;
-        response += `   Last: ${date}\n`;
-        if (jidData.devices.length <= 3) {
-          jidData.devices.forEach((dev, idx) => {
-            const devDate = new Date(dev.updatedAt).toLocaleString('id-ID', {
-              day: '2-digit',
-              month: '2-digit',
-              hour: '2-digit',
-              minute: '2-digit'
-            });
-            let devInfo = `   └─ ${idx + 1}. ${dev.suffix} (${devDate})`;
-            if (dev.ttl > 0) {
-              const hours = Math.floor(dev.ttl / 3600);
-              devInfo += ` [TTL: ${hours}h]`;
-            }
-            response += devInfo + '\n';
-          });
-        } else {
-          const firstDev = jidData.devices[0];
-          const lastDev = jidData.devices[jidData.devices.length - 1];
-          response += `   └─ 1. ${firstDev.suffix}\n`;
-          response += `   └─ 2. ${jidData.devices[1].suffix}\n`;
-          response += `   └─ ... (+${jidData.devices.length - 3} more)\n`;
-          response += `   └─ ${jidData.devices.length}. ${lastDev.suffix}\n`;
-        }
-        response += `\n`;
-      });
-      const info = await redis.info('stats');
-      const keysMatch = info.match(/# Keyspace[\s\S]*?keys=(\d+)/);
-      if (keysMatch) {
-        response += `━━━━━━━━━━━━━━━━\n`;
-        response += `Total Redis Keys: ${keysMatch[1]}\n`;
-      }
-      await sReply(response);
-    } catch (error) {
-      await sReply(`Error saat list session: ${error.message}`);
+      stream.on('end', resolve);
+      stream.on('error', reject);
+    });
+    if (sessionKeys.length === 0) {
+      await sReply('Tidak ada Signal session yang tersimpan');
+      return;
     }
+    if (debugMode) {
+      let debugResponse = `*DEBUG MODE - RAW KEYS*\n`;
+      debugResponse += `Total: ${sessionKeys.length} keys\n\n`;
+      const limit = showAll ? sessionKeys.length : 20;
+      debugResponse += `Showing ${Math.min(limit, sessionKeys.length)} keys:\n\n`;
+      sessionKeys.slice(0, limit).forEach((key, idx) => {
+        const cleaned = key.replace('sessions:session-', '');
+        debugResponse += `${idx + 1}. \`${cleaned}\`\n`;
+      });
+      if (sessionKeys.length > limit) {
+        debugResponse += `\n... +${sessionKeys.length - limit} more keys\n`;
+      }
+      debugResponse += `\n*Format Analysis:*\n`;
+      const formats = new Map();
+      sessionKeys.forEach(key => {
+        const cleaned = key.replace('sessions:session-', '');
+        if (cleaned.includes('@s.whatsapp.net')) {
+          formats.set('WhatsApp JID', (formats.get('WhatsApp JID') || 0) + 1);
+        } else if (cleaned.includes('@lid')) {
+          formats.set('LID', (formats.get('LID') || 0) + 1);
+        } else if (/^\d+_\d+\.\d+$/.test(cleaned)) {
+          formats.set('Signal ID (number_version)', (formats.get('Signal ID (number_version)') || 0) + 1);
+        } else {
+          formats.set('Other', (formats.get('Other') || 0) + 1);
+        }
+      });
+      formats.forEach((count, format) => {
+        debugResponse += `• ${format}: ${count}\n`;
+      });
+      debugResponse += `\nUse .checksession all untuk show semua`;
+      return await sReply(debugResponse);
+    }
+    const sessionsWithInfo = await Promise.all(
+      sessionKeys.map(async (key) => {
+        try {
+          const ttl = await redis.ttl(key);
+          return {
+            key,
+            ttl
+          };
+        } catch {
+          return {
+            key,
+            ttl: -1
+          };
+        }
+      })
+    );
+    const byType = {
+      whatsappJid: [],
+      lid: [],
+      signalId: [],
+      other: []
+    };
+    sessionsWithInfo.forEach(s => {
+      const cleaned = s.key.replace('sessions:session-', '');
+      if (cleaned.includes('@s.whatsapp.net')) {
+        byType.whatsappJid.push({ ...s, cleaned });
+      } else if (cleaned.includes('@lid')) {
+        byType.lid.push({ ...s, cleaned });
+      } else if (/^\d+_\d+\.\d+$/.test(cleaned)) {
+        byType.signalId.push({ ...s, cleaned });
+      } else {
+        byType.other.push({ ...s, cleaned });
+      }
+    });
+    let response = `*SIGNAL SESSIONS SUMMARY*\n`;
+    response += `Total: ${sessionKeys.length} sessions\n\n`;
+    if (byType.whatsappJid.length > 0) {
+      response += `*WhatsApp JID Sessions*\n`;
+      response += `Count: ${byType.whatsappJid.length}\n\n`;
+      const jidMap = {};
+      byType.whatsappJid.forEach(s => {
+        const match = s.cleaned.match(/^(.+?@s\.whatsapp\.net)([:_-](.+))?$/);
+        if (match) {
+          const jid = match[1];
+          const device = match[3] || 'main';
+          if (!jidMap[jid]) {
+            jidMap[jid] = { jid, devices: [] };
+          }
+          jidMap[jid].devices.push({ device, ttl: s.ttl });
+        }
+      });
+      const jids = Object.values(jidMap).slice(0, 5);
+      jids.forEach((jidData, i) => {
+        const phoneNumber = jidData.jid.split('@')[0];
+        response += `${i + 1}. ${phoneNumber}\n`;
+        response += `   Devices: ${jidData.devices.length}\n`;
+      });
+      if (Object.keys(jidMap).length > 5) {
+        response += `... +${Object.keys(jidMap).length - 5} more JIDs\n`;
+      }
+      response += `\n`;
+    }
+    if (byType.lid.length > 0) {
+      response += `*LID Sessions*\n`;
+      response += `Count: ${byType.lid.length}\n`;
+      byType.lid.slice(0, 3).forEach((s, i) => {
+        const shortLid = s.cleaned.substring(0, 20) + '...';
+        response += `${i + 1}. ${shortLid}\n`;
+      });
+      if (byType.lid.length > 3) {
+        response += `... +${byType.lid.length - 3} more\n`;
+      }
+      response += `\n`;
+    }
+    if (byType.signalId.length > 0) {
+      response += `*Signal Protocol Sessions*\n`;
+      response += `Count: ${byType.signalId.length}\n`;
+      const versions = new Map();
+      byType.signalId.forEach(s => {
+        const match = s.cleaned.match(/^\d+_(\d+\.\d+)$/);
+        if (match) {
+          const version = match[1];
+          versions.set(version, (versions.get(version) || 0) + 1);
+        }
+      });
+      response += `Versions:\n`;
+      Array.from(versions.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .forEach(([version, count]) => {
+          response += `  • v${version}: ${count} sessions\n`;
+        });
+      if (versions.size > 5) {
+        response += `  • ... +${versions.size - 5} more versions\n`;
+      }
+      response += `\n`;
+    }
+    if (byType.other.length > 0) {
+      response += `*Other Sessions*\n`;
+      response += `Count: ${byType.other.length}\n\n`;
+    }
+    const info = await redis.info('stats');
+    const keysMatch = info.match(/# Keyspace[\s\S]*?keys=(\d+)/);
+    if (keysMatch) {
+      response += `━━━━━━━━━━━━━━━━\n`;
+      response += `Total Redis Keys: ${keysMatch[1]}\n`;
+    }
+    response += `\nCommands:\n`;
+    response += `.checksession - Summary\n`;
+    response += `.checksession debug - Raw keys`;
+    await sReply(response);
   }
 };

@@ -8,9 +8,9 @@
 
 import log from './logger.js';
 import { jidNormalizedUser } from 'baileys';
-import { store, Group } from '../../database/index.js';
 import { performanceManager } from './performanceManager.js';
 import { batchUpdateContacts } from '../lib/contactManager.js';
+import { store, Group, Whitelist } from '../../database/index.js';
 
 async function getCachedMetadata(groupId) {
   try {
@@ -105,6 +105,11 @@ export default async function groupParticipantsUpdate({ id, participants, action
           log(`Bot dikeluarkan dari grup ${id}. Membersihkan metadata...`);
           await invalidateMetadataCache(id);
           await store.deleteGroup(id);
+          const isWhitelisted = await Whitelist.isWhitelisted(id, 'group');
+          if (isWhitelisted) {
+            await Whitelist.removeFromWhitelist(id, 'group');
+            log(`Grup ${id} dihapus dari whitelist karena bot dikeluarkan.`);
+          }
           return;
         }
         const groupData = await Group.findOne({ groupId: id }).lean();

@@ -16,20 +16,23 @@ export const command = {
   isCommandWithoutPayment: true,
   execute: async ({ m, args, sReply, toId, dbSettings, reactDone, isSadmin, isMaster, store }) => {
     if (!m.isGroup) return await sReply(`Perintah ini hanya bisa digunakan didalam group.`);
-    const group = await Group.ensureGroup(toId);
+    const group = await performanceManager.cache.warmGroupSettingsCache(toId);
+    if (!group) return await sReply('Gagal memuat data group.');
     const status = args[0]?.toLowerCase();
     switch (status) {
       case 'on':
         if (group.isMuted) return sReply(`Chat ini sudah dimatikan notifikasinya.\n\nGunakan ${dbSettings.rname}banchat off untuk mengaktifkan kembali notifikasi.`);
         await group.muteChat();
-        performanceManager.cache.groupDataCache.delete(toId);
+        await group.save();
+        performanceManager.cache.invalidateGroupDataCache(toId);
         await reactDone();
         await sReply(`Chat berhasil dimatikan.`);
         break;
       case 'off':
         if (!group.isMuted) return sReply(`Chat ini belum dimatikan notifikasinya.\n\nGunakan ${dbSettings.rname}banchat on untuk mematikan notifikasi.`);
         await group.unmuteChat();
-        performanceManager.cache.groupDataCache.delete(toId);
+        await group.save();
+        performanceManager.cache.invalidateGroupDataCache(toId);
         await reactDone();
         await sReply(`Chat berhasil diaktifkan.`);
         break;
@@ -47,20 +50,26 @@ export const command = {
             isAnnounce: false,
             isRestrict: false
           };
-          const metadata = await store.getGroupMetadata(groupId);
-          groupInfo = {
-            name: metadata.subject || groupInfo.name,
-            memberCount: metadata.size || groupInfo.memberCount,
-            isAnnounce: metadata.announce || false,
-            isRestrict: metadata.restrict || false
-          };
+          try {
+            const metadata = await store.getGroupMetadata(groupId);
+            if (metadata) {
+              groupInfo = {
+                name: metadata.subject || groupInfo.name,
+                memberCount: metadata.size || groupInfo.memberCount,
+                isAnnounce: metadata.announce || false,
+                isRestrict: metadata.restrict || false
+              };
+            }
+          } catch {
+            // Do nothing
+          }
           message += `${i + 1}. *${groupInfo.name}*\n`;
           message += `   👥 Members: ${groupInfo.memberCount}\n`;
-          const status = [];
-          if (groupInfo.isAnnounce) status.push('Only Admin');
-          if (groupInfo.isRestrict) status.push('Locked');
-          if (status.length > 0) {
-            message += `   Status: ${status.join(', ')}\n`;
+          const statusArr = [];
+          if (groupInfo.isAnnounce) statusArr.push('Only Admin');
+          if (groupInfo.isRestrict) statusArr.push('Locked');
+          if (statusArr.length > 0) {
+            message += `   Status: ${statusArr.join(', ')}\n`;
           }
           message += `\n`;
         }
@@ -71,12 +80,19 @@ export const command = {
       case 'reset': {
         if (!isSadmin && !isMaster) return;
         const mutedGroups = await Group.find({ isMuted: true });
+        let successCount = 0;
         for (const mutedGroup of mutedGroups) {
-          await mutedGroup.unmuteChat();
-          performanceManager.cache.groupDataCache.delete(mutedGroup.groupId);
+          try {
+            await mutedGroup.unmuteChat();
+            await mutedGroup.save();
+            performanceManager.cache.invalidateGroupDataCache(mutedGroup.groupId);
+            successCount++;
+          } catch (error) {
+            console.error(`Failed to unmute ${mutedGroup.groupId}:`, error);
+          }
         }
         await reactDone();
-        await sReply(`Semua chat yang dimatikan telah direset (${mutedGroups.length} group).`);
+        await sReply(`Semua chat yang dimatikan telah direset (${successCount}/${mutedGroups.length} group berhasil).`);
         break;
       }
       default: {

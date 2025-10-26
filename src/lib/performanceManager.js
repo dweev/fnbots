@@ -41,7 +41,7 @@ const REDIS_KEYS = {
 class UnifiedCacheManager {
   constructor() {
     this.whitelistCache = new LRUCache(PERFORMANCE_CONFIG.CACHE_SIZES.whitelist);
-    this.groupDataCache = new LRUCache(PERFORMANCE_CONFIG.CACHE_SIZES.groupData);
+    this.groupSettingsCache = new LRUCache(PERFORMANCE_CONFIG.CACHE_SIZES.groupData);
     this.groupMetadataCache = new LRUCache(PERFORMANCE_CONFIG.CACHE_SIZES.groupMetadata);
     this.contactDataCache = new LRUCache(PERFORMANCE_CONFIG.CACHE_SIZES.contactData);
     this.globalStatsCache = {
@@ -150,19 +150,26 @@ class UnifiedCacheManager {
     }
     return this.whitelistCache.get(groupId);
   }
-  async warmGroupDataCache(groupId) {
-    if (!this.groupDataCache.has(groupId)) {
-      try {
-        const { Group } = await import('../../database/index.js');
-        const data = await Group.findOne({ groupId });
-        this.groupDataCache.set(groupId, data);
-        return data;
-      } catch (error) {
-        log(`Error warming group data cache for ${groupId}:\n${error}`, true);
-        return null;
+  async warmGroupSettingsCache(groupId) {
+    try {
+      const { Group } = await import('../../database/index.js');
+      if (this.groupSettingsCache.has(groupId)) {
+        const cachedData = this.groupSettingsCache.get(groupId);
+        const hydratedDoc = Group.hydrate(cachedData);
+        return hydratedDoc;
       }
+      let data = await Group.findOne({ groupId });
+      if (!data) {
+        data = await Group.ensureGroup(groupId);
+      }
+      if (data) {
+        this.groupSettingsCache.set(groupId, data.toObject());
+      }
+      return data;
+    } catch (error) {
+      log(`Error warming group data cache for ${groupId}:\n${error}`, true);
+      return null;
     }
-    return this.groupDataCache.get(groupId);
   }
   async warmGroupMetadataCache(groupId) {
     if (!this.groupMetadataCache.has(groupId)) {
@@ -200,18 +207,31 @@ class UnifiedCacheManager {
     try {
       log('Warming hot data into LRU cache...');
       const { default: GroupCache } = await import('../cache/cacheGroupMetadata.js');
-      const { store } = await import('../../database/index.js');
+      const { store, Group } = await import('../../database/index.js');
       const groups = await GroupCache.getAllCachedGroupIds();
       if (groups.length === 0) {
-        log('No groups found in cache, skipping metadata warming');
+        log('No groups found in cache, skipping data warming');
         return;
       }
       const groupMetadatas = await store.getArrayGroups(groups);
-      let cachedCount = 0;
+      let metadataCachedCount = 0;
       for (const metadata of groupMetadatas) {
         if (metadata) {
           this.groupMetadataCache.set(metadata.groupId || metadata.id, metadata);
-          cachedCount++;
+          metadataCachedCount++;
+        }
+      }
+      const groupIds = groupMetadatas.map(m => m.groupId || m.id).filter(Boolean);
+      if (groupIds.length > 0) {
+        log(`Loading group settings for ${groupIds.length} groups...`);
+        const groupSettings = await Group.find({
+          groupId: { $in: groupIds },
+          isActive: true
+        });
+        for (const setting of groupSettings) {
+          if (setting && setting.groupId) {
+            this.groupSettingsCache.set(setting.groupId, setting.toObject());
+          }
         }
       }
       const contacts = new Set();
@@ -223,10 +243,8 @@ class UnifiedCacheManager {
               jid = p.phoneNumber;
             } else if (p.id && p.id.includes('@s.whatsapp.net')) {
               jid = p.id;
-            } else if (p.id) {
-              if (!p.id.includes('@lid')) {
-                jid = p.id;
-              }
+            } else if (p.id && !p.id.includes('@lid')) {
+              jid = p.id;
             }
             if (jid && jid.includes('@s.whatsapp.net')) {
               contacts.add(jid);
@@ -245,16 +263,16 @@ class UnifiedCacheManager {
           }
         }
       }
-      log(`LRU cache warmed: ${cachedCount} groups, ${contactArray.length} contacts`);
+      log(`LRU cache warmed: ${metadataCachedCount} metadata, ${contactArray.length} contacts`);
     } catch (error) {
-      log(`Warm cache error: ${error}`, true);
+      log(`Warm hot data error: ${error}`, true);
     }
   }
   invalidateGroupMetadataCache(groupId) {
     this.groupMetadataCache.delete(groupId);
   }
   invalidateGroupDataCache(groupId) {
-    this.groupDataCache.delete(groupId);
+    this.groupSettingsCache.delete(groupId);
   }
   invalidateContactCache(jid) {
     this.contactDataCache.delete(jid);
@@ -670,7 +688,7 @@ class UnifiedCacheManager {
         },
         lruCaches: {
           whitelist: { size: this.whitelistCache.size, max: this.whitelistCache.max },
-          groupData: { size: this.groupDataCache.size, max: this.groupDataCache.max },
+          groupData: { size: this.groupSettingsCache.size, max: this.groupSettingsCache.max },
           groupMetadata: { size: this.groupMetadataCache.size, max: this.groupMetadataCache.max },
           contactData: { size: this.contactDataCache.size, max: this.contactDataCache.max }
         },
@@ -690,7 +708,7 @@ class UnifiedCacheManager {
         },
         lruCaches: {
           whitelist: { size: this.whitelistCache.size, max: this.whitelistCache.max },
-          groupData: { size: this.groupDataCache.size, max: this.groupDataCache.max },
+          groupData: { size: this.groupSettingsCache.size, max: this.groupSettingsCache.max },
           groupMetadata: { size: this.groupMetadataCache.size, max: this.groupMetadataCache.max },
           contactData: { size: this.contactDataCache.size, max: this.contactDataCache.max }
         },
@@ -746,7 +764,7 @@ class UnifiedCacheManager {
       }
       this.globalStatsCache.totalHits = 0;
       this.whitelistCache.clear();
-      this.groupDataCache.clear();
+      this.groupSettingsCache.clear();
       this.groupMetadataCache.clear();
       this.contactDataCache.clear();
       log('All caches cleared.');

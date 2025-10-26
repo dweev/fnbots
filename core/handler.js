@@ -220,7 +220,7 @@ export async function arfine(fn, m, { store, dbSettings, ownerNumber, version, i
         commandCount: isCmd ? 1 : 0
       }
     });
-    groupData = await performanceManager.cache.warmGroupDataCache(toId);
+    groupData = await performanceManager.cache.warmGroupSettingsCache(toId);
     if (!groupData || !groupData.isActive) return;
     if (groupData.isMemberBanned(serial)) return;
     const userAfkGroups = await Group.findUserAfkStatus(serial);

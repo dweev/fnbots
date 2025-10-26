@@ -107,8 +107,9 @@ function setupWhatsAppEventHandlers(fn) {
   fn.ev.on('groups.upsert', async (newMetas) => {
     for (const daget of newMetas) {
       const id = jidNormalizedUser(daget.id);
-      log(`Bot dimasukkan ke grup ${id}. Menyinkronkan metadata...`);
+      log(`Bot dimasukkan ke grup ${daget.subject}. Menyinkronkan metadata...`);
       await store.syncGroupMetadata(fn, id);
+      await performanceManager.cache.warmGroupSettingsCache(id);
       if (daget.participants?.length) {
         log(`Memperbarui kontak peserta untuk grup ${id}...`);
         const participantJids = daget.participants.map(p => {

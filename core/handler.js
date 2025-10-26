@@ -70,7 +70,7 @@ export async function arfine(fn, m, { store, dbSettings, ownerNumber, version, i
   await expiredCheck(fn, ownerNumber, store);
   await expiredVIPcheck(fn, ownerNumber, store);
 
-  const serial = await getSerial(m);
+  const serial = await getSerial(m, dbSettings);
   const botNumber = m.botnumber;
   const id = m.key.id;
   const pushname = m.pushName || 'Unknown';

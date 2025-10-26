@@ -569,9 +569,15 @@ export async function expiredVIPcheck(fn, ownerNumber, store) {
     }
   }, config.performance.defaultInterval);
 };
-export async function getSerial(m) {
-  if (m?.key?.fromMe) return;
-  const sender = m.sender;
+export async function getSerial(m, dbSettings) {
+  let sender;
+  const selfMode = dbSettings.self;
+  if (selfMode === 'true' || selfMode === 'auto') {
+    sender = m.sender;
+  } else {
+    if (m?.key?.fromMe) return;
+    sender = m.sender;
+  }
   return sender;
 };
 export async function getTxt(txt, dbSettings) {

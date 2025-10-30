@@ -18,6 +18,10 @@ import { Settings, store } from '../database/index.js';
 import { restartManager } from '../src/lib/restartManager.js';
 import { default as makeWASocket, jidNormalizedUser, fetchLatestBaileysVersion, Browsers, isJidBroadcast, makeCacheableSignalKeyStore } from 'baileys';
 
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const baileysPackage = require('baileys/package.json');
+
 let phoneNumber;
 let pairingStarted = false;
 let isReconnecting = false;
@@ -55,7 +59,7 @@ function parseDisconnectReason(lastDisconnect) {
     502: 'bad_gateway',
     503: 'service_unavailable',
     504: 'gateway_timeout',
-    515: 'protocol_violation',
+    515: 'restart_required',
     516: 'unknown_server_error',
     518: 'connection_replaced',
     540: 'too_many_sessions',
@@ -130,7 +134,7 @@ export async function createWASocket(dbSettings) {
     shouldIgnoreJid: (jid) => {
       return isJidBroadcast(jid) && jid !== 'status@broadcast';
     },
-    browser: Browsers.ubuntu('Chrome'),
+    browser: Browsers.appropriate('Desktop'),
     defaultQueryTimeoutMs: undefined,
     markOnlineOnConnect: false,
     retryRequestDelayMs: 500,
@@ -235,7 +239,8 @@ export async function createWASocket(dbSettings) {
         } catch (error) {
           await log(`Error during group sync: ${error.message}`, true);
         }
-        await log(`WA Version: ${global.version.join('.')}`);
+        await log(`WhatsAppWeb Version: ${global.version.join('.')}`);
+        await log(`Baileys Version: ${baileysPackage.version}`);
         await log(`BOT Number: ${jidNormalizedUser(fn.user.id).split('@')[0]}`);
         await log(`${dbSettings.botName} Success Connected to WhatsApp`);
       }

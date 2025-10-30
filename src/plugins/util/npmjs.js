@@ -17,7 +17,7 @@ export const command = {
     const packageName = arg;
     if (!packageName) return await sReply(`Gagal. Mohon berikan nama paket.\n\nContoh:\n${dbSettings.rname}npmjs baileys`);
     const response = await nativeFetch(`https://registry.npmjs.org/${packageName}`);
-    if (response.status === 404) return sReply(`❎ Paket "${packageName}" tidak ditemukan di NPM registry.`);
+    if (response.status === 404) return sReply(`Paket "${packageName}" tidak ditemukan di NPM registry.`);
     if (!response.ok) return await sReply(`Request gagal dengan status: ${response.status} ${response.statusText}`);
     const stalk = await response.json();
     const latestVersion = stalk['dist-tags']?.latest;

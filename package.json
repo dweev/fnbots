@@ -1,6 +1,6 @@
 {
   "name": "fnbots",
-  "version": "3.0.9",
+  "version": "3.0.10",
   "description": "FNBOTS FN WHATSAPP BOT",
   "main": "core/main.js",
   "type": "module",

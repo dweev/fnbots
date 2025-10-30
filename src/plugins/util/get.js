@@ -6,12 +6,17 @@
 */
 // ─── Info ────────────────────────────────
 
+import path from 'path';
+import fs from 'fs-extra';
+import { fileTypeFromBuffer } from 'file-type';
+import { tmpDir } from '../../lib/tempManager.js';
 import { runJob } from '../../worker/worker_manager.js';
+import { convert as convertNative } from '../../addon/bridge.js';
 
 export const command = {
   name: 'get',
   category: 'util',
-  description: 'Menjalankan skrip eksternal untuk mengambil data atau media.',
+  description: 'Menjalankan native fetch untuk mengambil data atau media.',
   isCommandWithoutPayment: true,
   execute: async ({ fn, m, sReply, toId, dbSettings, arg, sendRawWebpAsSticker }) => {
     const argsArray = arg.match(/(?:[^\s"']+|"[^"]*"|'[^']*')+/g) || [];
@@ -24,18 +29,41 @@ export const command = {
       case 'url':
         await fn.sendFileUrl2(toId, result.content, dbSettings.autocommand, m);
         break;
-      case 'sticker':
-        await sendRawWebpAsSticker(result.content, { packName: dbSettings.packName, authorName: dbSettings.packAuthor });
+      case 'local_file': {
+        let inputBuffer;
+        try {
+          inputBuffer = await fs.readFile(result.path);
+        } catch (readError) {
+          await sReply(`Error membaca file: ${readError.message}`);
+          return;
+        }
+        try {
+          const ext = path.extname(result.path).toLowerCase();
+          if (ext === '.gif' || ext === '.webp') {
+            await sendRawWebpAsSticker(inputBuffer, {
+              packName: dbSettings.packName,
+              authorName: dbSettings.packAuthor
+            });
+            return;
+          }
+          if (ext === '.webm') {
+            try {
+              const outputBuffer = convertNative(inputBuffer, { format: 'mpeg', ptt: false });
+              await fn.sendMediaFromBuffer(toId, 'audio/mpeg', outputBuffer, dbSettings.autocommand, m);
+              return;
+            } catch {
+              await fn.sendMediaFromBuffer(toId, 'video/webm', inputBuffer, dbSettings.autocommand, m);
+              return;
+            }
+          }
+          const fileType = await fileTypeFromBuffer(inputBuffer);
+          const mimeType = fileType?.mime || 'application/octet-stream';
+          await fn.sendMediaFromBuffer(toId, mimeType, inputBuffer, dbSettings.autocommand, m);
+        } finally {
+          await tmpDir.deleteFile(result.path);
+        }
         break;
-      case 'mpeg':
-        await fn.sendMediaFromBuffer(toId, 'audio/mpeg', result.content, dbSettings.autocommand, m);
-        break;
-      case 'media':
-        await fn.sendMediaFromBuffer(toId, result.mime, result.content, dbSettings.autocommand, m);
-        break;
-      case 'document':
-        await fn.sendMediaFromBuffer(toId, result.mime, result.content, dbSettings.autocommand, m);
-        break;
+      }
       default:
         await sReply("Tipe hasil tidak dikenali dari worker.");
     }

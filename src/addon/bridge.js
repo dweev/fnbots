@@ -174,6 +174,91 @@ export function fetch(url, options = {}) {
     });
 }
 
+export function parseArgsToFetchOptions(argsArray) {
+  if (!argsArray || argsArray.length === 0) {
+    throw new Error('URL tidak diberikan!');
+  }
+  const result = {
+    url: argsArray[0],
+    options: {
+      method: 'GET',
+      headers: {},
+      timeout: 30000,
+      decompress: true,
+      maxRedirects: 10,
+    }
+  };
+  for (let i = 1; i < argsArray.length; i++) {
+    const arg = argsArray[i];
+    const value = argsArray[i + 1];
+    switch (arg) {
+      case '--method':
+      case '--metode':
+        if (value) {
+          result.options.method = value.toUpperCase();
+          i++;
+        }
+        break;
+      case '--headers':
+        if (value) {
+          value.split(';').forEach(h => {
+            const [key, ...val] = h.split(':');
+            if (key && val.length > 0) {
+              result.options.headers[key.trim()] = val.join(':').trim();
+            }
+          });
+          i++;
+        }
+        break;
+      case '--data':
+        if (value) {
+          try {
+            const parsed = JSON.parse(value);
+            result.options.body = JSON.stringify(parsed);
+            if (!result.options.headers['Content-Type']) {
+              result.options.headers['Content-Type'] = 'application/json';
+            }
+          } catch (e) {
+            throw new Error('Data JSON tidak valid: ' + e.message);
+          }
+          i++;
+        }
+        break;
+      case '--cookie':
+        if (value) {
+          result.options.cookie = value;
+          i++;
+        }
+        break;
+      case '--proxy':
+        if (value) {
+          result.options.proxy = value;
+          i++;
+        }
+        break;
+    }
+  }
+  return result;
+}
+
+export function getHeader(headers, key) {
+  if (!headers || typeof headers !== 'object') return null;
+  const lowerKey = key.toLowerCase();
+  if (headers.__first && typeof headers.__first === 'object') {
+    for (const [k, v] of Object.entries(headers.__first)) {
+      if (k.toLowerCase() === lowerKey) return v;
+    }
+  }
+  for (const [k, v] of Object.entries(headers)) {
+    if (k === '__first') continue;
+    if (k.toLowerCase() === lowerKey) {
+      if (Array.isArray(v) && v.length > 0) return v[0];
+      return v;
+    }
+  }
+  return null;
+}
+
 class CronJob {
   constructor(name, handle) {
     this._name = name;

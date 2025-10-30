@@ -21,6 +21,7 @@ extern "C" {
 #include <libavutil/avutil.h>
 #include <libavcodec/avcodec.h>
 #include <libswscale/swscale.h>
+#include <libavutil/opt.h> 
 }
 
 static inline void ensure(bool ok, const char* msg) {
@@ -35,6 +36,20 @@ struct AvIOGuard  { AVIOContext*     p=nullptr; ~AvIOGuard(){ if(p){ av_free(p->
 struct AvCodecCtxG{ AVCodecContext*  p=nullptr; ~AvCodecCtxG(){ if(p) avcodec_free_context(&p);} };
 struct AvFrameGuard{ AVFrame*        p=nullptr; ~AvFrameGuard(){ if(p) av_frame_free(&p);} };
 struct SwsGuard   { SwsContext*      p=nullptr; ~SwsGuard(){ if(p) sws_freeContext(p);} };
+struct AVOutFmtGuard { 
+  AVFormatContext* oc = nullptr; 
+  ~AVOutFmtGuard() { 
+    if (oc) {
+      if (oc->pb) {
+        uint8_t* buf = nullptr;
+        avio_close_dyn_buf(oc->pb, &buf);
+        if (buf) av_free(buf);
+        oc->pb = nullptr;
+      }
+      avformat_free_context(oc);
+    }
+  } 
+};
 
 static inline void write_le32(uint8_t* d, uint32_t x){
   d[0]=x&0xff; d[1]=(x>>8)&0xff; d[2]=(x>>16)&0xff; d[3]=(x>>24)&0xff;
@@ -791,6 +806,65 @@ static std::vector<RGBAFrame> DecodeAll(AVFormatContext* fmt, int si, AVCodecCon
   return out;
 }
 
+static std::vector<RGBAFrame> DecodeAnimatedWebP(const uint8_t* data, size_t len) {
+  std::vector<RGBAFrame> frames;
+  
+  WebPData webp_data;
+  webp_data.bytes = data;
+  webp_data.size = len;
+  
+  WebPAnimDecoderOptions dec_options;
+  WebPAnimDecoderOptionsInit(&dec_options);
+  dec_options.color_mode = MODE_RGBA;
+  
+  WebPAnimDecoder* dec = WebPAnimDecoderNew(&webp_data, &dec_options);
+  if (!dec) {
+    throw std::runtime_error("Failed to create WebP animation decoder");
+  }
+  
+  WebPAnimInfo anim_info;
+  if (!WebPAnimDecoderGetInfo(dec, &anim_info)) {
+    WebPAnimDecoderDelete(dec);
+    throw std::runtime_error("Failed to get WebP animation info");
+  }
+  
+  int width = anim_info.canvas_width;
+  int height = anim_info.canvas_height;
+  
+  if (width <= 0 || height <= 0 || width > 8192 || height > 8192) {
+    WebPAnimDecoderDelete(dec);
+    throw std::runtime_error("Invalid WebP dimensions");
+  }
+  
+  int timestamp = 0;
+  while (WebPAnimDecoderHasMoreFrames(dec)) {
+    uint8_t* buf;
+    if (!WebPAnimDecoderGetNext(dec, &buf, &timestamp)) {
+      break;
+    }
+    
+    size_t frame_size = (size_t)width * (size_t)height * 4;
+    std::vector<uint8_t> rgba_data(buf, buf + frame_size);
+    
+    frames.push_back({
+      std::move(rgba_data),
+      width,
+      height,
+      (int64_t)timestamp
+    });
+    
+    if (frames.size() >= 1000) break;
+  }
+  
+  WebPAnimDecoderDelete(dec);
+  
+  if (frames.empty()) {
+    throw std::runtime_error("No frames decoded from animated WebP");
+  }
+  
+  return frames;
+}
+
 Napi::Value AddExif(const Napi::CallbackInfo& info){
   Napi::Env env = info.Env();
   try {
@@ -833,6 +907,8 @@ Napi::Value MakeSticker(const Napi::CallbackInfo& info){
       Napi::TypeError::New(env, "sticker(inputBuffer, options?)").ThrowAsJavaScriptException();
       return env.Null();
     }
+
+    av_log_set_level(AV_LOG_QUIET);
     
     auto input = info[0].As<Napi::Buffer<uint8_t>>();
     
@@ -860,7 +936,7 @@ Napi::Value MakeSticker(const Napi::CallbackInfo& info){
     quality = std::max(1, std::min(100, quality));
     fps = std::max(1, std::min(60, fps));
     maxDur = std::max(1, std::min(60, maxDur));
-    cornerRadius = std::max(0, std::min(256, cornerRadius)); // Max 256px radius
+    cornerRadius = std::max(0, std::min(256, cornerRadius));
     
     std::string pack = opt.Has("packName") ? opt.Get("packName").ToString().Utf8Value() : "";
     std::string author = opt.Has("authorName") ? opt.Get("authorName").ToString().Utf8Value() : "";
@@ -932,10 +1008,274 @@ Napi::Value MakeSticker(const Napi::CallbackInfo& info){
   }
 }
 
+Napi::Value IsAnimatedSticker(const Napi::CallbackInfo& info){
+  Napi::Env env = info.Env();
+  try {
+    if (info.Length() < 1 || !info[0].IsBuffer()) {
+      Napi::TypeError::New(env, "isAnimated(stickerBuffer)").ThrowAsJavaScriptException();
+      return env.Null();
+    }
+    
+    av_log_set_level(AV_LOG_QUIET);
+    
+    auto input = info[0].As<Napi::Buffer<uint8_t>>();
+    const uint8_t* data = input.Data();
+    size_t len = input.Length();
+    
+    if (!IsWebP(data, len)) {
+      return Napi::Boolean::New(env, false);
+    }
+    
+    WebPData webp_data;
+    webp_data.bytes = data;
+    webp_data.size = len;
+    
+    WebPDemuxer* demux = WebPDemux(&webp_data);
+    if (!demux) {
+      return Napi::Boolean::New(env, false);
+    }
+    
+    int frame_count = WebPDemuxGetI(demux, WEBP_FF_FRAME_COUNT);
+    bool is_anim = (frame_count > 1);
+    
+    WebPDemuxDelete(demux);
+    
+    return Napi::Boolean::New(env, is_anim);
+  } catch (const std::exception& e) {
+    Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
+    return env.Null();
+  }
+}
+
+Napi::Value StickerToImage(const Napi::CallbackInfo& info){
+  Napi::Env env = info.Env();
+  try {
+    if (info.Length() < 1 || !info[0].IsBuffer()) {
+      Napi::TypeError::New(env, "toImage(stickerBuffer)").ThrowAsJavaScriptException();
+      return env.Null();
+    }
+    
+    av_log_set_level(AV_LOG_QUIET);
+    
+    auto input = info[0].As<Napi::Buffer<uint8_t>>();
+    const uint8_t* data = input.Data();
+    size_t len = input.Length();
+    
+    int width, height;
+    uint8_t* rgba = WebPDecodeRGBA(data, len, &width, &height);
+    if (!rgba) {
+      throw std::runtime_error("Failed to decode WebP sticker");
+    }
+    
+    size_t rgba_size = (size_t)width * height * 4;
+    std::vector<uint8_t> out(rgba, rgba + rgba_size);
+    WebPFree(rgba);
+    
+    WebPConfig cfg;
+    WebPConfigInit(&cfg);
+    cfg.lossless = 1;
+    
+    WebPPicture pic;
+    WebPPictureInit(&pic);
+    pic.use_argb = 1;
+    pic.width = width;
+    pic.height = height;
+    
+    if (!WebPPictureImportRGBA(&pic, out.data(), width * 4)) {
+      WebPPictureFree(&pic);
+      throw std::runtime_error("WebPPictureImportRGBA failed");
+    }
+    
+    WebPMemoryWriter writer;
+    WebPMemoryWriterInit(&writer);
+    pic.writer = WebPMemoryWrite;
+    pic.custom_ptr = &writer;
+    
+    if (!WebPEncode(&cfg, &pic)) {
+      WebPPictureFree(&pic);
+      WebPMemoryWriterClear(&writer);
+      throw std::runtime_error("WebP encode failed");
+    }
+    
+    std::vector<uint8_t> result(writer.mem, writer.mem + writer.size);
+    
+    WebPMemoryWriterClear(&writer);
+    WebPPictureFree(&pic);
+    
+    return Napi::Buffer<uint8_t>::Copy(env, result.data(), result.size());
+  } catch (const std::exception& e) {
+    Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
+    return env.Null();
+  }
+}
+
+Napi::Value StickerToVideo(const Napi::CallbackInfo& info){
+  Napi::Env env = info.Env();
+  try {
+    if (info.Length() < 1 || !info[0].IsBuffer()) {
+      Napi::TypeError::New(env, "toVideo(stickerBuffer, options?)").ThrowAsJavaScriptException();
+      return env.Null();
+    }
+    
+    av_log_set_level(AV_LOG_QUIET);
+    
+    auto input = info[0].As<Napi::Buffer<uint8_t>>();
+    Napi::Object opt = (info.Length() >= 2 && info[1].IsObject()) ? 
+                        info[1].As<Napi::Object>() : Napi::Object::New(env);
+    
+    const uint8_t* data = input.Data();
+    size_t len = input.Length();
+    
+    std::vector<RGBAFrame> frames;
+    
+    if (IsWebP(data, len)) {
+      try {
+        frames = DecodeAnimatedWebP(data, len);
+      } catch (const std::exception& e) {
+        throw std::runtime_error(std::string("WebP decode failed: ") + e.what());
+      }
+    } else {
+      OpenResult R = OpenFromBuffer(data, len);
+      auto DC = OpenDecoder(R.st);
+      frames = DecodeAll(R.fmt.p, R.stream_index, DC.p, 15, 0);
+      FreeBufferCtx(R);
+    }
+    
+    if (frames.empty()) {
+      throw std::runtime_error("No frames decoded from input");
+    }
+    
+    if (frames[0].w <= 0 || frames[0].h <= 0) {
+      throw std::runtime_error("Invalid frame dimensions");
+    }
+    
+    int fps = 15;
+    if (opt.Has("fps")) {
+      fps = opt.Get("fps").ToNumber().Int32Value();
+      fps = std::max(1, std::min(60, fps));
+    } else if (frames.size() > 1) {
+      int64_t total_duration = frames.back().pts_ms - frames.front().pts_ms;
+      if (total_duration > 0) {
+        fps = (int)std::round((frames.size() - 1) * 1000.0 / total_duration);
+        fps = std::max(1, std::min(30, fps));
+      }
+    }
+    
+    AVOutFmtGuard out_guard;
+    ensure(avformat_alloc_output_context2(&out_guard.oc, nullptr, "mp4", nullptr) == 0, 
+           "alloc output context failed");
+    ensure(avio_open_dyn_buf(&out_guard.oc->pb) == 0, "avio_open_dyn_buf failed");
+    
+    const AVCodec* enc = avcodec_find_encoder(AV_CODEC_ID_H264);
+    ensure_ptr(enc, "H264 encoder not found");
+    
+    AVStream* out_st = avformat_new_stream(out_guard.oc, enc);
+    ensure_ptr(out_st, "new stream failed");
+    
+    AvCodecCtxG enc_ctx;
+    enc_ctx.p = avcodec_alloc_context3(enc);
+    ensure_ptr(enc_ctx.p, "alloc enc ctx failed");
+    
+    enc_ctx.p->codec_id = AV_CODEC_ID_H264;
+    enc_ctx.p->codec_type = AVMEDIA_TYPE_VIDEO;
+    enc_ctx.p->width = frames[0].w;
+    enc_ctx.p->height = frames[0].h;
+    enc_ctx.p->pix_fmt = AV_PIX_FMT_YUV420P;
+    
+    enc_ctx.p->time_base = {1, 1000};
+    enc_ctx.p->framerate = {fps, 1};
+    enc_ctx.p->gop_size = 10;
+    enc_ctx.p->max_b_frames = 0;
+    
+    av_opt_set(enc_ctx.p->priv_data, "preset", "fast", 0);
+    av_opt_set_int(enc_ctx.p->priv_data, "crf", 23, 0);
+    
+    if (out_guard.oc->oformat->flags & AVFMT_GLOBALHEADER) {
+      enc_ctx.p->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+    }
+    
+    ensure(avcodec_open2(enc_ctx.p, enc, nullptr) == 0, "encoder open failed");
+    ensure(avcodec_parameters_from_context(out_st->codecpar, enc_ctx.p) == 0, 
+           "params from context failed");
+    out_st->time_base = enc_ctx.p->time_base;
+    
+    ensure(avformat_write_header(out_guard.oc, nullptr) == 0, "write header failed");
+    
+    SwsGuard sws;
+    sws.p = sws_getContext(frames[0].w, frames[0].h, AV_PIX_FMT_RGBA,
+                          enc_ctx.p->width, enc_ctx.p->height, AV_PIX_FMT_YUV420P,
+                          SWS_BILINEAR, nullptr, nullptr, nullptr);
+    ensure_ptr(sws.p, "sws_getContext failed");
+    
+    AvFrameGuard yuv_frame;
+    yuv_frame.p = av_frame_alloc();
+    ensure_ptr(yuv_frame.p, "av_frame_alloc failed");
+    yuv_frame.p->format = AV_PIX_FMT_YUV420P;
+    yuv_frame.p->width = enc_ctx.p->width;
+    yuv_frame.p->height = enc_ctx.p->height;
+    ensure(av_frame_get_buffer(yuv_frame.p, 0) == 0, "av_frame_get_buffer failed");
+    
+    int64_t first_pts = frames[0].pts_ms;
+    
+    for (size_t i = 0; i < frames.size(); ++i) {
+      const uint8_t* rgba_data = frames[i].data.data();
+      const uint8_t* src_slice[4] = { rgba_data, nullptr, nullptr, nullptr };
+      int src_stride[4] = { frames[i].w * 4, 0, 0, 0 };
+      
+      sws_scale(sws.p, src_slice, src_stride, 0, frames[i].h,
+                yuv_frame.p->data, yuv_frame.p->linesize);
+      
+      yuv_frame.p->pts = frames[i].pts_ms - first_pts;
+      
+      ensure(avcodec_send_frame(enc_ctx.p, yuv_frame.p) == 0, "send_frame failed");
+      
+      AVPacket pkt;
+      av_init_packet(&pkt);
+      pkt.data = nullptr;
+      pkt.size = 0;
+      
+      while (avcodec_receive_packet(enc_ctx.p, &pkt) == 0) {
+        av_packet_rescale_ts(&pkt, enc_ctx.p->time_base, out_st->time_base);
+        pkt.stream_index = out_st->index;
+        av_interleaved_write_frame(out_guard.oc, &pkt);
+        av_packet_unref(&pkt);
+      }
+    }
+
+    avcodec_send_frame(enc_ctx.p, nullptr);
+    AVPacket pkt;
+    av_init_packet(&pkt);
+    while (avcodec_receive_packet(enc_ctx.p, &pkt) == 0) {
+      av_packet_rescale_ts(&pkt, enc_ctx.p->time_base, out_st->time_base);
+      pkt.stream_index = out_st->index;
+      av_interleaved_write_frame(out_guard.oc, &pkt);
+      av_packet_unref(&pkt);
+    }
+    
+    av_write_trailer(out_guard.oc);
+    
+    uint8_t* out_buf = nullptr;
+    int out_size = avio_close_dyn_buf(out_guard.oc->pb, &out_buf);
+    out_guard.oc->pb = nullptr;
+    ensure(out_size > 0 && out_buf, "output buffer invalid");
+    
+    std::vector<uint8_t> result(out_buf, out_buf + out_size);
+    av_free(out_buf);
+    
+    return Napi::Buffer<uint8_t>::Copy(env, result.data(), result.size());
+  } catch (const std::exception& e) {
+    Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
+    return env.Null();
+  }
+}
+
 Napi::Object Init(Napi::Env env, Napi::Object exports){
   exports.Set("addExif", Napi::Function::New(env, AddExif));
   exports.Set("sticker", Napi::Function::New(env, MakeSticker));
   exports.Set("makeSticker", Napi::Function::New(env, MakeSticker));
+  exports.Set("isAnimated", Napi::Function::New(env, IsAnimatedSticker));
+  exports.Set("toImage", Napi::Function::New(env, StickerToImage));
+  exports.Set("toVideo", Napi::Function::New(env, StickerToVideo));
   return exports;
 }
 

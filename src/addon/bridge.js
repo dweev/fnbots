@@ -72,6 +72,30 @@ export function sticker(buffer, options = {}) {
   return stickerNative.sticker(buffer, opts);
 }
 
+export function isAnimated(buffer) {
+  if (!Buffer.isBuffer(buffer)) {
+    throw new Error("isAnimated() input harus Buffer");
+  }
+  return stickerNative.isAnimated(buffer);
+}
+
+export function stickerToImage(buffer) {
+  if (!Buffer.isBuffer(buffer)) {
+    throw new Error("stickerToImage() input harus Buffer");
+  }
+  return stickerNative.toImage(buffer);
+}
+
+export function stickerToVideo(buffer, options = {}) {
+  if (!Buffer.isBuffer(buffer)) {
+    throw new Error("stickerToVideo() input harus Buffer");
+  }
+  const opts = {
+    fps: options.fps ?? 15,
+  };
+  return stickerNative.toVideo(buffer, opts);
+}
+
 export function encodeRGBA(buf, w, h, opt = {}) {
   if (!Buffer.isBuffer(buf)) {
     throw new Error("encodeRGBA() input harus Buffer");

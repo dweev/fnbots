@@ -2,9 +2,33 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.0.10] - 2025-10-30
+
+### 🚀 What's Changed
+- chore: bump version to 3.0.10 ([364bd12](https://github.com/Terror-Machine/fnbots/commit/364bd12ee0454fef9cfa7dbe34783a76bddc0323))
+- refactor(connection): simplify error handling and use Boom for status codes ([538b1d1](https://github.com/Terror-Machine/fnbots/commit/538b1d1009db65385f429c50849861faf621b12b))
+- feat: implement fetch options parser and enhance media processing with improved error handling ([7639638](https://github.com/Terror-Machine/fnbots/commit/763963897f79acf950f80bb8faa06d1d9d54fb14))
+- chore: update tiktok-api-dl dependencies to latest versions and delete axios ([42d11a1](https://github.com/Terror-Machine/fnbots/commit/42d11a1c4af95c6fa73d8209347ffde56c1be0bb))
+- refactor: remove debug logging for media validation in tourl command ([141e809](https://github.com/Terror-Machine/fnbots/commit/141e809977f5d2f015bb944f856bfa1117d8f1c2))
+- feat: update connection handling with improved logging and browser compatibility ([9bf25f2](https://github.com/Terror-Machine/fnbots/commit/9bf25f2e2a37d2ba60ad4defad30a646b8606251))
+- feat: update getSerial function to include dbSettings for self mode handling ([6a98d0f](https://github.com/Terror-Machine/fnbots/commit/6a98d0fbd1deff3a949035d5eb25615e0f8c6010))
+- feat: enhance session debugging with improved key identification and summary response ([61228ae](https://github.com/Terror-Machine/fnbots/commit/61228aef63a14cf3c2712b459e9f3a0eeee49980))
+- refactor: rename group data cache to group settings cache and update related methods ([12b78f6](https://github.com/Terror-Machine/fnbots/commit/12b78f6423777dde2f58f6c64e870b3ebc775677))
+- feat: add whitelist management for groups when bot is removed ([8c3ed73](https://github.com/Terror-Machine/fnbots/commit/8c3ed73025f546a6b528ba4a9c78de66b233f046))
+- feat: enhance participant handling by adding phone number support and improving metadata synchronization ([580ca09](https://github.com/Terror-Machine/fnbots/commit/580ca0960eaff28c27c847f7176f49a1a4395724))
+- refactor: update group metadata retrieval to use store for consistency cache strategy ([d99fde9](https://github.com/Terror-Machine/fnbots/commit/d99fde95c1aa5d1f6f9d7d0996d760fd3c451305))
+- feat: enhance connection management and restart logic with improved error handling and socket reference ([3e6c1b8](https://github.com/Terror-Machine/fnbots/commit/3e6c1b851dbeca075393f181321ed90aa2b05d50))
+- feat: implement media upload functionality with multiple server options ([1bcd6ec](https://github.com/Terror-Machine/fnbots/commit/1bcd6ec314e3f241a84e388965b1f1041e5e7a1b))
+- feat: add header information to katepe.js and screenshots.js files ([bc7cf89](https://github.com/Terror-Machine/fnbots/commit/bc7cf896c89326c7f05481528438ad23ee09c383))
+- feat: add gacha property to user limit reset functionality ([46191ea](https://github.com/Terror-Machine/fnbots/commit/46191ea7ecc4f76926340512c7985ea2a276345a))
+- feat: improve OTP verification flow with enhanced error handling and user notifications ([5b8cf65](https://github.com/Terror-Machine/fnbots/commit/5b8cf651e3beec041657efd21b92f31d9c262152))
+- feat: enhance WASocket configuration and restart manager with improved delay handling ([cf8d5e4](https://github.com/Terror-Machine/fnbots/commit/cf8d5e4966f0d128cae389bb071245a320f1293e))
+- feat: implement error tracking system with management commands and statistics ([30cb122](https://github.com/Terror-Machine/fnbots/commit/30cb1229624c94685df971bea92b756ff53b61c3))
+
 ## [3.0.9] - 2025-10-24
 
 ### 🚀 What's Changed
+- chore(release): update CHANGELOG.md for v3.0.9 ([9da2025](https://github.com/Terror-Machine/fnbots/commit/9da20251452a34a85ec8bd47a57321ac93710a39))
 - chore: bump version to 3.0.9 in package.json ([b6316b3](https://github.com/Terror-Machine/fnbots/commit/b6316b33a6c760b56729e3fc3146a587554f05a1))
 - feat: implement active verification cache for group member verification commands ([fc22315](https://github.com/Terror-Machine/fnbots/commit/fc2231589840b92d195857666860dc488483cd6c))
 - refactor: streamline session data handling and improve error logging ([9e66ed9](https://github.com/Terror-Machine/fnbots/commit/9e66ed9cbf0457c91218c475f578297b97ef6534))

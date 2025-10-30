@@ -46,7 +46,7 @@ export const command = {
           await tmpDir.deleteFile(inputGifPath);
         }
       } else {
-        await fn.sendMediaFromBuffer(toId, 'image/webp', mediaData, dbSettings.autocommand, m);
+        await fn.sendMediaFromBuffer(toId, 'image/png', mediaData, dbSettings.autocommand, m);
       }
     } else {
       let inputText;

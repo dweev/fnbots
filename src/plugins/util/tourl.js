@@ -29,7 +29,6 @@ export const command = {
     const server = uploaders[args[0]];
     const targetMsg = quotedMsg ? m.quoted || m : m.message;
     const isMedia = !!(targetMsg.imageMessage || targetMsg.videoMessage || targetMsg.stickerMessage);
-    console.log(isMedia);
     if (!isMedia) return await sReply("Media tidak valid! Pastikan yang Anda balas adalah gambar atau video.");
     const buffer = await fn.getMediaBuffer(targetMsg);
     if (!Buffer.isBuffer(buffer) || !buffer.length) return await sReply("Failed to get media buffer.");

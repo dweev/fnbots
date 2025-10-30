@@ -10,6 +10,7 @@ import path from 'path';
 import fs from 'fs-extra';
 import { fileURLToPath } from 'url';
 import log from '../../lib/logger.js';
+import config from '../../../config.js';
 import { fetch, parseArgsToFetchOptions, getHeader } from '../../addon/bridge.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -36,7 +37,7 @@ export default async function ({ argsArray }) {
     }
     const isDirectDownload = contentType.startsWith('image/') || contentType.startsWith('audio/') || contentType.startsWith('video/') || contentType.startsWith('application/pdf') || contentType.startsWith('application/zip') || contentType.startsWith('application/octet-stream');
     if (isDirectDownload) {
-      const tempDir = path.join(__dirname, '../sampah');
+      const tempDir = config.paths.tempDir;
       if (!fs.existsSync(tempDir)) {
         fs.mkdirSync(tempDir, { recursive: true });
       }

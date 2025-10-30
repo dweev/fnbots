@@ -47,7 +47,7 @@ export const command = {
     const isVideo = mime === "video/mp4" || mime === "image/gif";
     const duration = targetMsg?.videoMessage?.seconds || 0;
     if (!buffer) return await sReply("Gagal mengunduh media.");
-    if (isVideo && duration > 20) return await sReply("❎ Durasi video terlalu panjang. Maksimal 10 detik untuk stiker.");
+    if (isVideo && duration > 20) return await sReply("Durasi video terlalu panjang. Maksimal 10 detik untuk stiker.");
     if (isVideo) {
       const inputPath = await tmpDir.createTempFileWithContent(buffer, 'mp4');
       const outputPath = tmpDir.createTempFile('webp');

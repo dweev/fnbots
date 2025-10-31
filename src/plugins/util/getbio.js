@@ -14,11 +14,14 @@ export const command = {
   execute: async ({ fn, sReply, quotedMsg, quotedParticipant, mentionedJidList }) => {
     const targetId = quotedMsg ? quotedParticipant : mentionedJidList[0];
     if (!targetId) return await sReply(`Silakan balas pesan atau tag nomor yang ingin ambil bio nya.`);
-    const status = await fn.fetchStatus(targetId);
-    if (status && status.status && status.status.status !== '' && status.status.status !== '1970-01-01T00:00:00.000Z') {
-      await sReply(`Bio dari ${targetId}: ${status.status.status}`);
+    const statusData = await fn.fetchStatus(targetId);
+    console.log(statusData);
+    if (!statusData || statusData.length === 0) return await sReply(`User ID: ${targetId}\nTidak dapat mengambil bio user.`);
+    const userStatus = statusData[0]?.status?.status;
+    if (userStatus && userStatus.trim() !== '') {
+      await sReply(`Bio dari @${targetId.split('@')[0]}:\n\n${userStatus}`);
     } else {
-      await sReply(`User ID: ${targetId}\nTidak ada bio atau privasi user tidak menginginkan bio nya dilihat oleh orang lain.`);
+      await sReply(`User ID: @${targetId.split('@')[0]}\n\nTidak ada bio atau privasi user tidak menginginkan bio nya dilihat oleh orang lain.`);
     }
   }
 };

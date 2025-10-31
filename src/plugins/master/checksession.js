@@ -151,7 +151,7 @@ export const command = {
       });
       response += `Versions:\n`;
       // prettier-ignore
-      Array.from(versions.entries()).sort((a, b) => b[1] - a[1]).slice(0, 5).forEach(([version, count]) => { response += `  • v${version}: ${count} sessions\n` });
+      Array.from(versions.entries()).sort((a, b) => b[1] - a[1]).slice(0, 5).forEach(([version, count]) => { response += `  • v${version}: ${count} sessions\n`; });
       if (versions.size > 5) {
         response += `  • ... +${versions.size - 5} more versions\n`;
       }

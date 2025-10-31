@@ -6,8 +6,7 @@
  */
 // ─── Info ────────────────────────────────
 
-import pkg from 'translatte';
-const { translatte } = pkg;
+import translatte from 'translatte';
 
 export const command = {
   name: 'translate',

@@ -1,9 +1,9 @@
 // ─── Info ─────────────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info src/cache/cacheMessage.js ───────────────
 
 import log from '../lib/logger.js';
@@ -15,6 +15,7 @@ const REDIS_TTL = {
   PRESENCE: 60 * 60 * 24
 };
 
+// prettier-ignore
 const REDIS_PREFIX = {
   MESSAGES:       'cache:messages:',
   CONVERSATIONS:  'cache:conversation:',
@@ -47,7 +48,7 @@ class MessageCache {
         log(`Cache miss for messages: ${chatId}`);
         return null;
       }
-      const parsed = messages.map(m => JSON.parse(m));
+      const parsed = messages.map((m) => JSON.parse(m));
       return parsed;
     } catch (error) {
       log(`Get messages from cache error: ${error.message}`, true);
@@ -171,7 +172,7 @@ class MessageCache {
       if (!conversations || conversations.length === 0) {
         return null;
       }
-      return conversations.map(c => JSON.parse(c));
+      return conversations.map((c) => JSON.parse(c));
     } catch (error) {
       log(`Get conversations from cache error: ${error.message}`, true);
       return null;
@@ -263,6 +264,7 @@ class MessageCache {
   static async clearAllCaches() {
     try {
       log('Clearing all message caches...');
+      // prettier-ignore
       const patterns = [
         `${REDIS_PREFIX.MESSAGES}*`,
         `${REDIS_PREFIX.CONVERSATIONS}*`,

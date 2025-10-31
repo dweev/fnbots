@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import fs from 'fs-extra';
@@ -15,12 +15,14 @@ export const command = {
   description: 'Add blur effect to an image',
   isCommandWithoutPayment: true,
   execute: async ({ fn, m, toId, dbSettings, quotedMsg, mentionedJidList, sReply, arg, args }) => {
-    const kontol = !arg ? 5 : (() => {
-      const num = parseInt(args[0], 10);
-      if (isNaN(num)) return sReply('Argumen pertama harus angka.');
-      if (num > 10) return sReply('Angka tidak boleh lebih dari 10.');
-      return num;
-    })();
+    const kontol = !arg
+      ? 5
+      : (() => {
+          const num = parseInt(args[0], 10);
+          if (isNaN(num)) return sReply('Argumen pertama harus angka.');
+          if (num > 10) return sReply('Angka tidak boleh lebih dari 10.');
+          return num;
+        })();
     let bufferMedia;
     if (m.message?.imageMessage) {
       bufferMedia = await fn.getMediaBuffer(m.message);
@@ -30,7 +32,7 @@ export const command = {
       const targetJid = mentionedJidList[0];
       let profilePicBuffer;
       try {
-        profilePicBuffer = await fn.profileImageBuffer(targetJid, "image");
+        profilePicBuffer = await fn.profileImageBuffer(targetJid, 'image');
       } catch {
         profilePicBuffer = await fs.readFile('./src/image/default-dp.jpeg');
       }

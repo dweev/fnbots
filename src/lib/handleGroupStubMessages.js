@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info src/lib/handleGroupStubMessages.js ─────
 
 import log from './logger.js';
@@ -29,7 +29,7 @@ export default async function handleGroupStubMessages(fn, m) {
       break;
     case 28:
     case 32:
-      if (m.fromMe && (jidNormalizedUser(fn.user.id) === normalizedTarget)) return;
+      if (m.fromMe && jidNormalizedUser(fn.user.id) === normalizedTarget) return;
       needsMetadataRefresh = true;
       break;
     case 172: {
@@ -58,6 +58,7 @@ export default async function handleGroupStubMessages(fn, m) {
         try {
           await OTPSession.createSession(requesterJid, m.key.remoteJid, otp);
           const expiration = await fn.getEphemeralExpiration(requesterJid);
+          // prettier-ignore
           await fn.sendPesan(requesterJid,
             `*Kode Verifikasi Grup*\n\n` +
             `Untuk melanjutkan proses persetujuan, silakan kirim kode berikut:\n\n` +
@@ -94,4 +95,4 @@ export default async function handleGroupStubMessages(fn, m) {
       await log(error, true);
     }
   }
-};
+}

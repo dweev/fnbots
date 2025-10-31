@@ -1,9 +1,9 @@
 // ─── Info ───────────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info src/utils/screenshots.js ──────────────
 
 import { chromium, devices } from 'playwright';
@@ -12,13 +12,7 @@ export async function screenshotWeb(targetUrl, options = {}) {
   if (!targetUrl) {
     return null;
   }
-  const {
-    device,
-    fullPage = false,
-    type = 'png',
-    delay = 0,
-    quality
-  } = options;
+  const { device, fullPage = false, type = 'png', delay = 0, quality } = options;
   let browser;
   try {
     browser = await chromium.launch({ headless: true });
@@ -45,7 +39,7 @@ export async function screenshotWeb(targetUrl, options = {}) {
     });
     return buffer;
   } catch (error) {
-    console.error("Error:", error);
+    console.error('Error:', error);
     return null;
   } finally {
     if (browser) {

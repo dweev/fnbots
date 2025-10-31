@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import { Whitelist } from '../../../database/index.js';
@@ -16,17 +16,17 @@ export const command = {
   isCommandWithoutPayment: true,
   execute: async ({ fn, m, sReply, reactDone, args, dbSettings, store }) => {
     const subcmd = args[0];
-    const target = args.slice(1).join(" ");
-    if (subcmd === "reset") {
+    const target = args.slice(1).join(' ');
+    if (subcmd === 'reset') {
       await Whitelist.clearAll();
       await reactDone();
-    } else if (subcmd === "add") {
+    } else if (subcmd === 'add') {
       if (target.match(/^https:\/\/chat\.whatsapp\.com\/[A-Za-z0-9]+$/i)) {
-        const inviteCode = target.split("https://chat.whatsapp.com/")[1];
+        const inviteCode = target.split('https://chat.whatsapp.com/')[1];
         const { id } = await fn.groupGetInviteInfo(inviteCode);
         await Whitelist.addToWhitelist(id, 'group');
         await reactDone();
-      } else if (target.includes("@g.us")) {
+      } else if (target.includes('@g.us')) {
         await Whitelist.addToWhitelist(target, 'group');
         await reactDone();
       } else {
@@ -34,11 +34,11 @@ export const command = {
           await Whitelist.addToWhitelist(m.key.remoteJid, 'group');
           await reactDone();
         } else {
-          return await sReply("Perintah `whitelist add` tanpa target hanya bisa digunakan di dalam grup.");
+          return await sReply('Perintah `whitelist add` tanpa target hanya bisa digunakan di dalam grup.');
         }
       }
-    } else if (subcmd === "del") {
-      if (target.includes("@g.us")) {
+    } else if (subcmd === 'del') {
+      if (target.includes('@g.us')) {
         await Whitelist.removeFromWhitelist(target, 'group');
         await reactDone();
       } else {
@@ -46,12 +46,12 @@ export const command = {
           await Whitelist.removeFromWhitelist(m.key.remoteJid, 'group');
           await reactDone();
         } else {
-          return await sReply("Perintah `whitelist del` tanpa target hanya bisa digunakan di dalam grup.");
+          return await sReply('Perintah `whitelist del` tanpa target hanya bisa digunakan di dalam grup.');
         }
       }
-    } else if (subcmd === "list") {
+    } else if (subcmd === 'list') {
       const whitelistedGroups = await Whitelist.getWhitelistedGroups();
-      let list = "📜 *Daftar Whitelist Grup:*\n\n";
+      let list = '📜 *Daftar Whitelist Grup:*\n\n';
       if (whitelistedGroups.length > 0) {
         let i = 1;
         for (const whitelist of whitelistedGroups) {
@@ -63,7 +63,7 @@ export const command = {
           }
         }
       } else {
-        list += "_Tidak ada grup yang di-whitelist._";
+        list += '_Tidak ada grup yang di-whitelist._';
       }
       await sReply(list);
     } else {

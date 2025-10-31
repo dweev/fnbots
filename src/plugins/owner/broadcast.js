@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import { delay } from 'baileys';
@@ -29,6 +29,7 @@ export const command = {
       messageContent = args.slice(1).join(' ');
     }
     if (!messageContent) {
+      // prettier-ignore
       return await sReply(
         `Masukkan pesan untuk broadcast.\n\n` +
         `*Penggunaan:*\n` +
@@ -41,7 +42,7 @@ export const command = {
       );
     }
     const allGroupMetadatas = await store.getAllGroups({ groupId: 1 });
-    const allGroupIds = allGroupMetadatas.map(g => g.groupId);
+    const allGroupIds = allGroupMetadatas.map((g) => g.groupId);
     const whitelistIdSet = new Set();
     for (const id of allGroupIds) {
       if (await performanceManager.cache.warmWhitelistCache(id)) {
@@ -50,9 +51,9 @@ export const command = {
     }
     let targetGroups;
     if (broadcastMode === 'whitelist') {
-      targetGroups = allGroupIds.filter(id => whitelistIdSet.has(id));
+      targetGroups = allGroupIds.filter((id) => whitelistIdSet.has(id));
     } else if (broadcastMode === 'nonwhitelist') {
-      targetGroups = allGroupIds.filter(id => !whitelistIdSet.has(id));
+      targetGroups = allGroupIds.filter((id) => !whitelistIdSet.has(id));
     } else {
       targetGroups = allGroupIds;
     }

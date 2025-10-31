@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info src/lib/cooldownManager.js ───────────
 
 import log from './logger.js';
@@ -53,12 +53,15 @@ class CooldownManager {
   }
   getUserQueue(userId) {
     if (!this.userQueues.has(userId)) {
-      this.userQueues.set(userId, new PQueue({
-        concurrency: 1,
-        timeout: 120000,
-        throwOnTimeout: true,
-        autoStart: true
-      }));
+      this.userQueues.set(
+        userId,
+        new PQueue({
+          concurrency: 1,
+          timeout: 120000,
+          throwOnTimeout: true,
+          autoStart: true
+        })
+      );
     }
     return this.userQueues.get(userId);
   }
@@ -156,9 +159,12 @@ class CooldownManager {
     }
   }
   setupCleanupInterval() {
-    this.cleanupIntervalId = setInterval(() => {
-      this.cleanupUserCooldowns();
-    }, 5 * 60 * 1000);
+    this.cleanupIntervalId = setInterval(
+      () => {
+        this.cleanupUserCooldowns();
+      },
+      5 * 60 * 1000
+    );
   }
   cleanupUserCooldowns() {
     const now = Date.now();
@@ -175,37 +181,33 @@ class CooldownManager {
     }
   }
   registerShutdownHandler() {
-    signalHandler.register('cooldownCleanup', async () => {
-      clearInterval(this.cleanupIntervalId);
-      this.commandQueue.pause();
-      this.userQueues.forEach(queue => queue.pause());
-      const globalIdleTimeout = new Promise((resolve) => {
-        setTimeout(() => {
-          log('Global queue idle timeout - forcing cleanup');
-          resolve();
-        }, 30000);
-      });
-      await Promise.race([
-        this.commandQueue.onIdle(),
-        globalIdleTimeout
-      ]);
-      const userQueuesIdle = Array.from(this.userQueues.values()).map(q =>
-        Promise.race([
-          q.onIdle(),
-          new Promise(resolve => setTimeout(resolve, 10000))
-        ])
-      );
-      await Promise.all(userQueuesIdle);
-      this.commandQueue.clear();
-      this.userQueues.forEach(queue => queue.clear());
-      this.userQueues.clear();
-      this.userCooldowns.clear();
-      this.spamSet.clear();
-      this.banSet.clear();
-      this.mediaSpamTracking.clear();
-      log('Cooldown manager cleanup completed');
-      return Promise.resolve();
-    }, 40);
+    signalHandler.register(
+      'cooldownCleanup',
+      async () => {
+        clearInterval(this.cleanupIntervalId);
+        this.commandQueue.pause();
+        this.userQueues.forEach((queue) => queue.pause());
+        const globalIdleTimeout = new Promise((resolve) => {
+          setTimeout(() => {
+            log('Global queue idle timeout - forcing cleanup');
+            resolve();
+          }, 30000);
+        });
+        await Promise.race([this.commandQueue.onIdle(), globalIdleTimeout]);
+        const userQueuesIdle = Array.from(this.userQueues.values()).map((q) => Promise.race([q.onIdle(), new Promise((resolve) => setTimeout(resolve, 10000))]));
+        await Promise.all(userQueuesIdle);
+        this.commandQueue.clear();
+        this.userQueues.forEach((queue) => queue.clear());
+        this.userQueues.clear();
+        this.userCooldowns.clear();
+        this.spamSet.clear();
+        this.banSet.clear();
+        this.mediaSpamTracking.clear();
+        log('Cooldown manager cleanup completed');
+        return Promise.resolve();
+      },
+      40
+    );
   }
   addToSpamSet(userId) {
     this.spamSet.add(userId);
@@ -242,7 +244,7 @@ class CooldownManager {
       },
       userQueues: {
         total: this.userQueues.size,
-        active: Array.from(this.userQueues.values()).filter(q => q.size > 0 || q.pending > 0).length
+        active: Array.from(this.userQueues.values()).filter((q) => q.size > 0 || q.pending > 0).length
       },
       tracking: {
         activeCooldowns: this.userCooldowns.size,
@@ -255,7 +257,7 @@ class CooldownManager {
   canSendAfkNotification(groupId) {
     const lastTime = this.groupCooldowns.get(groupId);
     const now = Date.now();
-    if (!lastTime || (now - lastTime >= config.performance.groupCooldownMS)) {
+    if (!lastTime || now - lastTime >= config.performance.groupCooldownMS) {
       this.groupCooldowns.set(groupId, now);
       return true;
     }

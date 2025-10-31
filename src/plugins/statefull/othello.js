@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import { createOthelloBoard, getValidOthelloMoves, PLAYER_BLACK, generateOthelloBoardImage, calculateOthelloScore } from '../../function/index.js';
@@ -16,7 +16,7 @@ export const command = {
   isLimitGameCommand: true,
   aliases: ['g-othello'],
   execute: async ({ toId, sReply, serial, othelloGame }) => {
-    if (othelloGame[toId]) return await sReply("Masih ada sesi Othello yang berjalan. Hentikan dengan mengetik *menyerah*.");
+    if (othelloGame[toId]) return await sReply('Masih ada sesi Othello yang berjalan. Hentikan dengan mengetik *menyerah*.');
     const playerJid = serial;
     const board = createOthelloBoard();
     const playerValidMoves = getValidOthelloMoves(board, PLAYER_BLACK);

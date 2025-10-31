@@ -1,9 +1,9 @@
 // ─── Info ───────────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info src/utils/igdl.js ─────────────────────
 
 import qs from 'qs';
@@ -42,7 +42,7 @@ async function instagramDl(url) {
     if (results.length === 0) throw new Error('Tidak ada media yang dapat diunduh ditemukan.');
     return {
       results_number: results.length,
-      url_list: results.map(r => r.url),
+      url_list: results.map((r) => r.url),
       media_details: results
     };
   } catch (e) {
@@ -73,7 +73,7 @@ async function instagramPost(url_media, config = { retries: 5, delay: 1000 }) {
     const OUTPUT_DATA = createOutputData(INSTAGRAM_REQUEST);
     return OUTPUT_DATA;
   } catch (err) {
-    console.error("Terjadi kesalahan di fungsi instagramPost:", err);
+    console.error('Terjadi kesalahan di fungsi instagramPost:', err);
     throw err;
   }
 }
@@ -86,7 +86,7 @@ async function checkRedirect(url) {
 }
 function formatPostInfo(requestData) {
   const mediaCapt = requestData.edge_media_to_caption.edges;
-  const capt = (mediaCapt.length === 0) ? "" : mediaCapt[0].node.text;
+  const capt = mediaCapt.length === 0 ? '' : mediaCapt[0].node.text;
   return {
     owner_username: requestData.owner.username,
     owner_fullname: requestData.owner.full_name,
@@ -100,7 +100,7 @@ function formatPostInfo(requestData) {
 function formatMediaDetails(mediaData) {
   if (mediaData.is_video) {
     return {
-      type: "video",
+      type: 'video',
       dimensions: mediaData.dimensions,
       video_view_count: mediaData.video_view_count,
       url: mediaData.video_url,
@@ -108,16 +108,16 @@ function formatMediaDetails(mediaData) {
     };
   } else {
     return {
-      type: "image",
+      type: 'image',
       dimensions: mediaData.dimensions,
       url: mediaData.display_url
     };
   }
 }
 function getShortcode(url) {
-  const post_tags = ["p", "reel", "tv", "reels"];
+  const post_tags = ['p', 'reel', 'tv', 'reels'];
   const url_parts = new URL(url).pathname.split('/').filter(Boolean);
-  const tagIndex = url_parts.findIndex(part => post_tags.includes(part));
+  const tagIndex = url_parts.findIndex((part) => post_tags.includes(part));
   if (tagIndex !== -1 && url_parts[tagIndex + 1]) {
     return url_parts[tagIndex + 1];
   }
@@ -128,17 +128,17 @@ async function getCSRFToken() {
   const setCookieHeader = response.headers.get('set-cookie');
   if (!setCookieHeader) throw new Error('Header set-cookie tidak ditemukan.');
   const cookies = Array.isArray(setCookieHeader) ? setCookieHeader : [setCookieHeader];
-  const csrfCookie = cookies.find(cookie => cookie.startsWith('csrftoken='));
+  const csrfCookie = cookies.find((cookie) => cookie.startsWith('csrftoken='));
   if (!csrfCookie) throw new Error('Token CSRF tidak ditemukan.');
   return csrfCookie.split(';')[0].split('=')[1];
 }
 function isSidecar(requestData) {
-  return requestData["__typename"] === "XDTGraphSidecar";
+  return requestData['__typename'] === 'XDTGraphSidecar';
 }
 async function instagramRequest(shortcode, retries, delay) {
   try {
-    const BASE_URL = "https://www.instagram.com/graphql/query";
-    const INSTAGRAM_DOCUMENT_ID = "9510064595728286";
+    const BASE_URL = 'https://www.instagram.com/graphql/query';
+    const INSTAGRAM_DOCUMENT_ID = '9510064595728286';
     const dataBody = qs.stringify({
       'variables': JSON.stringify({ 'shortcode': shortcode }),
       'doc_id': INSTAGRAM_DOCUMENT_ID
@@ -158,7 +158,7 @@ async function instagramRequest(shortcode, retries, delay) {
       const errorCodes = [429, 403];
       if (errorCodes.includes(response.status) && retries > 0) {
         const waitTime = parseInt(response.headers.get('retry-after') || delay, 10);
-        await new Promise(res => setTimeout(res, waitTime));
+        await new Promise((res) => setTimeout(res, waitTime));
         return instagramRequest(shortcode, retries - 1, delay * 2);
       }
       if (response.status === 404) throw new Error(`Gagal melakukan permintaan: Konten tidak ditemukan (404).`);
@@ -166,14 +166,14 @@ async function instagramRequest(shortcode, retries, delay) {
     }
     const data = await response.json();
     if (!data.data?.xdt_shortcode_media) {
-      throw new Error("Konten tidak ditemukan atau link tidak valid. Pastikan ini adalah link Post/Reel.");
+      throw new Error('Konten tidak ditemukan atau link tidak valid. Pastikan ini adalah link Post/Reel.');
     }
     return data.data.xdt_shortcode_media;
   } catch (err) {
     const errorCodes = [429, 403];
     if (err.response && errorCodes.includes(err.response.status) && retries > 0) {
       const waitTime = parseInt(err.response.headers['retry-after'] || delay, 10);
-      await new Promise(res => setTimeout(res, waitTime));
+      await new Promise((res) => setTimeout(res, waitTime));
       return instagramRequest(shortcode, retries - 1, delay * 2);
     }
     if (err.response?.status === 404) {
@@ -183,7 +183,8 @@ async function instagramRequest(shortcode, retries, delay) {
   }
 }
 function createOutputData(requestData) {
-  const url_list = [], media_details = [];
+  const url_list = [];
+  const media_details = [];
   const IS_SIDECAR = isSidecar(requestData);
 
   if (IS_SIDECAR) {
@@ -205,14 +206,14 @@ function createOutputData(requestData) {
 }
 export default async function instagram(url) {
   try {
-    const cleanUrl = url.split("?")[0];
+    const cleanUrl = url.split('?')[0];
     if (cleanUrl.includes('/stories/') || cleanUrl.includes('/s/')) {
       return await instagramDl(cleanUrl);
     } else {
       return await instagramPost(cleanUrl);
     }
   } catch (error) {
-    console.error("Terjadi kesalahan di fungsi instagram:", error);
+    console.error('Terjadi kesalahan di fungsi instagram:', error);
     throw error;
   }
 }

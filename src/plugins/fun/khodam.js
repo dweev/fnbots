@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import { randomChoice } from '../../function/index.js';
@@ -16,7 +16,7 @@ export const command = {
   isCommandWithoutPayment: true,
   execute: async ({ arg, sReply, quotedParticipant, mentionedJidList, sPesan, serial }) => {
     const khodam = randomChoice(khodams);
-    const targetId = quotedParticipant || (mentionedJidList?.[0]);
+    const targetId = quotedParticipant || mentionedJidList?.[0];
     if (targetId) {
       await sReply(`khodam dari @${targetId.split('@')[0]} adalah *${khodam.nama}*\n${khodam.deskripsi}`);
     } else if (arg) {

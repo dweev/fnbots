@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import errorTracker from '../../lib/errorTracker.js';
@@ -19,7 +19,7 @@ export const command = {
     if (subCmd === 'info') {
       const { performanceManager } = await import('../../lib/performanceManager.js');
       const schedulerStatus = performanceManager.scheduler.getStatus();
-      const cleanupJob = schedulerStatus.jobs.find(j => j.name === 'errorTrackerCleanup');
+      const cleanupJob = schedulerStatus.jobs.find((j) => j.name === 'errorTrackerCleanup');
       let reply = `*Error Tracker Info*\n\n`;
       reply += `Max Consecutive Errors: ${errorTracker.MAX_CONSECUTIVE_ERRORS}\n`;
       reply += `Error Reset Time: ${errorTracker.ERROR_RESET_TIME / 60000} minutes\n\n`;
@@ -68,8 +68,7 @@ export const command = {
     reply += `━━━━━━━━━━━━━━━━━━━━\n\n`;
     entries.sort((a, b) => b[1].errorCount - a[1].errorCount);
     entries.forEach(([cmd, data], idx) => {
-      const statusIcon = data.isDisabled ? '🔴' :
-        data.errorCount >= 3 ? '🟡' : '🟢';
+      const statusIcon = data.isDisabled ? '🔴' : data.errorCount >= 3 ? '🟡' : '🟢';
       const lastError = new Date(data.lastError).toLocaleString('id-ID', {
         timeZone: 'Asia/Jakarta',
         hour: '2-digit',

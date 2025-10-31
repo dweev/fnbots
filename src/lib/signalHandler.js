@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info src/lib/signalHandler.js ───────────────
 
 import process from 'process';
@@ -17,7 +17,7 @@ class SignalHandler {
   setupSignals() {
     process.setMaxListeners(20);
     const signals = ['SIGINT', 'SIGTERM', 'SIGUSR2'];
-    signals.forEach(signal => {
+    signals.forEach((signal) => {
       process.once(signal, async () => {
         if (this.isShuttingDown) return;
         this.isShuttingDown = true;
@@ -43,17 +43,11 @@ class SignalHandler {
   }
   async executeShutdown(signal) {
     console.log(`Starting graceful shutdown...`);
-    const sortedHandlers = Array.from(this.handlers.entries())
-      .sort(([, a], [, b]) => a.priority - b.priority);
+    const sortedHandlers = Array.from(this.handlers.entries()).sort(([, a], [, b]) => a.priority - b.priority);
     for (const [name, { handler }] of sortedHandlers) {
       try {
         console.log(`Executing cleanup: ${name}`);
-        await Promise.race([
-          handler(signal),
-          new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Timeout')), 10000)
-          )
-        ]);
+        await Promise.race([handler(signal), new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 10000))]);
         console.log(`${name} completed`);
       } catch (error) {
         console.error(`${name} failed:`, error.message);

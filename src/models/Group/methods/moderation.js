@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 export const methods = {
@@ -15,7 +15,7 @@ export const methods = {
     return Promise.resolve(this);
   },
   unbanMember(userId) {
-    this.bannedMembers = this.bannedMembers.filter(id => id !== userId);
+    this.bannedMembers = this.bannedMembers.filter((id) => id !== userId);
     return this.save();
   },
   isMemberBanned(userId) {
@@ -36,7 +36,7 @@ export const methods = {
   removeFilterWord(word) {
     const lowerCaseWord = word.toLowerCase();
     const initialLength = this.filterWords.length;
-    this.filterWords = this.filterWords.filter(w => w !== lowerCaseWord);
+    this.filterWords = this.filterWords.filter((w) => w !== lowerCaseWord);
     if (this.filterWords.length !== initialLength) {
       return this.save();
     }
@@ -49,6 +49,6 @@ export const methods = {
   checkMessage(message) {
     if (!this.filter) return false;
     const lowerMessage = message.toLowerCase();
-    return this.filterWords.some(word => lowerMessage.includes(word));
+    return this.filterWords.some((word) => lowerMessage.includes(word));
   }
 };

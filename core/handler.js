@@ -1,14 +1,13 @@
 // ─── Info ─────────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info core/handler.js ─────────────────────
 
 import util from 'util';
 import path from 'path';
-import { delay } from 'baileys';
 import config from '../config.js';
 import log from '../src/lib/logger.js';
 import dayjs from '../src/utils/dayjs.js';
@@ -94,13 +93,13 @@ export async function arfine(fn, m, { store, dbSettings, ownerNumber, version, i
   const body = m?.body;
   const type = m?.type;
   const txt = body;
+  const isCmd = txt?.startsWith(dbSettings.rname) || txt?.startsWith(dbSettings.sname);
 
-  const reactDone = async () => { await delay(1000); await fn.sendMessage(toId, { react: { text: '✅', key: m.key } }); };
-  const reactFail = async () => { await delay(1000); await fn.sendMessage(toId, { react: { text: '❎', key: m.key } }); };
+  const reactDone = async () => await fn.sendMessage(toId, { react: { text: '✅', key: m.key } });
+  const reactFail = async () => await fn.sendMessage(toId, { react: { text: '❎', key: m.key } });
   const sReply = (content, options = {}) => fn.sendReply(toId, content, { quoted: m, ...options });
   const sPesan = (content, options = {}) => fn.sendPesan(toId, content, { ephemeralExpiration: m.expiration ?? 0, ...options });
-  const sendRawWebpAsSticker = async (_data, options = {}) => { await fn.sendRawWebpAsSticker(toId, _data, m, { ...options }); };
-  const isCmd = txt?.startsWith(dbSettings.rname) || txt?.startsWith(dbSettings.sname);
+  const sendRawWebpAsSticker = async (_data, options = {}) => await fn.sendRawWebpAsSticker(toId, _data, m, { ...options });
 
   if (user.isUserMuted(serial)) return;
   if (body?.startsWith('>')) {
@@ -165,11 +164,15 @@ export async function arfine(fn, m, { store, dbSettings, ownerNumber, version, i
           const errObj = {
             name: error?.name,
             message: error?.message,
-            stack: error?.stack,
+            stack: error?.stack
           };
           for (const k of Object.getOwnPropertyNames(error || {})) {
             if (!['name', 'message', 'stack'].includes(k)) {
-              try { errObj[k] = error[k]; } catch { errObj[k] = `[unserializable:${k}]`; }
+              try {
+                errObj[k] = error[k];
+              } catch {
+                errObj[k] = `[unserializable:${k}]`;
+              }
             }
           }
           return safeStringify(errObj, 2);
@@ -183,23 +186,23 @@ export async function arfine(fn, m, { store, dbSettings, ownerNumber, version, i
     if (!isSadmin && !isMaster) return;
     try {
       const { stdout, stderr } = await exec(body?.slice(2).trim());
-      const combinedOutput = (stdout || stderr || "").trim();
+      const combinedOutput = (stdout || stderr || '').trim();
       if (combinedOutput) {
         await sReply(`\`\`\`\n${util.format(combinedOutput)}\n\`\`\``);
       } else {
-        await sReply("Perintah berhasil dieksekusi, namun tidak ada output yang dihasilkan.");
+        await sReply('Perintah berhasil dieksekusi, namun tidak ada output yang dihasilkan.');
       }
     } catch (error) {
       await sReply(`\`\`\`\n${util.format(error)}\n\`\`\``);
     }
-  } else if (body?.toLowerCase().trim() === "res") {
+  } else if (body?.toLowerCase().trim() === 'res') {
     if (!isSadmin && !isMaster) return;
     dbSettings.restartState = true;
     dbSettings.restartId = m.from;
     await Settings.updateSettings(dbSettings);
     await reactDone();
-    await restartManager.restart("Manual restart", performanceManager, fn);
-  } else if (body?.toLowerCase().trim() === "shutdown") {
+    await restartManager.restart('Manual restart', performanceManager, fn);
+  } else if (body?.toLowerCase().trim() === 'shutdown') {
     if (!isSadmin && !isMaster) return;
     await reactDone();
     await restartManager.shutdown(performanceManager, fn);
@@ -227,11 +230,7 @@ export async function arfine(fn, m, { store, dbSettings, ownerNumber, version, i
     if (userAfkGroups.length > 0) {
       const currentTime = new Date();
       for (const afkGroup of userAfkGroups) {
-        const handleResult = await Group.findOneAndUpdate(
-          { groupId: afkGroup.groupId },
-          {},
-          { new: true }
-        );
+        const handleResult = await Group.findOneAndUpdate({ groupId: afkGroup.groupId }, {}, { new: true });
         if (handleResult) {
           const returnResult = await handleResult.handleUserReturn(serial, currentTime);
           if (returnResult.success) {
@@ -257,6 +256,7 @@ export async function arfine(fn, m, { store, dbSettings, ownerNumber, version, i
         switch (verificationResult.reason) {
           case 'OTP_VERIFIED': {
             await sPesan('Verifikasi berhasil!\n\nPermintaan Anda telah diteruskan ke Admin untuk persetujuan akhir. Mohon tunggu.');
+            // prettier-ignore
             const adminNotification =
               `*Permintaan Bergabung Baru*\n\n` +
               `Pengguna: @${serial.split('@')[0]}\n` +
@@ -283,7 +283,7 @@ export async function arfine(fn, m, { store, dbSettings, ownerNumber, version, i
       }
     }
   }
-  
+
   const userData = {
     isSadmin: isSadmin,
     isMaster: isMaster,
@@ -322,7 +322,7 @@ export async function arfine(fn, m, { store, dbSettings, ownerNumber, version, i
       if (groupData.filter) {
         if (isBotGroupAdmins && body && groupData.filterWords && groupData.filterWords.length > 0) {
           if (!isPrivileged) {
-            const filteredWord = groupData.filterWords.find(word => {
+            const filteredWord = groupData.filterWords.find((word) => {
               const regex = new RegExp(`\\b${word}\\b`, 'i');
               return regex.test(body);
             });
@@ -375,7 +375,7 @@ export async function arfine(fn, m, { store, dbSettings, ownerNumber, version, i
         if (groupData.checkAfkUser(ment)) {
           const afkData = groupData.getAfkData(ment);
           if (afkData) {
-            const userTag = await fn.getName(ment) || ment.split('@')[0];
+            const userTag = (await fn.getName(ment)) || ment.split('@')[0];
             const waktuAfk = dayjs(afkData.time).tz('Asia/Jakarta').format('DD/MM/YYYY HH:mm:ss');
             afkUsersToSend.push({
               userTag,
@@ -389,7 +389,7 @@ export async function arfine(fn, m, { store, dbSettings, ownerNumber, version, i
       if (afkUsersToSend.length > 0) {
         if (cooldownManager.canSendAfkNotification(toId)) {
           let groupMessage = '┌ ❏ *PENGGUNA SEDANG AFK*\n│\n';
-          afkUsersToSend.forEach(user => {
+          afkUsersToSend.forEach((user) => {
             groupMessage += `│ • Pengguna: ${user.userTag}\n`;
             groupMessage += `│   └ Sejak: ${user.waktu}\n`;
             groupMessage += `│   └ Alasan: ${user.reason}\n│\n`;
@@ -404,6 +404,7 @@ export async function arfine(fn, m, { store, dbSettings, ownerNumber, version, i
               }
               const groupName = metadata?.subject || 'sebuah grup';
               const currentTime = dayjs().tz('Asia/Jakarta').format('DD/MM/YYYY HH:mm:ss');
+              // prettier-ignore
               const notificationMsg = `*Notifikasi AFK*\n\n` +
                 `Seseorang men-tag kamu di grup *${groupName}*:\n` +
                 `• Pengirim: @${serial.split('@')[0]}\n` +
@@ -481,16 +482,69 @@ export async function arfine(fn, m, { store, dbSettings, ownerNumber, version, i
                   const args = currentCommand.split(' ').slice(1);
                   const fullArgs = args.join(' ');
                   const commandArgs = {
-                    fn, m, dbSettings, ownerNumber, version, isSadmin, isMaster, isVIP, isPremium,
-                    isWhiteList, hakIstimewa, isBotGroupAdmins, sPesan, sReply, reactDone, reactFail,
-                    toId, quotedMsg, quotedParticipant, mentionedJidList, body, args, arg: fullArgs,
-                    ar: args, serial, user, groupData, botNumber, mygroupMembers, mygroup, isPrivileged,
-                    pushname, yts, tebaklirik, tekateki, tebakkata, susunkata, tebakkimia, tebaknegara,
-                    tebakbendera, tebakgambar, caklontong, sudokuGame, family100, hangman, chatBots,
-                    sessions, chessGame, othelloGame, ludoSessions, game41Sessions, gamematematika,
-                    werewolfSessions, minesweeperSessions, ularTanggaSessions, tictactoeSessions,
-                    samgongSessions, tebakkalimat, siapakahaku, ulartangga, tebakgame,
-                    sendRawWebpAsSticker, store
+                    fn,
+                    m,
+                    dbSettings,
+                    ownerNumber,
+                    version,
+                    isSadmin,
+                    isMaster,
+                    isVIP,
+                    isPremium,
+                    isWhiteList,
+                    hakIstimewa,
+                    isBotGroupAdmins,
+                    sPesan,
+                    sReply,
+                    reactDone,
+                    reactFail,
+                    toId,
+                    quotedMsg,
+                    quotedParticipant,
+                    mentionedJidList,
+                    body,
+                    args,
+                    arg: fullArgs,
+                    ar: args,
+                    serial,
+                    user,
+                    groupData,
+                    botNumber,
+                    mygroupMembers,
+                    mygroup,
+                    isPrivileged,
+                    pushname,
+                    yts,
+                    tebaklirik,
+                    tekateki,
+                    tebakkata,
+                    susunkata,
+                    tebakkimia,
+                    tebaknegara,
+                    tebakbendera,
+                    tebakgambar,
+                    caklontong,
+                    sudokuGame,
+                    family100,
+                    hangman,
+                    chatBots,
+                    sessions,
+                    chessGame,
+                    othelloGame,
+                    ludoSessions,
+                    game41Sessions,
+                    gamematematika,
+                    werewolfSessions,
+                    minesweeperSessions,
+                    ularTanggaSessions,
+                    tictactoeSessions,
+                    samgongSessions,
+                    tebakkalimat,
+                    siapakahaku,
+                    ulartangga,
+                    tebakgame,
+                    sendRawWebpAsSticker,
+                    store
                   };
                   await command.execute(commandArgs);
                   await errorTracker.resetError(commandName);
@@ -534,11 +588,7 @@ export async function arfine(fn, m, { store, dbSettings, ownerNumber, version, i
                   }
                 }
               } catch (error) {
-                const errorDetails = await errorTracker.trackError(
-                  commandName,
-                  error.message,
-                  error.stack
-                );
+                const errorDetails = await errorTracker.trackError(commandName, error.message, error.stack);
                 log(`Command "${commandName}" error (${errorDetails.errorCount}/${errorTracker.MAX_CONSECUTIVE_ERRORS}): ${error.message}`, true);
                 log(error, true);
                 if (errorDetails.shouldDisable) {
@@ -555,12 +605,14 @@ export async function arfine(fn, m, { store, dbSettings, ownerNumber, version, i
                         log(`Failed to send error report to ${ownerJid}: ${notifError.message}`, true);
                       }
                     }
+                    // prettier-ignore
                     await sReply(
                       `Perintah *${command.name}* telah dinonaktifkan otomatis karena mengalami ${errorDetails.errorCount} error berturut-turut.\n\n` +
                       `Admin telah diberitahu tentang masalah ini.`
                     );
                   }
                 } else {
+                  // prettier-ignore
                   await sReply(
                     `Terjadi kesalahan saat menjalankan perintah "${command.name}":\n${error.message}\n\n` +
                     `_Error count: ${errorDetails.errorCount}/${errorTracker.MAX_CONSECUTIVE_ERRORS}_`
@@ -574,6 +626,7 @@ export async function arfine(fn, m, { store, dbSettings, ownerNumber, version, i
             if (commandFound) {
               const msgPreview = msgs(currentCommand);
               if (msgPreview !== undefined) {
+                // prettier-ignore
                 const parts = [
                   color(msgPreview, "#32CD32"),
                   color('from', "#a8dffb"),
@@ -626,30 +679,52 @@ export async function arfine(fn, m, { store, dbSettings, ownerNumber, version, i
     } else {
       if (dbSettings.antideleted === true) {
         await handleAntiDeleted({ fn, m, toId, store });
-      };
+      }
       if (dbSettings.autojoin === true) {
         await handleAutoJoin({ m, fn, dbSettings, body, isSadmin, isMaster, isVIP, user, sReply, User });
-      };
+      }
       if (dbSettings.changer === true) {
         await handleAudioChanger({ m, toId, fn, selfMode, fromBot, runJob, sReply });
-      };
+      }
       if (dbSettings.autosticker === true) {
         await handleAutoSticker({ m, toId, fn, runJob, reactDone });
-      };
+      }
       if (dbSettings.chatbot === true) {
         await handleChatbot({ m, toId, fn, dbSettings, body, Media, DatabaseBot, sReply });
-      };
+      }
       if (dbSettings.autodownload === true) {
         await handleAutoDownload({ body, fn, toId, m, dbSettings, user, sReply });
-      };
+      }
     }
     const gameStates = {
-      hangman, family100, tebaklirik, tekateki, tebakkata, susunkata,
-      tebakkimia, tebaknegara, tebakgambar, caklontong, tebakbendera,
-      sudokuGame, chatBots, sessions, chessGame, othelloGame,
-      ludoSessions, game41Sessions, gamematematika, werewolfSessions,
-      minesweeperSessions, ularTanggaSessions, tictactoeSessions,
-      samgongSessions, tebakkalimat, siapakahaku, ulartangga, tebakgame
+      hangman,
+      family100,
+      tebaklirik,
+      tekateki,
+      tebakkata,
+      susunkata,
+      tebakkimia,
+      tebaknegara,
+      tebakgambar,
+      caklontong,
+      tebakbendera,
+      sudokuGame,
+      chatBots,
+      sessions,
+      chessGame,
+      othelloGame,
+      ludoSessions,
+      game41Sessions,
+      gamematematika,
+      werewolfSessions,
+      minesweeperSessions,
+      ularTanggaSessions,
+      tictactoeSessions,
+      samgongSessions,
+      tebakkalimat,
+      siapakahaku,
+      ulartangga,
+      tebakgame
     };
     const gameHandled = await handleGameBotResponse({ m, toId, body, user, sReply, sPesan, fn, serial, isCmd, reactFail, dbSettings, config, gameStates });
     if (gameHandled) return;
@@ -659,4 +734,4 @@ export async function arfine(fn, m, { store, dbSettings, ownerNumber, version, i
     chainingCommands = [];
     suggested = false;
   }
-};
+}

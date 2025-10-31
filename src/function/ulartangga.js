@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── info src/function/ulartangga.js ─────────────────
 
 import sharp from 'sharp';
@@ -28,9 +28,10 @@ export const turboBoard = {
 };
 export function rollDice() {
   return Math.floor(Math.random() * 6) + 1;
-};
+}
 export function createRandomMap() {
   const basePath = config.paths.basePath;
+  // prettier-ignore
   const mapsData = [
     { move: { 4: 56, 12: 50, 14: 55, 22: 58, 41: 79, 54: 88, 96: 42, 94: 71, 75: 32, 48: 16, 37: 3, 28: 10 } },
     { move: { 7: 36, 21: 58, 31: 51, 34: 84, 54: 89, 63: 82, 96: 72, 78: 59, 66: 12, 56: 20, 43: 24, 33: 5 } },
@@ -46,7 +47,7 @@ export function createRandomMap() {
   selectedMap.path = `${basePath}map${randomIndex + 1}.jpg`;
   selectedMap.size = 100;
   return selectedMap;
-};
+}
 export function startUlarTanggaTimeout(idGroup, ularTanggaSessions) {
   const gameDuration = 3 * 60 * 1000;
   const timeoutCallback = () => {
@@ -57,7 +58,7 @@ export function startUlarTanggaTimeout(idGroup, ularTanggaSessions) {
   if (ularTanggaSessions[idGroup]) {
     ularTanggaSessions[idGroup].timeoutId = setTimeout(timeoutCallback, gameDuration);
   }
-};
+}
 export async function generateUlarTanggaImage(gameState) {
   try {
     const boardSize = 1024;
@@ -73,7 +74,7 @@ export async function generateUlarTanggaImage(gameState) {
       const { position } = players[i];
       if (position === 0) continue;
       const row = Math.floor((position - 1) / 10);
-      const col = (row % 2 === 0) ? (position - 1) % 10 : 9 - (position - 1) % 10;
+      const col = row % 2 === 0 ? (position - 1) % 10 : 9 - ((position - 1) % 10);
       const x = col * tileSize;
       const y = (9 - row) * tileSize;
       const pionSize = Math.round(tileSize * 0.7);
@@ -83,7 +84,7 @@ export async function generateUlarTanggaImage(gameState) {
       layers.push({
         input: pionBuffer,
         top: Math.round(y + offsetY),
-        left: Math.round(x + offsetX),
+        left: Math.round(x + offsetX)
       });
     }
     const finalImageBuffer = await sharp(gameState.map.path).resize(boardSize, boardSize).composite(layers).jpeg({ quality: 90, progressive: true, mozjpeg: true }).toBuffer();
@@ -92,7 +93,7 @@ export async function generateUlarTanggaImage(gameState) {
     await log(`Error generateUlarTanggaImage:\n${error}`, true);
     return null;
   }
-};
+}
 export async function runBotUlarTanggaTurn(toId, m, fn, ularTanggaSessions) {
   const gameState = ularTanggaSessions[toId];
   if (!gameState) return;
@@ -141,7 +142,7 @@ export async function runBotUlarTanggaTurn(toId, m, fn, ularTanggaSessions) {
     await fn.sendPesan(toId, botText, { ephemeralExpiration: m.expiration ?? 0 });
     startUlarTanggaTimeout(toId, ularTanggaSessions);
   }
-};
+}
 export async function runBotUlarTanggaTurnV2(toId, m, fn, ulartangga) {
   const sPesan = (text) => fn.sendPesan(toId, text, { ephemeralExpiration: m.expiration ?? 0 });
   const gameState = ulartangga[toId];
@@ -151,6 +152,7 @@ export async function runBotUlarTanggaTurnV2(toId, m, fn, ulartangga) {
   const oldPos = gameState.botPos;
   gameState.botPos += roll;
   if (gameState.botPos > 100) gameState.botPos = 100 - (gameState.botPos - 100);
+  // prettier-ignore
   let moveText = `🤖 *Giliran Bot...*\n` +
     `Bot melempar dadu dan mendapat angka *${roll}*.\n` +
     `Bot maju dari *${oldPos}* ke *${gameState.botPos}*.\n`;
@@ -178,4 +180,4 @@ export async function runBotUlarTanggaTurnV2(toId, m, fn, ulartangga) {
       delete ulartangga[toId];
     }
   }, gameDuration);
-};
+}

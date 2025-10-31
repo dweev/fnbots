@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 export const command = {
@@ -18,10 +18,12 @@ export const command = {
     const messageTimestamp = m.timestamp && m.timestamp !== 0 ? m.timestamp : Date.now();
     const modifyOptions = {
       archive: arsip,
-      lastMessages: [{
-        key: m.key,
-        messageTimestamp: messageTimestamp
-      }]
+      lastMessages: [
+        {
+          key: m.key,
+          messageTimestamp: messageTimestamp
+        }
+      ]
     };
     await fn.chatModify(modifyOptions, toId);
     await reactDone();

@@ -1,9 +1,9 @@
 // ─── Info ─────────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info core/main.js ────────────────────────
 
 import process from 'process';
@@ -66,7 +66,7 @@ async function initializeDatabases() {
     await log(error, true);
     throw error;
   }
-};
+}
 
 function setupWhatsAppEventHandlers(fn) {
   fn.ev.on('messaging-history.set', async (event) => {
@@ -74,11 +74,7 @@ function setupWhatsAppEventHandlers(fn) {
       console.error('Received empty event');
       return;
     }
-    const {
-      contacts = [],
-      messages = [],
-      syncType
-    } = event;
+    const { contacts = [], messages = [], syncType } = event;
     if (syncType === proto.HistorySync.HistorySyncType.ON_DEMAND) {
       console.log('received on-demand history sync, messages=', messages.length);
     }
@@ -112,14 +108,14 @@ function setupWhatsAppEventHandlers(fn) {
       await performanceManager.cache.warmGroupSettingsCache(id);
       if (daget.participants?.length) {
         log(`Memperbarui kontak peserta untuk grup ${id}...`);
-        const participantJids = daget.participants.map(p => {
+        const participantJids = daget.participants.map((p) => {
           if (p.phoneNumber) return p.phoneNumber;
           if (p.id && p.id.includes('@s.whatsapp.net')) return p.id;
           return p.id;
         });
         const contacts = await store.getArrayContacts(participantJids);
         if (contacts) {
-          const contactMap = new Map(contacts.map(c => [c.jid, c]));
+          const contactMap = new Map(contacts.map((c) => [c.jid, c]));
           const contactUpdates = [];
           for (const participant of daget.participants) {
             let contactJid;
@@ -157,14 +153,14 @@ function setupWhatsAppEventHandlers(fn) {
       const id = jidNormalizedUser(newMeta.id);
       await store.updateGroupMetadata(id, newMeta);
       if (newMeta.participants?.length) {
-        const participantJids = newMeta.participants.map(p => {
+        const participantJids = newMeta.participants.map((p) => {
           if (p.phoneNumber) return p.phoneNumber;
           if (p.id && p.id.includes('@s.whatsapp.net')) return p.id;
           return p.id;
         });
         const contacts = await store.getArrayContacts(participantJids);
         if (contacts) {
-          const contactMap = new Map(contacts.map(c => [c.jid, c]));
+          const contactMap = new Map(contacts.map((c) => [c.jid, c]));
           const contactUpdates = [];
           for (const participant of newMeta.participants) {
             let contactJid;
@@ -218,10 +214,10 @@ function setupWhatsAppEventHandlers(fn) {
           lid = participantAlt?.endsWith('@lid') ? participantAlt : null;
         }
         if (!jid) {
-          jid = participant?.endsWith('@s.whatsapp.net') ? participant : (participantAlt?.endsWith('@s.whatsapp.net') ? participantAlt : null);
+          jid = participant?.endsWith('@s.whatsapp.net') ? participant : participantAlt?.endsWith('@s.whatsapp.net') ? participantAlt : null;
         }
         if (!lid) {
-          lid = participant?.endsWith('@lid') ? participant : (participantAlt?.endsWith('@lid') ? participantAlt : null);
+          lid = participant?.endsWith('@lid') ? participant : participantAlt?.endsWith('@lid') ? participantAlt : null;
         }
       } else {
         delete key.participant;
@@ -236,14 +232,14 @@ function setupWhatsAppEventHandlers(fn) {
           lid = remoteJidAlt?.endsWith('@lid') ? remoteJidAlt : null;
         }
         if (!jid) {
-          jid = remoteJid?.endsWith('@s.whatsapp.net') ? remoteJid : (remoteJidAlt?.endsWith('@s.whatsapp.net') ? remoteJidAlt : null);
+          jid = remoteJid?.endsWith('@s.whatsapp.net') ? remoteJid : remoteJidAlt?.endsWith('@s.whatsapp.net') ? remoteJidAlt : null;
         }
         if (!lid) {
-          lid = remoteJid?.endsWith('@lid') ? remoteJid : (remoteJidAlt?.endsWith('@lid') ? remoteJidAlt : null);
+          lid = remoteJid?.endsWith('@lid') ? remoteJid : remoteJidAlt?.endsWith('@lid') ? remoteJidAlt : null;
         }
       }
       if (jid && lid) {
-        const eName = messageData.pushName || await fn.getName(jid);
+        const eName = messageData.pushName || (await fn.getName(jid));
         await updateContact(jid, { lid: lid, name: eName });
       }
     }
@@ -276,9 +272,9 @@ function setupWhatsAppEventHandlers(fn) {
     }
     await store.updatePresences(id, resolvedPresences);
   });
-  fn.ev.on("call", (call) => {
+  fn.ev.on('call', (call) => {
     const { id, status, from } = call[0];
-    if (status === "offer" && dbSettings.anticall) {
+    if (status === 'offer' && dbSettings.anticall) {
       return fn.rejectCall(id, from);
     }
   });
@@ -306,32 +302,36 @@ async function starts() {
     errorTracker.initialize(performanceManager);
   } catch (error) {
     await log(error, true);
-    await restartManager.restart("Failed to load database store", performanceManager, fn);
+    await restartManager.restart('Failed to load database store', performanceManager, fn);
   }
-};
+}
 
-signalHandler.register('database', async (signal) => {
-  await log(`${signal}: Database cleanup initiated...`);
-  try {
-    await errorTracker.shutdown();
-    if (authStore) {
-      await authStore.saveCreds();
-      await log('Credentials saved');
+signalHandler.register(
+  'database',
+  async (signal) => {
+    await log(`${signal}: Database cleanup initiated...`);
+    try {
+      await errorTracker.shutdown();
+      if (authStore) {
+        await authStore.saveCreds();
+        await log('Credentials saved');
+      }
+      if (dbSettings) {
+        await Settings.updateSettings(dbSettings);
+      }
+      if (store) {
+        await store.disconnect();
+      }
+      if (database?.isConnected) {
+        await database.disconnect();
+      }
+      await log(`Database cleanup completed.`);
+    } catch (error) {
+      await log(error, true);
     }
-    if (dbSettings) {
-      await Settings.updateSettings(dbSettings);
-    }
-    if (store) {
-      await store.disconnect();
-    }
-    if (database?.isConnected) {
-      await database.disconnect();
-    }
-    await log(`Database cleanup completed.`);
-  } catch (error) {
-    await log(error, true);
-  }
-}, 100);
+  },
+  100
+);
 
 process.on('unhandledRejection', async (reason, promise) => {
   await log(`Unhandled Rejection at: ${promise}, reason: ${reason}`);

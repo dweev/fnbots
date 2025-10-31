@@ -1,16 +1,15 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import path from 'path';
 import fs from 'fs-extra';
 import FileProcessor from '../../utils/beautify.js';
 import log from '../../lib/logger.js';
-
 
 export const command = {
   name: 'beautify',
@@ -21,7 +20,7 @@ export const command = {
     if (quotedMsg && quotedMsg?.documentMessage) {
       const mime = quotedMsg?.documentMessage?.mimetype || '';
       const supportedMimes = ['application/javascript', 'text/html', 'text/css', 'application/json', 'application/zip', 'text/plain'];
-      if (!supportedMimes.some(supportedMime => mime.startsWith(supportedMime))) return await sReply("Tipe media tidak didukung. Harap reply file .js, .json, .html, .css, atau .zip");
+      if (!supportedMimes.some((supportedMime) => mime.startsWith(supportedMime))) return await sReply('Tipe media tidak didukung. Harap reply file .js, .json, .html, .css, atau .zip');
       const buffer = await fn.getMediaBuffer(quotedMsg);
       const originalFileName = quotedMsg?.documentMessage.title || 'replied-file';
       let beautifiedBuffer, outputFileName;
@@ -54,6 +53,7 @@ export const command = {
         codeToProcess = arg;
       }
       if (!codeToProcess || !codeToProcess.trim()) {
+        // prettier-ignore
         const usage = `*Perintah Beautifier Universal*\n\n` +
           `Gunakan untuk merapikan kode JS, JSON, HTML, & CSS.\n\n` +
           `*Cara 1: Reply File*\n` +
@@ -77,10 +77,10 @@ export const command = {
           outputFileName = processor.getOutputFileName('beautified-code', 'js');
         } catch (error) {
           await log(`Beautify failed for both JSON and JS:\n${error}`, true);
-          return await sReply("Gagal memformat kode. Pastikan sintaks JavaScript atau JSON Kamu sudah benar.");
+          return await sReply('Gagal memformat kode. Pastikan sintaks JavaScript atau JSON Kamu sudah benar.');
         }
       }
-      if (!beautifiedBuffer) return await sReply("Gagal memproses konten.");
+      if (!beautifiedBuffer) return await sReply('Gagal memproses konten.');
       const beautifiedText = beautifiedBuffer.toString('utf8');
       if (beautifiedText.length < 10000) {
         const detectedType = outputFileName.endsWith('.json') ? 'json' : 'javascript';

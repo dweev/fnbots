@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import util from 'util';
@@ -26,11 +26,11 @@ export const command = {
   execute: async ({ fn, m, toId, dbSettings, quotedMsg, arg, sReply }) => {
     let command = '';
     const targetMsg = quotedMsg ? m.quoted || m : m.message;
-    if (!targetMsg) return await sReply("Media tidak ditemukan.");
+    if (!targetMsg) return await sReply('Media tidak ditemukan.');
     const mime = targetMsg?.imageMessage?.mimetype;
-    if (!mime || !mime.startsWith('image/')) return await sReply("Kirim atau balas sebuah GAMBAR.");
+    if (!mime || !mime.startsWith('image/')) return await sReply('Kirim atau balas sebuah GAMBAR.');
     const buffer = await fn.getMediaBuffer(targetMsg);
-    if (!buffer) return await sReply("Gagal mengunduh media.");
+    if (!buffer) return await sReply('Gagal mengunduh media.');
     const inputPath = tmpDir.createTempFile('jpg', 'input-');
     const outputPath = tmpDir.createTempFile('jpg', 'output-');
     const sendPath = tmpDir.createTempFile('jpg', 'rembg-');

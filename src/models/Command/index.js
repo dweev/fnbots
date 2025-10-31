@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import mongoose from 'mongoose';
@@ -13,16 +13,8 @@ import { methods as managementMethods, statics as managementStatics } from './me
 import { statics as aliasStatics } from './methods/alias.js';
 import { statics as statsStatics } from './methods/stats.js';
 
-Object.assign(
-  commandSchema.methods,
-  managementMethods
-);
-Object.assign(
-  commandSchema.statics,
-  managementStatics,
-  aliasStatics,
-  statsStatics
-);
+Object.assign(commandSchema.methods, managementMethods);
+Object.assign(commandSchema.statics, managementStatics, aliasStatics, statsStatics);
 
 const Command = mongoose.model('Command', commandSchema);
 

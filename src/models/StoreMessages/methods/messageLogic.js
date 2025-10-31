@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import config from '../../../../config.js';
@@ -60,10 +60,7 @@ export const statics = {
     return this.deleteMany({ lastUpdatedAt: { $lt: FIFTEEN_DAYS_AGO } });
   },
   async getLatestMessage(chatId) {
-    const chat = await this.findOne(
-      { chatId: chatId },
-      { messages: { $slice: -1 } }
-    ).lean();
+    const chat = await this.findOne({ chatId: chatId }, { messages: { $slice: -1 } }).lean();
     return chat?.messages?.[0] || null;
   }
 };

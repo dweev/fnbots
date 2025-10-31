@@ -1,9 +1,9 @@
 // ─── Info ─────────────────────────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info src/cache/otpSession.js ─────────────────────────────
 
 import log from '../lib/logger.js';
@@ -182,11 +182,16 @@ class OTPSession {
         const pipeline = redis.pipeline();
         pipeline.del(sessionKey);
         pipeline.srem(userSessionsKey, session.groupId);
-        pipeline.set(blockedKey, JSON.stringify({
-          userId,
-          blockedAt: new Date().toISOString(),
-          reason: 'MAX_ATTEMPTS_EXCEEDED'
-        }), 'EX', BLOCK_TTL);
+        pipeline.set(
+          blockedKey,
+          JSON.stringify({
+            userId,
+            blockedAt: new Date().toISOString(),
+            reason: 'MAX_ATTEMPTS_EXCEEDED'
+          }),
+          'EX',
+          BLOCK_TTL
+        );
         await pipeline.exec();
         await log(`User blocked due to max attempts: ${userId}`);
         return {
@@ -196,12 +201,7 @@ class OTPSession {
         };
       }
       const ttl = await redis.ttl(sessionKey);
-      await redis.set(
-        sessionKey,
-        JSON.stringify(session),
-        'EX',
-        ttl > 0 ? ttl : OTP_TTL
-      );
+      await redis.set(sessionKey, JSON.stringify(session), 'EX', ttl > 0 ? ttl : OTP_TTL);
       await log(`Wrong OTP attempt ${session.attempts}/4: ${userId}`);
       return {
         success: false,
@@ -376,10 +376,7 @@ class OTPSession {
 
   static async getStats() {
     try {
-      const [sessions, blocked] = await Promise.all([
-        this.getAllSessions(),
-        this.getBlockedUsers()
-      ]);
+      const [sessions, blocked] = await Promise.all([this.getAllSessions(), this.getBlockedUsers()]);
       return {
         activeSessions: sessions.length,
         blockedUsers: blocked.length,

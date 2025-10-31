@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import { Whitelist } from '../../../database/index.js';
@@ -18,7 +18,7 @@ export const command = {
     if (!arg) {
       return await sReply(`Silakan berikan link undangan grup WhatsApp yang ingin Kamu masuki.\nContoh: ${dbSettings.sname}join https://chat.whatsapp.com/abc123xyz`);
     } else if (args[0].match(/^https:\/\/chat\.whatsapp\.com\//i)) {
-      const inviteCode = args[0].split("https://chat.whatsapp.com/")[1];
+      const inviteCode = args[0].split('https://chat.whatsapp.com/')[1];
       if (!inviteCode) return await sReply(`Silakan berikan link undangan grup WhatsApp yang valid.\nContoh: ${dbSettings.sname}join https://chat.whatsapp.com/abc123xyz`);
       const { restrict, joinApprovalMode, subject, participants, id } = await fn.groupGetInviteInfo(inviteCode);
       if (!(isSadmin || isMaster) && participants.length < dbSettings.memberLimit) return await sReply(`Grup terlalu kecil!\n\nMember: ${participants.length}\nMinimal: ${dbSettings.memberLimit}\nBot hanya bergabung ke grup dengan ${dbSettings.memberLimit}+ member.`);
@@ -26,7 +26,7 @@ export const command = {
         await fn.groupAcceptInvite(inviteCode);
         if (!restrict) {
           const res = await store.getGroupMetadata(id);
-          await fn.sendPesan(id, `Halo warga grup *${subject}*!\nTerima kasih sudah mengundang ${dbSettings.botname}.`, { ephemeralExpiration: res.ephemeralDuration ?? 0 }); 
+          await fn.sendPesan(id, `Halo warga grup *${subject}*!\nTerima kasih sudah mengundang ${dbSettings.botname}.`, { ephemeralExpiration: res.ephemeralDuration ?? 0 });
         }
         if (isSadmin || isMaster) {
           await Whitelist.addToWhitelist(id, 'group');

@@ -1,9 +1,9 @@
 // ─── Info ─────────────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info src/worker/worker_manager.js ────────────
 
 import os from 'os';
@@ -47,7 +47,7 @@ function deserializeBuffer(data) {
   }
   if (data && typeof data === 'object') {
     const keys = Object.keys(data);
-    if (keys.length > 0 && keys.every(k => !isNaN(k))) {
+    if (keys.length > 0 && keys.every((k) => !isNaN(k))) {
       console.log('[Worker Manager] Converting object with numeric keys to Buffer');
       return Buffer.from(Object.values(data));
     }
@@ -67,10 +67,7 @@ export async function runJob(type, data, options = {}) {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), timeout);
       try {
-        const result = await pool.run(
-          { type, data },
-          { signal: controller.signal }
-        );
+        const result = await pool.run({ type, data }, { signal: controller.signal });
         clearTimeout(timeoutId);
         const deserializedResult = deserializeBuffer(result);
         return deserializedResult;
@@ -84,7 +81,7 @@ export async function runJob(type, data, options = {}) {
       }
       if (attempt < retries) {
         const delay = Math.min(1000 * Math.pow(2, attempt), 5000);
-        await new Promise(resolve => setTimeout(resolve, delay));
+        await new Promise((resolve) => setTimeout(resolve, delay));
         continue;
       }
       throw new Error(`Job '${type}' failed after ${retries + 1} attempts: ${error.message}`);

@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import { waktu } from '../../function/index.js';
@@ -16,7 +16,7 @@ export const command = {
   aliases: ['uptime', 'rt'],
   isCommandWithoutPayment: true,
   execute: async ({ sReply }) => {
-    const tms = (Date.now() / 1000) - (timeStart);
+    const tms = Date.now() / 1000 - timeStart;
     const cts = waktu(tms);
     await sReply(cts);
   }

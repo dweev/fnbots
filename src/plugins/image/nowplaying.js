@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import fs from 'fs-extra';
@@ -35,7 +35,7 @@ export const command = {
     ctx.fillStyle = '#bdbec2';
     ctx.font = '20px Noto';
     ctx.fillText(artist, base.width / 2, 720);
-    ctx.fillText('FNBot\'s Picks', base.width / 2, 65);
+    ctx.fillText("FNBot's Picks", base.width / 2, 65);
     const resBuffer = canvas.toBuffer();
     await fn.sendMediaFromBuffer(toId, 'image/jpeg', resBuffer, dbSettings.autocommand, m);
   }

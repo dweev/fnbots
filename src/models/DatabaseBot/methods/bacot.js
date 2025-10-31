@@ -1,15 +1,15 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 export const methods = {
   addBacot(text) {
     if (this.bacot.includes(text)) {
-      throw new Error("Teks tersebut sudah ada.");
+      throw new Error('Teks tersebut sudah ada.');
     }
     this.bacot.push(text);
     return this.save();
@@ -17,9 +17,9 @@ export const methods = {
 
   deleteBacot(text) {
     const initialLength = this.bacot.length;
-    this.bacot = this.bacot.filter(b => b !== text);
+    this.bacot = this.bacot.filter((b) => b !== text);
     if (this.bacot.length === initialLength) {
-      throw new Error("Teks tersebut tidak ditemukan.");
+      throw new Error('Teks tersebut tidak ditemukan.');
     }
     return this.save();
   },

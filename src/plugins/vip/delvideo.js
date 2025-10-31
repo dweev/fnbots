@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import { deleteMedia } from '../../../database/index.js';
@@ -17,6 +17,7 @@ export const command = {
   execute: async ({ sReply, arg }) => {
     const name = arg.trim().toLowerCase();
     if (!name) {
+      // prettier-ignore
       return await sReply(
         'Gagal! Berikan nama video yang ingin dihapus.\n\n' +
         'Contoh: `.delvideo fnbots`'
@@ -33,12 +34,14 @@ export const command = {
         } else if (deletedInfo.storageType === 'local') {
           storageLabel = 'Local Filesystem';
         }
+        // prettier-ignore
         await sReply(
           `Name: ${deletedInfo.name}\n` +
           `Storage: ${storageLabel}\n\n` +
           `Video berhasil dihapus!`
         );
       } else {
+        // prettier-ignore
         return await sReply(
           `Video dengan nama '${name}' tidak ditemukan.\n\n` +
           `Gunakan .listvideo untuk melihat video yang tersedia.`
@@ -47,5 +50,5 @@ export const command = {
     } catch (err) {
       await sReply(`Gagal menghapus video: ${err.message}`);
     }
-  },
+  }
 };

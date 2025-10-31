@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 export const command = {
@@ -14,7 +14,7 @@ export const command = {
   execute: async ({ fn, m, sReply, isBotGroupAdmins, dbSettings, toId, store }) => {
     if (!m.isGroup) return await sReply(`Perintah ini hanya bisa digunakan didalam group.`);
     if (!isBotGroupAdmins) return await sReply(`Perintah ini hanya bisa digunakan jika bot menjadi admin grup.`);
-    const pendingList = await fn.groupRequestParticipantsList(toId).then(a => a.map(b => b.jid));
+    const pendingList = await fn.groupRequestParticipantsList(toId).then((a) => a.map((b) => b.jid));
     if (pendingList.length > 0) {
       const listPromises = pendingList.map(async (p, index) => {
         let jid;
@@ -23,7 +23,7 @@ export const command = {
         } else {
           jid = p;
         }
-        return `${index + 1}. @${(jid).split('@')[0]}`;
+        return `${index + 1}. @${jid.split('@')[0]}`;
       });
       const listText = (await Promise.all(listPromises)).join('\n');
       await sReply(`*Daftar Permintaan Bergabung yang Tertunda:*\n\n${listText}\n\nUntuk menyetujui, gunakan perintah *${dbSettings.rname}accept nomor urut*.`);

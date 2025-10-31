@@ -1,13 +1,14 @@
 // ─── Info ─────────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── info src/function/math.js ────────────────
 
 import { randomChoice } from './index.js';
 
+// prettier-ignore
 export const modes = {
   noob:     [-5, 5, -5, 5, '+-', 30000, 5n],
   easy:     [-10, 10, -10, 10, '+-', 25000, 50n],
@@ -26,7 +27,7 @@ export function genMath(mode) {
   let a = randomInt(a1, a2);
   const b = randomInt(b1, b2);
   const op = randomChoice([...ops]);
-  let result = (new Function(`return ${a} ${op.replace('/', '*')} ${b < 0 ? `(${b})` : b}`))();
+  let result = new Function(`return ${a} ${op.replace('/', '*')} ${b < 0 ? `(${b})` : b}`)();
   if (op === '/') [a, result] = [result, a];
   return {
     str: `${a} ${operators[op]} ${b}`,
@@ -35,10 +36,10 @@ export function genMath(mode) {
     bonus,
     result
   };
-};
+}
 function randomInt(from, to) {
   if (from > to) [from, to] = [to, from];
   from = Math.floor(from);
   to = Math.floor(to);
   return Math.floor(Math.random() * (to - from + 1) + from);
-};
+}

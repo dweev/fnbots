@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import { redis } from '../../../database/index.js';
@@ -46,7 +46,7 @@ export const command = {
       }
       debugResponse += `\n*Format Analysis:*\n`;
       const formats = new Map();
-      sessionKeys.forEach(key => {
+      sessionKeys.forEach((key) => {
         const cleaned = key.replace('sessions:session-', '');
         if (cleaned.includes('@s.whatsapp.net')) {
           formats.set('WhatsApp JID', (formats.get('WhatsApp JID') || 0) + 1);
@@ -86,7 +86,7 @@ export const command = {
       signalId: [],
       other: []
     };
-    sessionsWithInfo.forEach(s => {
+    sessionsWithInfo.forEach((s) => {
       const cleaned = s.key.replace('sessions:session-', '');
       if (cleaned.includes('@s.whatsapp.net')) {
         byType.whatsappJid.push({ ...s, cleaned });
@@ -104,7 +104,7 @@ export const command = {
       response += `*WhatsApp JID Sessions*\n`;
       response += `Count: ${byType.whatsappJid.length}\n\n`;
       const jidMap = {};
-      byType.whatsappJid.forEach(s => {
+      byType.whatsappJid.forEach((s) => {
         const match = s.cleaned.match(/^(.+?@s\.whatsapp\.net)([:_-](.+))?$/);
         if (match) {
           const jid = match[1];
@@ -142,7 +142,7 @@ export const command = {
       response += `*Signal Protocol Sessions*\n`;
       response += `Count: ${byType.signalId.length}\n`;
       const versions = new Map();
-      byType.signalId.forEach(s => {
+      byType.signalId.forEach((s) => {
         const match = s.cleaned.match(/^\d+_(\d+\.\d+)$/);
         if (match) {
           const version = match[1];

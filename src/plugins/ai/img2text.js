@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import config from '../../../config.js';
@@ -28,18 +28,16 @@ export const command = {
     const supportedTypes = ['image/jpeg', 'image/png', 'image/webp'];
     if (!fileType || !supportedTypes.includes(fileType.mime)) return await sReply(`Tipe file tidak didukung. Diketahui: ${fileType?.mime || 'tidak diketahui'}`);
     const genAI = new GoogleGenerativeAI(config.geminiApikey);
-    const model = genAI.getGenerativeModel(
-      {
-        model: "gemini-2.0-flash-lite",
-        generationConfig: {
-          responseModalities: ['TEXT']
-        },
-        safetySettings,
-      }
-    );
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-2.0-flash-lite',
+      generationConfig: {
+        responseModalities: ['TEXT']
+      },
+      safetySettings
+    });
     const promptParts = [
       {
-        text: "Tolong lakukan OCR penuh. Hasil harus persis semua teks yang terlihat di gambar termasuk yang tidak jelas atau didalam logo. Jangan berikan penjelasan, hanya teks hasil OCR."
+        text: 'Tolong lakukan OCR penuh. Hasil harus persis semua teks yang terlihat di gambar termasuk yang tidak jelas atau didalam logo. Jangan berikan penjelasan, hanya teks hasil OCR.'
       },
       {
         inlineData: {
@@ -51,7 +49,7 @@ export const command = {
     const result = await model.generateContent(promptParts);
     const response = result.response;
     const textOutput = response.text();
-    if (!textOutput) return await sReply("AI tidak berhasil membaca teks dari gambar.");
+    if (!textOutput) return await sReply('AI tidak berhasil membaca teks dari gambar.');
     await sReply(textOutput);
   }
 };

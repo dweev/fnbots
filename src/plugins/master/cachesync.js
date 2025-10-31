@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import { performanceManager } from '../../lib/performanceManager.js';
@@ -17,7 +17,7 @@ export const command = {
   isEnabled: true,
   execute: async ({ sReply, reactDone }) => {
     await performanceManager.cache.forceSync();
-    await sReply("Cache sync completed successfully!");
+    await sReply('Cache sync completed successfully!');
     await reactDone();
   }
 };

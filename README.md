@@ -2,19 +2,21 @@
 
 <h1 align="center">FN WHATSAPP BOT</h1>
 
------
+---
+
+--
 
 ## About The Project
 
-  * **This is an independent project and is NOT affiliated, endorsed, or supported by WhatsApp or Meta Platforms.** It is built using the [Baileys](https://www.npmjs.com/package/baileys) library from the [WhiskeySockets/Baileys](https://github.com/WhiskeySockets/Baileys) GitHub repository with 1 server for 1 bot only. Or you can multiple with different folder project but i dont recommend for small servers.
+- **This is an independent project and is NOT affiliated, endorsed, or supported by WhatsApp or Meta Platforms.** It is built using the [Baileys](https://www.npmjs.com/package/baileys) library from the [WhiskeySockets/Baileys](https://github.com/WhiskeySockets/Baileys) GitHub repository with 1 server for 1 bot only. Or you can multiple with different folder project but i dont recommend for small servers.
 
 ### Core Philosophies
 
-  * **Performance**: Heavy, blocking tasks (media processing, image generation, web scraping) are offloaded to a separate pool of worker threads, ensuring the main application remains non-blocking and highly responsive. Caching is handled by an in-memory Redis database for maximum speed.
-  * **Stability**: The application is designed for high uptime with self-healing capabilities, including memory monitoring, connection health checks, and a graceful restart manager that prevents infinite crash loops.
-  * **Modularity**: A file-based plugin system allows for easy addition and hot-reloading of commands without restarting the entire application, streamlining development and maintenance.
+- **Performance**: Heavy, blocking tasks (media processing, image generation, web scraping) are offloaded to a separate pool of worker threads, ensuring the main application remains non-blocking and highly responsive. Caching is handled by an in-memory Redis database for maximum speed.
+- **Stability**: The application is designed for high uptime with self-healing capabilities, including memory monitoring, connection health checks, and a graceful restart manager that prevents infinite crash loops.
+- **Modularity**: A file-based plugin system allows for easy addition and hot-reloading of commands without restarting the entire application, streamlining development and maintenance.
 
------
+---
 
 ## Architecture
 
@@ -57,22 +59,22 @@ graph TD
     R --> S{2. Security Check};
     S -- Dangerous --> T[Block & Delete Message];
     S -- Safe --> U{3. Special Message Type?};
-    
+
     U -- Group Event --> V{Welcome/Leave Event?};
     V -- Yes --> V1[Send Welcome/Goodbye Message];
     V1 --> AT;
     V -- No --> P;
-    
+
     U -- Status Update --> W{Status Update?};
     W -- Yes --> W1[Process Status Logic];
     W1 --> P;
     W -- No --> P;
-    
+
     U -- Deleted Message --> X{Anti-Delete Active?};
     X -- Yes --> X1[Send Delete Notification];
     X1 --> AT;
     X -- No --> P;
-    
+
     U -- Regular Message --> Y[Main Handler];
   end
 
@@ -81,12 +83,12 @@ graph TD
     Z --> AA{5. Check Bot Mode};
     AA -- Ignore --> TERM(End Cycle);
     AA -- Process --> AB{6. Command?};
-    
+
     AB -- No --> AC_ROUTER{Group Moderation & Auto Features};
       AC_ROUTER -- Moderation --> AC_MOD{Run Group Moderation};
       AC_MOD -- Need Response --> AT;
       AC_MOD -- No Need --> P;
-      
+
       AC_ROUTER -- Check Next --> AC1{AutoSticker?};
       AC1 -- Yes --> AC2[Process to Sticker];
       AC2 --> AT;
@@ -104,21 +106,21 @@ graph TD
       AC10 --> AT;
       AC9 -- No --> AC11[Other Auto Features];
       AC11 --> P;
-    
+
     AB -- Yes --> AD(7. Parse Command);
-    
+
     AD --> AE{Remote Command?};
     AE -- No --> AF[Continue Normal];
     AE -- Yes --> AG{SAdmin?};
     AG -- No --> TERM;
     AG -- Yes --> AH[Process Remote];
     AH --> AF;
-    
+
     AF --> AI{8. Cooldown?};
     AI -- Yes --> AJ[Warn User];
     AJ --> TERM;
     AI -- No --> AK[Set Cooldown];
-    
+
     AK --> AL(9. Search in pluginCache);
     AL --> AM{Found?};
     AM -- No --> AN[10. Fuzzy Correction];
@@ -127,7 +129,7 @@ graph TD
     AO --> AP{Allowed?};
     AP -- No --> AQ[Send Error];
     AP -- Yes --> AR[12. EXECUTE];
-    
+
     AR --> AS[13. Update Stats & DB];
     AS --> AT[14. Send Response];
   end
@@ -137,7 +139,7 @@ graph TD
       BG --> BB[Cache Sync];
       BG --> BC[Batch DB Writes];
       BG --> BD[File Watcher];
-      
+
       BA --> BA1[Reset Daily Limits];
       BA --> BA2[Clean Expired Users];
       BB --> BB1[Sync Settings];
@@ -150,7 +152,7 @@ graph TD
   AT --> P;
   TERM --> P;
   AQ --> P;
-  
+
   ERR1 --> EXIT[Application Exit];
   ERR2 --> EXIT;
 ```
@@ -252,7 +254,7 @@ classDiagram
     +Boolean isLimitGameCommand
     +Boolean isCommandWithoutPayment
   }
-  
+
   class DatabaseBot {
     +String docId
     +Map~String, String~ chat
@@ -260,13 +262,13 @@ classDiagram
     +getDatabase()
   }
   note for DatabaseBot "Singleton for chatbot & media responses"
-  
+
   class Media {
     +String name
     +String type
     +Buffer data
   }
-  
+
   class Redis {
     <<In-Memory>>
     +BaileysSession
@@ -274,7 +276,7 @@ classDiagram
     +DataCache (Contacts, Groups)
     +GameState
   }
-  
+
   class StoreContact {
     +String jid
     +String lid
@@ -282,7 +284,7 @@ classDiagram
     +String notify
     +String verifiedName
   }
-  
+
   class StoreGroupMetadata {
     +String groupId
     +String subject
@@ -290,14 +292,14 @@ classDiagram
     +Array~Participant~ participants
   }
   note for StoreGroupMetadata "object data same as Baileys"
-  
+
   class StoreMessages {
     +String chatId
     +Array~Mixed~ messages
     +Array~Conversation~ conversations
     +Map presences
   }
-  
+
   class StoreStory {
     +String userId
     +Array~Mixed~ statuses
@@ -311,7 +313,7 @@ classDiagram
     +Date expireAt
     +Boolean isBlocked
   }
-  
+
   class Whitelist {
     +String type ('group' or 'user')
     +String targetId
@@ -323,18 +325,18 @@ classDiagram
   User "1" -- "1" StoreStory : Has status updates
   Group "1" -- "1" StoreGroupMetadata : Has metadata
   User "1" -- "0" Group : Implicitly related via afkUsers, bannedMembers, etc.
-  
+
   StoreGroupMetadata "1" -- "0" StoreContact : Participants are contacts
   StoreMessages ..> User : `chatId` can be a User JID
   StoreMessages ..> Group : `chatId` can be a Group JID
-  
+
   DatabaseBot "1" -- "0" Media : Can link to media responses
 
   MongoDB ..> Redis : MongoDB is the source of truth
   Redis ..> MongoDB : Write-behind caching syncs data to MongoDB
 ```
 
------
+---
 
 ## Project Structure
 
@@ -378,41 +380,39 @@ The directory structure is designed for a clear separation of concerns, making t
 └── update.sh              # Python dependency update script
 ```
 
------
+---
 
 ## Requirements
 
 ### Software
 
-  * **Node.js**: `v20.x` or higher
-  * **MongoDB**: `v4.0` or higher (local or Atlas)
-  * **Redis**: `v6.x` or higher
-  * **Git**
-  * **FFMPEG**: **Required** for all media processing (stickers, audio filters).
-  * **Python**: `v3.12` recommended.
-    * **Python Libraries**: `rembg`, `yt-dlp`, `google-generativeai`, and other dependencies listed in `install.sh`.
-  * A valid **WhatsApp** account.
+- **Node.js**: `v20.x` or higher
+- **MongoDB**: `v4.0` or higher (local or Atlas)
+- **Redis**: `v6.x` or higher
+- **Git**
+- **FFMPEG**: **Required** for all media processing (stickers, audio filters).
+- **Python**: `v3.12` recommended.
+  - **Python Libraries**: `rembg`, `yt-dlp`, `google-generativeai`, and other dependencies listed in `install.sh`.
+- A valid **WhatsApp** account.
 
 ### Hardware (VPS/Server)
 
 The resource requirements are higher than a standard bot due to heavy processing features.
 
-  * **Recommended (Production)**:
+- **Recommended (Production)**:
+  - **CPU**: **4 vCores** or more
+  - **RAM**: **8 GB** or more
+  - **Storage**: **80 GB+ SSD/NVMe**
+  - **OS**: Ubuntu 24.04 LTS or a similar Linux distribution. (i never try on ubuntu 22, but i recommend to use ubuntu 24)
 
-    * **CPU**: **4 vCores** or more
-    * **RAM**: **8 GB** or more
-    * **Storage**: **80 GB+ SSD/NVMe**
-    * **OS**: Ubuntu 24.04 LTS or a similar Linux distribution. (i never try on ubuntu 22, but i recommend to use ubuntu 24)
-
-  * **Minimal (Testing/Low-Load)**:
-
-    * **CPU**: 2 vCores
-    * **RAM**: 4 GB
-    * **Storage**: 50 GB SSD/NVMe
+- **Minimal (Testing/Low-Load)**:
+  - **CPU**: 2 vCores
+  - **RAM**: 4 GB
+  - **Storage**: 50 GB SSD/NVMe
 
 > **Note**: Running features like Instagram scraping (`Playwright`) and parallel media processing (`FFMPEG`, `Canvas`) is very resource-intensive. Using specs below the recommended values may lead to slow response times and instability.
 
------
+---
 
 ## Quick Start
 
@@ -422,55 +422,56 @@ The easiest way to set up is by using the `install.sh` script on a fresh Ubuntu 
 
 1.  **Clone the Repository**
 
-  ```bash
-  git clone https://github.com/Terror-Machine/fnbots.git
-  cd fnbots
-  ```
+```bash
+git clone https://github.com/Terror-Machine/fnbots.git
+cd fnbots
+```
 
 2.  **Setup Environment Variables**
 
-  ```bash
-  cp .env.example .env
-  ```
+```bash
+cp .env.example .env
+```
 
-  Open and edit the `.env` file, filling in all required values:
+Open and edit the `.env` file, filling in all required values:
 
     * `MONGODB_URI`: Your MongoDB connection string.
     * `OWNER_NUMBER`: JSON array of owner numbers.
-    * `GEMINI_API_KEY`: For generative AI features. (Optional) 
-    * `HUGGINGFACE_API_KEY`: For generative AI features. (Optional) 
+    * `GEMINI_API_KEY`: For generative AI features. (Optional)
+    * `HUGGINGFACE_API_KEY`: For generative AI features. (Optional)
 
 3.  **Run the Automatic Setup Script**
-  Execute the `install.sh` script to automatically install all system dependencies.
+    Execute the `install.sh` script to automatically install all system dependencies.
 
-  ```bash
-  sudo bash install.sh
-  ```
+```bash
+sudo bash install.sh
+```
 
-  If you encounter errors related to `mongo`:
-  ```bash
-  sudo bash mongo.sh
-  ```
+If you encounter errors related to `mongo`:
+
+```bash
+sudo bash mongo.sh
+```
 
 ### Running the Bot
 
 1.  **Start with Pairing Code (Recommended)**
-  Use the `pair` script to log in with a pairing code. The bot will prompt you for your bot's phone number.
+    Use the `pair` script to log in with a pairing code. The bot will prompt you for your bot's phone number.
 
-  ```bash
-  npm run pair
-  ```
+```bash
+npm run pair
+```
 
 2.  **Start with QR Code**
-  If you prefer to use a QR code, ensure `usePairingCode` is `false` in `config.js` and run:
+    If you prefer to use a QR code, ensure `usePairingCode` is `false` in `config.js` and run:
 
-  ```bash
-  npm start
-  ```
+```bash
+npm start
+```
 
-  Scan the QR code that appears in your terminal.
+Scan the QR code that appears in your terminal.
 
------
+---
 
 ### Production Deployment
 
@@ -485,13 +486,14 @@ pm2 logs
 ```
 
 For ROOT users (running at systemd level), use the `system.sh` script to set up the systemd service.
+
 ```bash
 sudo bash ./system.sh
 bot start
 ```
 
------
+---
 
 Made with ❤️ and 💦 by [Terror-Machine](https://github.com/Terror-Machine)
 
------
+---

@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import { delay } from 'baileys';
@@ -19,7 +19,7 @@ export const command = {
   isLimitCommand: true,
   execute: async ({ fn, m, toId, dbSettings, quotedMsg, args, sReply }) => {
     let input;
-    if ((quotedMsg && quotedMsg?.type === "extendedTextMessage") || (quotedMsg && quotedMsg?.type === "conversation")) {
+    if ((quotedMsg && quotedMsg?.type === 'extendedTextMessage') || (quotedMsg && quotedMsg?.type === 'conversation')) {
       input = quotedMsg?.body.trim();
     } else if (args.length > 0) {
       input = args[0];

@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import fs from 'fs-extra';
@@ -25,7 +25,7 @@ export const command = {
       const targetJid = mentionedJidList[0];
       let profilePicBuffer;
       try {
-        profilePicBuffer = await fn.profileImageBuffer(targetJid, "image");
+        profilePicBuffer = await fn.profileImageBuffer(targetJid, 'image');
       } catch {
         profilePicBuffer = await fs.readFile('./src/image/default-dp.jpeg');
       }

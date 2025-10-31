@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import { generateFakeChatIphone } from 'generator-fake';
@@ -26,7 +26,7 @@ export const command = {
     const resultBuffer = await generateFakeChatIphone({
       text: caption,
       chatTime: formatTimestampToHourMinute(m.timestamp),
-      statusBarTime: "11:02"
+      statusBarTime: '11:02'
     });
     await fn.sendMediaFromBuffer(toId, 'image/jpeg', resultBuffer, dbSettings.autocommand, m);
   }

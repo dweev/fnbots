@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 export const methods = {
@@ -16,7 +16,7 @@ export const methods = {
   },
   removeSAdmin(userId) {
     const initialLength = this.sAdmin.length;
-    this.sAdmin = this.sAdmin.filter(id => id !== userId);
+    this.sAdmin = this.sAdmin.filter((id) => id !== userId);
     if (this.sAdmin.length !== initialLength) {
       return this.save();
     }

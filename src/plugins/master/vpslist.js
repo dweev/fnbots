@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import fs from 'fs-extra';
@@ -21,18 +21,18 @@ export const command = {
     const users = data
       .trim()
       .split('\n')
-      .map(line => line.split(':'))
-      .filter(parts => {
+      .map((line) => line.split(':'))
+      .filter((parts) => {
         const homeDir = parts[5];
         return homeDir && homeDir.startsWith('/home/');
       })
-      .map(parts => parts[0]);
+      .map((parts) => parts[0]);
     if (users.length > 0) {
       let userListText = `*Daftar User di Server:*\n\n`;
-      userListText += users.map(user => `👤 ${user}`).join('\n');
+      userListText += users.map((user) => `👤 ${user}`).join('\n');
       await sReply(userListText);
     } else {
-      await sReply("Tidak ditemukan user normal di server.");
+      await sReply('Tidak ditemukan user normal di server.');
     }
   }
 };

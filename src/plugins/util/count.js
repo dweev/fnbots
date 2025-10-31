@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 export const command = {
@@ -12,8 +12,8 @@ export const command = {
   description: 'Menampilkan jumlah penggunaan bot oleh user',
   aliases: ['myhit', 'hitstats', 'hitcount'],
   isCommandWithoutPayment: true,
-  execute: async ({ sReply, serial, user, botNumber }) => {
-    if (botNumber === serial) return;
+  execute: async ({ sReply, serial, user }) => {
+    // prettier-ignore
     await sReply(`*Statistik Penggunaan Bot*\n\n` +
       `➸ *User*: @${serial.split('@')[0]}\n` +
       `➸ *Total Hit*: ${user.userCount}\n`);

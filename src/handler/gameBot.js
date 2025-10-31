@@ -1,40 +1,26 @@
 // ─── Info ────────────────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info src/handler/gameBot.js ─────────────────────
 
 import { delay } from 'baileys';
 import { User } from '../../database/index.js';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { performanceManager } from '../lib/performanceManager.js';
-import {
-  rollDice, generateUlarTanggaImage, runBotUlarTanggaTurnV2, runBotUlarTanggaTurn,
-  generateBoardImage, PLAYER_BLACK, PLAYER_WHITE, fileLabels, rankLabels,
-  parseOthelloMove, makeOthelloMove, getValidOthelloMoves, calculateOthelloScore,
-  generateOthelloBoardImage, runBotLudoTurns, calculateNewPosition, HOME_POSITIONS,
-  checkForCapture, generateLudoBoard, startLudoTimeout, formatKartu, runBotTurn41,
-  calculateScore, calculateSamgongValue, runBotSamgongTurn, emoji_role, checkWinner,
-  formatTicTacToeBoard, formatMinesweeperBoard, revealCell, checkWinCondition,
-  generateSudokuBoardImage, parseSudokuCoord, SESSION_TIMEOUT, getSession, safetySettings
-} from '../function/index.js';
+import { rollDice, generateUlarTanggaImage, runBotUlarTanggaTurnV2, runBotUlarTanggaTurn, generateBoardImage, PLAYER_BLACK, PLAYER_WHITE, fileLabels, rankLabels, parseOthelloMove, makeOthelloMove, getValidOthelloMoves, calculateOthelloScore, generateOthelloBoardImage, runBotLudoTurns, calculateNewPosition, HOME_POSITIONS, checkForCapture, generateLudoBoard, startLudoTimeout, formatKartu, runBotTurn41, calculateScore, calculateSamgongValue, runBotSamgongTurn, emoji_role, checkWinner, formatTicTacToeBoard, formatMinesweeperBoard, revealCell, checkWinCondition, generateSudokuBoardImage, parseSudokuCoord, SESSION_TIMEOUT, getSession, safetySettings } from '../function/index.js';
 
 export async function handleGameBotResponse(params) {
   const { m, toId, body, user, sReply, sPesan, fn, serial, isCmd, reactFail, dbSettings, config, gameStates } = params;
-  const {
-    hangman, family100, tebaklirik, tekateki, tebakkata, susunkata, tebakkimia, tebaknegara,
-    tebakgambar, caklontong, tebakbendera, sudokuGame, chatBots, sessions, chessGame, othelloGame,
-    ludoSessions, game41Sessions, gamematematika, werewolfSessions, minesweeperSessions,
-    ularTanggaSessions, tictactoeSessions, samgongSessions, tebakkalimat, siapakahaku,
-    ulartangga, tebakgame
-  } = gameStates;
+  const { hangman, family100, tebaklirik, tekateki, tebakkata, susunkata, tebakkimia, tebaknegara, tebakgambar, caklontong, tebakbendera, sudokuGame, chatBots, sessions, chessGame, othelloGame, ludoSessions, game41Sessions, gamematematika, werewolfSessions, minesweeperSessions, ularTanggaSessions, tictactoeSessions, samgongSessions, tebakkalimat, siapakahaku, ulartangga, tebakgame } = gameStates;
 
   const quotedMsg = m.quoted ? m.quoted : false;
   const txt = body;
 
   if (quotedMsg) {
+    // prettier-ignore
     const gameDefinitions = [
       { name: 'Tebak Lirik',          regex: /^Tebak Lirik:/i,          store: tebaklirik     },
       { name: 'Tebak Kalimat',        regex: /^Tebak Kalimat:/i,        store: tebakkalimat   },
@@ -87,10 +73,10 @@ export async function handleGameBotResponse(params) {
   if (hangman[toId] && !isCmd) {
     const counthits = { $inc: { userCount: 1 } };
     const huruf = m.body?.toLowerCase()?.trim();
-    const isValidHangmanInput = (huruf && huruf.length === 1 && /^[a-z]$/i.test(huruf)) || (huruf === 'menyerah');
+    const isValidHangmanInput = (huruf && huruf.length === 1 && /^[a-z]$/i.test(huruf)) || huruf === 'menyerah';
     if (isValidHangmanInput) {
       const dataGame = hangman[toId];
-      const [jawaban, display, clue, data, mode, timeout,] = dataGame;
+      const [jawaban, display, clue, data, mode, timeout] = dataGame;
       const rewardNormal = 500;
       const rewardExpert = 2000;
       if (huruf === 'menyerah') {
@@ -100,7 +86,7 @@ export async function handleGameBotResponse(params) {
         return true;
       }
       if (data.menyerah[serial]) return true;
-      if ((data.benar[serial]?.includes(huruf)) || (data.salah[serial]?.includes(huruf))) {
+      if (data.benar[serial]?.includes(huruf) || data.salah[serial]?.includes(huruf)) {
         await sPesan(`Huruf '${huruf.toUpperCase()}' sudah pernah kamu tebak sebelumnya.`);
         return true;
       }
@@ -123,17 +109,17 @@ export async function handleGameBotResponse(params) {
         if (selesai) {
           clearTimeout(timeout);
           const totalReward = mode === 'normal' ? rewardNormal : rewardExpert;
-          const pemainAktif = Object.keys(data.benar).filter(u => !data.menyerah[u]);
+          const pemainAktif = Object.keys(data.benar).filter((u) => !data.menyerah[u]);
           const kontribusi = {};
-          pemainAktif.forEach(u => {
+          pemainAktif.forEach((u) => {
             kontribusi[u] = data.benar[u].length || 0;
           });
           const totalKontribusi = Object.values(kontribusi).reduce((a, b) => a + b, 0) || 1;
           const rewardPerPlayer = {};
           if (mode === 'normal') {
-            pemainAktif.forEach(u => rewardPerPlayer[u] = Math.floor(totalReward / pemainAktif.length));
+            pemainAktif.forEach((u) => (rewardPerPlayer[u] = Math.floor(totalReward / pemainAktif.length)));
           } else {
-            pemainAktif.forEach(u => {
+            pemainAktif.forEach((u) => {
               rewardPerPlayer[u] = Math.floor(totalReward * (kontribusi[u] / totalKontribusi));
             });
           }
@@ -149,7 +135,7 @@ export async function handleGameBotResponse(params) {
           pesanAkhir += `📌 Deskripsi: ${clue}\n\n`;
           pesanAkhir += `💰 *Reward dibagikan sebagai berikut:*`;
           const mentions = [];
-          pemainAktif.forEach(u => {
+          pemainAktif.forEach((u) => {
             pesanAkhir += `\n- @${u.split('@')[0]}: ${rewardPerPlayer[u]} Saldo`;
             mentions.push(u);
           });
@@ -200,11 +186,11 @@ export async function handleGameBotResponse(params) {
       try {
         const playerMove = gameState.game.move({ from, to, promotion: 'q' });
         if (playerMove === null) {
-          await sReply("Gerakan tidak valid!");
+          await sReply('Gerakan tidak valid!');
           return true;
         }
       } catch {
-        await sReply("Gerakan tidak valid!");
+        await sReply('Gerakan tidak valid!');
         return true;
       }
       if (gameState.game.isCheckmate()) {
@@ -276,12 +262,12 @@ export async function handleGameBotResponse(params) {
       delete ulartangga[toId];
       await user.addXp();
       await performanceManager.cache.updateUserStats(user.userId, counthits);
-      await sReply("Permainan Ular Tangga telah dihentikan.");
+      await sReply('Permainan Ular Tangga telah dihentikan.');
       return true;
     }
     if (['roll', 'kocok'].includes(messageText)) {
       if (gameState.turn !== 'player') {
-        await sReply("Bukan giliranmu!");
+        await sReply('Bukan giliranmu!');
         return true;
       }
       clearTimeout(gameState.timeoutId);
@@ -289,6 +275,7 @@ export async function handleGameBotResponse(params) {
       const oldPos = gameState.playerPos;
       gameState.playerPos += roll;
       if (gameState.playerPos > 100) gameState.playerPos = 100 - (gameState.playerPos - 100);
+      // prettier-ignore
       let moveText = `Kamu melempar dadu dan mendapat angka *${roll}*.\n` +
         `Maju dari kotak *${oldPos}* ke *${gameState.playerPos}*.\n`;
       const moveEffect = gameState.map.move[gameState.playerPos];
@@ -328,9 +315,9 @@ export async function handleGameBotResponse(params) {
     }
     const moveCoords = parseOthelloMove(messageText);
     if (!moveCoords) return true;
-    const isValid = gameState.validMoves.some(valid => valid.move[0] === moveCoords[0] && valid.move[1] === moveCoords[1]);
+    const isValid = gameState.validMoves.some((valid) => valid.move[0] === moveCoords[0] && valid.move[1] === moveCoords[1]);
     if (!isValid) {
-      await sReply("Gerakan tidak valid! Pilih salah satu kotak yang ditandai.");
+      await sReply('Gerakan tidak valid! Pilih salah satu kotak yang ditandai.');
       return true;
     }
     clearTimeout(gameState.timeoutId);
@@ -343,7 +330,7 @@ export async function handleGameBotResponse(params) {
     };
     gameState.timeoutId = setTimeout(newTimeoutCallback, gameDuration);
     let currentBoard = makeOthelloMove(gameState.board, PLAYER_BLACK, moveCoords);
-    let gameCaption = "";
+    let gameCaption = '';
     let botValidMoves = getValidOthelloMoves(currentBoard, PLAYER_WHITE);
     if (botValidMoves.length > 0) {
       botValidMoves.sort((a, b) => b.flips - a.flips);
@@ -396,13 +383,13 @@ export async function handleGameBotResponse(params) {
     if (stopKeywords.includes(messageText)) {
       clearTimeout(gameState.timeoutId);
       delete ludoSessions[toId];
-      await sReply("Permainan Ludo telah dihentikan.");
+      await sReply('Permainan Ludo telah dihentikan.');
       return true;
     }
     if (gameState.players[gameState.turn] !== 'RED') return true;
     if (['roll', 'kocok'].includes(messageText)) {
       if (gameState.status !== 'WAITING_FOR_ROLL') {
-        await sReply("Bukan giliran Kamu atau Kamu harus menunggu bot selesai.");
+        await sReply('Bukan giliran Kamu atau Kamu harus menunggu bot selesai.');
         return true;
       }
       clearTimeout(gameState.timeoutId);
@@ -463,10 +450,11 @@ export async function handleGameBotResponse(params) {
     if (['ambil dek', 'ambil buangan'].includes(messageText) && gameState.playerHand.length === 4) {
       const takenCard = messageText === 'ambil dek' ? gameState.deck.shift() : gameState.discardPile.pop();
       if (!takenCard) {
-        await sReply("Tumpukan tersebut kosong!");
+        await sReply('Tumpukan tersebut kosong!');
         return true;
       }
       gameState.playerHand.push(takenCard);
+      // prettier-ignore
       const privateMessage = `Kamu mengambil [ ${takenCard.display} ].\n\n` +
         `Kartu Kamu sekarang:\n${formatKartu(gameState.playerHand)}\n\n` +
         `Ketik *buang <nomor kartu>* (1-5) di grup untuk membuang kartu.`;
@@ -495,6 +483,7 @@ export async function handleGameBotResponse(params) {
       clearTimeout(gameState.timeoutId);
       const playerScore = calculateScore(gameState.playerHand);
       const botScore = calculateScore(gameState.botHand);
+      // prettier-ignore
       let resultText = `*RONDE SELESAI!*\n\n` +
         `Tangan Kamu (Skor: *${playerScore}*):\n${formatKartu(gameState.playerHand)}\n\n` +
         `Tangan Bot (Skor: *${botScore}*):\n${formatKartu(gameState.botHand)}\n\n`;
@@ -536,11 +525,12 @@ export async function handleGameBotResponse(params) {
       clearTimeout(gameState.timeoutId);
       const newCard = gameState.deck.shift();
       if (!newCard) {
-        await sReply("Dek sudah habis!");
+        await sReply('Dek sudah habis!');
         return true;
       }
       gameState.playerHand.push(newCard);
       const playerScore = calculateSamgongValue(gameState.playerHand);
+      // prettier-ignore
       let privateMessage = `Kamu mengambil [ ${newCard.display} ].\n\n` +
         `Tangan Kamu sekarang (Total: *${playerScore}*):\n${formatKartu(gameState.playerHand)}`;
       if (playerScore > 30) {
@@ -580,8 +570,8 @@ export async function handleGameBotResponse(params) {
       try {
         const [, action, targetIndexStr] = text.split(' ');
         const targetIndex = parseInt(targetIndexStr) - 1;
-        const livingPlayers = Object.values(gameState.pemain).filter(p => p.isAlive);
-        if (isNaN(targetIndex) || targetIndex < 0 || targetIndex >= livingPlayers.length) throw new Error("Nomor target tidak valid.");
+        const livingPlayers = Object.values(gameState.pemain).filter((p) => p.isAlive);
+        if (isNaN(targetIndex) || targetIndex < 0 || targetIndex >= livingPlayers.length) throw new Error('Nomor target tidak valid.');
         const targetPlayer = livingPlayers[targetIndex];
         if (action === 'kill' && playerState.role === 'werewolf') {
           gameState.aksiMalam.pilihanWerewolf = targetPlayer.id;
@@ -607,10 +597,10 @@ export async function handleGameBotResponse(params) {
       try {
         const targetIndexStr = text.split(' ')[1];
         const targetIndex = parseInt(targetIndexStr) - 1;
-        const livingPlayers = Object.values(gameState.pemain).filter(p => p.isAlive);
-        if (isNaN(targetIndex) || targetIndex < 0 || targetIndex >= livingPlayers.length) throw new Error("Nomor target tidak valid.");
+        const livingPlayers = Object.values(gameState.pemain).filter((p) => p.isAlive);
+        if (isNaN(targetIndex) || targetIndex < 0 || targetIndex >= livingPlayers.length) throw new Error('Nomor target tidak valid.');
         const targetPlayer = livingPlayers[targetIndex];
-        if (targetPlayer.id === serial) throw new Error("Kamu tidak bisa vote diri sendiri.");
+        if (targetPlayer.id === serial) throw new Error('Kamu tidak bisa vote diri sendiri.');
         gameState.votes[serial] = targetPlayer.id;
         await user.addXp();
         await performanceManager.cache.updateUserStats(user.userId, counthits);
@@ -648,7 +638,7 @@ export async function handleGameBotResponse(params) {
     const row = Math.floor((playerMove - 1) / 3);
     const col = (playerMove - 1) % 3;
     if (gameState.board[row][col]) {
-      await sReply("Kotak itu sudah terisi! Pilih kotak lain.");
+      await sReply('Kotak itu sudah terisi! Pilih kotak lain.');
       return true;
     }
     clearTimeout(gameState.timeoutId);
@@ -664,7 +654,7 @@ export async function handleGameBotResponse(params) {
       await performanceManager.cache.updateUserStats(user.userId, counthits);
       return true;
     }
-    await sReply("Langkah Kamu diterima. Bot sedang berpikir...");
+    await sReply('Langkah Kamu diterima. Bot sedang berpikir...');
     await delay(1000);
     let botMove = null;
     for (const symbol of [gameState.botSymbol, gameState.playerSymbol]) {
@@ -684,12 +674,22 @@ export async function handleGameBotResponse(params) {
     if (!botMove) {
       if (!gameState.board[1][1]) botMove = { row: 1, col: 1 };
       else {
-        const corners = [{ row: 0, col: 0 }, { row: 0, col: 2 }, { row: 2, col: 0 }, { row: 2, col: 2 }];
-        const emptyCorners = corners.filter(c => !gameState.board[c.row][c.col]);
+        const corners = [
+          { row: 0, col: 0 },
+          { row: 0, col: 2 },
+          { row: 2, col: 0 },
+          { row: 2, col: 2 }
+        ];
+        const emptyCorners = corners.filter((c) => !gameState.board[c.row][c.col]);
         if (emptyCorners.length > 0) botMove = emptyCorners[Math.floor(Math.random() * emptyCorners.length)];
         else {
-          const sides = [{ row: 0, col: 1 }, { row: 1, col: 0 }, { row: 1, col: 2 }, { row: 2, col: 1 }];
-          const emptySides = sides.filter(s => !gameState.board[s.row][s.col]);
+          const sides = [
+            { row: 0, col: 1 },
+            { row: 1, col: 0 },
+            { row: 1, col: 2 },
+            { row: 2, col: 1 }
+          ];
+          const emptySides = sides.filter((s) => !gameState.board[s.row][s.col]);
           if (emptySides.length > 0) botMove = emptySides[Math.floor(Math.random() * emptySides.length)];
         }
       }
@@ -805,14 +805,14 @@ export async function handleGameBotResponse(params) {
       delete minesweeperSessions[toId];
       await user.addXp();
       await performanceManager.cache.updateUserStats(user.userId, counthits);
-      await sReply("Permainan Minesweeper dihentikan.");
+      await sReply('Permainan Minesweeper dihentikan.');
       return true;
     }
     const col = coord.charCodeAt(0) - 97;
     const row = parseInt(coord.slice(1)) - 1;
     if (row < 0 || row >= gameState.playerBoard.length || col < 0 || col >= gameState.playerBoard[0].length) {
       startMinesweeperTimeout(toId);
-      await sReply("Koordinat tidak valid.");
+      await sReply('Koordinat tidak valid.');
       return true;
     }
     if (action === 'buka') {
@@ -820,7 +820,7 @@ export async function handleGameBotResponse(params) {
         startMinesweeperTimeout(toId);
         await user.addXp();
         await performanceManager.cache.updateUserStats(user.userId, counthits);
-        await sReply("Kotak itu sudah terbuka.");
+        await sReply('Kotak itu sudah terbuka.');
         return true;
       }
       if (gameState.playerBoard[row][col].status === 'ditandai') {
@@ -833,7 +833,7 @@ export async function handleGameBotResponse(params) {
       if (gameState.solutionBoard[row][col] === '*') {
         gameState.gameStatus = 'lost';
         const finalBoard = formatMinesweeperBoard(gameState.playerBoard, true, gameState.solutionBoard);
-        await sReply("💣 BOOM! Kamu menginjak bom. Game Selesai.\n" + finalBoard);
+        await sReply('💣 BOOM! Kamu menginjak bom. Game Selesai.\n' + finalBoard);
         delete minesweeperSessions[toId];
         await user.addXp();
         await performanceManager.cache.updateUserStats(user.userId, counthits);
@@ -843,7 +843,7 @@ export async function handleGameBotResponse(params) {
       if (checkWinCondition(gameState)) {
         gameState.gameStatus = 'won';
         const finalBoard = formatMinesweeperBoard(gameState.playerBoard, true, gameState.solutionBoard);
-        await sReply("🎉 Selamat! Kamu menemukan semua bom dan MEMENANGKAN permainan!\n" + finalBoard);
+        await sReply('🎉 Selamat! Kamu menemukan semua bom dan MEMENANGKAN permainan!\n' + finalBoard);
         delete minesweeperSessions[toId];
         await user.addXp();
         await performanceManager.cache.updateUserStats(user.userId, counthits);
@@ -858,7 +858,7 @@ export async function handleGameBotResponse(params) {
         gameState.playerBoard[row][col] = { status: 'tertutup', value: '' };
       }
     }
-    await sReply("Langkah diterima:\n" + formatMinesweeperBoard(gameState.playerBoard));
+    await sReply('Langkah diterima:\n' + formatMinesweeperBoard(gameState.playerBoard));
     startMinesweeperTimeout(toId);
     await user.addXp();
     await performanceManager.cache.updateUserStats(user.userId, counthits);
@@ -866,7 +866,7 @@ export async function handleGameBotResponse(params) {
   }
   if (quotedMsg && /^Berapa hasil dari/i.test(quotedMsg.body)) {
     const counthits = { $inc: { userCount: 1 } };
-    if ((toId in gamematematika) && quotedMsg?.id === gamematematika[toId]?.[0]?.key?.id) {
+    if (toId in gamematematika && quotedMsg?.id === gamematematika[toId]?.[0]?.key?.id) {
       const userAnswer = parseInt(body.trim());
       if (isNaN(userAnswer)) {
         await user.addXp();
@@ -910,7 +910,7 @@ export async function handleGameBotResponse(params) {
       await user.addXp();
       await performanceManager.cache.updateUserStats(user.userId, counthits);
     };
-    if ((toId in family100) && quotedMsg?.id === family100[toId]?.[6]?.key?.id) {
+    if (toId in family100 && quotedMsg?.id === family100[toId]?.[6]?.key?.id) {
       const [, jawaban, status, contribs, timeout] = family100[toId];
       const userAnswer = txt.toLowerCase().trim();
       const total = 600;
@@ -927,7 +927,7 @@ export async function handleGameBotResponse(params) {
           const userId = playerDoc.userId;
           const benar = contribs.benar[userId] || 0;
           const salah = contribs.salah[userId] || 0;
-          const net = Math.max((benar * scorePerJawaban) - (salah * scorePerJawaban), 0);
+          const net = Math.max(benar * scorePerJawaban - salah * scorePerJawaban, 0);
           if (net > 0) {
             await playerDoc.addBalance(net);
           }
@@ -944,7 +944,7 @@ export async function handleGameBotResponse(params) {
         const benarCount = status.filter(Boolean).length;
         let teks = `📢 Game *Family100* dihentikan oleh pemain.\n\n`;
         if (benarCount > 0) teks += await bagiSaldo();
-        const belum = jawaban.map((j, i) => status[i] ? null : `❎ ${j}`).filter(Boolean);
+        const belum = jawaban.map((j, i) => (status[i] ? null : `❎ ${j}`)).filter(Boolean);
         if (belum.length) {
           teks += `\n❗ *Jawaban yang belum tertebak:*\n${belum.join('\n')}`;
         }
@@ -967,7 +967,7 @@ export async function handleGameBotResponse(params) {
           addStat();
           return true;
         }
-      } else if (jawaban.findIndex(j => j.toLowerCase() === userAnswer) >= 0) {
+      } else if (jawaban.findIndex((j) => j.toLowerCase() === userAnswer) >= 0) {
         await sReply(`⚠️ Jawaban *${txt}* sudah ditebak oleh pemain lain.\n📊 Progress: ${status.filter(Boolean).length}/${jawaban.length}`, m);
       } else {
         contribs.salah[serial] = (contribs.salah[serial] || 0) + 1;
@@ -988,7 +988,7 @@ export async function handleGameBotResponse(params) {
     try {
       if (messageText === 'menyerah') {
         const solutionBoardBuffer = await generateSudokuBoardImage(gameState.puzzle, gameState.solution);
-        await sReply({ image: solutionBoardBuffer, caption: "Baiklah, game telah dihentikan. Ini adalah jawaban yang benar." });
+        await sReply({ image: solutionBoardBuffer, caption: 'Baiklah, game telah dihentikan. Ini adalah jawaban yang benar.' });
         await performanceManager.cache.updateUserStats(user.userId, counthits);
         clearTimeout(gameState.timeoutId);
         delete sudokuGame[toId];
@@ -1010,17 +1010,17 @@ export async function handleGameBotResponse(params) {
           const boardBuffer = await generateSudokuBoardImage(gameState.puzzle, gameState.board, errorIndices);
           await sReply({ image: boardBuffer, caption: `🤔 Ditemukan ${errorIndices.length} angka yang salah dan ditandai dengan warna merah. Coba perbaiki!` });
         } else if (isFull) {
-          await sReply("🎉 *Luar Biasa!* 🎉\n\nSemua jawabanmu benar dan papan telah terisi penuh. Anda menang!");
+          await sReply('🎉 *Luar Biasa!* 🎉\n\nSemua jawabanmu benar dan papan telah terisi penuh. Anda menang!');
           clearTimeout(gameState.timeoutId);
           delete sudokuGame[toId];
         } else {
-          await sReply("✅ Sejauh ini semua angkamu benar. Lanjutkan mengisi!");
+          await sReply('✅ Sejauh ini semua angkamu benar. Lanjutkan mengisi!');
         }
         return true;
       }
       if (messageText === 'hint') {
         if (gameState.hintsUsed >= 3) {
-          await sReply("Maaf, kamu sudah menggunakan semua jatah bantuan (3/3).");
+          await sReply('Maaf, kamu sudah menggunakan semua jatah bantuan (3/3).');
           return true;
         }
         const emptyCells = [];
@@ -1028,7 +1028,7 @@ export async function handleGameBotResponse(params) {
           if (cell === null) emptyCells.push(index);
         });
         if (emptyCells.length === 0) {
-          await sReply("Papan sudah terisi penuh, tidak ada bantuan yang bisa diberikan.");
+          await sReply('Papan sudah terisi penuh, tidak ada bantuan yang bisa diberikan.');
           return true;
         }
         gameState.hintsUsed++;
@@ -1057,9 +1057,9 @@ export async function handleGameBotResponse(params) {
         const coord = match[1];
         const value = parseInt(match[2], 10);
         const index = parseSudokuCoord(coord);
-        if (index === null) throw new Error("Koordinat tidak valid. Gunakan a1 - i9.");
-        if (gameState.puzzle[index] !== null) throw new Error("Kotak ini adalah bagian dari puzzle dan tidak bisa diubah.");
-        let replyCaption = "";
+        if (index === null) throw new Error('Koordinat tidak valid. Gunakan a1 - i9.');
+        if (gameState.puzzle[index] !== null) throw new Error('Kotak ini adalah bagian dari puzzle dan tidak bisa diubah.');
+        let replyCaption = '';
         if (value === 0) {
           gameState.board[index] = null;
           replyCaption = `🗑️ Angka di *${coord.toUpperCase()}* berhasil dihapus.`;
@@ -1072,7 +1072,7 @@ export async function handleGameBotResponse(params) {
         if (value !== 0 && !gameState.board.includes(null)) {
           const isSolved = JSON.stringify(gameState.board) === JSON.stringify(gameState.solution);
           if (isSolved) {
-            await sReply("🎉 *Luar Biasa!* 🎉\n\nPapan sudah terisi penuh dan semua jawabanmu BENAR! Anda berhasil menyelesaikan puzzle ini!");
+            await sReply('🎉 *Luar Biasa!* 🎉\n\nPapan sudah terisi penuh dan semua jawabanmu BENAR! Anda berhasil menyelesaikan puzzle ini!');
           } else {
             const errorIndices = [];
             for (let i = 0; i < 81; i++) {
@@ -1081,7 +1081,7 @@ export async function handleGameBotResponse(params) {
               }
             }
             const errorBoardBuffer = await generateSudokuBoardImage(gameState.puzzle, gameState.board, errorIndices);
-            await sReply({ image: errorBoardBuffer, caption: "Papan sudah penuh, namun masih ada jawaban yang salah (ditandai merah)." });
+            await sReply({ image: errorBoardBuffer, caption: 'Papan sudah penuh, namun masih ada jawaban yang salah (ditandai merah).' });
           }
           await user.addXp();
           await performanceManager.cache.updateUserStats(user.userId, counthits);
@@ -1109,8 +1109,8 @@ export async function handleGameBotResponse(params) {
       const genAI = new GoogleGenerativeAI(config.geminiApikey);
       const model = genAI.getGenerativeModel({
         generationConfig: { responseModalities: ['Text', 'Image'] },
-        model: "gemini-2.0-flash-exp-image-generation",
-        safetySettings,
+        model: 'gemini-2.0-flash-exp-image-generation',
+        safetySettings
       });
 
       const result = await model.generateContent(promptForImage);
@@ -1133,13 +1133,13 @@ export async function handleGameBotResponse(params) {
       }
 
       if (!imageGenerated) {
-        await sReply("Gagal membuat gambar. Respons dari AI tidak mengandung data gambar.");
+        await sReply('Gagal membuat gambar. Respons dari AI tidak mengandung data gambar.');
       }
       return true;
     } else {
       const session = getSession(serial, sessions);
       if (!session) {
-        await sReply("Maaf, sesi chatbot sedang bermasalah. Coba `.chatbot off` lalu `.chatbot on` lagi.");
+        await sReply('Maaf, sesi chatbot sedang bermasalah. Coba `.chatbot off` lalu `.chatbot on` lagi.');
         return true;
       }
       const cleanupListeners = () => {
@@ -1165,7 +1165,7 @@ export async function handleGameBotResponse(params) {
 
       const timeoutHandler = setTimeout(async () => {
         cleanupListeners();
-        await sReply("Maaf, AI tidak merespons dalam waktu yang ditentukan. Coba lagi.");
+        await sReply('Maaf, AI tidak merespons dalam waktu yang ditentukan. Coba lagi.');
       }, 90000);
 
       session.emitter.on('message', messageListener);

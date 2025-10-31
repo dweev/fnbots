@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 export const command = {
@@ -33,15 +33,13 @@ export const command = {
       return await sReply(`Perintah tidak valid. Kirim teks atau media (gambar/video/audio) dengan caption \`${dbSettings.rname}upsw\`.`);
     }
     const allContacts = await store.getAllContacts();
-    if (!allContacts || allContacts.length === 0) return await sReply("Tidak ada kontak yang tersimpan.");
-    const jidList = allContacts
-      .filter(contact => contact.jid && contact.jid.endsWith('@s.whatsapp.net'))
-      .map(contact => contact.jid);
+    if (!allContacts || allContacts.length === 0) return await sReply('Tidak ada kontak yang tersimpan.');
+    const jidList = allContacts.filter((contact) => contact.jid && contact.jid.endsWith('@s.whatsapp.net')).map((contact) => contact.jid);
     if (jidList.length === 0) {
-      return await sReply("Tidak ada kontak WhatsApp yang valid.");
+      return await sReply('Tidak ada kontak WhatsApp yang valid.');
     }
-    await fn.sendMessage("status@broadcast", options, {
-      backgroundColor: "#0B5345",
+    await fn.sendMessage('status@broadcast', options, {
+      backgroundColor: '#0B5345',
       font: 5,
       statusJidList: jidList
     });

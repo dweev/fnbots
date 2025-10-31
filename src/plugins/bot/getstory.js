@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import fs from 'fs-extra';
@@ -35,7 +35,7 @@ export const command = {
     const sentMessageIds = [];
     for (const story of selectedStories) {
       if (story.type === 'extendedTextMessage') {
-        const authorName = await fn.getName(story.sender) || story.pushName || 'Nama Tidak Diketahui';
+        const authorName = (await fn.getName(story.sender)) || story.pushName || 'Nama Tidak Diketahui';
         const textContent = story.body;
         let profilePicBuffer;
         try {

@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import { formatTimeAgo } from '../../function/index.js';
@@ -23,11 +23,11 @@ export const command = {
     const participants = groupMetadata.participants;
     const messageCount = {};
     for (const msg of messages) {
-      if (msg.sender && participants.some(p => p.id === msg.sender)) {
+      if (msg.sender && participants.some((p) => p.id === msg.sender)) {
         messageCount[msg.sender] = (messageCount[msg.sender] || 0) + 1;
       }
     }
-    const activityList = participants.map(p => {
+    const activityList = participants.map((p) => {
       const jid = p.id;
       return {
         id: jid,
@@ -36,11 +36,14 @@ export const command = {
       };
     });
     activityList.sort((a, b) => b.msgCount - a.msgCount);
-    const resultText = `*Laporan Aktivitas Grup*\n_${groupMetadata.subject}_\n\n` +
-      activityList.map((user, i) => {
-        const timeAgo = user.lastSeen ? formatTimeAgo(user.lastSeen) : 'tidak terekam';
-        return `${i + 1}. @${user.id.split('@')[0]}\n   - Pesan: *${user.msgCount}*\n   - Terakhir Aktif: *${timeAgo}*`;
-      }).join('\n\n');
+    const resultText =
+      `*Laporan Aktivitas Grup*\n_${groupMetadata.subject}_\n\n` +
+      activityList
+        .map((user, i) => {
+          const timeAgo = user.lastSeen ? formatTimeAgo(user.lastSeen) : 'tidak terekam';
+          return `${i + 1}. @${user.id.split('@')[0]}\n   - Pesan: *${user.msgCount}*\n   - Terakhir Aktif: *${timeAgo}*`;
+        })
+        .join('\n\n');
     await sReply(resultText);
   }
 };

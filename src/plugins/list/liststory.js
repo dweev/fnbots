@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 export const command = {
@@ -29,5 +29,5 @@ export const command = {
     replyText += `\nTotal Users: ${usersWithStories.length}\n`;
     replyText += `Cached: ${cacheStats.totalUsers}`;
     await sReply(replyText);
-  },
+  }
 };

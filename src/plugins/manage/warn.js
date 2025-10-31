@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import { Group } from '../../../database/index.js';
@@ -18,7 +18,7 @@ export const command = {
     if (!m.isGroup) return await sReply('Perintah ini hanya bisa digunakan di grup!');
     if (!arg) return await sReply(`Gagal. Balas atau mention pengguna untuk memberi peringatan, atau gunakan ${dbSettings.rname}warn set on/off untuk mengatur fitur.`);
     const metadata = await store.getGroupMetadata(toId);
-    const groupAdmins = metadata?.participants?.filter(p => p.admin).map(p => p.id) || [];
+    const groupAdmins = metadata?.participants?.filter((p) => p.admin).map((p) => p.id) || [];
     const group = await Group.ensureGroup(toId);
     const subCommand = ar[0]?.toLowerCase();
     if (subCommand === 'set') {
@@ -65,13 +65,11 @@ export const command = {
     }
     let replyText = '';
     if (warnedUsers.length > 0) {
-      const successList = warnedUsers
-        .map(u => `› @${u.id.split('@')[0]} Total: ${u.count}`)
-        .join('\n');
+      const successList = warnedUsers.map((u) => `› @${u.id.split('@')[0]} Total: ${u.count}`).join('\n');
       replyText += `Peringatan Diberikan:\n${successList}`;
     }
     if (failedAdmins.length > 0) {
-      const adminList = failedAdmins.map(id => `› @${id.split('@')[0]}`).join('\n');
+      const adminList = failedAdmins.map((id) => `› @${id.split('@')[0]}`).join('\n');
       replyText += `\n\nGagal memberi peringatan kepada admin:\n${adminList}`;
     }
     if (failedBots.length > 0) {

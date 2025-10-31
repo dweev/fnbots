@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────────
 
 import config from '../../../config.js';
@@ -24,10 +24,10 @@ export const command = {
     };
     let buffer;
     let hasCustomWatermark = false;
-    const hasCropFlag = args.some(a => a === '--crop');
+    const hasCropFlag = args.some((a) => a === '--crop');
     if (hasCropFlag) {
       pack.crop = true;
-      args = args.filter(a => a !== '--crop');
+      args = args.filter((a) => a !== '--crop');
       arg = args.join(' ').trim();
     }
     const isURL = args.length > 0 && /^https?:\/\/.+/i.test(args[0]);
@@ -51,6 +51,7 @@ export const command = {
           pack.authorName = rightPart;
           hasCustomWatermark = true;
         } else {
+          // prettier-ignore
           return await sReply(
             'Format watermark salah! Pastikan kedua bagian terisi.\n' +
             'Contoh: .s MyPack|FN\n' +
@@ -60,6 +61,7 @@ export const command = {
       }
       const targetMsg = quotedMsg ? m.quoted || m : m.message;
       if (!targetMsg) {
+        // prettier-ignore
         return await sReply(
           "Balas gambar/video atau kirim media dengan caption .sticker\n\n" +
           "Contoh penggunaan:\n" +
@@ -71,14 +73,14 @@ export const command = {
         );
       }
       const isMedia = !!(targetMsg.imageMessage || targetMsg.videoMessage || targetMsg.stickerMessage);
-      if (!isMedia) return await sReply("Media tidak valid! Pastikan yang Anda balas adalah gambar atau video.");
+      if (!isMedia) return await sReply('Media tidak valid! Pastikan yang Anda balas adalah gambar atau video.');
       buffer = await fn.getMediaBuffer(targetMsg);
       if (targetMsg.mime?.includes('video')) {
         const duration = targetMsg?.videoMessage?.seconds || 0;
-        if (duration > 20) return await sReply("Durasi video melebihi 20 detik");
+        if (duration > 20) return await sReply('Durasi video melebihi 20 detik');
       }
     }
-    if (!buffer || buffer.length < 100) return await sReply("Ukuran media tidak valid atau gagal diunduh.");
+    if (!buffer || buffer.length < 100) return await sReply('Ukuran media tidak valid atau gagal diunduh.');
     const stickerBuffer = await runJob('stickerNative', {
       mediaBuffer: buffer,
       packName: pack.packName,
@@ -87,10 +89,6 @@ export const command = {
       forceUpdateExif: hasCustomWatermark
     });
     if (!Buffer.isBuffer(stickerBuffer) || stickerBuffer.length === 0) return await sReply('Worker gagal menghasilkan buffer stiker yang valid.');
-    await fn.sendMessage(
-      toId,
-      { sticker: stickerBuffer },
-      { quoted: m, ephemeralExpiration: m.expiration ?? 0 }
-    );
+    await fn.sendMessage(toId, { sticker: stickerBuffer }, { quoted: m, ephemeralExpiration: m.expiration ?? 0 });
   }
 };

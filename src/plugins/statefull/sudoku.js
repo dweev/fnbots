@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import sudoku from 'sudoku';
@@ -17,7 +17,7 @@ export const command = {
   isLimitGameCommand: true,
   aliases: ['g-sudoku'],
   execute: async ({ toId, sReply, serial, sudokuGame, args }) => {
-    if (sudokuGame[toId]) return await sReply("Masih ada sesi Sudoku yang berjalan. Hentikan dengan mengetik *menyerah*.");
+    if (sudokuGame[toId]) return await sReply('Masih ada sesi Sudoku yang berjalan. Hentikan dengan mengetik *menyerah*.');
     const difficultyArg = args[0] ? args[0].toLowerCase() : 'easy';
     const difficultyMap = {
       easy: 45,
@@ -26,7 +26,7 @@ export const command = {
       extreme: 24
     };
     const cellsToKeep = difficultyMap[difficultyArg] || difficultyMap['easy'];
-    const difficultyName = Object.keys(difficultyMap).find(key => difficultyMap[key] === cellsToKeep);
+    const difficultyName = Object.keys(difficultyMap).find((key) => difficultyMap[key] === cellsToKeep);
     const base_puzzle = sudoku.makepuzzle();
     const solution = sudoku.solvepuzzle(base_puzzle);
     const puzzle = [...solution];

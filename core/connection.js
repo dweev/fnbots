@@ -1,9 +1,9 @@
 // ─── Info ─────────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info core/connection.js ──────────────────
 
 import 'dotenv/config.js';
@@ -162,7 +162,7 @@ export async function createWASocket(dbSettings) {
         restartManager.forceExit(1);
       } else if (transientCodes.includes(statusCode)) {
         await log(`Temporary disconnect (${statusCode}). Reconnecting in 15s...`);
-        await new Promise(res => setTimeout(res, 15_000));
+        await new Promise((res) => setTimeout(res, 15_000));
         await restartManager.restart(`Reconnecting after code ${statusCode}`, (await import('../src/lib/performanceManager.js')).performanceManager);
       } else {
         await log(`Unexpected close (${statusCode}). Restarting...`);

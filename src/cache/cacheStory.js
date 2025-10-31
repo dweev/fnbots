@@ -1,16 +1,16 @@
 // ─── Info ─────────────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info src/cache/cacheStory.js ─────────────────
 
 import log from '../lib/logger.js';
 import { redis } from '../../database/index.js';
 
 const REDIS_TTL = {
-  STORY: 60 * 60 * 24,
+  STORY: 60 * 60 * 24
 };
 
 const REDIS_PREFIX = {
@@ -42,7 +42,7 @@ class StoryCache {
         storiesWithTime.sort((a, b) => a.timestamp - b.timestamp);
         const toDelete = storiesWithTime.slice(0, storyCount - maxSize);
         if (toDelete.length > 0) {
-          const deleteIds = toDelete.map(s => s.messageId);
+          const deleteIds = toDelete.map((s) => s.messageId);
           await redis.hdel(key, ...deleteIds);
           log(`Trimmed ${deleteIds.length} old stories for ${userId}`);
         }
@@ -61,7 +61,7 @@ class StoryCache {
         log(`Cache miss for stories: ${userId}`);
         return null;
       }
-      const stories = Object.values(cached).map(data => JSON.parse(data));
+      const stories = Object.values(cached).map((data) => JSON.parse(data));
       stories.sort((a, b) => (b.messageTimestamp || 0) - (a.messageTimestamp || 0));
       return stories;
     } catch (error) {

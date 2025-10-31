@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import { delay } from 'baileys';
@@ -22,7 +22,7 @@ export const command = {
         easy: {
           cost: 0,
           count: 5,
-          rewardText: "Menang!",
+          rewardText: 'Menang!',
           getReward: (cost, maxSame) => {
             if (maxSame >= 3) {
               return Math.floor(Math.random() * (500 - 100) + 100);
@@ -33,7 +33,7 @@ export const command = {
         normal: {
           cost: 2000,
           count: 7,
-          rewardText: "Menang!",
+          rewardText: 'Menang!',
           getReward: (cost, maxSame) => {
             if (maxSame >= 7) return Math.floor(cost * 3);
             if (maxSame >= 5) return Math.floor(cost * 2.5);
@@ -44,7 +44,7 @@ export const command = {
         hard: {
           cost: 20000,
           count: 10,
-          rewardText: "Menang!",
+          rewardText: 'Menang!',
           getReward: (cost, maxSame) => {
             if (maxSame >= 10) return Math.floor(cost * 4);
             if (maxSame >= 7) return Math.floor(cost * 2.7);
@@ -55,7 +55,7 @@ export const command = {
         extreme: {
           cost: 200000,
           count: 20,
-          rewardText: "Menang!",
+          rewardText: 'Menang!',
           getReward: (cost, maxSame) => {
             if (maxSame >= 20) return Math.floor(cost * 10);
             if (maxSame >= 13) return Math.floor(cost * 4.7);
@@ -65,11 +65,11 @@ export const command = {
           }
         }
       };
-      if (args.length > 1) return await sReply("pesan tidak valid, contoh: .slot, .slot normal, .slot extreme");
+      if (args.length > 1) return await sReply('pesan tidak valid, contoh: .slot, .slot normal, .slot extreme');
       const mode = args[0] ? args[0].toLowerCase() : 'easy';
       const config = gameModes[mode];
       if (!config) return await sReply(`Mode "${mode}" tidak ditemukan. Pilihan: easy, normal, hard, extreme.`);
-      if (!user || user.balance <= 0) return await sReply("User tidak ditemukan atau saldo 0.\nsilakan gunakan permainan mode grinding dulu seperti .chop, .mine, .fish, .hunt, .ngelonte, .work atau gunakan perintah .daily jika kamu belum daily claim hari ini.");
+      if (!user || user.balance <= 0) return await sReply('User tidak ditemukan atau saldo 0.\nsilakan gunakan permainan mode grinding dulu seperti .chop, .mine, .fish, .hunt, .ngelonte, .work atau gunakan perintah .daily jika kamu belum daily claim hari ini.');
       const saldoAwal = BigInt(user.balance);
       if (saldoAwal < BigInt(config.cost)) return await sReply(`Saldomu tidak cukup untuk bermain mode ${mode} (butuh ${formatNumber(config.cost)}).`);
       const { key } = await sReply('🎰 Slot Machine🎰\n⏳ Rolling...');
@@ -110,7 +110,8 @@ export const command = {
         }
       }
       finalText += `Saldo akhir: ${formatNumber(saldoAkhir)}`;
-      await delay(1500); fn.sendReply(toId, finalText, { edit: key });
+      await delay(1500);
+      fn.sendReply(toId, finalText, { edit: key });
       await user.addXp();
     } finally {
       gameStateManager.endGame(serial);

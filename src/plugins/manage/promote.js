@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 export const command = {
@@ -24,8 +24,8 @@ export const command = {
       return await sReply(`Gunakan perintah ini dengan membalas pesan atau tag @user yang ingin dijadikan admin.`);
     }
     const metadata = await store.getGroupMetadata(toId);
-    const groupAdmins = metadata?.participants?.filter(p => p.admin) || [];
-    if (groupAdmins.some(admin => admin.id === targetId)) return await sReply(`@${targetId.split('@')[0]} sudah menjadi admin.`);
+    const groupAdmins = metadata?.participants?.filter((p) => p.admin) || [];
+    if (groupAdmins.some((admin) => admin.id === targetId)) return await sReply(`@${targetId.split('@')[0]} sudah menjadi admin.`);
     await fn.promoteParticipant(toId, targetId);
     await sReply(`Sukses menambahkan @${targetId.split('@')[0]} sebagai admin.`);
   }

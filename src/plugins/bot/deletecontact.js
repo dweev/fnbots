@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 export const command = {
@@ -21,7 +21,7 @@ export const command = {
       targetJid = quotedParticipant;
     } else if (arg) {
       const sanitizedNumber = arg.replace(/[^0-9]/g, '');
-      if (!sanitizedNumber) return await sReply("Nomor tidak valid. Berikan nomor, mention, atau balas pesan.");
+      if (!sanitizedNumber) return await sReply('Nomor tidak valid. Berikan nomor, mention, atau balas pesan.');
       targetJid = `${sanitizedNumber}@s.whatsapp.net`;
     } else {
       return await sReply(`Anda harus menunjuk target!\nBalas pesan, mention, atau berikan nomor.\nContoh: ${dbSettings.rname}hapuskontak @user`);

@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import { jadwalSholat } from '../../function/index.js';
@@ -20,10 +20,13 @@ export const command = {
     const hariIni = new Date();
     const daftarHari = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
     const namaHari = daftarHari[hariIni.getDay()];
-    const namaKotaKapital = kota.split(' ').map(kata => kata.charAt(0).toUpperCase() + kata.slice(1)).join(' ');
+    const namaKotaKapital = kota
+      .split(' ')
+      .map((kata) => kata.charAt(0).toUpperCase() + kata.slice(1))
+      .join(' ');
     let replyText = `🕌 *Jadwal Sholat untuk wilayah ${namaKotaKapital}*\n`;
     replyText += `*${namaHari}, ${hasil.tanggal} ${hasil.bulan}*\n`;
-    replyText += "```\n";
+    replyText += '```\n';
     replyText += `Imsyak  : ${hasil.imsyak}\n`;
     replyText += `Shubuh  : ${hasil.shubuh}\n`;
     replyText += `Terbit  : ${hasil.terbit}\n`;
@@ -32,7 +35,7 @@ export const command = {
     replyText += `Ashar   : ${hasil.ashr}\n`;
     replyText += `Maghrib : ${hasil.maghrib}\n`;
     replyText += `Isya    : ${hasil.isya}\n`;
-    replyText += "```";
+    replyText += '```';
     await sReply(replyText);
   }
 };

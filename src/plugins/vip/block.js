@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 export const command = {
@@ -25,12 +25,13 @@ export const command = {
     const blocked = [];
     const failed = [];
     const metadata = await store.getGroupMetadata(toId);
+    // prettier-ignore
     const groupAdmins = metadata?.participants?.reduce((a, b) => {
-      if (b.admin) a.push({ id: b.id, admin: b.admin });
-      return a;
-    }, []) || [];
+        if (b.admin) a.push({ id: b.id, admin: b.admin });
+        return a;
+      }, []) || [];
     for (const jid of targets) {
-      if (groupAdmins && groupAdmins.some(admin => admin.id === jid)) {
+      if (groupAdmins && groupAdmins.some((admin) => admin.id === jid)) {
         failed.push(jid);
         continue;
       }

@@ -1,25 +1,25 @@
 // ─── Info ───────────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info src/utils/igdocs.js ───────────────────
 
 /*
  *
- * Menggunakan Playwright untuk membuka URL Instagram dan menyadap (intercept) 
+ * Menggunakan Playwright untuk membuka URL Instagram dan menyadap (intercept)
  * permintaan jaringan untuk menemukan doc_id, app_id, dan asbd_id.
  * @param {string} targetUrl - URL lengkap dari Post atau Reel Instagram.
  * @returns {Promise<object>} Sebuah objek berisi ID yang ditemukan.
- * 
-*/
+ *
+ */
 
 import { chromium } from 'playwright';
 
 export default async function instagramGetIds(targetUrl) {
   if (!targetUrl) {
-    throw new Error("URL target tidak diberikan.");
+    throw new Error('URL target tidak diberikan.');
   }
   console.log(`Memulai browser untuk membuka: ${targetUrl}`);
   let browser;
@@ -34,7 +34,7 @@ export default async function instagramGetIds(targetUrl) {
       appIds: new Set(),
       asbdIds: new Set()
     };
-    page.on('request', request => {
+    page.on('request', (request) => {
       const url = request.url();
       const headers = request.headers();
       if (url.includes('/graphql/query')) {
@@ -52,7 +52,7 @@ export default async function instagramGetIds(targetUrl) {
       }
     });
     await page.goto(targetUrl, { waitUntil: 'networkidle', timeout: 60000 });
-    console.log("Halaman selesai dimuat, data telah ditangkap.");
+    console.log('Halaman selesai dimuat, data telah ditangkap.');
     return {
       success: true,
       doc_ids: [...foundData.docIds],
@@ -60,12 +60,12 @@ export default async function instagramGetIds(targetUrl) {
       asbd_ids: [...foundData.asbdIds]
     };
   } catch (error) {
-    console.error("Terjadi kesalahan saat proses Playwright:", error);
+    console.error('Terjadi kesalahan saat proses Playwright:', error);
     throw new Error(`Gagal mengambil data dari URL: ${error.message}`);
   } finally {
     if (browser) {
       await browser.close();
-      console.log("Browser telah ditutup.");
+      console.log('Browser telah ditutup.');
     }
   }
 }

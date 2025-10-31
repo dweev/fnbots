@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import { createDeck, shuffleDeck, formatKartu, calculateSamgongValue } from '../../function/index.js';
@@ -34,10 +34,12 @@ export const command = {
     const playerId = serial;
     samgongSessions[toId] = { playerJid: playerId, deck, playerHand, botHand, status: 'player_turn', timeoutId: null };
     startTimeout(toId);
+    // prettier-ignore
     const groupMessage = `Permainan Samgong (Gaya Hit/Stand) dimulai oleh @${playerId.split('@')[0]}!\n\n` +
       `Satu kartu Bandar terbuka: [ ${botHand[0].display} ]\n\n` +
       `Giliranmu, @${playerId.split('@')[0]}! Cek DM. Sesi akan berakhir dalam 5 menit jika tidak aktif.`;
     await sPesan(groupMessage);
+    // prettier-ignore
     const privateMessage = `Ini kartumu (Total: *${calculateSamgongValue(playerHand)}*):\n${formatKartu(playerHand)}\n\n` +
       `Ketik *hit* untuk menambah kartu, atau *stand* untuk berhenti.`;
     const expiration = await fn.getEphemeralExpiration(playerId);

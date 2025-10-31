@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import dayjs from '../../utils/dayjs.js';
@@ -19,7 +19,7 @@ export const command = {
   execute: async ({ mentionedJidList, serial, sReply }) => {
     const targetId = mentionedJidList[0] || serial;
     const activePrems = await User.findActivePremiums();
-    const premiumUser = activePrems.find(user => user.userId === targetId);
+    const premiumUser = activePrems.find((user) => user.userId === targetId);
     if (!premiumUser) {
       await sReply(`@${targetId.split('@')[0]} tidak memiliki status Premium aktif.`);
       return;

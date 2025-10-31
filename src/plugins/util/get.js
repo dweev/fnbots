@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import path from 'path';
@@ -20,7 +20,7 @@ export const command = {
   isCommandWithoutPayment: true,
   execute: async ({ fn, m, sReply, toId, dbSettings, arg, sendRawWebpAsSticker }) => {
     const argsArray = arg.match(/(?:[^\s"']+|"[^"]*"|'[^']*')+/g) || [];
-    if (argsArray.length === 0) return await sReply("Argumen tidak boleh kosong.");
+    if (argsArray.length === 0) return await sReply('Argumen tidak boleh kosong.');
     const result = await runJob('mediaProcessor', { argsArray });
     switch (result.type) {
       case 'text':
@@ -65,7 +65,7 @@ export const command = {
         break;
       }
       default:
-        await sReply("Tipe hasil tidak dikenali dari worker.");
+        await sReply('Tipe hasil tidak dikenali dari worker.');
     }
   }
 };

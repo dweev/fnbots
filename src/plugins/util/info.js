@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info info.js ───────────────────────
 
 import { pluginCache } from '../../lib/plugins.js';
@@ -37,11 +37,7 @@ export const command = {
       const partialMatches = [];
       for (const [cmdKey, cmdData] of pluginCache.commands.entries()) {
         if (cmdKey !== cmdData.name) continue;
-        const checkFields = [
-          cmdData.name,
-          cmdData.displayName,
-          ...(cmdData.aliases || [])
-        ].filter(Boolean);
+        const checkFields = [cmdData.name, cmdData.displayName, ...(cmdData.aliases || [])].filter(Boolean);
         for (const field of checkFields) {
           if (field.toLowerCase().includes(searchQuery)) {
             partialMatches.push({
@@ -54,7 +50,7 @@ export const command = {
         }
       }
       if (partialMatches.length > 0) {
-        const exactMatch = partialMatches.find(m => m.exactMatch);
+        const exactMatch = partialMatches.find((m) => m.exactMatch);
         if (exactMatch) {
           foundCommand = exactMatch.command;
           matchType = 'partial_exact';
@@ -64,7 +60,7 @@ export const command = {
         } else {
           const suggestions = partialMatches
             .slice(0, 5)
-            .map(m => `• ${m.command.displayName || m.command.name}`)
+            .map((m) => `• ${m.command.displayName || m.command.name}`)
             .join('\n');
 
           return await sReply(`Command "${args[0]}" tidak ditemukan.\n\nMungkin yang kamu maksud:\n${suggestions}\n\nGunakan nama yang lebih spesifik.`);

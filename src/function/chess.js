@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── info src/function/chess.js ──────────────────────
 
 import { createCanvas } from 'canvas';
@@ -15,15 +15,25 @@ export async function generateBoardImage(fen, perspective = 'w') {
   const canvas = createCanvas(canvasSize, canvasSize);
   const ctx = canvas.getContext('2d');
   const pieces = {
-    'p': '♙', 'r': '♖', 'n': '♘', 'b': '♗', 'q': '♕', 'k': '♔',
-    'P': '♟︎', 'R': '♜', 'N': '♞', 'B': '♝', 'Q': '♛', 'K': '♚'
+    'p': '♙',
+    'r': '♖',
+    'n': '♘',
+    'b': '♗',
+    'q': '♕',
+    'k': '♔',
+    'P': '♟︎',
+    'R': '♜',
+    'N': '♞',
+    'B': '♝',
+    'Q': '♛',
+    'K': '♚'
   };
   const fileLabels = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
   const rankLabels = ['8', '7', '6', '5', '4', '3', '2', '1'];
   if (perspective === 'b') {
     fileLabels.reverse();
     rankLabels.reverse();
-  };
+  }
   for (let row = 0; row < 8; row++) {
     for (let col = 0; col < 8; col++) {
       const isLightSquare = (row + col) % 2 === 0;
@@ -46,7 +56,7 @@ export async function generateBoardImage(fen, perspective = 'w') {
   const [board] = fen.split(' ');
   const ranks = board.split('/');
   if (perspective === 'b') {
-    ranks.reverse().forEach((rank, i) => ranks[i] = rank.split('').reverse().join(''));
+    ranks.reverse().forEach((rank, i) => (ranks[i] = rank.split('').reverse().join('')));
   }
   ranks.forEach((rankStr, rank) => {
     let file = 0;
@@ -54,8 +64,8 @@ export async function generateBoardImage(fen, perspective = 'w') {
       if (/\d/.test(char)) {
         file += parseInt(char, 10);
       } else {
-        ctx.fillStyle = (char === char.toUpperCase()) ? '#FFFFFF' : '#000000';
-        ctx.strokeStyle = (char === char.toUpperCase()) ? '#000000' : '#FFFFFF';
+        ctx.fillStyle = char === char.toUpperCase() ? '#FFFFFF' : '#000000';
+        ctx.strokeStyle = char === char.toUpperCase() ? '#000000' : '#FFFFFF';
         ctx.lineWidth = 1.5;
         ctx.font = '42px Arial';
         ctx.textAlign = 'center';
@@ -70,4 +80,4 @@ export async function generateBoardImage(fen, perspective = 'w') {
     }
   });
   return canvas.toBuffer('image/png');
-};
+}

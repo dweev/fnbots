@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info src/lib/tempManager.js ─────────────────
 
 import path from 'path';
@@ -27,7 +27,7 @@ class TempManager {
     return path.resolve(this.baseDir, filename);
   }
   createTempFile(extension = '', prefix = 'temp-') {
-    const safeExtension = extension.startsWith('.') ? extension : (extension ? `.${extension}` : '');
+    const safeExtension = extension.startsWith('.') ? extension : extension ? `.${extension}` : '';
     const filename = `${prefix}${Date.now()}-${Math.random().toString(36).substring(2, 11)}${safeExtension}`;
     return this.getPath(filename);
   }
@@ -47,7 +47,7 @@ class TempManager {
     }
     const filePath = this.getPath(filename);
     try {
-      if (!await fs.pathExists(filePath)) {
+      if (!(await fs.pathExists(filePath))) {
         log(`File not found: ${filePath}`);
         return false;
       }

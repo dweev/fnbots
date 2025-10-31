@@ -2,7 +2,7 @@ name: Auto Release
 
 on:
   push:
-    branches: ["master"]
+    branches: ['master']
 
 permissions:
   contents: write
@@ -220,7 +220,7 @@ jobs:
         run: |
           VERSION="${{ steps.check_version.outputs.version }}"
           TAG_DATE=$(date +%Y-%m-%d)
-          
+
           # Replace [Unreleased] with new version
           if grep -q "## \[Unreleased\]" CHANGELOG.md; then
             sed -i "s/## \[Unreleased\]/## [$VERSION] - $TAG_DATE/" CHANGELOG.md
@@ -231,10 +231,10 @@ jobs:
         run: |
           VERSION="${{ steps.check_version.outputs.version }}"
           LAST_TAG="${{ steps.check_version.outputs.last_tag }}"
-          
+
           echo "## 🎉 What's Changed in v$VERSION" > release_notes.txt
           echo "" >> release_notes.txt
-          
+
           if [ "$LAST_TAG" != "v0.0.0" ]; then
             COMMIT_COUNT=$(git log ${LAST_TAG}..HEAD --oneline --no-merges | wc -l)
             
@@ -293,7 +293,7 @@ jobs:
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          
+
           if [[ -n $(git status --porcelain CHANGELOG.md) ]]; then
             git add CHANGELOG.md
             git commit -m "chore(release): update CHANGELOG.md for v${{ steps.check_version.outputs.version }}"
@@ -313,7 +313,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.check_version.outputs.version }}
-          name: "Release v${{ steps.check_version.outputs.version }} (${{ steps.check_version.outputs.update_type }})"
+          name: 'Release v${{ steps.check_version.outputs.version }} (${{ steps.check_version.outputs.update_type }})'
           body_path: release_notes.txt
           generate_release_notes: false
           draft: false

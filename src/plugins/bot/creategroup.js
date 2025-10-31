@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 export const command = {
@@ -19,11 +19,11 @@ export const command = {
     participantSet.add(serial);
     const mentioned = mentionedJidList;
     if (mentioned.length > 0) {
-      mentioned.forEach(jid => participantSet.add(jid));
+      mentioned.forEach((jid) => participantSet.add(jid));
     } else if (quotedMsg) {
       participantSet.add(quotedParticipant);
     } else if (args.length > 1 && args[1]) {
-      const numbers = args[1].split(',').map(num => num.trim());
+      const numbers = args[1].split(',').map((num) => num.trim());
       for (const num of numbers) {
         const sanitizedNumber = num.replace(/[^0-9]/g, '');
         if (sanitizedNumber) {

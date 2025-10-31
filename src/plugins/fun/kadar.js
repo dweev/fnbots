@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 const categories = {
@@ -115,7 +115,10 @@ export const command = {
   isCommandWithoutPayment: true,
   execute: async ({ args, sReply }) => {
     if (args.length === 0) {
-      const availableCategories = Object.keys(categories).map(cat => `› ${cat}`).join('\n');
+      const availableCategories = Object.keys(categories)
+        .map((cat) => `› ${cat}`)
+        .join('\n');
+      // prettier-ignore
       return await sReply(
         `Silakan pilih kadar yang ingin diukur!\n\n` +
         `*Contoh Penggunaan:*\n.kadar kepintaran\n\n` +
@@ -130,14 +133,13 @@ export const command = {
         const replyText = `Tingkat *${requestedCategory}* kamu adalah *${random}%*!\n\n"${result[1]}"`;
         await sReply(replyText);
       } else {
-        return await sReply("Terjadi kesalahan internal pada data kategori.");
+        return await sReply('Terjadi kesalahan internal pada data kategori.');
       }
     } else {
-      const availableCategories = Object.keys(categories).map(cat => `› ${cat}`).join('\n');
-      return await sReply(
-        `Kadar "${requestedCategory}" tidak ditemukan.\n\n` +
-        `*Pilihan yang Tersedia:*\n${availableCategories}`
-      );
+      const availableCategories = Object.keys(categories)
+        .map((cat) => `› ${cat}`)
+        .join('\n');
+      return await sReply(`Kadar "${requestedCategory}" tidak ditemukan.\n\n` + `*Pilihan yang Tersedia:*\n${availableCategories}`);
     }
   }
 };

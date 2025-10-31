@@ -1,9 +1,9 @@
 // ─── Info ─────────────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info src/cache/StoreDB.js ────────────────────
 
 import log from '../lib/logger.js';
@@ -53,10 +53,10 @@ class DBStore {
 
   // ─── Info Initialization ──────────────────────────
   /*
-  * Created with ❤️ and 💦 By FN
-  * Follow https://github.com/Terror-Machine
-  * Feel Free To Use
-  */
+   * Created with ❤️ and 💦 By FN
+   * Follow https://github.com/Terror-Machine
+   * Feel Free To Use
+   */
   // ─── Info Initialization Methods ──────────────────
 
   setAuthStore(authStore) {
@@ -79,7 +79,7 @@ class DBStore {
 
   async connect() {
     this.isConnected = true;
-    log("Warming up Redis cache...");
+    log('Warming up Redis cache...');
     await this.warmRedisCache();
     log('Redis + MongoDB ready');
     return this;
@@ -93,10 +93,10 @@ class DBStore {
 
   // ─── Info Circuit Breaker ─────────────────────────
   /*
-  * Created with ❤️ and 💦 By FN
-  * Follow https://github.com/Terror-Machine
-  * Feel Free To Use
-  */
+   * Created with ❤️ and 💦 By FN
+   * Follow https://github.com/Terror-Machine
+   * Feel Free To Use
+   */
   // ─── Info Circuit Breaker Methods ─────────────────
 
   checkCircuitBreaker() {
@@ -140,15 +140,15 @@ class DBStore {
 
   // ─── Info Data Sanitization ───────────────────────
   /*
-  * Created with ❤️ and 💦 By FN
-  * Follow https://github.com/Terror-Machine
-  * Feel Free To Use
-  */
+   * Created with ❤️ and 💦 By FN
+   * Follow https://github.com/Terror-Machine
+   * Feel Free To Use
+   */
   // ─── Info Data Sanitization Methods ───────────────
 
   sanitizeParticipants(participants) {
     if (!Array.isArray(participants)) return [];
-    return participants.map(p => {
+    return participants.map((p) => {
       let jid;
       if (p.phoneNumber) {
         jid = p.phoneNumber;
@@ -234,10 +234,10 @@ class DBStore {
 
   // ─── Info Change Detection ────────────────────────
   /*
-  * Created with ❤️ and 💦 By FN
-  * Follow https://github.com/Terror-Machine
-  * Feel Free To Use
-  */
+   * Created with ❤️ and 💦 By FN
+   * Follow https://github.com/Terror-Machine
+   * Feel Free To Use
+   */
   // ─── Info Change Detection Methods ────────────────
 
   hasParticipantsChanged(existingParticipants = [], updatedParticipants = []) {
@@ -245,7 +245,7 @@ class DBStore {
       return true;
     }
     const existingMap = new Map(
-      existingParticipants.map(p => {
+      existingParticipants.map((p) => {
         const key = p.phoneNumber || p.id;
         return [
           key,
@@ -266,9 +266,7 @@ class DBStore {
       const updatedPhoneNumber = updatedP.phoneNumber || updatedP.id;
       const updatedLid = updatedP.lid || '';
       const updatedAdmin = updatedP.admin || null;
-      if (existing.phoneNumber !== updatedPhoneNumber ||
-        existing.lid !== updatedLid ||
-        existing.admin !== updatedAdmin) {
+      if (existing.phoneNumber !== updatedPhoneNumber || existing.lid !== updatedLid || existing.admin !== updatedAdmin) {
         return true;
       }
     }
@@ -286,13 +284,7 @@ class DBStore {
       return false;
     }
     if (type === 'groups') {
-      const primitiveFields = [
-        'subject', 'subjectOwner', 'subjectOwnerPn', 'subjectTime',
-        'owner', 'ownerPn', 'owner_country_code', 'desc', 'descOwner',
-        'descOwnerPn', 'descId', 'descTime', 'creation', 'size', 'restrict',
-        'announce', 'isCommunity', 'isCommunityAnnounce', 'notify', 'addressingMode',
-        'linkedParent', 'joinApprovalMode', 'memberAddMode', 'ephemeralDuration'
-      ];
+      const primitiveFields = ['subject', 'subjectOwner', 'subjectOwnerPn', 'subjectTime', 'owner', 'ownerPn', 'owner_country_code', 'desc', 'descOwner', 'descOwnerPn', 'descId', 'descTime', 'creation', 'size', 'restrict', 'announce', 'isCommunity', 'isCommunityAnnounce', 'notify', 'addressingMode', 'linkedParent', 'joinApprovalMode', 'memberAddMode', 'ephemeralDuration'];
       for (const field of primitiveFields) {
         const existingVal = existing[field];
         const updatedVal = updated[field];
@@ -311,10 +303,10 @@ class DBStore {
 
   // ─── Info Batch Processing ───────────────────────
   /*
-  * Created with ❤️ and 💦 By FN
-  * Follow https://github.com/Terror-Machine
-  * Feel Free To Use
-  */
+   * Created with ❤️ and 💦 By FN
+   * Follow https://github.com/Terror-Machine
+   * Feel Free To Use
+   */
   // ─── Info Batch Processing Methods ────────────────
 
   startBatchProcessor() {
@@ -322,36 +314,36 @@ class DBStore {
   }
 
   startCacheRefresh() {
-    setInterval(async () => {
-      if (!this.isConnected || !this.fn) return;
-      try {
-        log('Running scheduled group cache refresh...');
-        const participatingGroups = await this.fn.groupFetchAllParticipating();
-        if (participatingGroups && Object.keys(participatingGroups).length > 0) {
-          const groupsToUpdate = Object.values(participatingGroups);
-          const currentGroupIds = new Set(Object.keys(participatingGroups));
-          await this.bulkUpsertGroups(groupsToUpdate);
-          const syncResult = await this.syncStaleGroups(currentGroupIds);
-          log(`Cache refresh complete: ${groupsToUpdate.length} groups updated, ${syncResult.removed} stale removed`);
+    setInterval(
+      async () => {
+        if (!this.isConnected || !this.fn) return;
+        try {
+          log('Running scheduled group cache refresh...');
+          const participatingGroups = await this.fn.groupFetchAllParticipating();
+          if (participatingGroups && Object.keys(participatingGroups).length > 0) {
+            const groupsToUpdate = Object.values(participatingGroups);
+            const currentGroupIds = new Set(Object.keys(participatingGroups));
+            await this.bulkUpsertGroups(groupsToUpdate);
+            const syncResult = await this.syncStaleGroups(currentGroupIds);
+            log(`Cache refresh complete: ${groupsToUpdate.length} groups updated, ${syncResult.removed} stale removed`);
+          }
+        } catch (error) {
+          this.stats.errors++;
+          log(`Scheduled cache refresh error: ${error.message}`, true);
         }
-      } catch (error) {
-        this.stats.errors++;
-        log(`Scheduled cache refresh error: ${error.message}`, true);
-      }
-    }, 23 * 60 * 60 * 1000);
+      },
+      23 * 60 * 60 * 1000
+    );
   }
 
   async flushAllBatches() {
     if (!this.isConnected) return;
-    await Promise.all([
-      this.flushBatch('contacts'),
-      this.flushBatch('groups')
-    ]);
+    await Promise.all([this.flushBatch('contacts'), this.flushBatch('groups')]);
   }
 
   async flushBatch(type) {
     while (this.queueLocks[type]) {
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
     }
     if (this.updateQueues[type].size === 0) return;
     this.queueLocks[type] = true;
@@ -376,10 +368,10 @@ class DBStore {
 
   // ─── Info Group Operations ────────────────────────
   /*
-  * Created with ❤️ and 💦 By FN
-  * Follow https://github.com/Terror-Machine
-  * Feel Free To Use
-  */
+   * Created with ❤️ and 💦 By FN
+   * Follow https://github.com/Terror-Machine
+   * Feel Free To Use
+   */
   // ─── Info Group Operations Methods ────────────────
 
   async bulkUpsertGroups(groupsArray) {
@@ -393,19 +385,17 @@ class DBStore {
       log(`Bulk upserting ${groupsArray.length} groups in batches of ${BATCH_SIZE}...`);
       for (let i = 0; i < groupsArray.length; i += BATCH_SIZE) {
         const chunk = groupsArray.slice(i, i + BATCH_SIZE);
-        const chunkIds = chunk.map(g => g.id || g.groupId);
+        const chunkIds = chunk.map((g) => g.id || g.groupId);
         const existingGroups = await StoreGroupMetadata.find({
           groupId: { $in: chunkIds }
         }).lean();
-        const existingMap = new Map(
-          existingGroups.map(g => [g.groupId, g])
-        );
-        const sanitizedGroups = chunk.map(rawGroup => {
+        const existingMap = new Map(existingGroups.map((g) => [g.groupId, g]));
+        const sanitizedGroups = chunk.map((rawGroup) => {
           const groupId = rawGroup.id || rawGroup.groupId;
           const existing = existingMap.get(groupId);
           return this.sanitizeGroupData(rawGroup, existing);
         });
-        const dirtyGroups = sanitizedGroups.filter(updated => {
+        const dirtyGroups = sanitizedGroups.filter((updated) => {
           const existing = existingMap.get(updated.groupId);
           return !existing || this.hasChanges(existing, updated, 'groups');
         });
@@ -413,7 +403,7 @@ class DBStore {
           this.stats.skippedWrites += chunk.length;
           continue;
         }
-        const operations = dirtyGroups.map(group => ({
+        const operations = dirtyGroups.map((group) => ({
           updateOne: {
             filter: { groupId: group.groupId },
             update: {
@@ -428,7 +418,7 @@ class DBStore {
         totalUpserted += result.upsertedCount;
         totalModified += result.modifiedCount;
         this.stats.batchedWrites += dirtyGroups.length;
-        this.stats.skippedWrites += (chunk.length - dirtyGroups.length);
+        this.stats.skippedWrites += chunk.length - dirtyGroups.length;
         log(`Batch ${Math.floor(i / BATCH_SIZE) + 1}: ${result.upsertedCount} inserted, ${result.modifiedCount} modified`);
       }
       log(`Bulk upsert complete: ${totalUpserted} inserted, ${totalModified} modified`);
@@ -487,7 +477,7 @@ class DBStore {
       } else {
         this.stats.dbHits++;
         if (this.fn) {
-          this._refreshGroupInBackground(groupId).catch(err => {
+          this._refreshGroupInBackground(groupId).catch((err) => {
             log(`Background refresh failed: ${err.message}`, true);
           });
         }
@@ -563,7 +553,7 @@ class DBStore {
       if (cachedGroups.length > 0) {
         this.stats.redisHits += cachedGroups.length;
         if (projection) {
-          return cachedGroups.map(group => {
+          return cachedGroups.map((group) => {
             const filtered = {};
             for (const key in projection) {
               if (projection[key] === 1 && group[key] !== undefined) {
@@ -673,9 +663,9 @@ class DBStore {
     try {
       log('Starting stale group detection...');
       const storedGroups = await this.getAllGroups({ groupId: 1 });
-      const storedGroupIds = storedGroups.map(g => g.groupId);
+      const storedGroupIds = storedGroups.map((g) => g.groupId);
       log(`Stored: ${storedGroupIds.length} groups, Active: ${activeGroupIds.size} groups`);
-      const staleGroupIds = storedGroupIds.filter(id => !activeGroupIds.has(id));
+      const staleGroupIds = storedGroupIds.filter((id) => !activeGroupIds.has(id));
       if (staleGroupIds.length === 0) {
         log('No stale groups found. All data synchronized.');
         return { removed: 0, errors: 0 };
@@ -701,10 +691,10 @@ class DBStore {
 
   // ─── Info Contact Operations ──────────────────────
   /*
-  * Created with ❤️ and 💦 By FN
-  * Follow https://github.com/Terror-Machine
-  * Feel Free To Use
-  */
+   * Created with ❤️ and 💦 By FN
+   * Follow https://github.com/Terror-Machine
+   * Feel Free To Use
+   */
   // ─── Info Contact Operations Methods ──────────────
 
   async bulkUpsertContacts(contactsArray) {
@@ -718,16 +708,14 @@ class DBStore {
       log(`Bulk upserting ${contactsArray.length} contacts in batches of ${BATCH_SIZE}...`);
       for (let i = 0; i < contactsArray.length; i += BATCH_SIZE) {
         const chunk = contactsArray.slice(i, i + BATCH_SIZE);
-        const jids = chunk.map(c => c.jid);
+        const jids = chunk.map((c) => c.jid);
         const existingContacts = await StoreContact.find({ jid: { $in: jids } }).lean();
-        const existingMap = new Map(
-          existingContacts.map(c => [c.jid, c])
-        );
-        const sanitizedContacts = chunk.map(rawContact => {
+        const existingMap = new Map(existingContacts.map((c) => [c.jid, c]));
+        const sanitizedContacts = chunk.map((rawContact) => {
           const existing = existingMap.get(rawContact.jid);
           return this.sanitizeContactData(rawContact, existing);
         });
-        const dirtyContacts = sanitizedContacts.filter(updated => {
+        const dirtyContacts = sanitizedContacts.filter((updated) => {
           const existing = existingMap.get(updated.jid);
           return !existing || this.hasChanges(existing, updated, 'contacts');
         });
@@ -735,7 +723,7 @@ class DBStore {
           this.stats.skippedWrites += chunk.length;
           continue;
         }
-        const operations = dirtyContacts.map(contact => ({
+        const operations = dirtyContacts.map((contact) => ({
           updateOne: {
             filter: { jid: contact.jid },
             update: {
@@ -750,7 +738,7 @@ class DBStore {
         totalUpserted += result.upsertedCount;
         totalModified += result.modifiedCount;
         this.stats.batchedWrites += dirtyContacts.length;
-        this.stats.skippedWrites += (chunk.length - dirtyContacts.length);
+        this.stats.skippedWrites += chunk.length - dirtyContacts.length;
         log(`Batch ${Math.floor(i / BATCH_SIZE) + 1}: ${result.upsertedCount} inserted, ${result.modifiedCount} modified`);
       }
       log(`Bulk upsert complete: ${totalUpserted} inserted, ${totalModified} modified`);
@@ -902,10 +890,10 @@ class DBStore {
 
   // ─── Info LID & JID Resolution ────────────────────
   /*
-  * Created with ❤️ and 💦 By FN
-  * Follow https://github.com/Terror-Machine
-  * Feel Free To Use
-  */
+   * Created with ❤️ and 💦 By FN
+   * Follow https://github.com/Terror-Machine
+   * Feel Free To Use
+   */
   // ─── Info LID & JID Resolution Methods ────────────
 
   async handleLIDMapping(lid, jid) {
@@ -914,7 +902,7 @@ class DBStore {
     if (!normalizedLid && !normalizedJid) return;
     const lockKey = normalizedJid || normalizedLid;
     while (this.lidMappingLocks.has(lockKey)) {
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise((resolve) => setTimeout(resolve, 50));
     }
     this.lidMappingLocks.set(lockKey, true);
     try {
@@ -1080,10 +1068,10 @@ class DBStore {
 
   // ─── Info Message Operations ──────────────────────
   /*
-  * Created with ❤️ and 💦 By FN
-  * Follow https://github.com/Terror-Machine
-  * Feel Free To Use
-  */
+   * Created with ❤️ and 💦 By FN
+   * Follow https://github.com/Terror-Machine
+   * Feel Free To Use
+   */
   // ─── Info Message Operations Methods ──────────────
 
   async updateMessages(chatId, message, maxSize = 50) {
@@ -1091,7 +1079,7 @@ class DBStore {
       await MessageCache.addMessage(chatId, message, maxSize);
       import('../../database/index.js')
         .then(({ StoreMessages }) => StoreMessages.addMessage(chatId, message))
-        .catch(err => {
+        .catch((err) => {
           this.stats.errors++;
           log(`Message DB write error: ${err.message}`, true);
         });
@@ -1199,10 +1187,7 @@ class DBStore {
       log(`Load message from Redis error: ${error.message}`, true);
     }
     try {
-      const chatHistory = await StoreMessages.findOne(
-        { chatId: remoteJid, 'messages.key.id': id },
-        { 'messages.$': 1 }
-      ).lean();
+      const chatHistory = await StoreMessages.findOne({ chatId: remoteJid, 'messages.key.id': id }, { 'messages.$': 1 }).lean();
       this.stats.dbHits++;
       return chatHistory?.messages?.[0] || null;
     } catch (error) {
@@ -1217,7 +1202,7 @@ class DBStore {
       await MessageCache.addConversation(chatId, conversation, maxSize);
       import('../../database/index.js')
         .then(({ StoreMessages }) => StoreMessages.addConversation(chatId, conversation, maxSize))
-        .catch(err => {
+        .catch((err) => {
           this.stats.errors++;
           log(`Conversation DB write error: ${err.message}`, true);
         });
@@ -1250,10 +1235,10 @@ class DBStore {
 
   // ─── Info Presence Operations ─────────────────────
   /*
-  * Created with ❤️ and 💦 By FN
-  * Follow https://github.com/Terror-Machine
-  * Feel Free To Use
-  */
+   * Created with ❤️ and 💦 By FN
+   * Follow https://github.com/Terror-Machine
+   * Feel Free To Use
+   */
   // ─── Info Presence Operations Methods ─────────────
 
   async updatePresences(chatId, presenceUpdate) {
@@ -1261,7 +1246,7 @@ class DBStore {
       await MessageCache.updatePresences(chatId, presenceUpdate);
       import('../../database/index.js')
         .then(({ StoreMessages }) => StoreMessages.updatePresences(chatId, presenceUpdate))
-        .catch(err => {
+        .catch((err) => {
           this.stats.errors++;
           log(`Presence DB write error: ${err.message}`, true);
         });
@@ -1298,10 +1283,10 @@ class DBStore {
 
   // ─── Info Story Operations ────────────────────────
   /*
-  * Created with ❤️ and 💦 By FN
-  * Follow https://github.com/Terror-Machine
-  * Feel Free To Use
-  */
+   * Created with ❤️ and 💦 By FN
+   * Follow https://github.com/Terror-Machine
+   * Feel Free To Use
+   */
   // ─── Info Story Operations Methods ────────────────
 
   async addStatus(userId, statusMessage, maxSize = 20) {
@@ -1309,7 +1294,7 @@ class DBStore {
       await StoryCache.addStatus(userId, statusMessage, maxSize);
       import('../../database/index.js')
         .then(({ StoreStory }) => StoreStory.addStatus(userId, statusMessage, maxSize))
-        .catch(err => {
+        .catch((err) => {
           this.stats.errors++;
           log(`Story DB write error: ${err.message}`, true);
         });
@@ -1348,7 +1333,7 @@ class DBStore {
       }
       this.stats.redisMisses++;
       const doc = await StoreStory.findOne({ userId }).lean();
-      const story = doc?.statuses?.find(s => s.key?.id === messageId);
+      const story = doc?.statuses?.find((s) => s.key?.id === messageId);
       this.stats.dbHits++;
       return story || null;
     } catch (error) {
@@ -1362,7 +1347,7 @@ class DBStore {
       await StoryCache.deleteStatus(userId, messageId);
       import('../../database/index.js')
         .then(({ StoreStory }) => StoreStory.deleteStatus(userId, messageId))
-        .catch(err => {
+        .catch((err) => {
           this.stats.errors++;
           log(`Story DB delete error: ${err.message}`, true);
         });
@@ -1376,10 +1361,10 @@ class DBStore {
       await StoryCache.bulkDeleteStatuses(userId, messageIds);
       import('../../database/index.js')
         .then(({ StoreStory }) => StoreStory.bulkDeleteStatuses(userId, messageIds))
-        .then(result => {
+        .then((result) => {
           log(`Bulk deleted ${result.modifiedCount} stories from DB for ${userId}`);
         })
-        .catch(err => {
+        .catch((err) => {
           this.stats.errors++;
           log(`Bulk story DB delete error: ${err.message}`, true);
         });
@@ -1401,14 +1386,14 @@ class DBStore {
       const cachedUsers = await StoryCache.getUsersWithStories();
       if (cachedUsers.length > 0) {
         this.stats.redisHits++;
-        return cachedUsers.map(userId => ({ userId, storyCount: 1 }));
+        return cachedUsers.map((userId) => ({ userId, storyCount: 1 }));
       }
       this.stats.redisMisses++;
       const usersWithStories = await StoreStory.aggregate([
         {
           $project: {
             userId: 1,
-            storyCount: { $size: "$statuses" }
+            storyCount: { $size: '$statuses' }
           }
         },
         {
@@ -1437,22 +1422,17 @@ class DBStore {
 
   // ─── Info Cache Management ────────────────────────
   /*
-  * Created with ❤️ and 💦 By FN
-  * Follow https://github.com/Terror-Machine
-  * Feel Free To Use
-  */
+   * Created with ❤️ and 💦 By FN
+   * Follow https://github.com/Terror-Machine
+   * Feel Free To Use
+   */
   // ─── Info Cache Management Methods ────────────────
 
   async clearCache() {
     this.updateQueues.contacts.clear();
     this.updateQueues.groups.clear();
     try {
-      await Promise.all([
-        ContactCache.clearAllCaches(),
-        GroupCache.clearAllCaches(),
-        MessageCache.clearAllCaches(),
-        StoryCache.clearAllCaches()
-      ]);
+      await Promise.all([ContactCache.clearAllCaches(), GroupCache.clearAllCaches(), MessageCache.clearAllCaches(), StoryCache.clearAllCaches()]);
       log('All caches cleared successfully');
     } catch (error) {
       this.stats.errors++;
@@ -1484,10 +1464,10 @@ class DBStore {
 
   // ─── Info Statistics & Monitoring ─────────────────
   /*
-  * Created with ❤️ and 💦 By FN
-  * Follow https://github.com/Terror-Machine
-  * Feel Free To Use
-  */
+   * Created with ❤️ and 💦 By FN
+   * Follow https://github.com/Terror-Machine
+   * Feel Free To Use
+   */
   // ─── Info Statistics & Monitoring Methods ─────────
 
   startStatsLogger() {
@@ -1501,17 +1481,12 @@ class DBStore {
 
   async getStats() {
     const total = this.stats.redisHits + this.stats.redisMisses;
-    const [contactStats, groupStats, messageStats, storyStats] = await Promise.all([
-      ContactCache.getStats(),
-      GroupCache.getStats(),
-      MessageCache.getStats(),
-      StoryCache.getStats()
-    ]);
+    const [contactStats, groupStats, messageStats, storyStats] = await Promise.all([ContactCache.getStats(), GroupCache.getStats(), MessageCache.getStats(), StoryCache.getStats()]);
     return {
       redis: {
         hits: this.stats.redisHits,
         misses: this.stats.redisMisses,
-        hitRate: total > 0 ? (this.stats.redisHits / total * 100).toFixed(2) + '%' : '0%'
+        hitRate: total > 0 ? ((this.stats.redisHits / total) * 100).toFixed(2) + '%' : '0%'
       },
       database: {
         hits: this.stats.dbHits,

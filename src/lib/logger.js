@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info src/lib/logger.js ──────────────────────
 
 import pino from 'pino';
@@ -21,7 +21,7 @@ function redactSecrets(input) {
   if (!input || typeof input !== 'string') return input;
   let redacted = input;
   const secrets = [config.openWather, config.huggigFace, config.geminiApikey];
-  secrets.forEach(secret => {
+  secrets.forEach((secret) => {
     if (typeof secret === 'string' && secret.length > 0) {
       redacted = redacted.split(secret).join('[REDACTED]');
     }
@@ -166,9 +166,13 @@ class SafeRotatingFileStream {
   }
   registerShutdownHandler() {
     const handlerName = `rotating-stream-${this.filePath}`;
-    signalHandler.register(handlerName, async () => {
-      await this.close();
-    }, 50);
+    signalHandler.register(
+      handlerName,
+      async () => {
+        await this.close();
+      },
+      50
+    );
   }
   close() {
     if (this.flushTimer) {
@@ -193,13 +197,7 @@ class SafeRotatingFileStream {
 
 function formatLogObject(logObj) {
   const timestamp = formatTime(logObj.time);
-  const level = 
-    logObj.level === 30 ? 'INFO' :
-    logObj.level === 40 ? 'WARN' :
-    logObj.level === 50 ? 'ERROR' :
-    logObj.level === 60 ? 'FATAL' :
-    logObj.level === 20 ? 'DEBUG' :
-    logObj.level === 10 ? 'TRACE' : 'INFO';
+  const level = logObj.level === 30 ? 'INFO' : logObj.level === 40 ? 'WARN' : logObj.level === 50 ? 'ERROR' : logObj.level === 60 ? 'FATAL' : logObj.level === 20 ? 'DEBUG' : logObj.level === 10 ? 'TRACE' : 'INFO';
   const logParts = [`[${timestamp}] ${level}: ${logObj.msg}`];
   const excludedKeys = ['time', 'level', 'msg', 'pid', 'hostname', 'v'];
   const additionalData = {};
@@ -210,9 +208,7 @@ function formatLogObject(logObj) {
   }
   if (Object.keys(additionalData).length > 0) {
     for (const [key, value] of Object.entries(additionalData)) {
-      const formattedValue = typeof value === 'object'
-        ? JSON.stringify(value, null, 2).split('\n').join('\n    ')
-        : value;
+      const formattedValue = typeof value === 'object' ? JSON.stringify(value, null, 2).split('\n').join('\n    ') : value;
       logParts.push(`    ${key}: ${formattedValue}`);
     }
   }
@@ -229,15 +225,12 @@ let baileysFileStreamSingleton = null;
 
 function getOrCreateBaileysFileStream() {
   if (!baileysFileStreamSingleton) {
-    const rotatingStream = new SafeRotatingFileStream(
-      path.join(logFilePath, 'baileys.log'),
-      {
-        maxSize: 10 * 1024 * 1024,
-        maxFiles: 7,
-        maxBufferSize: 100,
-        flushInterval: 1000
-      }
-    );
+    const rotatingStream = new SafeRotatingFileStream(path.join(logFilePath, 'baileys.log'), {
+      maxSize: 10 * 1024 * 1024,
+      maxFiles: 7,
+      maxBufferSize: 100,
+      flushInterval: 1000
+    });
     baileysFileStreamSingleton = {
       write: (data) => {
         try {
@@ -275,14 +268,16 @@ function createFormattedStream(filePath) {
 
 class BaileysLoggerWrapper {
   constructor() {
-    this.consoleLogger = pino(pino.transport({
-      target: 'pino-pretty',
-      options: {
-        colorize: true,
-        translateTime: 'SYS:dd-mm-yyyy HH:MM:ss',
-        ignore: 'pid,hostname,level',
-      }
-    }));
+    this.consoleLogger = pino(
+      pino.transport({
+        target: 'pino-pretty',
+        options: {
+          colorize: true,
+          translateTime: 'SYS:dd-mm-yyyy HH:MM:ss',
+          ignore: 'pid,hostname,level'
+        }
+      })
+    );
     this.fileStream = getOrCreateBaileysFileStream();
     this.fileLogger = pino({ level: 'debug' }, this.fileStream);
     this._consoleLevel = 'trace';
@@ -346,25 +341,28 @@ export const pinoLogger = new BaileysLoggerWrapper();
 
 const appFileStream = createFormattedStream(path.join(logFilePath, 'app_activity.log'));
 
-export const appLogger = pino({
-  level: 'trace'
-}, pino.multistream([
+export const appLogger = pino(
   {
-    level: 'trace',
-    stream: pino.transport({
-      target: 'pino-pretty',
-      options: {
-        colorize: true,
-        translateTime: 'SYS:dd-mm-yyyy HH:MM:ss',
-        ignore: 'pid,hostname,level',
-      }
-    })
+    level: 'trace'
   },
-  {
-    level: 'trace',
-    stream: appFileStream
-  }
-]));
+  pino.multistream([
+    {
+      level: 'trace',
+      stream: pino.transport({
+        target: 'pino-pretty',
+        options: {
+          colorize: true,
+          translateTime: 'SYS:dd-mm-yyyy HH:MM:ss',
+          ignore: 'pid,hostname,level'
+        }
+      })
+    },
+    {
+      level: 'trace',
+      stream: appFileStream
+    }
+  ])
+);
 
 export function updatePinoLoggerLevel(level) {
   pinoLogger.level = level;
@@ -406,12 +404,12 @@ export default async function log(message, isError = false) {
         }, {})
       };
       const errorString = util.inspect(errorObj, { depth: null, colors: false });
-      if (blockedKeywords.some(keyword => errorString.includes(keyword))) return;
+      if (blockedKeywords.some((keyword) => errorString.includes(keyword))) return;
       appLogger.error(errorString);
       return;
     }
     const inspectedMessage = typeof message === 'string' ? message : util.inspect(message, { depth: null });
-    if (blockedKeywords.some(keyword => inspectedMessage.includes(keyword))) return;
+    if (blockedKeywords.some((keyword) => inspectedMessage.includes(keyword))) return;
     if (isError) {
       appLogger.error(inspectedMessage);
     } else {

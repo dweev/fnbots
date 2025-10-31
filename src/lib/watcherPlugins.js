@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info src/lib/watcherPlugins.js ──────────────
 
 import path from 'path';
@@ -39,8 +39,8 @@ export default function startPluginWatcher() {
     depth: 10,
     awaitWriteFinish: {
       stabilityThreshold: 500,
-      pollInterval: 100,
-    },
+      pollInterval: 100
+    }
   });
   watcher.on('all', (event, filePath) => {
     if (!filePath.endsWith('.js')) return;

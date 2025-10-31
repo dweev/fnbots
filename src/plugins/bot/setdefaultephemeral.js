@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 export const command = {
@@ -27,7 +27,7 @@ export const command = {
       return await sReply('gunakan argument:\n90d, 7d, 1d, 24jam, off');
     } else {
       return await sReply('gunakan argument:\n90d, 7d, 1d, 24jam, off');
-    };
+    }
     await reactDone();
   }
 };

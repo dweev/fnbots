@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import { formatNumber } from '../../function/index.js';
@@ -18,7 +18,7 @@ export const command = {
   execute: async ({ user, sReply, serial }) => {
     await gameStateManager.startGame(serial);
     try {
-      if (!user.gacha) return await sReply("Kamu sudah mengambil daily-claim hari ini. Tunggu hingga jam 21:00!");
+      if (!user.gacha) return await sReply('Kamu sudah mengambil daily-claim hari ini. Tunggu hingga jam 21:00!');
       const randomValue = Math.random();
       let reward;
       if (randomValue < 0.03) {

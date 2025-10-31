@@ -1,9 +1,9 @@
 // ─── Info ─────────────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info src/handler/autochanger.js ──────────────
 
 import log from '../lib/logger.js';
@@ -12,6 +12,7 @@ export class AudioChangerHandler {
   constructor(fn, runJob) {
     this.fn = fn;
     this.runJob = runJob;
+    // prettier-ignore
     this.supportedMediaTypes = new Set([
       'audio/ogg; codecs=opus',
       'audio/mpeg',
@@ -97,9 +98,7 @@ export class AudioChangerHandler {
     }
   }
   isValidBuffer(buffer) {
-    return buffer &&
-      Buffer.isBuffer(buffer) &&
-      buffer.length > 0;
+    return buffer && Buffer.isBuffer(buffer) && buffer.length > 0;
   }
 }
 

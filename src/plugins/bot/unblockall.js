@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 export const command = {
@@ -13,7 +13,7 @@ export const command = {
   isCommandWithoutPayment: true,
   execute: async ({ fn, reactDone }) => {
     const blockNumber = await fn.fetchBlocklist();
-    await Promise.all(blockNumber.map(number => fn.updateBlockStatus(number, 'unblock')));
+    await Promise.all(blockNumber.map((number) => fn.updateBlockStatus(number, 'unblock')));
     await reactDone();
   }
 };

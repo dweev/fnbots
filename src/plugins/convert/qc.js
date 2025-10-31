@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import { QuoteGenerator } from 'qc-generator-whatsapp';
@@ -50,11 +50,11 @@ export const command = {
         message.from = {
           id: 1,
           name: pushname,
-          photo: { 
-            buffer: await getProfilePic(serial) 
+          photo: {
+            buffer: await getProfilePic(serial)
           },
-          number: "+" + serial.split('@')[0],
-          time: formatTimestampToHourMinute(m.timestamp),
+          number: '+' + serial.split('@')[0],
+          time: formatTimestampToHourMinute(m.timestamp)
         };
         message.text = processedArg.text;
         message.entities = processedArg.entities;
@@ -63,17 +63,17 @@ export const command = {
           name: await fn.getName(targetSender),
           text: processedQuoted.text,
           entities: processedQuoted.entities,
-          number: "+" + targetSender.split('@')[0]
+          number: '+' + targetSender.split('@')[0]
         };
       } else {
         message.from = {
           id: 1,
           name: await fn.getName(targetSender),
-          photo: { 
-            buffer: await getProfilePic(targetSender) 
+          photo: {
+            buffer: await getProfilePic(targetSender)
           },
-          number: "+" + targetSender.split('@')[0],
-          time: formatTimestampToHourMinute(m.timestamp),
+          number: '+' + targetSender.split('@')[0],
+          time: formatTimestampToHourMinute(m.timestamp)
         };
         message.text = processedQuoted.text;
         message.entities = processedQuoted.entities;
@@ -84,16 +84,16 @@ export const command = {
         message.from = {
           id: 1,
           name: pushname,
-          photo: { 
-            buffer: await getProfilePic(serial) 
+          photo: {
+            buffer: await getProfilePic(serial)
           },
-          number: "+" + serial.split('@')[0],
+          number: '+' + serial.split('@')[0],
           time: formatTimestampToHourMinute(m.timestamp)
         };
         message.text = processedArg.text;
         message.entities = processedArg.entities;
       } else {
-        return await sReply("Perintah tidak lengkap. Mohon sertakan teks atau balas sebuah pesan.");
+        return await sReply('Perintah tidak lengkap. Mohon sertakan teks atau balas sebuah pesan.');
       }
     }
     params.messages.push(message);

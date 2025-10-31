@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 export const command = {
@@ -13,10 +13,10 @@ export const command = {
   aliases: ['tagall', 'tag'],
   isCommandWithoutPayment: true,
   execute: async ({ m, toId, sReply, sPesan, store }) => {
-    if (!m.isGroup) return await sReply("Perintah ini hanya bisa digunakan di grup.");
+    if (!m.isGroup) return await sReply('Perintah ini hanya bisa digunakan di grup.');
     const groupMetadata = await store.getGroupMetadata(toId);
-    const mentions = groupMetadata.participants.map(member => member.id);
-    let message = "📢 MENTIONALL MEMBER\n";
+    const mentions = groupMetadata.participants.map((member) => member.id);
+    let message = '📢 MENTIONALL MEMBER\n';
     mentions.forEach((jid, idx) => {
       message += `\n${idx + 1}. @${jid.split('@')[0]}`;
     });

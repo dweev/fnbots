@@ -1,53 +1,55 @@
 // ─── Info ──────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info eslint.config.mjs ────────────────
 
-import js from "@eslint/js";
-import globals from "globals";
-import { defineConfig } from "eslint/config";
-import pluginImport from "eslint-plugin-import";
-import pluginSecurity from "eslint-plugin-security";
+import js from '@eslint/js';
+import globals from 'globals';
+import { defineConfig } from 'eslint/config';
+import pluginImport from 'eslint-plugin-import';
+import pluginSecurity from 'eslint-plugin-security';
 
 export default defineConfig([
   {
-    files: ["**/*.{js,mjs,cjs}"],
+    files: [
+      '**/*.{js,mjs,cjs}'
+    ],
     ignores: [
-      "node_modules/**",
-      "venv/**",
-      "eslint.config.{js,mjs}",
+      'node_modules/**',
+      'venv/**',
+      'eslint.config.{js,mjs}'
     ],
     plugins: {
       import: pluginImport,
-      security: pluginSecurity,
+      security: pluginSecurity
     },
     extends: [
-      js.configs.recommended,
+      js.configs.recommended
     ],
     languageOptions: {
-      ecmaVersion: "latest",
-      sourceType: "module",
+      ecmaVersion: 'latest',
+      sourceType: 'module',
       globals: {
         ...globals.node,
-        ...globals.browser,
-      },
+        ...globals.browser
+      }
     },
     rules: {
-      "no-unused-vars": ["warn", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
-      "no-undef": "error",
-      "no-useless-catch": "off",
-      "no-empty-function": "warn",
-      "no-console": "off",
-      "prefer-const": "warn",
-      "no-const-assign": "error",
-      "no-redeclare": "error",
-      "eqeqeq": ["error", "always"],
-      "semi": ["error", "always"],
-      "import/no-unresolved": "error",
-      "import/no-absolute-path": "error",
+      'no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+      'no-undef': 'error',
+      'no-useless-catch': 'off',
+      'no-empty-function': 'warn',
+      'no-console': 'off',
+      'prefer-const': 'warn',
+      'no-const-assign': 'error',
+      'no-redeclare': 'error',
+      'eqeqeq': ['error', 'always'],
+      'semi': ['error', 'always'],
+      'import/no-unresolved': 'error',
+      'import/no-absolute-path': 'error',
     },
   },
 ]);

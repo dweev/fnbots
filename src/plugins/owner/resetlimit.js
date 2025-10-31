@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import { User } from '../../../database/index.js';
@@ -48,7 +48,7 @@ export const command = {
       while (true) {
         const users = await User.find({}).skip(processed).limit(batchSize);
         if (users.length === 0) break;
-        const bulkOps = users.map(user => ({
+        const bulkOps = users.map((user) => ({
           updateOne: {
             filter: { _id: user._id },
             update: {

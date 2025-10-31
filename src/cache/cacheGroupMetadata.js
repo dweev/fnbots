@@ -1,16 +1,16 @@
 // ─── Info ─────────────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info src/cache/cacheGroupMetadata.js ─────────
 
 import log from '../lib/logger.js';
 import { redis } from '../../database/index.js';
 
 const REDIS_TTL = {
-  GROUP: 60 * 60 * 24,
+  GROUP: 60 * 60 * 24
 };
 
 const REDIS_PREFIX = {
@@ -72,7 +72,7 @@ class GroupCache {
   static async getArrayGroups(groupIds) {
     try {
       if (!groupIds || groupIds.length === 0) return { groups: [], missingIds: [] };
-      const keys = groupIds.map(id => `${REDIS_PREFIX.GROUP}${id}`);
+      const keys = groupIds.map((id) => `${REDIS_PREFIX.GROUP}${id}`);
       const results = await redis.mget(keys);
       const groups = [];
       const missingIds = [];
@@ -227,6 +227,7 @@ class GroupCache {
   static async clearAllCaches() {
     try {
       log('Clearing all group caches...');
+      // prettier-ignore
       const patterns = [
         `${REDIS_PREFIX.GROUP}*`,
         `${REDIS_PREFIX.HOT_GROUP}*`
@@ -263,7 +264,9 @@ class GroupCache {
   static async getStats() {
     try {
       const groupIds = await this.getAllCachedGroupIds();
-      const hotGroups = Array.from(this.hotGroupStats.entries()).filter(([_, count]) => count >= this.hotGroupThreshold).map(([groupId]) => groupId);
+      const hotGroups = Array.from(this.hotGroupStats.entries())
+        .filter(([_, count]) => count >= this.hotGroupThreshold)
+        .map(([groupId]) => groupId);
       const stats = {
         totalGroups: groupIds.length,
         hotGroups: hotGroups.length,
@@ -320,10 +323,7 @@ class GroupCache {
       const allGroups = await this.getAllCachedGroups();
       if (!pattern) return allGroups;
       const regex = new RegExp(pattern, 'i');
-      return allGroups.filter(group =>
-        regex.test(group.subject) ||
-        regex.test(group.groupId)
-      );
+      return allGroups.filter((group) => regex.test(group.subject) || regex.test(group.groupId));
     } catch (error) {
       log(`Get groups by pattern error: ${error.message}`, true);
       return [];

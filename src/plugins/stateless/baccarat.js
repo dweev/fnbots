@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import { delay } from 'baileys';
@@ -18,32 +18,43 @@ export const command = {
   execute: async ({ fn, toId, user, args, serial, sReply }) => {
     await gameStateManager.startGame(serial);
     try {
-      if (args.length > 2) return await sReply("Pesan tidak valid, contoh: .baccarat 10k banker, .baccarat all tie, .baccarat 50% player");
+      if (args.length > 2) return await sReply('Pesan tidak valid, contoh: .baccarat 10k banker, .baccarat all tie, .baccarat 50% player');
       const PilihanTaruhan = args[1] ? args[1].toLowerCase() : '';
-      if (!['player', 'banker', 'tie'].includes(PilihanTaruhan)) return await sReply("Format salah! Pilih taruhan: player, banker, atau tie.\nContoh: .baccarat 1k player");
-      if (!user || user.balance <= 0) return await sReply("User tidak ditemukan atau saldo 0.\nsilakan gunakan permainan mode grinding dulu seperti .chop, .mine, .fish, .hunt, .ngelonte, .work atau gunakan perintah .daily jika kamu belum daily claim hari ini.");
+      if (!['player', 'banker', 'tie'].includes(PilihanTaruhan)) return await sReply('Format salah! Pilih taruhan: player, banker, atau tie.\nContoh: .baccarat 1k player');
+      if (!user || user.balance <= 0) return await sReply('User tidak ditemukan atau saldo 0.\nsilakan gunakan permainan mode grinding dulu seperti .chop, .mine, .fish, .hunt, .ngelonte, .work atau gunakan perintah .daily jika kamu belum daily claim hari ini.');
       const saldoAwal = BigInt(user.balance);
       const bi0 = args[0] ? args[0].toLowerCase() : '';
-      if (!bi0) return await sReply("Masukkan jumlah taruhan.");
+      if (!bi0) return await sReply('Masukkan jumlah taruhan.');
       let bid;
       if (bi0 === 'all' || bi0 === 'allin') {
         bid = saldoAwal;
       } else if (bi0.endsWith('%')) {
         const sanitizedPercent = bi0.replace(',', '.');
         const percentValue = parseFloat(sanitizedPercent.replace(/%/g, ''));
-        if (isNaN(percentValue) || percentValue <= 0 || percentValue > 100) return await sReply("Input persen tidak valid (1-100).");
+        if (isNaN(percentValue) || percentValue <= 0 || percentValue > 100) return await sReply('Input persen tidak valid (1-100).');
         bid = (saldoAwal * BigInt(Math.floor(percentValue * 100))) / 10000n;
       } else {
         let multiplier = 1n;
         let numPart = bi0;
-        if (bi0.endsWith('k')) { multiplier = 1000n; numPart = bi0.slice(0, -1); }
-        else if (bi0.endsWith('m')) { multiplier = 1000000n; numPart = bi0.slice(0, -1); }
-        else if (bi0.endsWith('b')) { multiplier = 1000000000n; numPart = bi0.slice(0, -1); }
-        else if (bi0.endsWith('t')) { multiplier = 1000000000000n; numPart = bi0.slice(0, -1); }
-        else if (bi0.endsWith('q')) { multiplier = 1000000000000000n; numPart = bi0.slice(0, -1); }
+        if (bi0.endsWith('k')) {
+          multiplier = 1000n;
+          numPart = bi0.slice(0, -1);
+        } else if (bi0.endsWith('m')) {
+          multiplier = 1000000n;
+          numPart = bi0.slice(0, -1);
+        } else if (bi0.endsWith('b')) {
+          multiplier = 1000000000n;
+          numPart = bi0.slice(0, -1);
+        } else if (bi0.endsWith('t')) {
+          multiplier = 1000000000000n;
+          numPart = bi0.slice(0, -1);
+        } else if (bi0.endsWith('q')) {
+          multiplier = 1000000000000000n;
+          numPart = bi0.slice(0, -1);
+        }
         const sanitizedNumPart = numPart.replace(',', '.');
         const numValue = Number(sanitizedNumPart);
-        if (isNaN(numValue) || !isFinite(numValue) || numValue <= 0) return await sReply("Input jumlah taruhan tidak valid. Gunakan format seperti: 50k, 1.5m, 2,2t");
+        if (isNaN(numValue) || !isFinite(numValue) || numValue <= 0) return await sReply('Input jumlah taruhan tidak valid. Gunakan format seperti: 50k, 1.5m, 2,2t');
         if (sanitizedNumPart.includes('.')) {
           const parts = sanitizedNumPart.split('.');
           const decimalPlaces = BigInt(parts[1].length);
@@ -54,7 +65,7 @@ export const command = {
           bid = BigInt(sanitizedNumPart) * multiplier;
         }
       }
-      if (bid <= 0n) return await sReply("Jumlah taruhan harus lebih dari 0.");
+      if (bid <= 0n) return await sReply('Jumlah taruhan harus lebih dari 0.');
       if (saldoAwal < bid) return await sReply(`Saldo tidak cukup. Kamu perlu: ${formatNumber(bid)}`);
       const { key } = await sReply(`🂡 *BACCARAT* 🂡\nAnda bertaruh ${formatNumber(bid)} pada *${PilihanTaruhan.toUpperCase()}*.\n\n⏳ Membagikan kartu...`);
       const suits = ['♠️', '♥️', '♦️', '♣️'];
@@ -77,7 +88,7 @@ export const command = {
         return hand.reduce((sum, card) => sum + getCardValue(card), 0) % 10;
       };
       const drawCard = () => deck.pop();
-      const formatHand = (hand) => hand.map(c => `[${c.rank}${c.suit}]`).join(' ');
+      const formatHand = (hand) => hand.map((c) => `[${c.rank}${c.suit}]`).join(' ');
       const playerHand = [drawCard(), drawCard()];
       const bankerHand = [drawCard(), drawCard()];
       let playerValue = calculateHandValue(playerHand);
@@ -116,25 +127,25 @@ export const command = {
           log += `Banker bertahan (stand).\n`;
         }
       } else {
-        log += "Natural Win! Permainan berhenti.\n";
+        log += 'Natural Win! Permainan berhenti.\n';
       }
       let pemenang = '';
       if (playerValue > bankerValue) pemenang = 'player';
       else if (bankerValue > playerValue) pemenang = 'banker';
       else pemenang = 'tie';
       let reward = 0n;
-      let multiplierText = "";
-      const menang = (PilihanTaruhan === pemenang);
+      let multiplierText = '';
+      const menang = PilihanTaruhan === pemenang;
       if (menang) {
         if (pemenang === 'player') {
           reward = bid;
-          multiplierText = "(Payout 1:1)";
+          multiplierText = '(Payout 1:1)';
         } else if (pemenang === 'banker') {
           reward = (bid * 95n) / 100n;
-          multiplierText = "(Payout 0.95:1, 5% Komisi)";
+          multiplierText = '(Payout 0.95:1, 5% Komisi)';
         } else if (pemenang === 'tie') {
           reward = bid * 8n;
-          multiplierText = "(Payout 8:1)";
+          multiplierText = '(Payout 8:1)';
         }
       }
       const selisih = menang ? reward : -bid;

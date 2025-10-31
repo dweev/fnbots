@@ -1,158 +1,164 @@
 // ─── Info ─────────────────────────────────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info src/models/StoreGroupMetadata/schema.js ─────────────────────
 
 import mongoose from 'mongoose';
 
-const participantSchema = new mongoose.Schema({
-  id: {
-    type: String,
-    required: true
+const participantSchema = new mongoose.Schema(
+  {
+    id: {
+      type: String,
+      required: true
+    },
+    phoneNumber: {
+      type: String,
+      required: true
+    },
+    lid: {
+      type: String,
+      default: ''
+    },
+    admin: {
+      type: String,
+      enum: ['admin', 'superadmin', null],
+      default: null
+    }
   },
-  phoneNumber: {
-    type: String,
-    required: true
-  },
-  lid: {
-    type: String,
-    default: ''
-  },
-  admin: {
-    type: String,
-    enum: ['admin', 'superadmin', null],
-    default: null
+  {
+    _id: false
   }
-}, {
-  _id: false
-});
-const groupMetadataSchema = new mongoose.Schema({
-  id: {
-    type: String,
-    required: true,
-    unique: true
+);
+const groupMetadataSchema = new mongoose.Schema(
+  {
+    id: {
+      type: String,
+      required: true,
+      unique: true
+    },
+    groupId: {
+      type: String,
+      required: true,
+      unique: true
+    },
+    notify: {
+      type: String,
+      default: ''
+    },
+    addressingMode: {
+      type: String,
+      default: ''
+    },
+    subject: {
+      type: String,
+      default: ''
+    },
+    subjectOwner: {
+      type: String,
+      default: ''
+    },
+    subjectOwnerPn: {
+      type: String,
+      default: ''
+    },
+    subjectTime: {
+      type: Number,
+      default: 0
+    },
+    creation: {
+      type: Number,
+      default: 0
+    },
+    owner: {
+      type: String,
+      default: ''
+    },
+    ownerPn: {
+      type: String,
+      default: ''
+    },
+    owner_country_code: {
+      type: String,
+      default: ''
+    },
+    desc: {
+      type: String,
+      default: ''
+    },
+    descId: {
+      type: String,
+      default: ''
+    },
+    descOwner: {
+      type: String,
+      default: ''
+    },
+    descOwnerPn: {
+      type: String,
+      default: ''
+    },
+    descTime: {
+      type: Number,
+      default: 0
+    },
+    linkedParent: {
+      type: String,
+      default: ''
+    },
+    restrict: {
+      type: Boolean,
+      default: false
+    },
+    announce: {
+      type: Boolean,
+      default: false
+    },
+    isCommunity: {
+      type: Boolean,
+      default: false
+    },
+    isCommunityAnnounce: {
+      type: Boolean,
+      default: false
+    },
+    joinApprovalMode: {
+      type: Boolean,
+      default: false
+    },
+    memberAddMode: {
+      type: Boolean,
+      default: false
+    },
+    ephemeralDuration: {
+      type: Number,
+      default: 0
+    },
+    participants: [participantSchema],
+    size: {
+      type: Number,
+      default: 0
+    },
+    lastUpdated: {
+      type: Date,
+      default: Date.now
+    },
+    lastSynced: {
+      type: Date,
+      default: Date.now
+    },
+    updateCount: {
+      type: Number,
+      default: 0
+    }
   },
-  groupId: {
-    type: String,
-    required: true,
-    unique: true
-  },
-  notify: {
-    type: String,
-    default: ''
-  },
-  addressingMode: {
-    type: String,
-    default: ''
-  },
-  subject: {
-    type: String,
-    default: ''
-  },
-  subjectOwner: {
-    type: String,
-    default: ''
-  },
-  subjectOwnerPn: {
-    type: String,
-    default: ''
-  },
-  subjectTime: {
-    type: Number,
-    default: 0
-  },
-  creation: {
-    type: Number,
-    default: 0
-  },
-  owner: {
-    type: String,
-    default: ''
-  },
-  ownerPn: {
-    type: String,
-    default: ''
-  },
-  owner_country_code: {
-    type: String,
-    default: ''
-  },
-  desc: {
-    type: String,
-    default: ''
-  },
-  descId: {
-    type: String,
-    default: ''
-  },
-  descOwner: {
-    type: String,
-    default: ''
-  },
-  descOwnerPn: {
-    type: String,
-    default: ''
-  },
-  descTime: {
-    type: Number,
-    default: 0
-  },
-  linkedParent: {
-    type: String,
-    default: ''
-  },
-  restrict: {
-    type: Boolean,
-    default: false
-  },
-  announce: {
-    type: Boolean,
-    default: false
-  },
-  isCommunity: {
-    type: Boolean,
-    default: false
-  },
-  isCommunityAnnounce: {
-    type: Boolean,
-    default: false
-  },
-  joinApprovalMode: {
-    type: Boolean,
-    default: false
-  },
-  memberAddMode: {
-    type: Boolean,
-    default: false
-  },
-  ephemeralDuration: {
-    type: Number,
-    default: 0
-  },
-  participants: [participantSchema],
-  size: {
-    type: Number,
-    default: 0
-  },
-  lastUpdated: {
-    type: Date,
-    default: Date.now
-  },
-  lastSynced: {
-    type: Date,
-    default: Date.now
-  },
-  updateCount: {
-    type: Number,
-    default: 0
-  },
-}, {
-  timestamps: true,
-  minimize: false
-});
+  {
+    timestamps: true,
+    minimize: false
+  }
+);
 
 groupMetadataSchema.pre('save', function (next) {
   if (!this.groupId && this.id) this.groupId = this.id;

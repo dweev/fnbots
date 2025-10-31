@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 export const command = {
@@ -14,8 +14,8 @@ export const command = {
   execute: async ({ fn, args, dbSettings, sReply }) => {
     if (!args || args.length === 0) return await sReply(`Gunakan format: ${dbSettings.rname}inspect <link group>`);
     const inviteLink = args.trim();
-    const inviteCode = inviteLink.split("https://chat.whatsapp.com/")[1];
-    if (!inviteCode) return await sReply("Link group WhatsApp tidak valid.");
+    const inviteCode = inviteLink.split('https://chat.whatsapp.com/')[1];
+    if (!inviteCode) return await sReply('Link group WhatsApp tidak valid.');
     const groupInfo = await fn.groupGetInviteInfo(inviteCode);
     let message = '📋 Informasi Group:\n';
     message += `• ID Group: ${groupInfo.id}\n`;

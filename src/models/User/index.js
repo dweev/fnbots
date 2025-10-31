@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import mongoose from 'mongoose';
@@ -16,22 +16,9 @@ import { statics as membershipStatics } from './methods/membership.js';
 import { methods as moderationMethods } from './methods/moderation.js';
 import { methods as statsMethods, statics as statsStatics } from './methods/stats.js';
 
-Object.assign(
-  userSchema.methods,
-  limitMethods,
-  xpMethods,
-  economyMethods,
-  moderationMethods,
-  statsMethods
-);
+Object.assign(userSchema.methods, limitMethods, xpMethods, economyMethods, moderationMethods, statsMethods);
 
-Object.assign(
-  userSchema.statics,
-  xpStatics,
-  economyStatics,
-  membershipStatics,
-  statsStatics
-);
+Object.assign(userSchema.statics, xpStatics, economyStatics, membershipStatics, statsStatics);
 
 userSchema.statics.ensureUser = async function (userId, retries = 3) {
   if (!userId || typeof userId !== 'string' || !userId.includes('@')) {
@@ -39,17 +26,13 @@ userSchema.statics.ensureUser = async function (userId, retries = 3) {
   }
   for (let i = 0; i < retries; i++) {
     try {
-      return await this.findOneAndUpdate(
-        { userId },
-        { $setOnInsert: { userId } },
-        { upsert: true, new: true, runValidators: true, setDefaultsOnInsert: true }
-      );
+      return await this.findOneAndUpdate({ userId }, { $setOnInsert: { userId } }, { upsert: true, new: true, runValidators: true, setDefaultsOnInsert: true });
     } catch (error) {
       if (error.code === 11000) {
         const user = await this.findOne({ userId });
         if (user) return user;
         if (i < retries - 1) {
-          await new Promise(resolve => setTimeout(resolve, 100 * (i + 1)));
+          await new Promise((resolve) => setTimeout(resolve, 100 * (i + 1)));
           continue;
         }
       }

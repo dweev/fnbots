@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import * as Math_js from 'mathjs';
@@ -19,7 +19,7 @@ export const command = {
     if (!arg) return await sReply(`Masukkan ekspresi matematika yang ingin dihitung.`);
     const expressionToEvaluate = arg.replace(/x/gi, '*').replace(/:/g, '/');
     const result = Math_js.evaluate(expressionToEvaluate);
-    if (typeof result !== "number") {
+    if (typeof result !== 'number') {
       return await sReply(`Hasil dari "${arg}" bukan angka!`);
     } else {
       await sReply(`${arg} = ${result}`);

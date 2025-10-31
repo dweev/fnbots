@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import { User } from '../../../database/index.js';
@@ -17,8 +17,9 @@ export const command = {
   aliases: ['buyprem'],
   execute: async ({ user, sReply, serial }) => {
     const premiumPrice = 100000000000n;
-    const premiumName = "Premium";
+    const premiumName = 'Premium';
     if (user.balance < premiumPrice) {
+      // prettier-ignore
       return await sReply(
         `Poin balancemu tidak cukup untuk membeli ${premiumName}.\n\n` +
         `💰 Butuh: *${formatNumber(premiumPrice)}*\n` +
@@ -33,6 +34,7 @@ export const command = {
     await user.minBalance(premiumPrice);
     await User.addPremium(serial, durationMs);
     const newBalance = user.balance;
+    // prettier-ignore
     const successMessage =
       `🎉 Selamat, @${serial.split('@')[0]}!\n\n` +
       `Anda berhasil membeli akses *${premiumName}* selama 30 hari.\n\n` +

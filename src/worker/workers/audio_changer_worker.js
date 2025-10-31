@@ -1,14 +1,15 @@
 // ─── Info ───────────────────────────────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info src/worker/workers/audio_changer_worker.js ────────────────
 
 import { spawn } from 'child_process';
 import log from '../../lib/logger.js';
 
+// prettier-ignore
 const ffmpegFilters = new Map([
   ['8d',         { flag: '-af',             filter: 'apulsator=hz=0.3'                                                                          }],
   ['alien',      { flag: '-af',             filter: 'asetrate=44100*0.5, atempo=2'                                                              }],
@@ -54,15 +55,17 @@ function ensureBuffer(input) {
   if (input.buffer instanceof ArrayBuffer) {
     return Buffer.from(input);
   }
+  // prettier-ignore
   throw new Error(
     `Cannot convert to Buffer: type=${typeof input}, ` +
     `constructor=${input?.constructor?.name}, ` +
     `isArray=${Array.isArray(input)}, ` +
     `hasData=${input?.data !== undefined}`
   );
-};
+}
 function runFFMPEGWithBuffer(inputBuffer, filter) {
   return new Promise((resolve, reject) => {
+    // prettier-ignore
     const args = [
       '-i', 'pipe:0',
       filter.flag, filter.filter,
@@ -99,7 +102,7 @@ function runFFMPEGWithBuffer(inputBuffer, filter) {
     ffmpeg.stdin.write(inputBuffer);
     ffmpeg.stdin.end();
   });
-};
+}
 
 export default async function audioChanger({ mediaBuffer, filterName }) {
   if (!mediaBuffer) throw new Error('mediaBuffer is required but received undefined');

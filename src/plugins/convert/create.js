@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import { runJob } from '../../worker/worker_manager.js';
@@ -18,8 +18,8 @@ export const command = {
     const text1 = args[0].toUpperCase();
     const text2 = args[1].toUpperCase();
     const text3 = args[2].toUpperCase();
-    if ([text1, text2, text3].some(t => t.length > 8)) return await sReply('Setiap kata tidak boleh lebih dari 8 huruf.');
-    if ([text1, text2, text3].some(t => /[^A-Z]/.test(t))) return await sReply('Teks hanya boleh berisi huruf A-Z.');
+    if ([text1, text2, text3].some((t) => t.length > 8)) return await sReply('Setiap kata tidak boleh lebih dari 8 huruf.');
+    if ([text1, text2, text3].some((t) => /[^A-Z]/.test(t))) return await sReply('Teks hanya boleh berisi huruf A-Z.');
     const resultBuffer = await runJob('imageGenerator', {
       type: 'create',
       text1: text1,

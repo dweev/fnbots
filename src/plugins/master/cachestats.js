@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine 
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────────────
 
 import { redis, store } from '../../../database/index.js';
@@ -24,6 +24,7 @@ export const command = {
   aliases: ['statcache', 'perfstats'],
   isEnabled: true,
   execute: async ({ sReply }) => {
+    // prettier-ignore
     const [
       perfFullStatus,
       storeStats,
@@ -67,7 +68,7 @@ export const command = {
       stream.on('error', reject);
     });
 
-    allKeys.forEach(key => {
+    allKeys.forEach((key) => {
       if (key.startsWith('cache:contact:')) cacheCounts.contacts++;
       else if (key.startsWith('cache:groupmetadata:')) cacheCounts.groups++;
       else if (key.startsWith('cache:lid2jid:')) cacheCounts.lidToJid++;
@@ -182,7 +183,7 @@ export const command = {
 
     if (perfFullStatus.scheduler?.jobs && perfFullStatus.scheduler.jobs.length > 0) {
       statsText += `*Active Jobs:*\n`;
-      perfFullStatus.scheduler.jobs.forEach(job => {
+      perfFullStatus.scheduler.jobs.forEach((job) => {
         const nextRun = job.secondsToNext > 0 ? `${job.secondsToNext}s` : 'Running';
         statsText += `${job.name}: ${job.isRunning ? 'Active' : 'Idle'} (next: ${nextRun})\n`;
       });

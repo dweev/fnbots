@@ -1,9 +1,9 @@
 // ─── Info ───────────────────────────────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info src/worker/jobs/image_generator.js ────────────────────────
 
 import imageGenerator from '../workers/image_generator_worker.js';

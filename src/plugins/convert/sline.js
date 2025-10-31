@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import path from 'path';
@@ -33,7 +33,7 @@ export const command = {
     await exec(`"${config.paths.stickerConvertPath}" --download-line "${lineUrl}" --no-confirm --no-progress --no-compress --input-dir "${inputDir}"`);
     await delay(2000);
     const files = await fs.readdir(inputDir);
-    const pngFiles = files.filter(f => f.endsWith('.png'));
+    const pngFiles = files.filter((f) => f.endsWith('.png'));
     if (!pngFiles.length) return await sReply('Tidak ada file stiker ditemukan.');
     for (const file of pngFiles) {
       const inputPath = path.join(inputDir, file);

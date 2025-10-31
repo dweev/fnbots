@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 export const command = {
@@ -12,7 +12,7 @@ export const command = {
   description: 'Memeriksa waktu respons bot.',
   aliases: ['readviewonce'],
   isCommandWithoutPayment: true,
-  execute: async ({ fn, m, quotedMsg, dbSettings, toId,  }) => {
+  execute: async ({ fn, m, quotedMsg, dbSettings, toId }) => {
     if (quotedMsg) {
       const akuCrot = m.quoted[m.quoted.type] || m.quoted;
       if (akuCrot.viewOnce) {

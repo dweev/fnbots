@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import dayjs from '../../utils/dayjs.js';
@@ -46,5 +46,5 @@ export const command = {
     });
     message += `└─ ─── FNBOTS`;
     await sReply(message);
-  },
+  }
 };

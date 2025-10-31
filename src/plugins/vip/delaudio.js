@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import { Media } from '../../../database/index.js';
@@ -23,5 +23,5 @@ export const command = {
     } else {
       await sReply(`audio dengan nama '${name}' tidak ditemukan.`);
     }
-  },
+  }
 };

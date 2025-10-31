@@ -1,9 +1,9 @@
 // ─── Info ─────────────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info src/worker/job_worker.js ────────────────
 
 import groupImageJob from './jobs/group_image.js';
@@ -17,7 +17,7 @@ const jobMap = {
   audioChanger: audioChangerJob,
   mediaProcessor: mediaProcessorJob,
   imageGenerator: imageGeneratorJob,
-  stickerNative: stickerNativeJob,
+  stickerNative: stickerNativeJob
 };
 
 export default async function (job) {

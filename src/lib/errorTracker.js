@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info src/lib/errorTracker.js ────────────────
 
 import log from './logger.js';
@@ -265,7 +265,7 @@ class ErrorTracker {
     try {
       const pattern = `${this.DISABLED_PREFIX}*`;
       const keys = await redis.keys(pattern);
-      return keys.map(key => key.replace(this.DISABLED_PREFIX, ''));
+      return keys.map((key) => key.replace(this.DISABLED_PREFIX, ''));
     } catch (error) {
       log(`Error getting disabled commands: ${error.message}`, true);
       return [];

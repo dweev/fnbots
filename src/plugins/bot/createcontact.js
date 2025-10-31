@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 export const command = {
@@ -25,7 +25,7 @@ export const command = {
       contactName = arg;
       if (!contactName) return await sReply(`Saat membalas pesan, nama harus disertakan.\nContoh: ${dbSettings.rname}savekontak Yanto Kopling`);
     } else {
-      const parts = arg.split('|').map(s => s.trim());
+      const parts = arg.split('|').map((s) => s.trim());
       if (parts.length < 2 || !parts[0] || !parts[1]) return await sReply(`Format salah.\nGunakan: ${dbSettings.rname}savekontak Nama|Nomor\nContoh: ${dbSettings.rname}savekontak Yanto Ngocok | 6281234567890`);
       contactName = parts[0];
       const sanitizedNumber = parts[1].replace(/[^0-9]/g, '');

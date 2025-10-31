@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import fs from 'fs-extra';
@@ -40,17 +40,18 @@ export const command = {
   isCommandWithoutPayment: true,
   execute: async ({ fn, m, quotedMsg, sReply, sendRawWebpAsSticker, dbSettings }) => {
     const targetMsg = quotedMsg ? m.quoted || m : m.message;
-    if (!targetMsg) return await sReply("Media tidak ditemukan.");
+    if (!targetMsg) return await sReply('Media tidak ditemukan.');
     const mime = targetMsg?.imageMessage?.mimetype || targetMsg?.videoMessage?.mimetype;
-    if (!mime) return await sReply("Kirim atau balas gambar/video untuk dijadikan stiker.");
+    if (!mime) return await sReply('Kirim atau balas gambar/video untuk dijadikan stiker.');
     const buffer = await fn.getMediaBuffer(targetMsg);
-    const isVideo = mime === "video/mp4" || mime === "image/gif";
+    const isVideo = mime === 'video/mp4' || mime === 'image/gif';
     const duration = targetMsg?.videoMessage?.seconds || 0;
-    if (!buffer) return await sReply("Gagal mengunduh media.");
-    if (isVideo && duration > 20) return await sReply("Durasi video terlalu panjang. Maksimal 10 detik untuk stiker.");
+    if (!buffer) return await sReply('Gagal mengunduh media.');
+    if (isVideo && duration > 20) return await sReply('Durasi video terlalu panjang. Maksimal 10 detik untuk stiker.');
     if (isVideo) {
       const inputPath = await tmpDir.createTempFileWithContent(buffer, 'mp4');
       const outputPath = tmpDir.createTempFile('webp');
+      // prettier-ignore
       const args = [
         '-i', inputPath,
         '-filter_complex',

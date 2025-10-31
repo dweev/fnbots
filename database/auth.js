@@ -1,9 +1,9 @@
 // ─── Info ─────────────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info database/auth.js ────────────────────────
 
 import { redis } from './index.js';
@@ -35,7 +35,7 @@ export default async function AuthStore() {
       await log(`removeData error for ${file}: ${error.message}`, true);
     }
   };
-  const creds = (await readData("creds")) || initAuthCreds();
+  const creds = (await readData('creds')) || initAuthCreds();
   return {
     state: {
       creds,
@@ -46,7 +46,7 @@ export default async function AuthStore() {
             await Promise.all(
               ids.map(async (id) => {
                 let value = await readData(`${type}-${id}`);
-                if (type === "app-state-sync-key" && value) {
+                if (type === 'app-state-sync-key' && value) {
                   value = proto.Message.AppStateSyncKeyData.create(value);
                 }
                 data[id] = value;
@@ -78,7 +78,7 @@ export default async function AuthStore() {
     },
     saveCreds: async () => {
       try {
-        await writeData(creds, "creds");
+        await writeData(creds, 'creds');
         return true;
       } catch (error) {
         await log(`Failed to save credentials: ${error.message}`, true);
@@ -93,7 +93,7 @@ export default async function AuthStore() {
         stream.on('data', (keys) => {
           keysToDelete.push(...keys);
         });
-        await new Promise(resolve => stream.on('end', resolve));
+        await new Promise((resolve) => stream.on('end', resolve));
         if (keysToDelete.length > 0) {
           for (let i = 0; i < keysToDelete.length; i += 1000) {
             const batch = keysToDelete.slice(i, i + 1000);
@@ -101,9 +101,9 @@ export default async function AuthStore() {
           }
         }
         await log(`Session cleared. Deleted ${keysToDelete.length} keys.`);
-        Object.keys(creds).forEach(key => delete creds[key]);
+        Object.keys(creds).forEach((key) => delete creds[key]);
         Object.assign(creds, initAuthCreds());
-        await writeData(creds, "creds");
+        await writeData(creds, 'creds');
         return true;
       } catch (error) {
         await log(`Failed to clear session: ${error.message}`, true);
@@ -115,13 +115,14 @@ export default async function AuthStore() {
         const stream = redis.scanStream({ match: 'sessions:*', count: 100 });
         const keysByCategory = {};
         stream.on('data', (keys) => {
-          keys.forEach(key => {
+          keys.forEach((key) => {
             const withoutPrefix = key.replace('sessions:', '');
             const category = withoutPrefix.split('-')[0];
             keysByCategory[category] = (keysByCategory[category] || 0) + 1;
           });
         });
-        await new Promise(resolve => stream.on('end', resolve));
+        await new Promise((resolve) => stream.on('end', resolve));
+        // prettier-ignore
         return Object.entries(keysByCategory).map(([category, count]) => ({ category, count })).sort((a, b) => b.count - a.count);
       } catch (error) {
         await log(`Failed to get session stats: ${error.message}`, true);

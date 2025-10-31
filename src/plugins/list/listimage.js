@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import { Media } from '../../../database/index.js';
@@ -30,5 +30,5 @@ export const command = {
       listText += `\n\nUntuk melihat halaman selanjutnya, ketik \`.listimage ${page + 1}\``;
     }
     await sReply(listText.trim());
-  },
+  }
 };

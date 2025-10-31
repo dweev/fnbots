@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info src/lib/groupParticipantsUpdate.js ─────
 
 import log from './logger.js';
@@ -51,17 +51,17 @@ async function invalidateMetadataCache(groupId) {
 }
 
 async function resolveParticipantJids(participants) {
-  const jids = participants.map(p => {
+  const jids = participants.map((p) => {
     if (typeof p === 'string') return p;
     return p.phoneNumber || p.id;
   });
   const resolved = await store.batchResolveJids(jids);
   return participants.map((p, idx) => {
-    const originalId = typeof p === 'string' ? p : (p.phoneNumber || p.id);
+    const originalId = typeof p === 'string' ? p : p.phoneNumber || p.id;
     return {
       original: p,
       jid: resolved[idx],
-      lid: originalId?.endsWith('@lid') ? originalId : (typeof p === 'object' ? p.lid : null)
+      lid: originalId?.endsWith('@lid') ? originalId : typeof p === 'object' ? p.lid : null
     };
   });
 }
@@ -145,7 +145,7 @@ export default async function groupParticipantsUpdate({ id, participants, action
           await invalidateMetadataCache(id);
           const freshMetadata = await store.syncGroupMetadata(fn, id);
           if (freshMetadata) {
-            const botParticipant = freshMetadata.participants.find(p => {
+            const botParticipant = freshMetadata.participants.find((p) => {
               const participantJid = p.phoneNumber || p.id;
               return participantJid === botJid || jidNormalizedUser(participantJid) === botJid;
             });
@@ -163,8 +163,8 @@ export default async function groupParticipantsUpdate({ id, participants, action
           const currentMetadata = await getCachedMetadata(id);
           if (currentMetadata && currentMetadata.participants) {
             let metadataChanged = false;
-            const affectedJids = resolvedParticipants.map(p => p.jid).filter(Boolean);
-            currentMetadata.participants.forEach(p => {
+            const affectedJids = resolvedParticipants.map((p) => p.jid).filter(Boolean);
+            currentMetadata.participants.forEach((p) => {
               const participantJid = p.phoneNumber || p.id;
               if (affectedJids.includes(participantJid)) {
                 p.admin = newStatus;
@@ -186,12 +186,12 @@ export default async function groupParticipantsUpdate({ id, participants, action
     const finalMetadata = await getCachedMetadata(id);
     if (finalMetadata && finalMetadata.participants) {
       const contactUpdates = finalMetadata.participants
-        .filter(p => {
+        .filter((p) => {
           const hasJid = p.phoneNumber || (p.id && p.id.includes('@s.whatsapp.net'));
           const hasLid = p.lid || (p.id && p.id.includes('@lid'));
           return hasJid && hasLid;
         })
-        .map(p => {
+        .map((p) => {
           const jid = p.phoneNumber || (p.id?.includes('@s.whatsapp.net') ? p.id : null);
           const lid = p.lid || (p.id?.includes('@lid') ? p.id : null);
           return {

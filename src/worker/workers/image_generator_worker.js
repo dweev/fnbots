@@ -1,9 +1,9 @@
 // ─── Info ───────────────────────────────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info src/worker/workers/image_generator_worker.js ──────────────
 
 import fs from 'fs-extra';
@@ -65,11 +65,7 @@ export default async function imageGenerator({ type, text1, text2, text3, output
       if (!text1 || !text2 || !text3) {
         throw new Error('Three texts are required for create mode');
       }
-      validatedTexts = [
-        validateText(text1),
-        validateText(text2),
-        validateText(text3)
-      ];
+      validatedTexts = [validateText(text1), validateText(text2), validateText(text3)];
       annotationText = validatedTexts.join('\n');
     } else {
       throw new Error(`Unknown type: ${type}. Use tahta, harta, or create`);
@@ -80,6 +76,7 @@ export default async function imageGenerator({ type, text1, text2, text3, output
   }
   const outputFile = tmpDir.createTempFile(`output-${type}.jpg`);
   try {
+    // prettier-ignore
     const convertArgs = [
       '-size', '512x512',
       '-background', 'black',
@@ -93,7 +90,7 @@ export default async function imageGenerator({ type, text1, text2, text3, output
       outputFile
     ];
     await runImageMagick(convertArgs);
-    if (!await fs.pathExists(outputFile)) {
+    if (!(await fs.pathExists(outputFile))) {
       throw new Error('ImageMagick did not create output file');
     }
     const outputStats = await fs.stat(outputFile);
@@ -102,9 +99,7 @@ export default async function imageGenerator({ type, text1, text2, text3, output
     }
     let outputBuffer;
     if (outputFormat === 'webp' || type === 'harta' || type === 'create') {
-      outputBuffer = await sharp(outputFile)
-        .webp()
-        .toBuffer();
+      outputBuffer = await sharp(outputFile).webp().toBuffer();
     } else {
       outputBuffer = await fs.readFile(outputFile);
     }

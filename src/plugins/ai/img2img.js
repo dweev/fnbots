@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import config from '../../../config.js';
@@ -34,13 +34,10 @@ export const command = {
     const genAI = new GoogleGenerativeAI(config.geminiApikey);
     const model = genAI.getGenerativeModel({
       generationConfig: { responseModalities: ['Text', 'Image'] },
-      model: "gemini-2.0-flash-exp-image-generation",
-      safetySettings,
+      model: 'gemini-2.0-flash-exp-image-generation',
+      safetySettings
     });
-    const promptParts = [
-      { text: finalPrompt },
-      { inlineData: { mimeType: fileType.mime, data: mediaBuffer.toString('base64') } }
-    ];
+    const promptParts = [{ text: finalPrompt }, { inlineData: { mimeType: fileType.mime, data: mediaBuffer.toString('base64') } }];
     const result = await model.generateContent(promptParts);
     const response = result.response;
     const parts = response.candidates?.[0]?.content?.parts;

@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import { fetchJson } from '../../function/index.js';
@@ -26,7 +26,7 @@ export const command = {
     let replyText = '';
     if (ayahNumber) {
       if (isNaN(ayahNumber) || ayahNumber < 1 || ayahNumber > quranData.number_of_ayah) return await sReply(`Nomor ayat tidak valid untuk Surah ${surahName}. Pilih ayat antara 1 s.d. ${quranData.number_of_ayah}.`);
-      const verseData = quranData.verses.find(v => v.number === ayahNumber);
+      const verseData = quranData.verses.find((v) => v.number === ayahNumber);
       const tafsirForAyah = tafsirKemenagText[ayahNumber];
       if (!verseData || !tafsirForAyah) return await sReply(`Data atau tafsir untuk Surah ${surahName} ayat ${ayahNumber} tidak ditemukan.`);
       replyText = `📖 *Tafsir Surah ${surahName} Ayat ${ayahNumber}*\n\n`;
@@ -35,7 +35,7 @@ export const command = {
       replyText += `*Tafsir Kemenag:*\n${tafsirForAyah}`;
     } else {
       replyText = `📖 *Tafsir Lengkap Surah ${surahName}*\n\n`;
-      quranData.verses.forEach(verse => {
+      quranData.verses.forEach((verse) => {
         const currentAyah = verse.number;
         const tafsirForAyah = tafsirKemenagText[currentAyah];
         if (tafsirForAyah) {

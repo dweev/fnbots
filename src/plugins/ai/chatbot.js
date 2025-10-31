@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import { SESSION_TIMEOUT } from '../../function/index.js';
@@ -26,8 +26,8 @@ export const command = {
       if (chatBots[serial]) {
         clearTimeout(chatBots[serial]);
         delete chatBots[serial];
-      };
+      }
       await sReply('Chatbot AI telah dinonaktifkan.');
-    };
+    }
   }
 };

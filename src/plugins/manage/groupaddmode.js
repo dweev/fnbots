@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 export const command = {
@@ -21,6 +21,7 @@ export const command = {
     };
     if (!Object.prototype.hasOwnProperty.call(modeMap, modeInput)) return await sReply(`Gunakan argumen "member" atau "admin"`);
     const mode = modeMap[modeInput];
-    await fn.groupMemberAddMode(toId, mode); await reactDone();
+    await fn.groupMemberAddMode(toId, mode);
+    await reactDone();
   }
 };

@@ -1,9 +1,9 @@
 // ─── Info ─────────────────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info src/handler/autodownload.js ─────────────────
 
 import util from 'util';
@@ -24,7 +24,7 @@ class AutoDownloadHandler {
       { name: 'tiktok', regex: /^https?:\/\/(www\.|vm\.|vt\.)?tiktok\.com\//i, handler: this.handleTikTok },
       { name: 'facebook', regex: /^https?:\/\/(?:www\.|m\.|web\.)?facebook\.com\/[^\s]+/i, handler: this.handleFacebook },
       { name: 'instagram', regex: /^https?:\/\/(www\.)?instagram\.com\/(s|p|reel|stories|tv)\/([a-zA-Z0-9\-_]+)/i, handler: this.handleInstagram },
-      { name: 'twitter', regex: /^https?:\/\/(?:www\.|mobile\.)?(?:twitter\.com|x\.com)\/[a-zA-Z0-9_]+\/status\/\d+/i, handler: this.handleTwitter },
+      { name: 'twitter', regex: /^https?:\/\/(?:www\.|mobile\.)?(?:twitter\.com|x\.com)\/[a-zA-Z0-9_]+\/status\/\d+/i, handler: this.handleTwitter }
     ];
   }
   async handle(params) {
@@ -49,6 +49,7 @@ class AutoDownloadHandler {
       if (data.post_info) {
         const postInfo = data.post_info;
         const mediaUrls = data.url_list;
+        // prettier-ignore
         const baseCaption = `📷 *Instagram Downloader*\n\n` +
           `👤 *Username:* ${postInfo.owner_username}\n` +
           `❤️ *Likes:* ${postInfo.likes}\n` +
@@ -110,12 +111,7 @@ class AutoDownloadHandler {
       let lastError = null;
       for (const version of versions) {
         try {
-          result = await Promise.race([
-            fetchTikTokData(url, version),
-            new Promise((_, reject) =>
-              setTimeout(() => reject(new Error(`Timeout (${version})`)), 15000)
-            )
-          ]);
+          result = await Promise.race([fetchTikTokData(url, version), new Promise((_, reject) => setTimeout(() => reject(new Error(`Timeout (${version})`)), 15000))]);
           if (result) break;
         } catch (error) {
           lastError = error;

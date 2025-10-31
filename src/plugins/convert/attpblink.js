@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import { attpBlinkGenerate } from 'attp-generator';
@@ -19,13 +19,13 @@ export const command = {
   execute: async ({ quotedMsg, arg, sReply, dbSettings, sendRawWebpAsSticker }) => {
     let text = '';
     const textLimit = 100;
-    if ((quotedMsg && quotedMsg?.type === "extendedTextMessage") || (quotedMsg && quotedMsg?.type === "conversation")) {
+    if ((quotedMsg && quotedMsg?.type === 'extendedTextMessage') || (quotedMsg && quotedMsg?.type === 'conversation')) {
       text = quotedMsg?.body;
     } else if (arg) {
       text = arg;
     }
     if (!text || text.length >= textLimit) return await sReply(`Teks tidak boleh kosong atau lebih dari ${textLimit} karakter.`);
-    const randomFonts = ["SpicyRice", "Bangers"];
+    const randomFonts = ['SpicyRice', 'Bangers'];
     const hasilRandomFonts = randomChoice(randomFonts);
     const result = await attpBlinkGenerate(text, hasilRandomFonts);
     await sendRawWebpAsSticker(result, { packName: dbSettings.packName, authorName: dbSettings.packAuthor });

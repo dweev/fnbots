@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info database/index.js ──────────────────────
 
 import mongoose from 'mongoose';
@@ -42,7 +42,7 @@ class DatabaseConnection {
         maxPoolSize: 50,
         minPoolSize: 10,
         serverSelectionTimeoutMS: config.performance.serverSelectionTimeoutMS,
-        socketTimeoutMS: config.performance.socketTimeoutMS,
+        socketTimeoutMS: config.performance.socketTimeoutMS
       });
       log(`MongoDB connection established in ${Date.now() - start}ms`);
     } catch (error) {
@@ -60,7 +60,7 @@ class DatabaseConnection {
     this.connectionRetries++;
     const delay = config.performance.serverSelectionTimeoutMS * this.connectionRetries;
     log(`Attempting reconnect (${this.connectionRetries}/${this.maxRetries}) after ${delay}ms...`);
-    await new Promise(resolve => setTimeout(resolve, delay));
+    await new Promise((resolve) => setTimeout(resolve, delay));
     await this.connect();
   }
 
@@ -80,14 +80,14 @@ class DatabaseConnection {
       return {
         status: 'healthy',
         connected: true,
-        retries: this.connectionRetries,
+        retries: this.connectionRetries
       };
     } catch (error) {
       return {
         status: 'unhealthy',
         connected: false,
         error: error.message,
-        retries: this.connectionRetries,
+        retries: this.connectionRetries
       };
     }
   }
@@ -126,6 +126,7 @@ import StoreMessages from '../src/models/StoreMessages/index.js';
 import DatabaseBot from '../src/models/DatabaseBot/index.js';
 import StoreStory from '../src/models/StoreStory/index.js';
 
+// prettier-ignore
 export {
   User,
   Group,

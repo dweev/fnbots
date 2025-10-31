@@ -1,9 +1,9 @@
 // ─── Info ──────────────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info src/handler/antiedit.js ────────────────
 
 import log from '../lib/logger.js';
@@ -20,12 +20,12 @@ function rehydrateBuffer(obj) {
     if (obj.length > 0 && typeof obj[0] === 'number') {
       return Buffer.from(obj);
     }
-    return obj.map(item => rehydrateBuffer(item));
+    return obj.map((item) => rehydrateBuffer(item));
   }
   const keys = Object.keys(obj);
-  const hasNumericKeys = keys.length > 0 && keys.every(key => !isNaN(parseInt(key)));
+  const hasNumericKeys = keys.length > 0 && keys.every((key) => !isNaN(parseInt(key)));
   if (hasNumericKeys && !obj.type && !Array.isArray(obj)) {
-    const maxIndex = Math.max(...keys.map(k => parseInt(k)));
+    const maxIndex = Math.max(...keys.map((k) => parseInt(k)));
     const arr = new Array(maxIndex + 1);
     for (const key in obj) {
       arr[parseInt(key)] = obj[key];
@@ -33,14 +33,12 @@ function rehydrateBuffer(obj) {
     return Buffer.from(arr);
   }
   if (obj.data && !obj.type) {
-    if (Array.isArray(obj.data) || Buffer.isBuffer(obj.data) ||
-      obj.data instanceof Uint8Array || obj.data instanceof ArrayBuffer) {
+    if (Array.isArray(obj.data) || Buffer.isBuffer(obj.data) || obj.data instanceof Uint8Array || obj.data instanceof ArrayBuffer) {
       return Buffer.from(obj.data);
     }
   }
   if (obj.buffer && !obj.type) {
-    if (Array.isArray(obj.buffer) || Buffer.isBuffer(obj.buffer) ||
-      obj.buffer instanceof Uint8Array || obj.buffer instanceof ArrayBuffer) {
+    if (Array.isArray(obj.buffer) || Buffer.isBuffer(obj.buffer) || obj.buffer instanceof Uint8Array || obj.buffer instanceof ArrayBuffer) {
       return Buffer.from(obj.buffer);
     }
   }
@@ -100,7 +98,7 @@ class AntiEditHandler {
   }
   extractOldText(originalMessage, isMediaEdit, mediaType) {
     if (!isMediaEdit) {
-      return (originalMessage.body || originalMessage.message?.conversation || originalMessage.message?.extendedTextMessage?.text || '[Konten tidak bisa diambil]');
+      return originalMessage.body || originalMessage.message?.conversation || originalMessage.message?.extendedTextMessage?.text || '[Konten tidak bisa diambil]';
     }
     const msgContent = originalMessage.message;
     switch (mediaType) {
@@ -109,7 +107,7 @@ class AntiEditHandler {
       case 'video':
         return msgContent?.videoMessage?.caption || '[Video tanpa caption]';
       case 'document':
-        return (msgContent?.documentMessage?.caption || msgContent?.documentMessage?.fileName || '[Dokumen]');
+        return msgContent?.documentMessage?.caption || msgContent?.documentMessage?.fileName || '[Dokumen]';
       default:
         return originalMessage.body || '[Media tidak bisa diambil]';
     }
@@ -145,10 +143,14 @@ class AntiEditHandler {
     try {
       const buffer = await fn.getMediaBuffer(originalMessage.message);
       const caption = this.buildEditCaption(oldText);
-      await fn.sendMessage(m.chat, {
-        image: buffer,
-        caption: caption
-      }, { quoted: m, ephemeralExpiration: originalMessage.expiration ?? 0 });
+      await fn.sendMessage(
+        m.chat,
+        {
+          image: buffer,
+          caption: caption
+        },
+        { quoted: m, ephemeralExpiration: originalMessage.expiration ?? 0 }
+      );
     } catch (error) {
       log(`Error handling image edit: ${error}`, true);
     }
@@ -157,10 +159,14 @@ class AntiEditHandler {
     try {
       const buffer = await fn.getMediaBuffer(originalMessage.message);
       const caption = this.buildEditCaption(oldText);
-      await fn.sendMessage(m.chat, {
-        video: buffer,
-        caption: caption
-      }, { quoted: m, ephemeralExpiration: originalMessage.expiration ?? 0 });
+      await fn.sendMessage(
+        m.chat,
+        {
+          video: buffer,
+          caption: caption
+        },
+        { quoted: m, ephemeralExpiration: originalMessage.expiration ?? 0 }
+      );
     } catch (error) {
       log(`Error handling video edit: ${error}`, true);
     }
@@ -169,12 +175,16 @@ class AntiEditHandler {
     try {
       const buffer = await fn.getMediaBuffer(originalMessage.message);
       const caption = this.buildEditCaption(oldText);
-      await fn.sendMessage(m.chat, {
-        document: buffer,
-        mimetype: originalMessage.mime,
-        fileName: originalMessage.message.documentMessage?.fileName,
-        caption: caption
-      }, { quoted: m, ephemeralExpiration: originalMessage.expiration ?? 0 });
+      await fn.sendMessage(
+        m.chat,
+        {
+          document: buffer,
+          mimetype: originalMessage.mime,
+          fileName: originalMessage.message.documentMessage?.fileName,
+          caption: caption
+        },
+        { quoted: m, ephemeralExpiration: originalMessage.expiration ?? 0 }
+      );
     } catch (error) {
       log(`Error handling document edit: ${error}`, true);
     }

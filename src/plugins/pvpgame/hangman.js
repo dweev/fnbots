@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import { randomChoice, formatNumber } from '../../function/index.js';
@@ -24,7 +24,7 @@ export const command = {
     const kategori = randomChoice(Object.keys(soalData));
     const soal = randomChoice(soalData[kategori]);
     const hiddenWord = soal.jawaban.toLowerCase();
-    const display = hiddenWord.replace(/[a-z]/gi, (huruf) => huruf === ' ' ? ' ' : '•');
+    const display = hiddenWord.replace(/[a-z]/gi, (huruf) => (huruf === ' ' ? ' ' : '•'));
     const benar = {};
     const salah = {};
     const reward = mode === 'normal' ? 500n : 2000n;
@@ -40,7 +40,8 @@ export const command = {
     hangman[toId] = [
       hiddenWord,
       display.split(''),
-      kategori, {
+      kategori,
+      {
         benar,
         salah,
         menyerah: {}
@@ -50,6 +51,7 @@ export const command = {
       soal
     ];
     await user.addXp();
+    // prettier-ignore
     await sPesan(
       '🎮 *Hangman - ' + mode.toUpperCase() + ' MODE*\n' +
       '📌 Clue: ' + kategori + '\n' +

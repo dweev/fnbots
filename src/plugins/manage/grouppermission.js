@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 export const command = {
@@ -16,6 +16,7 @@ export const command = {
     if (!isBotGroupAdmins) return await sReply(`Perintah ini hanya bisa digunakan jika bot menjadi admin grup.`);
     const mode = (args[0] || '').toLowerCase();
     if (!['locked', 'unlocked'].includes(mode)) return await sReply(`gunakan argumen seperti locked atau unlocked`);
-    await fn.groupSettingUpdate(toId, mode); await reactDone();
+    await fn.groupSettingUpdate(toId, mode);
+    await reactDone();
   }
 };

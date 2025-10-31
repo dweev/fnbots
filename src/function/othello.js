@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── info src/function/othello.js ────────────────────
 
 import { createCanvas } from 'canvas';
@@ -14,17 +14,28 @@ export const fileLabels = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
 export const rankLabels = ['1', '2', '3', '4', '5', '6', '7', '8'];
 
 export function createOthelloBoard() {
-  const board = Array(8).fill(null).map(() => Array(8).fill(0));
+  const board = Array(8)
+    .fill(null)
+    .map(() => Array(8).fill(0));
   board[3][4] = PLAYER_BLACK;
   board[4][3] = PLAYER_BLACK;
   board[3][3] = PLAYER_WHITE;
   board[4][4] = PLAYER_WHITE;
   return board;
-};
+}
 function getOthelloFlips(board, player, r, c) {
   if (board[r]?.[c] !== 0) return [];
   const opponent = player === PLAYER_BLACK ? PLAYER_WHITE : PLAYER_BLACK;
-  const directions = [[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, -1], [1, 0], [1, 1]];
+  const directions = [
+    [-1, -1],
+    [-1, 0],
+    [-1, 1],
+    [0, -1],
+    [0, 1],
+    [1, -1],
+    [1, 0],
+    [1, 1]
+  ];
   const allFlips = [];
   for (const [dr, dc] of directions) {
     const flipsInDir = [];
@@ -44,7 +55,7 @@ function getOthelloFlips(board, player, r, c) {
     }
   }
   return allFlips;
-};
+}
 export function getValidOthelloMoves(board, player) {
   const validMoves = [];
   for (let r = 0; r < 8; r++) {
@@ -56,33 +67,36 @@ export function getValidOthelloMoves(board, player) {
     }
   }
   return validMoves;
-};
+}
 export function makeOthelloMove(board, player, move) {
   const [r, c] = move;
   const flips = getOthelloFlips(board, player, r, c);
   if (flips.length === 0) return null;
-  const newBoard = board.map(row => [...row]);
+  const newBoard = board.map((row) => [...row]);
   newBoard[r][c] = player;
   for (const [fr, fc] of flips) {
     newBoard[fr][fc] = player;
   }
   return newBoard;
-};
+}
 export function calculateOthelloScore(board) {
-  let black = 0, white = 0;
-  board.forEach(row => row.forEach(cell => {
-    if (cell === PLAYER_BLACK) black++;
-    if (cell === PLAYER_WHITE) white++;
-  }));
+  let black = 0;
+  let white = 0;
+  board.forEach((row) =>
+    row.forEach((cell) => {
+      if (cell === PLAYER_BLACK) black++;
+      if (cell === PLAYER_WHITE) white++;
+    })
+  );
   return { black, white };
-};
+}
 export function parseOthelloMove(input) {
   const match = input.toLowerCase().match(/^([a-h])([1-8])$/);
   if (!match) return null;
   const col = match[1].charCodeAt(0) - 'a'.charCodeAt(0);
   const row = parseInt(match[2], 10) - 1;
   return [row, col];
-};
+}
 export async function generateOthelloBoardImage(board, validMoves = []) {
   const squareSize = 50;
   const boardSize = squareSize * 8;
@@ -123,8 +137,8 @@ export async function generateOthelloBoardImage(board, validMoves = []) {
       if (player === 0) continue;
       const x = c * squareSize + squareSize / 2;
       const y = r * squareSize + squareSize / 2;
-      ctx.fillStyle = (player === PLAYER_BLACK) ? 'black' : 'white';
-      ctx.strokeStyle = (player === PLAYER_BLACK) ? '#555' : '#CCC';
+      ctx.fillStyle = player === PLAYER_BLACK ? 'black' : 'white';
+      ctx.strokeStyle = player === PLAYER_BLACK ? '#555' : '#CCC';
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.arc(x, y, squareSize * 0.4, 0, 2 * Math.PI);
@@ -133,4 +147,4 @@ export async function generateOthelloBoardImage(board, validMoves = []) {
     }
   }
   return canvas.toBuffer('image/png');
-};
+}

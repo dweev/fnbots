@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow  https://github.com/Terror-Machine    
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow  https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import config from '../../../config.js';
@@ -29,23 +29,23 @@ export const command = {
       } else {
         if (!yts || yts.length === 0) return await sReply(`Tidak ada hasil pencarian sebelumnya. Silakan lakukan pencarian (misal: dengan ${dbSettings.rname}ytsearch) sebelum menggunakan indeks.`);
         const index = parseInt(firstArg, 10) - 1;
-        if (isNaN(index) || index < 0 || index >= yts.length) return await sReply("Indeks video tidak valid.");
+        if (isNaN(index) || index < 0 || index >= yts.length) return await sReply('Indeks video tidak valid.');
         const videoItem = yts[index];
         if (typeof videoItem === 'string') {
           input = cleanYoutubeUrl(videoItem.trim());
         } else if (videoItem && typeof videoItem.url === 'string') {
           input = cleanYoutubeUrl(videoItem.url.trim());
         } else {
-          return await sReply("Format data pencarian tidak valid.");
+          return await sReply('Format data pencarian tidak valid.');
         }
       }
       if (args.length > 1) {
         resolution = args[1].toLowerCase();
       }
-    } else if ((quotedMsg && quotedMsg?.type === "extendedTextMessage") || (quotedMsg && quotedMsg?.type === "conversation")) {
+    } else if ((quotedMsg && quotedMsg?.type === 'extendedTextMessage') || (quotedMsg && quotedMsg?.type === 'conversation')) {
       input = quotedMsg?.body;
     } else {
-      return await sReply("Silakan berikan URL YouTube atau pilih dari hasil pencarian.");
+      return await sReply('Silakan berikan URL YouTube atau pilih dari hasil pencarian.');
     }
     url = input;
     const downloadedFilePath = await youtubeDownloader.downloadVideo(url, {

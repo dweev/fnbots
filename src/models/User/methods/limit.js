@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import config from '../../../../config.js';
@@ -27,19 +27,13 @@ export const methods = {
   async setLimitWarned() {
     if (!this.limit.warned) {
       this.limit.warned = true;
-      await this.constructor.updateOne(
-        { userId: this.userId },
-        { $set: { 'limit.warned': true } }
-      );
+      await this.constructor.updateOne({ userId: this.userId }, { $set: { 'limit.warned': true } });
     }
   },
   async setGameLimitWarned() {
     if (!this.limitgame.warned) {
       this.limitgame.warned = true;
-      await this.constructor.updateOne(
-        { userId: this.userId },
-        { $set: { 'limitgame.warned': true } }
-      );
+      await this.constructor.updateOne({ userId: this.userId }, { $set: { 'limitgame.warned': true } });
     }
   },
   resetLimits() {

@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import { pluginCache } from '../../lib/plugins.js';
@@ -17,6 +17,7 @@ export const command = {
   isCommandWithoutPayment: true,
   execute: async ({ sReply, isSadmin, isMaster, isVIP, isPremium, dbSettings, m, args }) => {
     const input = args[0]?.toLowerCase();
+    // prettier-ignore
     const menuSections = [
       { key: 'master',      title: 'Master',            fullTitle: 'MASTER COMMANDS',     required: isSadmin                                      },
       { key: 'owner',       title: 'Owner',             fullTitle: 'OWNER COMMANDS',      required: isSadmin || isMaster                          },
@@ -41,7 +42,7 @@ export const command = {
       { key: 'util',        title: 'Util',              fullTitle: 'UTIL COMMANDS',       required: true                                          },
       { key: 'list',        title: 'List',              fullTitle: 'LIST COMMANDS',       required: true                                          },
     ];
-    const accessibleSections = menuSections.filter(s => s.required && pluginCache.helpMap.get(s.key)?.size > 0);
+    const accessibleSections = menuSections.filter((s) => s.required && pluginCache.helpMap.get(s.key)?.size > 0);
     if (input && !isNaN(input)) {
       const index = parseInt(input) - 1;
       if (index >= 0 && index < accessibleSections.length) {
@@ -77,13 +78,13 @@ async function showCategories(sReply, dbSettings, m, sections) {
   ts += `\n• commands [category]`;
   ts += `\n\nRegards: ${dbSettings.botName}\`\`\``;
   await sReply(`${ts}\n\n@${m.sender.split('@')[0]}`);
-};
+}
 
 async function showAllCommands(sReply, dbSettings, m, sections) {
   let ts = `\`\`\`── ${dbSettings.botName} ──`;
   ts += `\n\nKeterangan:\nⓁ = Menggunakan Limit\n🄶 = Menggunakan Limit Game`;
   const allDbCommands = await Command.find().lean();
-  const commandMap = new Map(allDbCommands.map(cmd => [cmd.name, cmd]));
+  const commandMap = new Map(allDbCommands.map((cmd) => [cmd.name, cmd]));
   for (const section of sections) {
     const commandNames = pluginCache.helpMap.get(section.key);
     if (!commandNames || commandNames.size === 0) continue;
@@ -107,10 +108,10 @@ async function showAllCommands(sReply, dbSettings, m, sections) {
   ts += `\n\nGunakan commands untuk melihat per kategori`;
   ts += `\n\nRegards: ${dbSettings.botName}\`\`\``;
   await sReply(`${ts}\n\n@${m.sender.split('@')[0]}`);
-};
+}
 
 async function showCategoryCommands(sReply, dbSettings, m, category, sections) {
-  const section = sections.find(s => s.key === category) || sections.find(s => s.fullTitle.toLowerCase().includes(category));
+  const section = sections.find((s) => s.key === category) || sections.find((s) => s.fullTitle.toLowerCase().includes(category));
   if (!section) {
     let ts = `\`\`\`Kategori tidak ditemukan!\n\n`;
     ts += `Kategori tersedia:\n`;
@@ -126,7 +127,7 @@ async function showCategoryCommands(sReply, dbSettings, m, category, sections) {
     return await sReply(`Tidak ada perintah di kategori *${section.fullTitle}*`);
   }
   const allDbCommands = await Command.find().lean();
-  const commandMap = new Map(allDbCommands.map(cmd => [cmd.name, cmd]));
+  const commandMap = new Map(allDbCommands.map((cmd) => [cmd.name, cmd]));
   let ts = `\`\`\`── ${dbSettings.botName} ──`;
   ts += `\n\n${section.fullTitle}`;
   ts += `\n\nTotal: ${commandData.size} perintah`;
@@ -150,4 +151,4 @@ async function showCategoryCommands(sReply, dbSettings, m, category, sections) {
   ts += `\ncommands all - Lihat semua perintah`;
   ts += `\n\nRegards: ${dbSettings.botName}\`\`\``;
   await sReply(`${ts}\n\n@${m.sender.split('@')[0]}`);
-};
+}

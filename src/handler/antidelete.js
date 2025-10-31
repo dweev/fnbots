@@ -1,9 +1,9 @@
 // ─── Info ──────────────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info src/handler/antidelete.js ────────────────
 
 import log from '../lib/logger.js';
@@ -21,12 +21,12 @@ function rehydrateBuffer(obj) {
     if (obj.length > 0 && typeof obj[0] === 'number') {
       return Buffer.from(obj);
     }
-    return obj.map(item => rehydrateBuffer(item));
+    return obj.map((item) => rehydrateBuffer(item));
   }
   const keys = Object.keys(obj);
-  const hasNumericKeys = keys.length > 0 && keys.every(key => !isNaN(parseInt(key)));
+  const hasNumericKeys = keys.length > 0 && keys.every((key) => !isNaN(parseInt(key)));
   if (hasNumericKeys && !obj.type && !Array.isArray(obj)) {
-    const maxIndex = Math.max(...keys.map(k => parseInt(k)));
+    const maxIndex = Math.max(...keys.map((k) => parseInt(k)));
     const arr = new Array(maxIndex + 1);
     for (const key in obj) {
       arr[parseInt(key)] = obj[key];
@@ -34,14 +34,12 @@ function rehydrateBuffer(obj) {
     return Buffer.from(arr);
   }
   if (obj.data && !obj.type) {
-    if (Array.isArray(obj.data) || Buffer.isBuffer(obj.data) ||
-      obj.data instanceof Uint8Array || obj.data instanceof ArrayBuffer) {
+    if (Array.isArray(obj.data) || Buffer.isBuffer(obj.data) || obj.data instanceof Uint8Array || obj.data instanceof ArrayBuffer) {
       return Buffer.from(obj.data);
     }
   }
   if (obj.buffer && !obj.type) {
-    if (Array.isArray(obj.buffer) || Buffer.isBuffer(obj.buffer) ||
-      obj.buffer instanceof Uint8Array || obj.buffer instanceof ArrayBuffer) {
+    if (Array.isArray(obj.buffer) || Buffer.isBuffer(obj.buffer) || obj.buffer instanceof Uint8Array || obj.buffer instanceof ArrayBuffer) {
       return Buffer.from(obj.buffer);
     }
   }
@@ -85,7 +83,7 @@ class AntiDeletedHandler {
     return resolved;
   }
   async extractMentionsFromMessage(message) {
-    const messageType = Object.keys(message).find(key => key !== 'messageContextInfo' && typeof message[key] === 'object');
+    const messageType = Object.keys(message).find((key) => key !== 'messageContextInfo' && typeof message[key] === 'object');
     if (!messageType) {
       return { mentions: [], body: '' };
     }
@@ -96,11 +94,7 @@ class AntiDeletedHandler {
       return { mentions: [], body };
     }
     const resolvedMentions = await this.resolveMentions(rawMentions);
-    const normalizedBody = normalizeMentionsInBody(
-      body,
-      rawMentions,
-      resolvedMentions
-    );
+    const normalizedBody = normalizeMentionsInBody(body, rawMentions, resolvedMentions);
     return {
       mentions: resolvedMentions,
       body: normalizedBody
@@ -141,109 +135,145 @@ class AntiDeletedHandler {
   async handleImageMessage(originalMessage, toId, fn) {
     const buffer = await fn.getMediaBuffer(originalMessage.message);
     const { mentions, body } = await this.extractMentionsFromMessage(originalMessage.message);
-    await fn.sendMessage(toId, {
-      image: buffer,
-      caption: body,
-      ...(mentions.length > 0 && { mentions })
-    }, {
-      ephemeralExpiration: originalMessage.expiration
-    });
+    await fn.sendMessage(
+      toId,
+      {
+        image: buffer,
+        caption: body,
+        ...(mentions.length > 0 && { mentions })
+      },
+      {
+        ephemeralExpiration: originalMessage.expiration
+      }
+    );
   }
   async handleVideoMessage(originalMessage, toId, fn) {
     const buffer = await fn.getMediaBuffer(originalMessage.message);
     const { mentions, body } = await this.extractMentionsFromMessage(originalMessage.message);
-    await fn.sendMessage(toId, {
-      video: buffer,
-      caption: body,
-      ...(mentions.length > 0 && { mentions })
-    }, {
-      ephemeralExpiration: originalMessage.expiration
-    });
+    await fn.sendMessage(
+      toId,
+      {
+        video: buffer,
+        caption: body,
+        ...(mentions.length > 0 && { mentions })
+      },
+      {
+        ephemeralExpiration: originalMessage.expiration
+      }
+    );
   }
   async handleStickerMessage(originalMessage, toId, fn) {
     const buffer = await fn.getMediaBuffer(originalMessage.message);
-    await fn.sendMessage(toId, {
-      sticker: buffer
-    }, {
-      ephemeralExpiration: originalMessage.expiration
-    });
+    await fn.sendMessage(
+      toId,
+      {
+        sticker: buffer
+      },
+      {
+        ephemeralExpiration: originalMessage.expiration
+      }
+    );
   }
   async handleAudioMessage(originalMessage, toId, fn) {
     const buffer = await fn.getMediaBuffer(originalMessage.message);
-    await fn.sendMessage(toId, {
-      audio: buffer,
-      mimetype: 'audio/mp4',
-      ptt: false
-    }, {
-      ephemeralExpiration: originalMessage.expiration
-    });
+    await fn.sendMessage(
+      toId,
+      {
+        audio: buffer,
+        mimetype: 'audio/mp4',
+        ptt: false
+      },
+      {
+        ephemeralExpiration: originalMessage.expiration
+      }
+    );
   }
   async handleDocumentMessage(originalMessage, toId, fn) {
     const buffer = await fn.getMediaBuffer(originalMessage.message);
     const { mentions, body } = await this.extractMentionsFromMessage(originalMessage.message);
-    await fn.sendMessage(toId, {
-      document: buffer,
-      mimetype: originalMessage.mime,
-      fileName: originalMessage.message.fileName,
-      ...(body && { caption: body }),
-      ...(mentions.length > 0 && { mentions })
-    }, {
-      ephemeralExpiration: originalMessage.expiration
-    });
+    await fn.sendMessage(
+      toId,
+      {
+        document: buffer,
+        mimetype: originalMessage.mime,
+        fileName: originalMessage.message.fileName,
+        ...(body && { caption: body }),
+        ...(mentions.length > 0 && { mentions })
+      },
+      {
+        ephemeralExpiration: originalMessage.expiration
+      }
+    );
   }
   async handleLocationMessage(originalMessage, toId, fn) {
-    await fn.sendMessage(toId, {
-      location: {
-        degreesLatitude: originalMessage.message.degreesLatitude,
-        degreesLongitude: originalMessage.message.degreesLongitude,
-        name: originalMessage.message.name,
-        address: originalMessage.message.address
+    await fn.sendMessage(
+      toId,
+      {
+        location: {
+          degreesLatitude: originalMessage.message.degreesLatitude,
+          degreesLongitude: originalMessage.message.degreesLongitude,
+          name: originalMessage.message.name,
+          address: originalMessage.message.address
+        }
+      },
+      {
+        ephemeralExpiration: originalMessage.expiration
       }
-    }, {
-      ephemeralExpiration: originalMessage.expiration
-    });
+    );
   }
   async handleContactMessage(originalMessage, toId, fn) {
-    await fn.sendMessage(toId, {
-      contacts: {
-        displayName: originalMessage.message.contactMessage.displayName,
-        contacts: [{ vcard: originalMessage.message.contactMessage.vcard }]
+    await fn.sendMessage(
+      toId,
+      {
+        contacts: {
+          displayName: originalMessage.message.contactMessage.displayName,
+          contacts: [{ vcard: originalMessage.message.contactMessage.vcard }]
+        }
+      },
+      {
+        ephemeralExpiration: originalMessage.expiration
       }
-    }, {
-      ephemeralExpiration: originalMessage.expiration
-    });
+    );
   }
   async handleTextMessage(originalMessage, toId, fn) {
     if (!originalMessage.body) return;
     const { mentions, body } = await this.extractMentionsFromMessage(originalMessage.message);
     if (mentions.length === 0) {
       try {
-        await fn.sendMessage(toId, {
-          forward: {
-            key: {
-              remoteJid: originalMessage.key.remoteJid,
-              fromMe: originalMessage.key.fromMe,
-              id: originalMessage.key.id,
-              ...(originalMessage.key.participant && { participant: originalMessage.key.participant })
-            },
-            message: originalMessage.message,
-            messageTimestamp: originalMessage.messageTimestamp
+        await fn.sendMessage(
+          toId,
+          {
+            forward: {
+              key: {
+                remoteJid: originalMessage.key.remoteJid,
+                fromMe: originalMessage.key.fromMe,
+                id: originalMessage.key.id,
+                ...(originalMessage.key.participant && { participant: originalMessage.key.participant })
+              },
+              message: originalMessage.message,
+              messageTimestamp: originalMessage.messageTimestamp
+            }
+          },
+          {
+            ephemeralExpiration: originalMessage.expiration || 0
           }
-        }, {
-          ephemeralExpiration: originalMessage.expiration || 0,
-        });
+        );
         return;
       } catch (forwardError) {
         log(`Forward failed, sending as new message: ${forwardError}`, false);
       }
     }
-    await fn.sendMessage(toId, {
-      text: body,
-      ...(mentions.length > 0 && { mentions })
-    }, {
-      quoted: originalMessage,
-      ephemeralExpiration: originalMessage.expiration || 0
-    });
+    await fn.sendMessage(
+      toId,
+      {
+        text: body,
+        ...(mentions.length > 0 && { mentions })
+      },
+      {
+        quoted: originalMessage,
+        ephemeralExpiration: originalMessage.expiration || 0
+      }
+    );
   }
 }
 

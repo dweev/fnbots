@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 export const command = {
@@ -24,8 +24,8 @@ export const command = {
       return await sReply(`Gunakan perintah ini dengan membalas pesan atau tag @user yang ingin dihapus dari admin.`);
     }
     const metadata = await store.getGroupMetadata(toId);
-    const groupAdmins = metadata?.participants?.filter(p => p.admin) || [];
-    if (!groupAdmins.some(admin => admin.id === targetId)) return await sReply(`@${targetId.split('@')[0]} bukan admin grup.`);
+    const groupAdmins = metadata?.participants?.filter((p) => p.admin) || [];
+    if (!groupAdmins.some((admin) => admin.id === targetId)) return await sReply(`@${targetId.split('@')[0]} bukan admin grup.`);
     await fn.demoteParticipant(toId, targetId);
     await sReply(`Sukses menghapus @${targetId.split('@')[0]} dari admin.`);
   }

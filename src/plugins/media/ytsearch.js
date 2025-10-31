@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import { YoutubeDownloader } from 'yt-spotify-dl';
@@ -21,6 +21,7 @@ export const command = {
     const videos = await youtubeDownloader.searchVideos(query, 5);
     let teks = '*Hasil Pencarian YouTube:*\n\n';
     for (let i = 0; i < videos.length; i++) {
+      // prettier-ignore
       teks += `${i + 1}. 🔍 *${videos[i].title}*\n` +
         `👤 ${videos[i].author.name}\n` +
         `⏰ ${videos[i].timestamp}\n` +

@@ -1,9 +1,9 @@
 // ─── Info ─────────────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info src/handler/autosticker.js ──────────────
 
 import log from '../lib/logger.js';
@@ -12,6 +12,7 @@ export class AutoStickerHandler {
   constructor(fn, runJob) {
     this.fn = fn;
     this.runJob = runJob;
+    // prettier-ignore
     this.supportedMimeTypes = [
       "video/mp4",
       "image/gif",
@@ -47,7 +48,7 @@ export class AutoStickerHandler {
     if (!body || typeof body !== 'string') {
       return false;
     }
-    return body.toLowerCase().includes("sticker");
+    return body.toLowerCase().includes('sticker');
   }
   isSupportedMedia(mime, message) {
     const isSupportedMime = this.supportedMimeTypes.includes(mime);

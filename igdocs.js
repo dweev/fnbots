@@ -12,10 +12,10 @@ async function main() {
   console.log(`Mencari ID untuk: ${url}\n`);
   try {
     const data = await instagramGetIds(url);
-    console.log("\n--- HASIL DITEMUKAN ---");
+    console.log('\n--- HASIL DITEMUKAN ---');
     console.log(JSON.stringify(data, null, 2));
   } catch (err) {
-    console.error("\n--- ERROR ---");
+    console.error('\n--- ERROR ---');
     console.error(err.message || err);
   }
 }

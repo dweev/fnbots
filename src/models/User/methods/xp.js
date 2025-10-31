@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 const levelData = [
@@ -23,7 +23,7 @@ export const methods = {
     this.xp += xpToAdd;
     let leveledUp = false;
     while (this.level < 10) {
-      const currentLevelData = levelData.find(d => d.level === this.level);
+      const currentLevelData = levelData.find((d) => d.level === this.level);
       if (!currentLevelData || this.xp < currentLevelData.threshold) {
         break;
       }
@@ -51,10 +51,7 @@ export const statics = {
     if (type === 'xp') {
       filter.xp = { $gt: user.xp };
     } else if (type === 'level') {
-      filter.$or = [
-        { level: { $gt: user.level } },
-        { level: user.level, xp: { $gt: user.xp } }
-      ];
+      filter.$or = [{ level: { $gt: user.level } }, { level: user.level, xp: { $gt: user.xp } }];
     }
     const higherRankCount = await this.countDocuments(filter);
     return higherRankCount + 1;

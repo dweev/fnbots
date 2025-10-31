@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import sharp from 'sharp';
@@ -32,7 +32,7 @@ export const command = {
       arg = arg.replace('--full', '').trim();
     }
     if (arg.includes('|')) {
-      const parts = arg.split('|').map(x => cleanFormattingText(x.trim()));
+      const parts = arg.split('|').map((x) => cleanFormattingText(x.trim()));
       textBot = parts[0] || '';
       textTop = parts[1] || '';
     } else {
@@ -77,7 +77,7 @@ export const command = {
       topPadding: 60,
       bottomPadding: 30,
       fontSize: 45,
-      square,
+      square
     });
     await sendRawWebpAsSticker(resBuffer, { packName: dbSettings.packName, authorName: dbSettings.packAuthor });
     await tmpDir.deleteFile(tmpInPath);

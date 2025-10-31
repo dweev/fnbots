@@ -1,9 +1,9 @@
 // ─── Info ─────────────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info src/lib/updateMessageUpsert.js ──────────
 
 import util from 'util';
@@ -22,7 +22,7 @@ class CrotToLive extends Map {
     super.set(key, value);
     setTimeout(() => this.delete(key), ttl);
   }
-};
+}
 
 const duplexM = new CrotToLive();
 
@@ -35,7 +35,7 @@ export default async function updateMessageUpsert(fn, message, dbSettings) {
     const msg = message.messages[0];
     if (global.debugs) {
       await log(util.inspect(msg, false, null, true));
-    };
+    }
     if (!msg.messageTimestamp) {
       await log(`Pesan diabaikan: tidak ada timestamp`);
       return;
@@ -72,12 +72,9 @@ export default async function updateMessageUpsert(fn, message, dbSettings) {
           if (dbSettings.autolikestory) {
             await fn.sendMessage(
               m.key.remoteJid,
-              { react: { key: m.key, text: "💚" } },
+              { react: { key: m.key, text: '💚' } },
               {
-                statusJidList: [
-                  m.key.participant,
-                  jidNormalizedUser(fn.user.id)
-                ]
+                statusJidList: [m.key.participant, jidNormalizedUser(fn.user.id)]
               }
             );
           } else if (dbSettings.autoreadsw) {
@@ -118,7 +115,7 @@ export default async function updateMessageUpsert(fn, message, dbSettings) {
         store,
         dbSettings,
         ownerNumber: config.ownerNumber,
-        version: global.version,
+        version: global.version
       };
       dependencies.isSuggestion = false;
       await arfine(fn, m, dependencies);
@@ -131,8 +128,7 @@ export default async function updateMessageUpsert(fn, message, dbSettings) {
       await log(`Terkena rate limit, menunggu 5 detik...`);
       await delay(5000);
     }
-    if (globalError.message?.includes('No matching sessions') ||
-      globalError.message?.includes('Bad MAC')) {
+    if (globalError.message?.includes('No matching sessions') || globalError.message?.includes('Bad MAC')) {
       await log(`Error session, mencoba refresh...`);
       try {
         await fn.ev.emit('creds.update', { deleteSessions: [message.messages?.[0]?.key?.remoteJid] });
@@ -141,4 +137,4 @@ export default async function updateMessageUpsert(fn, message, dbSettings) {
       }
     }
   }
-};
+}

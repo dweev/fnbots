@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import fs from 'fs-extra';
@@ -31,9 +31,9 @@ export const command = {
       ctx.font = `normal bold ${fontSize}px Noto`;
     }
     const lines = await wrapText(ctx, text.toUpperCase(), 895);
-    const topMost = 470 - (((fontSize * lines.length) / 2) + ((20 * (lines.length - 1)) / 2));
+    const topMost = 470 - ((fontSize * lines.length) / 2 + (20 * (lines.length - 1)) / 2);
     for (let i = 0; i < lines.length; i++) {
-      const height = topMost + ((fontSize + 20) * i);
+      const height = topMost + (fontSize + 20) * i;
       ctx.fillText(lines[i], base.width / 2, height);
     }
     const resBuffer = canvas.toBuffer();

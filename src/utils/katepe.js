@@ -1,9 +1,9 @@
 // ─── Info ───────────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info src/utils/katepe.js ───────────────────
 
 import fs from 'fs-extra';
@@ -21,61 +21,60 @@ try {
   console.error('Gagal mendaftarkan font:', error);
 }
 
+// prettier-ignore
 const defaultUserData = {
-  "NIK":                "1234567890123456",
-  "Nama":               "YANTO OLI GARDAN",
-  "Tempat/Tgl Lahir":   "Zimbabwe, 69-69-6969",
-  "Jenis Kelamin":      "LAKI-LAKI",
-  "Gol. Darah":         "O",
-  "Alamat":             "JL. Kemana Aja",
-  "RT/RW":              "001/002",
-  "Kel/Desa":           "JOLODONG",
-  "Kecamatan":          "KECIMITIN",
-  "Agama":              "KEPO",
-  "Status Perkawinan":  "SERING KAWIN",
-  "Pekerjaan":          "PENGANGGURAN BANYAK ACARA",
-  "Kewarganegaraan":    "PMO",
-  "Berlaku Hingga":     "SAMPE MENINGGOY",
+  'NIK':                '1234567890123456',
+  'Nama':               'YANTO OLI GARDAN',
+  'Tempat/Tgl Lahir':   'Zimbabwe, 69-69-6969',
+  'Jenis Kelamin':      'LAKI-LAKI',
+  'Gol. Darah':         'O',
+  'Alamat':             'JL. Kemana Aja',
+  'RT/RW':              '001/002',
+  'Kel/Desa':           'JOLODONG',
+  'Kecamatan':          'KECIMITIN',
+  'Agama':              'KEPO',
+  'Status Perkawinan':  'SERING KAWIN',
+  'Pekerjaan':          'PENGANGGURAN BANYAK ACARA',
+  'Kewarganegaraan':    'PMO',
+  'Berlaku Hingga':     'SAMPE MENINGGOY',
 };
 
+// prettier-ignore
 const defaultHeaderFooterData = {
-  "Provinsi":   "PROVINSI",
-  "Kabupaten":  "KABUPATEN",
-  "LokasiTTD":  "KONTOLODON",
-  "TanggalTTD": "12-34-5678"
+  'Provinsi':   'PROVINSI',
+  'Kabupaten':  'KABUPATEN',
+  'LokasiTTD':  'KONTOLODON',
+  'TanggalTTD': '12-34-5678'
 };
 
+// prettier-ignore
 const coordinates = {
-  "NIK":              { x: 195, y: 139, fontSize: 34, fontWeight: 'bold' },
-  "Nama":             { x: 215, y: 174, fontSize: 19, fontWeight: 'bold' },
-  "Tempat/Tgl Lahir": { x: 215, y: 200, fontSize: 19, fontWeight: 'bold' },
-  "Jenis Kelamin":    { x: 215, y: 224, fontSize: 19, fontWeight: 'bold' },
-  "Gol. Darah":       { x: 520, y: 224, fontSize: 19, fontWeight: 'bold' },
-  "Alamat":           { x: 215, y: 249, fontSize: 19, fontWeight: 'bold' },
-  "RT/RW":            { x: 215, y: 274, fontSize: 19, fontWeight: 'bold' },
-  "Kel/Desa":         { x: 215, y: 298, fontSize: 19, fontWeight: 'bold' },
-  "Kecamatan":        { x: 215, y: 322, fontSize: 19, fontWeight: 'bold' },
-  "Agama":            { x: 215, y: 348, fontSize: 19, fontWeight: 'bold' },
-  "Status Perkawinan":{ x: 215, y: 372, fontSize: 19, fontWeight: 'bold' },
-  "Pekerjaan":        { x: 215, y: 397, fontSize: 19, fontWeight: 'bold' },
-  "Kewarganegaraan":  { x: 215, y: 422, fontSize: 19, fontWeight: 'bold' },
-  "Berlaku Hingga":   { x: 215, y: 446, fontSize: 19, fontWeight: 'bold' },
+  'NIK':              { x: 195, y: 139, fontSize: 34, fontWeight: 'bold' },
+  'Nama':             { x: 215, y: 174, fontSize: 19, fontWeight: 'bold' },
+  'Tempat/Tgl Lahir': { x: 215, y: 200, fontSize: 19, fontWeight: 'bold' },
+  'Jenis Kelamin':    { x: 215, y: 224, fontSize: 19, fontWeight: 'bold' },
+  'Gol. Darah':       { x: 520, y: 224, fontSize: 19, fontWeight: 'bold' },
+  'Alamat':           { x: 215, y: 249, fontSize: 19, fontWeight: 'bold' },
+  'RT/RW':            { x: 215, y: 274, fontSize: 19, fontWeight: 'bold' },
+  'Kel/Desa':         { x: 215, y: 298, fontSize: 19, fontWeight: 'bold' },
+  'Kecamatan':        { x: 215, y: 322, fontSize: 19, fontWeight: 'bold' },
+  'Agama':            { x: 215, y: 348, fontSize: 19, fontWeight: 'bold' },
+  'Status Perkawinan':{ x: 215, y: 372, fontSize: 19, fontWeight: 'bold' },
+  'Pekerjaan':        { x: 215, y: 397, fontSize: 19, fontWeight: 'bold' },
+  'Kewarganegaraan':  { x: 215, y: 422, fontSize: 19, fontWeight: 'bold' },
+  'Berlaku Hingga':   { x: 215, y: 446, fontSize: 19, fontWeight: 'bold' },
 };
 
+// prettier-ignore
 const headerFooterCoordinates = {
-  "Provinsi":   { y: 55, fontSize: 34, fontWeight: 'bold', align: 'center' },
-  "Kabupaten":  { y: 90, fontSize: 30, fontWeight: 'bold', align: 'center' },
-  "LokasiTTD":  { x: 690, y: 410, fontSize: 19, fontWeight: 'bold', align: 'center' },
-  "TanggalTTD": { x: 690, y: 430, fontSize: 16, fontWeight: 'bold', align: 'center' }
+  'Provinsi':   { y: 55, fontSize: 34, fontWeight: 'bold', align: 'center' },
+  'Kabupaten':  { y: 90, fontSize: 30, fontWeight: 'bold', align: 'center' },
+  'LokasiTTD':  { x: 690, y: 410, fontSize: 19, fontWeight: 'bold', align: 'center' },
+  'TanggalTTD': { x: 690, y: 430, fontSize: 16, fontWeight: 'bold', align: 'center' }
 };
 
 export default async function generateCard(options = {}) {
-  const {
-    userData: providedUserData = {},
-    headerFooterData: providedHeaderFooterData = {},
-    profilePicPath,
-    signatureText
-  } = options;
+  const { userData: providedUserData = {}, headerFooterData: providedHeaderFooterData = {}, profilePicPath, signatureText } = options;
   const finalUserData = { ...defaultUserData, ...providedUserData };
   const finalHeaderFooterData = { ...defaultHeaderFooterData, ...providedHeaderFooterData };
   if (!profilePicPath || !fs.existsSync(profilePicPath)) {
@@ -107,7 +106,7 @@ export default async function generateCard(options = {}) {
     for (const [label, value] of Object.entries(finalHeaderFooterData)) {
       const style = headerFooterCoordinates[label];
       if (style) {
-        const xPos = style.x || (background.width / 2);
+        const xPos = style.x || background.width / 2;
         ctx.textAlign = style.align || 'left';
         const weight = style.fontWeight || 'normal';
         const size = style.fontSize || 30;
@@ -129,7 +128,7 @@ export default async function generateCard(options = {}) {
     ctx.fillText(finalSignatureText.toUpperCase(), 660, 450);
     return canvas.toBuffer('image/png');
   } catch (error) {
-    console.error("Terjadi kesalahan saat membuat kartu:", error);
+    console.error('Terjadi kesalahan saat membuat kartu:', error);
     return null;
   }
 }

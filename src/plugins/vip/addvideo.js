@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import log from '../../lib/logger.js';
@@ -23,6 +23,7 @@ export const command = {
     }
     const existing = await Media.findOne({ name, type: 'video' });
     if (existing) {
+      // prettier-ignore
       return await sReply(
         `Gagal! Nama video '${name}' sudah digunakan.\n\n` +
         `Gunakan .editvideo untuk mengupdate atau pilih nama lain.`
@@ -48,6 +49,7 @@ export const command = {
       } else if (saved.storageType === 'local') {
         storageInfo = '💾 Local Filesystem';
       }
+      // prettier-ignore
       await sReply(
         `Name: ${name}\n` +
         `Storage: ${storageInfo}\n` +
@@ -62,5 +64,5 @@ export const command = {
     } finally {
       await tmpDir.deleteFile(tempPath);
     }
-  },
+  }
 };

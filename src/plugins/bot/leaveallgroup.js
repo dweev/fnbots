@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import { delay } from 'baileys';
@@ -32,7 +32,7 @@ export const command = {
     }
     await sReply(`Mode terdeteksi: *${mode}*. Memulai proses keluar dari grup...`);
     const allGroupMetadatas = await store.getAllGroups({ groupId: 1 });
-    const allGroupIds = allGroupMetadatas.map(g => g.groupId);
+    const allGroupIds = allGroupMetadatas.map((g) => g.groupId);
     const whitelistIdSet = new Set();
     for (const id of allGroupIds) {
       if (await performanceManager.cache.warmWhitelistCache(id)) {
@@ -41,9 +41,9 @@ export const command = {
     }
     let targetGroupIds = [];
     if (mode === 'free') {
-      targetGroupIds = allGroupIds.filter(id => !whitelistIdSet.has(id));
+      targetGroupIds = allGroupIds.filter((id) => !whitelistIdSet.has(id));
     } else if (mode === 'paid') {
-      targetGroupIds = allGroupIds.filter(id => whitelistIdSet.has(id));
+      targetGroupIds = allGroupIds.filter((id) => whitelistIdSet.has(id));
     } else {
       targetGroupIds = allGroupIds;
     }

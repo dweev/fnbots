@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import { tmpDir } from '../../lib/tempManager.js';
@@ -22,8 +22,9 @@ export const command = {
     if (!mimeType || !mimeType.startsWith('image/')) return await sReply(`Silakan balas pesan gambar atau kirim gambar untuk mengubah foto profil bot.`);
     const resBuffer = await fn.getMediaBuffer(targetMsg);
     if (!resBuffer) return await sReply(`Gagal mendapatkan gambar dari pesan yang dibalas.`);
-    const filename = await saveFile(resBuffer, "tmp_group_icon");
+    const filename = await saveFile(resBuffer, 'tmp_group_icon');
     await fn.updateProfilePicture(botNumber, { url: filename });
-    await tmpDir.deleteFile(filename); await reactDone();
+    await tmpDir.deleteFile(filename);
+    await reactDone();
   }
 };

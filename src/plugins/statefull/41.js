@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import { createDeck, shuffleDeck, formatKartu } from '../../function/index.js';
@@ -34,18 +34,24 @@ export const command = {
     const discardPile = deck.splice(0, 1);
     const playerId = serial;
     game41Sessions[toId] = {
-      playerJid: playerId, deck, discardPile, playerHand, botHand,
+      playerJid: playerId,
+      deck,
+      discardPile,
+      playerHand,
+      botHand,
       turn: 'player',
       status: 'playing',
       personality: chosenPersonality,
       timeoutId: timeoutId
     };
+    // prettier-ignore
     const groupMessage = `Permainan Kartu 41 (4 Kartu) melawan Bot dimulai oleh @${playerId.split('@')[0]}!\n\n` +
       `Kepribadian Bot: *${chosenPersonality.replace('_', ' & ')}*\n` +
       `Kartu buangan pertama adalah [ ${discardPile[0].display} ].\n` +
       `Sesi ini akan berakhir dalam 10 menit.\n\n` +
       `Giliranmu! Kartu sudah saya kirim via DM.`;
     await sPesan(groupMessage);
+    // prettier-ignore
     const privateMessage = `Ini kartumu untuk game di grup:\n\n${formatKartu(playerHand)}\n\n` +
       `Pilih aksimu di grup: *ambil dek* atau *ambil buangan*.`;
     const expiration = await fn.getEphemeralExpiration(playerId);

@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import { Media } from '../../../database/index.js';
@@ -22,15 +22,11 @@ export const command = {
     const gambar = await Media.findOne({ name: name, type: 'image' });
     if (gambar) return await sReply(`Gagal! Nama gambar '${name}' sudah digunakan.`);
     const buffer = await fn.getMediaBuffer(targetMsg);
-    const result = await Media.findOneAndUpdate(
-      { name: name, type: 'image' },
-      { data: buffer, mime: mime },
-      { new: true }
-    );
+    const result = await Media.findOneAndUpdate({ name: name, type: 'image' }, { data: buffer, mime: mime }, { new: true });
     if (result) {
       await sReply(`gambar '${name}' berhasil diperbarui.`);
     } else {
       await sReply(`gambar dengan nama '${name}' tidak ditemukan. Mungkin Anda ingin membuatnya dengan .addimage?`);
     }
-  },
+  }
 };

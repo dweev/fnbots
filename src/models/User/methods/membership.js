@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import { Settings } from '../../../../database/index.js';
@@ -48,14 +48,17 @@ export const statics = {
   },
   removePremium(userId) {
     const dbSettings = Settings.getSettings();
-    return this.updateOne({ userId }, {
-      $set: {
-        isPremium: false,
-        premiumExpired: null,
-        'limit.current': dbSettings.limitCount,
-        'limitgame.current': dbSettings.limitGame
+    return this.updateOne(
+      { userId },
+      {
+        $set: {
+          isPremium: false,
+          premiumExpired: null,
+          'limit.current': dbSettings.limitCount,
+          'limitgame.current': dbSettings.limitGame
+        }
       }
-    });
+    );
   },
   removeVIP(userId) {
     return this.updateOne({ userId }, { $set: { isVIP: false, vipExpired: null } });

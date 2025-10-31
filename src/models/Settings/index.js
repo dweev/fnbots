@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import mongoose from 'mongoose';
@@ -15,20 +15,9 @@ import { methods as managementMethods } from './methods/management.js';
 import { statics as singletonStatics } from './methods/singleton.js';
 import { statics as statsStatics } from './methods/stats.js';
 
-Object.assign(
-  settingsSchema.methods,
-  selfModeMethods,
-  adminMethods,
-  managementMethods
-);
+Object.assign(settingsSchema.methods, selfModeMethods, adminMethods, managementMethods);
 
-Object.assign(
-  settingsSchema.statics,
-  singletonStatics,
-  selfModeStatics,
-  adminStatics,
-  statsStatics
-);
+Object.assign(settingsSchema.statics, singletonStatics, selfModeStatics, adminStatics, statsStatics);
 
 const Settings = mongoose.model('Settings', settingsSchema);
 

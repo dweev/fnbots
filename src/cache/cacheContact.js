@@ -1,9 +1,9 @@
 // ─── Info ─────────────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info src/cache/cacheContact.js ───────────────
 
 import log from '../lib/logger.js';
@@ -50,7 +50,7 @@ class ContactCache {
       if (!jids || jids.length === 0) {
         return { contacts: [], missingJids: [] };
       }
-      const keys = jids.map(jid => `${REDIS_PREFIX.CONTACT}${jid}`);
+      const keys = jids.map((jid) => `${REDIS_PREFIX.CONTACT}${jid}`);
       const results = await redis.mget(keys);
       const contacts = [];
       const missingJids = [];
@@ -165,7 +165,7 @@ class ContactCache {
   static async batchFindJidByLid(lids) {
     try {
       if (!lids || lids.length === 0) return [];
-      const keys = lids.map(lid => `${REDIS_PREFIX.LID_TO_JID}${lid}`);
+      const keys = lids.map((lid) => `${REDIS_PREFIX.LID_TO_JID}${lid}`);
       const results = await redis.mget(keys);
       return results;
     } catch (error) {
@@ -235,6 +235,7 @@ class ContactCache {
   static async clearAllCaches() {
     try {
       log('Clearing all contact caches...');
+      // prettier-ignore
       const patterns = [
         `${REDIS_PREFIX.CONTACT}*`,
         `${REDIS_PREFIX.LID_TO_JID}*`,

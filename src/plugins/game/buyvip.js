@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import { User } from '../../../database/index.js';
@@ -16,8 +16,9 @@ export const command = {
   isCommandWithoutPayment: true,
   execute: async ({ user, sReply, serial }) => {
     const priceVIP = 100000000000000n;
-    const namedVIP = "VIP";
+    const namedVIP = 'VIP';
     if (user.balance < priceVIP) {
+      // prettier-ignore
       return await sReply(
         `Poin balancemu tidak cukup untuk membeli ${namedVIP}.\n\n` +
         `💰 Butuh: *${formatNumber(priceVIP)}*\n` +
@@ -32,6 +33,7 @@ export const command = {
     await user.minBalance(priceVIP);
     await User.addVIP(serial, durationMs);
     const newBalance = user.balance;
+    // prettier-ignore
     const successMessage =
       `🎉 Selamat, @${serial.split('@')[0]}!\n\n` +
       `Anda berhasil membeli akses *${namedVIP}* selama 30 hari.\n\n` +

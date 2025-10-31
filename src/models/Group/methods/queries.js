@@ -1,18 +1,14 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 export const statics = {
   ensureGroup(groupId) {
-    return this.findOneAndUpdate(
-      { groupId },
-      { $setOnInsert: { groupId } },
-      { upsert: true, new: true }
-    );
+    return this.findOneAndUpdate({ groupId }, { $setOnInsert: { groupId } }, { upsert: true, new: true });
   },
   findBySetting(settingName, value = true) {
     return this.find({ [settingName]: value });
@@ -29,11 +25,11 @@ export const statics = {
         $group: {
           _id: null,
           totalGroups: { $sum: 1 },
-          activeGroups: { $sum: { $cond: [{ $eq: ["$isActive", true] }, 1, 0] } },
-          totalMembers: { $sum: "$memberCount" },
-          totalMessages: { $sum: "$messageCount" },
-          totalCommands: { $sum: "$commandCount" },
-          totalAfkUsers: { $sum: { $size: "$afkUsers" } }
+          activeGroups: { $sum: { $cond: [{ $eq: ['$isActive', true] }, 1, 0] } },
+          totalMembers: { $sum: '$memberCount' },
+          totalMessages: { $sum: '$messageCount' },
+          totalCommands: { $sum: '$commandCount' },
+          totalAfkUsers: { $sum: { $size: '$afkUsers' } }
         }
       }
     ]);
@@ -41,8 +37,11 @@ export const statics = {
   cleanupOldAfkUsers(maxAfkHours = 24) {
     const cutoffDate = new Date();
     cutoffDate.setHours(cutoffDate.getHours() - maxAfkHours);
-    return this.updateMany({}, {
-      $pull: { afkUsers: { time: { $lt: cutoffDate } } }
-    });
+    return this.updateMany(
+      {},
+      {
+        $pull: { afkUsers: { time: { $lt: cutoffDate } } }
+      }
+    );
   }
 };

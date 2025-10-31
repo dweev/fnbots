@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import fs from 'fs-extra';
@@ -35,7 +35,7 @@ export const command = {
       inputText = quotedMsg?.body;
     }
     if (!inputText) return await sReply(`Format salah.\n\nContoh:\n.faketweet [warna] | [teks]\n\nAnda juga bisa membalas pesan.`);
-    if (inputText.length > 2048) return await sReply("Teks terlalu panjang!");
+    if (inputText.length > 2048) return await sReply('Teks terlalu panjang!');
     let ppBuffer;
     try {
       if (quotedMsg) {
@@ -62,7 +62,7 @@ export const command = {
       verified: true,
       backgroundColor: bgColor
     });
-    if (!resultBuffer) return await sReply("Gagal membuat gambar tweet (modul mengembalikan null).");
+    if (!resultBuffer) return await sReply('Gagal membuat gambar tweet (modul mengembalikan null).');
     await fn.sendMediaFromBuffer(toId, 'image/jpeg', resultBuffer, dbSettings.autocommand, m);
   }
 };

@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import { createRandomMap, generateUlarTanggaImage } from '../../function/index.js';
@@ -16,8 +16,8 @@ export const command = {
   isLimitGameCommand: true,
   aliases: ['g-ulartangga'],
   execute: async ({ sPesan, m, user, toId, sReply, serial, ulartangga }) => {
-    if (!m.isGroup) return await sReply("Permainan ini hanya bisa dimainkan di grup.");
-    if (ulartangga[toId]) return await sReply("Sudah ada permainan yang berjalan. Ketik `stop` untuk berhenti.");
+    if (!m.isGroup) return await sReply('Permainan ini hanya bisa dimainkan di grup.');
+    if (ulartangga[toId]) return await sReply('Sudah ada permainan yang berjalan. Ketik `stop` untuk berhenti.');
     const playerId = serial;
     const newMap = createRandomMap();
     ulartangga[toId] = {
@@ -36,7 +36,8 @@ export const command = {
     };
     ulartangga[toId].timeoutId = setTimeout(timeoutCallback, gameDuration);
     const initialBoard = await generateUlarTanggaImage(ulartangga[toId]);
-    if (!initialBoard) return await sReply("Gagal membuat papan permainan.");
+    if (!initialBoard) return await sReply('Gagal membuat papan permainan.');
+    // prettier-ignore
     const welcomeMessage = `🐍🪜 *Permainan Ular Tangga Dimulai!* 🪜🐍\n\n` +
       `Pemain: @${playerId.split('@')[0]} (Pion Merah)\n` +
       `Lawan: Bot (Pion Biru Muda)\n` +

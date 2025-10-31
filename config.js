@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info config.js ──────────────────────
 
 import 'dotenv/config.js';
@@ -96,19 +96,19 @@ const config = {
   },
   logger: {
     blockedKeywords: [
-      "WARNING: Expected pubkey of length 33, please report the ST and client that generated the pubkey",
-      "Unhandled bucket type (for naming):",
-      "Closing stale open session for new outgoing prekey bundle",
-      "Closing open session in favor of incoming prekey bundle",
-      "Failed to decrypt message with any known session...",
-      "Session error:",
-      "Decrypted message with closed session.",
-      "V1 session storage migration error: registrationId",
-      "Migrating session to:",
-      "Session already closed",
-      "Session already open",
-      "Removing old closed session:",
-      "Closing session:"
+      'WARNING: Expected pubkey of length 33, please report the ST and client that generated the pubkey',
+      'Unhandled bucket type (for naming):',
+      'Closing stale open session for new outgoing prekey bundle',
+      'Closing open session in favor of incoming prekey bundle',
+      'Failed to decrypt message with any known session...',
+      'Session error:',
+      'Decrypted message with closed session.',
+      'V1 session storage migration error: registrationId',
+      'Migrating session to:',
+      'Session already closed',
+      'Session already open',
+      'Removing old closed session:',
+      'Closing session:'
     ]
   }
 };

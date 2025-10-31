@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import { Group } from '../../../database/index.js';
@@ -37,6 +37,7 @@ export const command = {
       await group.save();
       await sReply(`Pesan welcome diubah menjadi: ${pesan}`);
     } else {
+      // prettier-ignore
       return await sReply(
         `Format salah. Gunakan:\n` +
         `${dbSettings.rname}welcome on\n` +

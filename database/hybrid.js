@@ -1,9 +1,9 @@
 // ─── Info ──────────────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info database/hybrid.js ───────────────────────
 
 import path from 'path';
@@ -43,7 +43,10 @@ export async function saveMediaStream(name, type, mime, filePath) {
   if (size < 16 * 1024 * 1024) {
     const buffer = await fs.promises.readFile(filePath);
     doc = await Media.create({
-      name, type, mime, size,
+      name,
+      type,
+      mime,
+      size,
       storageType: 'buffer',
       data: buffer
     });
@@ -53,14 +56,16 @@ export async function saveMediaStream(name, type, mime, filePath) {
     const uploadStream = bucket.openUploadStream(`${name}-${Date.now()}`, { contentType: mime });
     const fileId = await new Promise((resolve, reject) => {
       const readStream = fs.createReadStream(filePath);
-      readStream.pipe(uploadStream)
-        .on('finish', () => resolve(uploadStream.id))
-        .on('error', reject);
+      // prettier-ignore
+      readStream.pipe(uploadStream).on('finish', () => resolve(uploadStream.id)).on('error', reject);
       readStream.on('error', reject);
     });
     try {
       doc = await Media.create({
-        name, type, mime, size,
+        name,
+        type,
+        mime,
+        size,
         storageType: 'gridfs',
         gridfsId: fileId
       });
@@ -74,7 +79,10 @@ export async function saveMediaStream(name, type, mime, filePath) {
   try {
     await fs.copy(filePath, destPath);
     doc = await Media.create({
-      name, type, mime, size,
+      name,
+      type,
+      mime,
+      size,
       storageType: 'local',
       path: destPath
     });
@@ -87,9 +95,7 @@ export async function saveMediaStream(name, type, mime, filePath) {
 
 export async function getMediaStream(identifier) {
   if (!bucket) throw new Error('GridFS is not ready yet. Please wait for the database connection.');
-  const query = (typeof identifier === 'string' && mongoose.Types.ObjectId.isValid(identifier))
-    ? { _id: identifier }
-    : { name: identifier };
+  const query = typeof identifier === 'string' && mongoose.Types.ObjectId.isValid(identifier) ? { _id: identifier } : { name: identifier };
   const media = await Media.findOne(query);
   if (!media) throw new Error('Media not found');
   if (media.storageType === 'buffer') {

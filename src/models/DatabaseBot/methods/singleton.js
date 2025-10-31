@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import log from '../../../lib/logger.js';
@@ -13,7 +13,7 @@ export const statics = {
     try {
       let db = await this.findOne({ docId: 'DATABASE_BOT_SINGLETON' });
       if (!db) {
-        log("Creating new database instance...");
+        log('Creating new database instance...');
         db = new this();
         await db.save();
       }

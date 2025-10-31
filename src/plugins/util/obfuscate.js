@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import path from 'path';
@@ -16,7 +16,7 @@ export const command = {
   category: 'util',
   description: 'Obfuskasi kode JavaScript untuk mengamankan kode sumber Anda',
   isCommandWithoutPayment: true,
-  execute: async ({ fn, m, toId, sReply, quotedMsg, dbSettings, args, arg,  }) => {
+  execute: async ({ fn, m, toId, sReply, quotedMsg, dbSettings, args, arg }) => {
     const obfuscator = new ObfsMgr();
     let level = 'medium';
     let pass = dbSettings.botname + '-Obfuscator';
@@ -25,7 +25,7 @@ export const command = {
     const validLevels = ['low', 'medium', 'high', 'extreme'];
     if (quotedMsg && quotedMsg?.documentMessage) {
       const mime = quotedMsg?.documentMessage?.mimetype || '';
-      if (!mime.startsWith('application/javascript')) return await sReply("Tipe media tidak didukung. Harap reply file .js");
+      if (!mime.startsWith('application/javascript')) return await sReply('Tipe media tidak didukung. Harap reply file .js');
       const buffer = await fn.getMediaBuffer(quotedMsg);
       codeToObfuscate = buffer.toString('utf8');
       outputFileName = `obfuscated-${quotedMsg?.documentMessage.title || 'file.js'}`;
@@ -57,6 +57,7 @@ export const command = {
       }
     }
     if (!codeToObfuscate || !codeToObfuscate.trim()) {
+      // prettier-ignore
       const usage = `*Perintah Obfuscator JavaScript*\n\n` +
         `*Cara 1: Reply File*\n.obfuscate <level?> <pass?>\n\n` +
         `*Cara 2: Reply Teks*\n.obfuscate <level?> <pass?>\n\n` +
@@ -67,7 +68,7 @@ export const command = {
     const obfuscatedCode = await obfuscator.obfs({
       code: codeToObfuscate,
       level: level,
-      pass: pass,
+      pass: pass
     });
     const tempFilePath = path.join(config.paths.tempDir, outputFileName);
     await fs.writeFile(tempFilePath, obfuscatedCode, 'utf-8');

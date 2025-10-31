@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import util from 'util';
@@ -23,14 +23,14 @@ export const command = {
   execute: async ({ fn, m, toId, dbSettings, quotedMsg, args, sReply }) => {
     try {
       let input;
-      if ((quotedMsg && quotedMsg?.type === "extendedTextMessage") || (quotedMsg && quotedMsg?.type === "conversation")) {
+      if ((quotedMsg && quotedMsg?.type === 'extendedTextMessage') || (quotedMsg && quotedMsg?.type === 'conversation')) {
         input = quotedMsg?.body;
       } else if (args.length > 0) {
         input = args[0];
       } else {
-        return await sReply("Silakan berikan URL Facebook atau balas pesan yang berisi URL.");
+        return await sReply('Silakan berikan URL Facebook atau balas pesan yang berisi URL.');
       }
-      if (!/^https?:\/\/(www\.)?(m\.)?(web\.)?facebook\.com([/?#]|$)/.test(input)) return await sReply("URL yang Kamu berikan bukan URL Facebook yang valid.");
+      if (!/^https?:\/\/(www\.)?(m\.)?(web\.)?facebook\.com([/?#]|$)/.test(input)) return await sReply('URL yang Kamu berikan bukan URL Facebook yang valid.');
       const downloadVideoCmd = `${config.paths.ytDlpPath} -f "bestvideo[ext=mp4]" -o - "${input}"`;
       const { stdout: videoBuffer } = await exec(downloadVideoCmd, {
         shell: '/bin/bash',
@@ -51,7 +51,7 @@ export const command = {
     } catch (error) {
       if (error.stderr) {
         await log(`YTDLP Error:\n\n${error.stderr}`, true);
-        await sReply("Gagal memproses video. Pastikan URL valid, video bersifat publik, dan tidak dibatasi.");
+        await sReply('Gagal memproses video. Pastikan URL valid, video bersifat publik, dan tidak dibatasi.');
       } else {
         await log(`Error: ${error.message}`, true);
         await sReply(error.message);

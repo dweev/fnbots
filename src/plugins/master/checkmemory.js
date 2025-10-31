@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import { performanceManager } from '../../lib/performanceManager.js';
@@ -25,7 +25,7 @@ export const command = {
       const heapTotalInMB = Math.round(memUsage.heapTotal / 1024 / 1024);
       const externalMB = Math.round(memUsage.external / 1024 / 1024);
       const rssPercent = Math.round((rssInMB / settings.rssThreshold) * 100);
-
+      // prettier-ignore
       const response = `*Memory Monitor Status*\n\n` +
         `Status: ${settings.isMonitoring ? 'Running' : 'Stopped'}\n` +
         `Auto-Restart: ${settings.enableAutoRestart ? 'Enabled' : 'Disabled'}\n` +
@@ -45,6 +45,7 @@ export const command = {
     }
 
     if (subCommand === 'help') {
+      // prettier-ignore
       return sReply(
         `*Memory Monitor Commands*\n\n` +
         `*Information:*\n` +
@@ -79,7 +80,7 @@ export const command = {
       const uptime = Math.round(process.uptime());
       const uptimeHours = Math.floor(uptime / 3600);
       const uptimeMinutes = Math.floor((uptime % 3600) / 60);
-
+      // prettier-ignore
       const response = `*Memory Monitor Details*\n\n` +
         `*System:*\n` +
         `Uptime: ${uptimeHours}h ${uptimeMinutes}m\n` +
@@ -120,7 +121,7 @@ export const command = {
       const settings = performanceManager.getMemorySettings();
       const rssPercent = Math.round((stats.rssMB / settings.rssThreshold) * 100);
       const heapPercent = Math.round((stats.heapUsedMB / stats.heapTotalMB) * 100);
-
+      // prettier-ignore
       return sReply(
         `*Memory Check Results*\n\n` +
         `RSS: ${stats.rssMB}MB / ${settings.rssThreshold}MB (${rssPercent}%)\n` +
@@ -142,7 +143,7 @@ export const command = {
       };
 
       await performanceManager.updateMemorySettings(defaultSettings);
-
+      // prettier-ignore
       return sReply(
         `Settings reset to defaults:\n\n` +
         `RSS Threshold: 3000MB\n` +
@@ -241,7 +242,7 @@ export const command = {
         const rssAfterMB = Math.round(after.rss / 1024 / 1024);
         const heapFreed = heapBeforeMB - heapAfterMB;
         const rssFreed = rssBeforeMB - rssAfterMB;
-
+        // prettier-ignore
         await sReply(
           `*Garbage Collection Complete*\n\n` +
           `*Heap Memory:*\n` +

@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info src/worker/workers/sticker_native_worker.js ────────────────
 
 import { sticker as stickerNative, addExif as addExifNative } from '../../addon/bridge.js';
@@ -20,7 +20,7 @@ function ensureBuffer(data) {
 }
 
 function isWebP(buffer) {
-  return (buffer.length >= 12 && buffer.slice(0, 4).toString() === "RIFF" && buffer.slice(8, 12).toString() === "WEBP");
+  return buffer.length >= 12 && buffer.slice(0, 4).toString() === 'RIFF' && buffer.slice(8, 12).toString() === 'WEBP';
 }
 
 function hasExifMetadata(buffer) {

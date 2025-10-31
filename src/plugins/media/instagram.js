@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import instagram from '../../utils/igdl.js';
@@ -18,19 +18,20 @@ export const command = {
   aliases: ['ig', 'igdl'],
   execute: async ({ fn, m, toId, dbSettings, quotedMsg, args, sReply }) => {
     let url;
-    if ((quotedMsg && quotedMsg?.type === "extendedTextMessage") || (quotedMsg && quotedMsg?.type === "conversation")) {
+    if ((quotedMsg && quotedMsg?.type === 'extendedTextMessage') || (quotedMsg && quotedMsg?.type === 'conversation')) {
       url = quotedMsg?.body.trim();
     } else if (args.length > 0) {
       url = args[0];
     } else {
       return await sReply(`Silakan balas pesan berisi link Instagram atau kirim linknya langsung.\nContoh: ${dbSettings.rname}ig https://...`);
     }
-    if (!/^https?:\/\/(www\.)?instagram\.com(\/|$)/.test(url)) return await sReply("URL yang Kamu berikan sepertinya bukan link Instagram yang valid.");
+    if (!/^https?:\/\/(www\.)?instagram\.com(\/|$)/.test(url)) return await sReply('URL yang Kamu berikan sepertinya bukan link Instagram yang valid.');
     const data = await instagram(url);
-    if (!data) return await sReply("Gagal mengambil data dari Instagram. Pastikan link valid dan tidak private.");
+    if (!data) return await sReply('Gagal mengambil data dari Instagram. Pastikan link valid dan tidak private.');
     if (data.post_info) {
       const postInfo = data.post_info;
       const mediaUrls = data.url_list;
+      // prettier-ignore
       const baseCaption =
         `📷 *Instagram Downloader*\n\n` +
         `👤 *Username:* ${postInfo.owner_username}\n` +
@@ -51,7 +52,7 @@ export const command = {
         if (selection) {
           const indicesToDownload = parseImageSelection(selection, mediaUrls.length);
           if (indicesToDownload.length === 0) return await sReply(`Format pemilihan slide salah!\nTotal: ${mediaUrls.length}\nContoh: ${dbSettings.rname}ig [url] 1,3,5 atau ${dbSettings.rname}ig [url] 2-5`);
-          mediaToSend = indicesToDownload.map(index => {
+          mediaToSend = indicesToDownload.map((index) => {
             const url = mediaUrls[index];
             const caption = `${baseCaption}\n\n📌 *File Pilihan ${index + 1} dari ${mediaUrls.length}*`;
             return createMediaObjectFromUrl(url, caption);
@@ -87,7 +88,7 @@ export const command = {
         if (selection) {
           const indicesToDownload = parseImageSelection(selection, mediaDetails.length);
           if (indicesToDownload.length === 0) return await sReply(`Format pemilihan salah!\nTotal: ${mediaDetails.length}\nContoh: ${dbSettings.rname}ig [url] 1,3,5 atau ${dbSettings.rname}ig [url] 2-5`);
-          mediaToSend = indicesToDownload.map(index => {
+          mediaToSend = indicesToDownload.map((index) => {
             const mediaItem = mediaDetails[index];
             const caption = `📸 *Instagram*\n\n📌 *Item Pilihan ${index + 1} dari ${mediaDetails.length}*`;
             return createMediaObject(mediaItem, caption);
@@ -107,7 +108,7 @@ export const command = {
         }
       }
     } else {
-      return await sReply("Gagal memproses media. Pastikan link benar dan tidak private.");
+      return await sReply('Gagal memproses media. Pastikan link benar dan tidak private.');
     }
   }
 };

@@ -1,9 +1,9 @@
 // ─── Info ─────────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ecosystem.config.cjs ────────────────
 
 const isDevelopment = process.argv.includes('--env') && process.argv[process.argv.indexOf('--env') + 1] === 'development';

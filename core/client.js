@@ -1,9 +1,9 @@
 // ─── Info ─────────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info core/client.js ──────────────────────
 
 import path from 'path';
@@ -20,10 +20,7 @@ import { MediaValidationError, MediaProcessingError, MediaSizeError } from '../s
 import { jidNormalizedUser, generateWAMessage, generateWAMessageFromContent, downloadContentFromMessage, jidDecode, jidEncode, getBinaryNodeChildString, getBinaryNodeChildren, getBinaryNodeChild, proto, WAMessageAddressingMode, isLidUser, isPnUser } from 'baileys';
 
 const createQuotedOptions = (quoted, options = {}) => {
-  const ephemeralExpiration = options?.ephemeralExpiration
-    ?? options?.expiration
-    ?? quoted?.expiration
-    ?? 0;
+  const ephemeralExpiration = options?.ephemeralExpiration ?? options?.expiration ?? quoted?.expiration ?? 0;
 
   return {
     quoted,
@@ -34,7 +31,7 @@ const createQuotedOptions = (quoted, options = {}) => {
 };
 const extractMentions = (text) => {
   if (!text || typeof text !== 'string') return [];
-  return [...text.matchAll(/@(\d{0,16})(@lid|@s\.whatsapp\.net)?/g)].map(v => v[1] + (v[2] || '@s.whatsapp.net'));
+  return [...text.matchAll(/@(\d{0,16})(@lid|@s\.whatsapp\.net)?/g)].map((v) => v[1] + (v[2] || '@s.whatsapp.net'));
 };
 const detectMimeType = async (data, headers = {}) => {
   let mime = headers['content-type'];
@@ -136,9 +133,11 @@ const createMediaMessage = (mime, data, caption, options = {}) => {
     return {
       contacts: {
         displayName: options.contact.displayName || options.contact.name,
-        contacts: [{
-          vcard: options.contact.vcard
-        }]
+        contacts: [
+          {
+            vcard: options.contact.vcard
+          }
+        ]
       }
     };
   } else {
@@ -162,7 +161,7 @@ export async function clientBot(fn, dbSettings) {
         to: jid
       },
       content
-  });
+    });
   fn.decodeJid = (jid = '') => {
     try {
       if (typeof jid !== 'string' || jid.length === 0) return jid;
@@ -170,13 +169,13 @@ export async function clientBot(fn, dbSettings) {
         const decode = jidDecode(jid);
         if (decode?.user && decode?.server) {
           return `${decode.user}@${decode.server}`;
-        };
-      };
+        }
+      }
       return jid;
     } catch (error) {
       log(error, true);
       return jid;
-    };
+    }
   };
   const botNumber = fn.decodeJid(fn.user?.id);
   fn.getName = async (jid) => {
@@ -184,18 +183,18 @@ export async function clientBot(fn, dbSettings) {
     if (id === botNumber) {
       return fn.user?.name;
     }
-    if (id.endsWith("g.us")) {
+    if (id.endsWith('g.us')) {
       const metadata = await store.getGroupMetadata(id);
-      return metadata ? metadata.subject : "none";
+      return metadata ? metadata.subject : 'none';
     } else {
       const contact = await store.getContact(id);
-      return (contact?.name || contact?.verifiedName || contact?.notify || "Unknown?");
+      return contact?.name || contact?.verifiedName || contact?.notify || 'Unknown?';
     }
   };
   fn.getFile = async (inputPath, save) => {
     try {
       const data = await handleBufferInput(inputPath);
-      const type = await fileTypeFromBuffer(data) || {
+      const type = (await fileTypeFromBuffer(data)) || {
         mime: 'application/octet-stream',
         ext: 'bin'
       };
@@ -232,7 +231,7 @@ export async function clientBot(fn, dbSettings) {
           if (!response.ok) throw new Error(`Download failed with status: ${response.status} ${response.statusText}`);
           const buffer = await response.arrayBuffer();
           const headers = {};
-          response.headers.forEach((value, key) => headers[key] = value);
+          response.headers.forEach((value, key) => (headers[key] = value));
           const mime = await detectMimeType(buffer, headers);
           const finalCaption = opts.caption || '';
           const isWebpSticker = opts.asSticker || /webp/.test(mime);
@@ -240,7 +239,7 @@ export async function clientBot(fn, dbSettings) {
             const stickerBuffer = await runJob('stickerNative', {
               mediaBuffer: buffer,
               packname: opts.packname || dbSettings.packName,
-              author: opts.author || dbSettings.packAuthor,
+              author: opts.author || dbSettings.packAuthor
             });
             return await fn.sendMessage(chat, { sticker: stickerBuffer }, createQuotedOptions(quoted, opts));
           } else if (/gif|image|video|audio|pdf|stream/i.test(mime)) {
@@ -253,7 +252,7 @@ export async function clientBot(fn, dbSettings) {
         return await fn.sendMessage(chat, { text: content, ...opts }, createQuotedOptions(quoted, opts));
       }
     }
-  };
+  }
   fn.sendPesan = async (chat, content, options = {}) => {
     return _internalSendMessage(chat, content, options);
   };
@@ -277,9 +276,7 @@ export async function clientBot(fn, dbSettings) {
         }
       } else if (Buffer.isBuffer(dataBuffer)) {
         imageBuffer = dataBuffer;
-      } else if (dataBuffer instanceof Uint8Array ||
-        dataBuffer instanceof ArrayBuffer ||
-        ArrayBuffer.isView(dataBuffer)) {
+      } else if (dataBuffer instanceof Uint8Array || dataBuffer instanceof ArrayBuffer || ArrayBuffer.isView(dataBuffer)) {
         imageBuffer = Buffer.from(dataBuffer);
       } else if (Array.isArray(dataBuffer)) {
         imageBuffer = Buffer.from(dataBuffer);
@@ -298,13 +295,17 @@ export async function clientBot(fn, dbSettings) {
         throw new Error('Buffer kosong atau tidak valid');
       }
       if (!mime) {
-        return await fn.sendMessage(jid, {
-          document: imageBuffer,
-          mimetype: 'application/octet-stream',
-          fileName: 'file',
-          caption,
-          ...options
-        }, createQuotedOptions(quoted, options));
+        return await fn.sendMessage(
+          jid,
+          {
+            document: imageBuffer,
+            mimetype: 'application/octet-stream',
+            fileName: 'file',
+            caption,
+            ...options
+          },
+          createQuotedOptions(quoted, options)
+        );
       }
       const messageContent = createMediaMessage(mime, imageBuffer, caption, options);
       return await fn.sendMessage(jid, messageContent, createQuotedOptions(quoted, options));
@@ -343,9 +344,9 @@ export async function clientBot(fn, dbSettings) {
         const type = message.mimetype.split('/')[0];
         messageType = type === 'audio' ? 'audio' : type === 'image' ? 'image' : type === 'video' ? 'video' : type === 'sticker' ? 'sticker' : 'document';
       } else {
-        const foundKey = Object.keys(message).find((key) => ["imageMessage", "videoMessage", "stickerMessage", "audioMessage", "documentMessage"].includes(key));
+        const foundKey = Object.keys(message).find((key) => ['imageMessage', 'videoMessage', 'stickerMessage', 'audioMessage', 'documentMessage'].includes(key));
         if (foundKey) {
-          messageType = foundKey.replace("Message", "");
+          messageType = foundKey.replace('Message', '');
           mediaMessage = message[foundKey];
         }
       }
@@ -370,13 +371,13 @@ export async function clientBot(fn, dbSettings) {
     }
   };
   fn.removeParticipant = async (jid, target) => {
-    await fn.groupParticipantsUpdate(jid, [target], "remove");
+    await fn.groupParticipantsUpdate(jid, [target], 'remove');
   };
   fn.promoteParticipant = async (jid, target) => {
-    await fn.groupParticipantsUpdate(jid, [target], "promote");
+    await fn.groupParticipantsUpdate(jid, [target], 'promote');
   };
   fn.demoteParticipant = async (jid, target) => {
-    await fn.groupParticipantsUpdate(jid, [target], "demote");
+    await fn.groupParticipantsUpdate(jid, [target], 'demote');
   };
   fn.sendRawWebpAsSticker = async (jid, path, quoted, options = {}) => {
     try {
@@ -415,7 +416,7 @@ export async function clientBot(fn, dbSettings) {
       const buffer = await response.arrayBuffer();
       if (!buffer || buffer.byteLength === 0) throw new Error('Downloaded buffer is empty');
       const responseHeaders = {};
-      response.headers.forEach((value, key) => responseHeaders[key] = value);
+      response.headers.forEach((value, key) => (responseHeaders[key] = value));
       const mime = await detectMimeType(buffer, responseHeaders);
       return await fn.sendMediaFromBuffer(jid, mime, buffer, caption, quoted, options);
     } catch (error) {
@@ -445,7 +446,7 @@ export async function clientBot(fn, dbSettings) {
       if (!dataResponse.ok) throw new Error(`GET request failed: ${dataResponse.status} ${dataResponse.statusText}`);
       const buffer = await dataResponse.arrayBuffer();
       const headers = {};
-      dataResponse.headers.forEach((value, key) => headers[key] = value);
+      dataResponse.headers.forEach((value, key) => (headers[key] = value));
       const mimeType = await detectMimeType(buffer, headers);
       return await fn.sendMediaFromBuffer(jid, mimeType, buffer, caption, quoted, options);
     } catch (error) {
@@ -561,7 +562,7 @@ export async function clientBot(fn, dbSettings) {
           id: attrs.jid,
           phoneNumber: isLidUser(attrs.jid) && isPnUser(attrs.phone_number) ? attrs.phone_number : undefined,
           lid: isPnUser(attrs.jid) && isLidUser(attrs.lid) ? attrs.lid : undefined,
-          admin: (attrs.type || null)
+          admin: attrs.type || null
         };
       }),
       ephemeralDuration: eph ? +eph : undefined
@@ -579,14 +580,16 @@ export async function clientBot(fn, dbSettings) {
     const result = await fn.query({
       tag: 'iq',
       attrs: { to: '@g.us', xmlns: 'w:g2', type: 'get' },
-      content: [{
-        tag: 'participating',
-        attrs: {},
-        content: [
-          { tag: 'participants', attrs: {} },
-          { tag: 'description', attrs: {} }
-        ]
-      }]
+      content: [
+        {
+          tag: 'participating',
+          attrs: {},
+          content: [
+            { tag: 'participants', attrs: {} },
+            { tag: 'description', attrs: {} }
+          ]
+        }
+      ]
     });
     const data = {};
     const groupsChild = getBinaryNodeChild(result, 'groups');
@@ -613,7 +616,7 @@ export async function clientBot(fn, dbSettings) {
     const msg = proto.Message.create({
       groupInviteMessage: {
         inviteCode,
-        inviteExpiration: parseInt(inviteExpiration) || + new Date(new Date + (config.performance.inviteExpiration)),
+        inviteExpiration: parseInt(inviteExpiration) || +new Date(new Date() + config.performance.inviteExpiration),
         groupJid: jid,
         groupName,
         jpegThumbnail: Buffer.isBuffer(jpegThumbnail) ? jpegThumbnail : null,
@@ -637,7 +640,7 @@ export async function clientBot(fn, dbSettings) {
       messageContextInfo: { messageSecret: randomByte(32) },
       albumMessage: {
         expectedImageCount: array.filter((a) => a.image).length,
-        expectedVideoCount: array.filter((a) => a.video).length,
+        expectedVideoCount: array.filter((a) => a.video).length
       }
     };
     const generationOptions = {
@@ -657,11 +660,11 @@ export async function clientBot(fn, dbSettings) {
         messageSecret: randomByte(32),
         messageAssociation: {
           associationType: 1,
-          parentMessageKey: album.key,
-        },
+          parentMessageKey: album.key
+        }
       };
       await fn.relayMessage(mediaMessage.key.remoteJid, mediaMessage.message, {
-        messageId: mediaMessage.key.id,
+        messageId: mediaMessage.key.id
       });
     }
     return album;
@@ -712,7 +715,7 @@ export async function clientBot(fn, dbSettings) {
       if (!response.ok) throw new Error(`Download failed: ${response.status} ${response.statusText}`);
       const buffer = await response.arrayBuffer();
       const headers = {};
-      response.headers.forEach((value, key) => headers[key] = value);
+      response.headers.forEach((value, key) => (headers[key] = value));
       const mime = await detectMimeType(buffer, headers);
       return await fn.sendMediaFromBuffer(jid, mime, buffer, caption, quoted, options);
     } catch (error) {
@@ -727,7 +730,7 @@ export async function clientBot(fn, dbSettings) {
     try {
       const data = await fn.fetchDisappearingDuration(jid);
       if (Array.isArray(data) && data.length > 0) {
-        const userData = data.find(item => item.id === jid);
+        const userData = data.find((item) => item.id === jid);
         return userData?.disappearing_mode?.duration || 0;
       }
       return 0;
@@ -736,4 +739,4 @@ export async function clientBot(fn, dbSettings) {
     }
   };
   return fn;
-};
+}

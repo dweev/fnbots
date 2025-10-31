@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import { proto } from 'baileys';
@@ -21,16 +21,20 @@ export const command = {
       return;
     }
     const groupMetadata = await store.getGroupMetadata(toId);
-    await fn.sendMessage(toId, {
-      forward: proto.WebMessageInfo.create({
-        key: m.quoted.key,
-        message: m.quoted,
-        ...(m.isGroup ? { participant: m.quoted.sender } : {})
-      }),
-      mentions: groupMetadata.participants.map(a => a.id)
-    }, {
-      ephemeralExpiration: m?.expiration ?? 0,
-      messageId: randomByte(32)
-    });
+    await fn.sendMessage(
+      toId,
+      {
+        forward: proto.WebMessageInfo.create({
+          key: m.quoted.key,
+          message: m.quoted,
+          ...(m.isGroup ? { participant: m.quoted.sender } : {})
+        }),
+        mentions: groupMetadata.participants.map((a) => a.id)
+      },
+      {
+        ephemeralExpiration: m?.expiration ?? 0,
+        messageId: randomByte(32)
+      }
+    );
   }
 };

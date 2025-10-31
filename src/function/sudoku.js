@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── info src/function/sudoku.js ─────────────────────
 
 import { createCanvas } from 'canvas';
@@ -14,7 +14,7 @@ export function parseSudokuCoord(input) {
   const col = match[1].charCodeAt(0) - 'a'.charCodeAt(0);
   const row = parseInt(match[2], 10) - 1;
   return row * 9 + col;
-};
+}
 export async function generateSudokuBoardImage(puzzle, board, errorIndices = []) {
   const squareSize = 45;
   const boardSize = squareSize * 9;
@@ -76,4 +76,4 @@ export async function generateSudokuBoardImage(puzzle, board, errorIndices = [])
     }
   }
   return canvas.toBuffer('image/png');
-};
+}

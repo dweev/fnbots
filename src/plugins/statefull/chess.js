@@ -1,11 +1,10 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
-
 
 import { Chess } from 'chess.js';
 import { generateBoardImage } from '../../function/index.js';
@@ -19,7 +18,7 @@ export const command = {
   aliases: ['g-chess'],
   execute: async ({ fn, m, user, toId, sReply, serial, chessGame }) => {
     if (!m.isGroup) return await sReply('Perintah catur hanya bisa digunakan di dalam grup.');
-    if (chessGame[toId]) return await sReply("Masih ada sesi game yang berjalan di grup ini. Hentikan dengan mengetik *menyerah*.");
+    if (chessGame[toId]) return await sReply('Masih ada sesi game yang berjalan di grup ini. Hentikan dengan mengetik *menyerah*.');
     const gameDuration = 15 * 60 * 1000;
     const timeoutCallback = () => {
       if (chessGame[toId]) {
@@ -38,7 +37,7 @@ export const command = {
       },
       timeoutId: timeoutId
     };
-    const boardBuffer = await generateBoardImage(gameInstance.fen(), "w");
+    const boardBuffer = await generateBoardImage(gameInstance.fen(), 'w');
     let caption = `🤖 *Mode PvE: Kamu Melawan Bot!* 🤖\n\n`;
     caption += `⚪️ Kamu (Putih): @${await fn.getName(serial)}\n`;
     caption += `⚫️ Lawan (Hitam): Bot\n\n`;

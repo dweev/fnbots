@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import errorTracker from '../../lib/errorTracker.js';
@@ -74,10 +74,7 @@ export const command = {
         if (!commandDoc) {
           return sReply(`Command *${cmdName}* tidak ditemukan di database.`);
         }
-        await Command.updateOne(
-          { _id: commandDoc._id },
-          { $set: { isEnabled: true } }
-        );
+        await Command.updateOne({ _id: commandDoc._id }, { $set: { isEnabled: true } });
         const allIdentifiers = [commandDoc.name, ...(commandDoc.aliases || [])];
         for (const identifier of allIdentifiers) {
           const cachedCmd = pluginCache.commands.get(identifier.toLowerCase());
@@ -94,7 +91,7 @@ export const command = {
       case 'status': {
         const { performanceManager } = await import('../../lib/performanceManager.js');
         const schedulerStatus = performanceManager.scheduler.getStatus();
-        const cleanupJob = schedulerStatus.jobs.find(j => j.name === 'errorTrackerCleanup');
+        const cleanupJob = schedulerStatus.jobs.find((j) => j.name === 'errorTrackerCleanup');
         const allStats = await errorTracker.getErrorStats();
         const entries = Object.entries(allStats);
         const disabledCount = entries.filter(([, data]) => data.isDisabled).length;

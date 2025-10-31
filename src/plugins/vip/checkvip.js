@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import dayjs from '../../utils/dayjs.js';
@@ -19,7 +19,7 @@ export const command = {
   execute: async ({ mentionedJidList, serial, sReply }) => {
     const targetId = mentionedJidList[0] || serial;
     const activeVIPs = await User.findActiveVIPs();
-    const vipUser = activeVIPs.find(user => user.userId === targetId);
+    const vipUser = activeVIPs.find((user) => user.userId === targetId);
     if (!vipUser) {
       await sReply(`@${targetId.split('@')[0]} tidak memiliki status VIP aktif.`);
       return;

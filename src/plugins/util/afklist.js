@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import dayjs from '../../utils/dayjs.js';
@@ -23,9 +23,9 @@ export const command = {
     let afkListMessage = `┌ ❏ DAFTAR USER AFK\n│\n`;
     for (let index = 0; index < groupData.afkUsers.length; index++) {
       const afkUser = groupData.afkUsers[index];
-      const userName = await fn.getName(afkUser.userId) || afkUser.userId.split('@')[0];
+      const userName = (await fn.getName(afkUser.userId)) || afkUser.userId.split('@')[0];
       const afkTime = dayjs(afkUser.time).tz('Asia/Jakarta').format('DD/MM/YYYY HH:mm:ss');
-      const durationSeconds = Math.floor((dayjs().diff(dayjs(afkUser.time))) / 1000);
+      const durationSeconds = Math.floor(dayjs().diff(dayjs(afkUser.time)) / 1000);
       const duration = waktu(durationSeconds);
       afkListMessage += `│ ${index + 1}. ${userName}\n`;
       afkListMessage += `│    ├ Sejak: ${afkTime}\n`;

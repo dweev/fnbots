@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info src/lib/contactManager.js ──────────────
 
 import log from './logger.js';
@@ -18,7 +18,7 @@ async function acquireLock(jid, timeout = 5000) {
     if (Date.now() - startTime > timeout) {
       throw new Error(`Lock acquisition timeout for ${jid}`);
     }
-    await new Promise(resolve => setTimeout(resolve, 50));
+    await new Promise((resolve) => setTimeout(resolve, 50));
   }
   updateLocks.set(jid, Date.now());
 }
@@ -51,12 +51,10 @@ export async function updateContact(jid, data = {}) {
 
 export async function batchUpdateContacts(contacts) {
   if (!contacts || contacts.length === 0) return;
-  const validContacts = contacts.filter(({ jid }) =>
-    jid && typeof jid === 'string' && jid.endsWith('@s.whatsapp.net')
-  );
+  const validContacts = contacts.filter(({ jid }) => jid && typeof jid === 'string' && jid.endsWith('@s.whatsapp.net'));
   if (validContacts.length === 0) return;
   const updatePromises = validContacts.map(({ jid, data }) =>
-    updateContact(jid, data).catch(err => {
+    updateContact(jid, data).catch((err) => {
       log(`Batch update failed for ${jid}: ${err.message}`, true);
     })
   );
@@ -65,9 +63,7 @@ export async function batchUpdateContacts(contacts) {
 
 export async function batchProcessContactUpdates(contacts) {
   if (!contacts || contacts.length === 0) return;
-  const personalContacts = contacts.filter(contact =>
-    contact && contact.id && contact.id.endsWith('@s.whatsapp.net')
-  );
+  const personalContacts = contacts.filter((contact) => contact && contact.id && contact.id.endsWith('@s.whatsapp.net'));
   if (personalContacts.length === 0) return;
   const resolvePromises = personalContacts.map(async (contact) => {
     const idFromEvent = contact.id;
@@ -95,7 +91,7 @@ export async function batchProcessContactUpdates(contacts) {
     return { jid: trueJid, data: dataToUpdate };
   });
   const resolved = await Promise.all(resolvePromises);
-  const validContacts = resolved.filter(c => c !== null);
+  const validContacts = resolved.filter((c) => c !== null);
   if (validContacts.length > 0) {
     await batchUpdateContacts(validContacts);
   }

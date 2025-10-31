@@ -1,14 +1,14 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 export const methods = {
   syncWithBaileys(baileysData) {
-    Object.keys(this.schema.paths).forEach(key => {
+    Object.keys(this.schema.paths).forEach((key) => {
       if (baileysData[key] !== undefined) {
         this[key] = baileysData[key];
       }

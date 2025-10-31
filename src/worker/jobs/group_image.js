@@ -1,9 +1,9 @@
 // ─── Info ─────────────────────────────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info src/worker/jobs/group_image.js ──────────────────────────
 
 import createImage from '../workers/groupimage_worker.js';

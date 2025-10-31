@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import { formatNumber } from '../../function/index.js';
@@ -36,7 +36,7 @@ export const command = {
         await user.addBalance(reward);
         tx += `Selamat, kamu menang dan mendapatkan +${formatNumber(reward)}!`;
       } else {
-        tx += "Sayang sekali, kamu kalah dari bot!";
+        tx += 'Sayang sekali, kamu kalah dari bot!';
       }
       await sReply(tx);
       await user.addXp();

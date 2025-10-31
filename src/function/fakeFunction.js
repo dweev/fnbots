@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── info src/function/fakeFunction.js ───────────────
 
 import { delay } from 'baileys';
@@ -21,10 +21,10 @@ export async function processAllTextFormatting(rawText, store, fn) {
     const originalText = match[0];
     if (match[1]) {
       type = 'mention';
-      const jid = match[1] + "@s.whatsapp.net";
+      const jid = match[1] + '@s.whatsapp.net';
       const contact = await store.getContact(jid);
       const fallbackMentionName = await fn.getName(jid);
-      replacementText = "@" + (contact?.name || fallbackMentionName || "Unknown?");
+      replacementText = '@' + (contact?.name || fallbackMentionName || 'Unknown?');
     } else if (match[2]) {
       type = 'bold';
       replacementText = match[2];
@@ -44,20 +44,20 @@ export async function processAllTextFormatting(rawText, store, fn) {
       index: match.index,
       type: type,
       originalText: originalText,
-      replacementText: replacementText,
+      replacementText: replacementText
     });
   }
-  let finalCleanText = "";
+  let finalCleanText = '';
   let lastIndex = 0;
   const allEntities = [];
-  matches.forEach(m => {
+  matches.forEach((m) => {
     finalCleanText += rawText.substring(lastIndex, m.index);
     const entityStartOffset = finalCleanText.length;
     finalCleanText += m.replacementText;
     allEntities.push({
       type: m.type,
       offset: entityStartOffset,
-      length: m.replacementText.length,
+      length: m.replacementText.length
     });
     lastIndex = m.index + m.originalText.length;
   });
@@ -65,6 +65,7 @@ export async function processAllTextFormatting(rawText, store, fn) {
   return { text: finalCleanText, entities: allEntities };
 }
 
+// prettier-ignore
 export const colorNameMap = {
   'merah':  '#F44336',
   'pink':   '#E91E63',
@@ -86,7 +87,7 @@ export function getContrastColor(hexColor) {
   const r = parseInt(hex.substring(0, 2), 16);
   const g = parseInt(hex.substring(2, 4), 16);
   const b = parseInt(hex.substring(4, 6), 16);
-  const luminance = (0.299 * r + 0.587 * g + 0.114 * b);
+  const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
   return luminance > 140 ? '#000000' : '#FFFFFF';
 }
 
@@ -95,10 +96,10 @@ export async function generateFakeChatWithQCGenerator(m, count, fn, store) {
   const sReply = (content, options = {}) => fn.sendReply(jid, content, { quoted: m, ...options });
   try {
     const chatData = await store.getConversations(jid, count);
-    if (!chatData || chatData.length === 0) throw new Error("Tidak ada percakapan yang tersimpan untuk chat ini.");
-    const filteredChats = chatData.filter(c => c.keyId !== m.key.id).filter(c => !c.text || !c.text.includes('sschat'));
+    if (!chatData || chatData.length === 0) throw new Error('Tidak ada percakapan yang tersimpan untuk chat ini.');
+    const filteredChats = chatData.filter((c) => c.keyId !== m.key.id).filter((c) => !c.text || !c.text.includes('sschat'));
     const selectedChats = filteredChats.slice(-count);
-    if (selectedChats.length === 0) throw new Error("Tidak ada percakapan yang bisa diambil.");
+    if (selectedChats.length === 0) throw new Error('Tidak ada percakapan yang bisa diambil.');
     const defaultAvatar = null;
     const messages = [];
     const tempAvatars = [];
@@ -108,7 +109,7 @@ export async function generateFakeChatWithQCGenerator(m, count, fn, store) {
       const senderJid = msg.sender;
       const senderContact = await store.getContact(senderJid);
       const fallbackName = await fn.getName(senderJid);
-      const senderName = senderContact?.name || msg.name || fallbackName || "Mukidi Slamet";
+      const senderName = senderContact?.name || msg.name || fallbackName || 'Mukidi Slamet';
       let avatarBuffer;
       try {
         avatarBuffer = await fn.profileImageBuffer(senderJid, 'image');
@@ -116,17 +117,13 @@ export async function generateFakeChatWithQCGenerator(m, count, fn, store) {
         avatarBuffer = defaultAvatar;
       }
       tempAvatars.push(avatarBuffer);
-      const { text: finalCleanText, entities: allEntities } = await processAllTextFormatting(
-        msg.text || '',
-        store,
-        fn
-      );
+      const { text: finalCleanText, entities: allEntities } = await processAllTextFormatting(msg.text || '', store, fn);
       const messageObj = {
         entities: allEntities,
         avatar: true,
         from: {
           time: formatTimestampToHourMinute(msg.timestamp),
-          number: "+" + senderJid.split('@')[0],
+          number: '+' + senderJid.split('@')[0],
           id: senderJid.split('@')[0],
           photo: { buffer: avatarBuffer },
           name: senderName,
@@ -137,14 +134,10 @@ export async function generateFakeChatWithQCGenerator(m, count, fn, store) {
       if (msg.quoted && msg.quotedSender) {
         const quotedContact = await store.getContact(msg.quotedSender);
         const fallbackQuotedName = await fn.getName(msg.quotedSender);
-        const quotedSenderName = quotedContact?.name || fallbackQuotedName || "Yanto Baut";
-        const { text: finalCleanQuotedText, entities: allQuotedEntities } = await processAllTextFormatting(
-          msg.quoted || '',
-          store,
-          fn
-        );
+        const quotedSenderName = quotedContact?.name || fallbackQuotedName || 'Yanto Baut';
+        const { text: finalCleanQuotedText, entities: allQuotedEntities } = await processAllTextFormatting(msg.quoted || '', store, fn);
         messageObj.replyMessage = {
-          number: "+" + msg.quotedSender.split('@')[0],
+          number: '+' + msg.quotedSender.split('@')[0],
           name: quotedSenderName,
           text: finalCleanQuotedText,
           chatId: msg.quotedSender.split('@')[0],

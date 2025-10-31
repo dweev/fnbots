@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 export const methods = {
@@ -34,17 +34,10 @@ export const methods = {
 export const statics = {
   async getUserStats() {
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-    const [totalUsers, activeUsers] = await Promise.all([
-      this.countDocuments(),
-      this.countDocuments({ updatedAt: { $gte: sevenDaysAgo } })
-    ]);
+    const [totalUsers, activeUsers] = await Promise.all([this.countDocuments(), this.countDocuments({ updatedAt: { $gte: sevenDaysAgo } })]);
     return { totalUsers, activeUsers };
   },
   getTopActiveUsers(limit = 10) {
-    return this.aggregate([
-      { $addFields: { totalActivity: { $add: ["$userCount", { $size: { $ifNull: [{ $objectToArray: "$commandStats" }, []] } }] } } },
-      { $sort: { totalActivity: -1 } },
-      { $limit: limit }
-    ]);
+    return this.aggregate([{ $addFields: { totalActivity: { $add: ['$userCount', { $size: { $ifNull: [{ $objectToArray: '$commandStats' }, []] } }] } } }, { $sort: { totalActivity: -1 } }, { $limit: limit }]);
   }
 };

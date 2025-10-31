@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import { delay } from 'baileys';
@@ -19,21 +19,15 @@ export const command = {
     if (!m.isGroup) return await sReply('Perintah ini hanya bisa digunakan di dalam grup.');
     if (!isBotGroupAdmins) return await sReply('Bot harus menjadi admin untuk menjalankan perintah ini.');
     const groupMetadata = await store.getGroupMetadata(toId);
-    const allMemberIds = groupMetadata.participants.map(p => p.id);
-    const groupAdminIds = new Set(
-      groupMetadata.participants
-        .filter(p => p.admin)
-        .map(p => p.id)
-    );
+    const allMemberIds = groupMetadata.participants.map((p) => p.id);
+    const groupAdminIds = new Set(groupMetadata.participants.filter((p) => p.admin).map((p) => p.id));
     const specialUsers = await User.find({
       userId: { $in: allMemberIds },
-      $or: [
-        { isMaster: true },
-        { isVIP: true },
-        { isPremium: true }
-      ]
-    }).select('userId').lean();
-    const specialUserIds = new Set(specialUsers.map(u => u.userId));
+      $or: [{ isMaster: true }, { isVIP: true }, { isPremium: true }]
+    })
+      .select('userId')
+      .lean();
+    const specialUserIds = new Set(specialUsers.map((u) => u.userId));
     let removedCount = 0;
     let failedCount = 0;
     for (const memberId of allMemberIds) {

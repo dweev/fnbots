@@ -1,9 +1,9 @@
 // ─── Info ───────────────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── info src/function/ludo.js ──────────────────────
 
 import sharp from 'sharp';
@@ -115,10 +115,10 @@ export function startLudoTimeout(idGroup, ludoSessions) {
     }
     ludoSessions[idGroup].timeoutId = setTimeout(timeoutCallback, gameDuration);
   }
-};
+}
 export function calculateNewPosition(currentPos, roll, color) {
   if (currentPos >= 500) {
-    return (roll === 6) ? START_POSITIONS[color] : currentPos;
+    return roll === 6 ? START_POSITIONS[color] : currentPos;
   }
   if (currentPos >= 100) {
     const finishTarget = HOME_POSITIONS[color];
@@ -143,7 +143,7 @@ export function calculateNewPosition(currentPos, roll, color) {
     }
   }
   return newPos;
-};
+}
 export function checkForCapture(gameState, attackerColor, attackerNewPos) {
   let captureText = '';
   if (SAFE_POSITIONS.includes(attackerNewPos)) {
@@ -158,7 +158,7 @@ export function checkForCapture(gameState, attackerColor, attackerNewPos) {
     }
   }
   return captureText;
-};
+}
 export async function runBotLudoTurns(toId, m, fn, ludoSessions) {
   const sPesan = (text) => fn.sendPesan(toId, text, { ephemeralExpiration: m.expiration ?? 0 });
   const gameState = ludoSessions[toId];
@@ -211,7 +211,7 @@ export async function runBotLudoTurns(toId, m, fn, ludoSessions) {
       }
     }
   }
-};
+}
 export async function generateLudoBoard(gameState) {
   try {
     const ludoLocalAssets = config.paths;
@@ -242,4 +242,4 @@ export async function generateLudoBoard(gameState) {
     await log(`Error generateLudoBoard:\n${error}`, true);
     return null;
   }
-};
+}

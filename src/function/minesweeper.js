@@ -1,13 +1,15 @@
 // ─── Info ────────────────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── info src/function/minesweeper.js ────────────────
 
 export function generateMinesweeperBoard(width, height, numMines) {
-  const board = Array(height).fill(null).map(() => Array(width).fill('0'));
+  const board = Array(height)
+    .fill(null)
+    .map(() => Array(width).fill('0'));
   let minesPlaced = 0;
   while (minesPlaced < numMines) {
     const row = Math.floor(Math.random() * height);
@@ -35,7 +37,7 @@ export function generateMinesweeperBoard(width, height, numMines) {
     }
   }
   return board;
-};
+}
 export function formatMinesweeperBoard(playerBoard, gameOver = false, solutionBoard = null) {
   const numberEmojis = ['🌀', '1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣'];
   let boardText = '```\n';
@@ -58,7 +60,7 @@ export function formatMinesweeperBoard(playerBoard, gameOver = false, solutionBo
   });
   boardText += '```';
   return boardText;
-};
+}
 export function revealCell(row, col, gameState) {
   const { solutionBoard, playerBoard } = gameState;
   const height = solutionBoard.length;
@@ -76,7 +78,7 @@ export function revealCell(row, col, gameState) {
       }
     }
   }
-};
+}
 export function checkWinCondition(gameState) {
   let hiddenCount = 0;
   for (const row of gameState.playerBoard) {
@@ -87,4 +89,4 @@ export function checkWinCondition(gameState) {
     }
   }
   return hiddenCount === gameState.mineCount;
-};
+}

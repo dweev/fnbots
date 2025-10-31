@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import { getCommonGroups } from '../../function/index.js';
@@ -34,5 +34,5 @@ export const command = {
     } else {
       return await sReply(`Tolong tag user atau masukkan nomor untuk dicari.\n\nContoh: ${dbSettings.rname}find @user1 @user2\natau ${dbSettings.rname}find 6281234567890`);
     }
-  },
+  }
 };

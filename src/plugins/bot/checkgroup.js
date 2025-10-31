@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import fs from 'fs-extra';
@@ -32,15 +32,15 @@ export const command = {
     }
     switch (subcommand) {
       case 'member': {
-        const mentions = members.map(m => m.id);
+        const mentions = members.map((m) => m.id);
         const memberList = mentions.map((jid, index) => `${index + 1}. @${jid.split('@')[0]}`).join('\n');
         await sReply(`*GROUP MEMBER LIST*\n\n${memberList}\n\nTotal: ${members.length} members`, { mentions });
         break;
       }
       case 'admins': {
-        const admins = members.filter(m => m.admin);
+        const admins = members.filter((m) => m.admin);
         if (admins.length === 0) return await sReply('No admins found in this group.');
-        const mentions = admins.map(a => a.id);
+        const mentions = admins.map((a) => a.id);
         const adminList = mentions.map((jid, index) => `${index + 1}. @${jid.split('@')[0]}`).join('\n');
         await sReply(`*GROUP ADMIN LIST*\n\n${adminList}\n\nTotal: ${admins.length} admins`, { mentions });
         break;
@@ -50,7 +50,7 @@ export const command = {
           return await sReply(`Wrong format!\nExample: ${dbSettings.rname}checkgroup 1 user 628123`);
         }
         const targetNumber = subArgs[0].replace(/[^0-9]/g, '');
-        const user = members.find(member => member.id.startsWith(targetNumber));
+        const user = members.find((member) => member.id.startsWith(targetNumber));
         if (user) {
           const name = await fn.getName(user.id);
           const userInfo = `*USER FOUND*\n\nName: ${name}\nNumber: ${user.id.split('@')[0]}\nStatus: ${user.admin ? 'Admin' : 'Member'}`;

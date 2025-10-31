@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 export const command = {
@@ -24,6 +24,6 @@ export const command = {
     }
     if (!creatorId) return await sReply(`Tidak dapat menemukan ID pembuat grup.`);
     const creatorNumber = creatorId.split('@')[0];
-    await fn.sendContact(toId, "Group Creator", subject, creatorNumber, m);
+    await fn.sendContact(toId, 'Group Creator', subject, creatorNumber, m);
   }
 };

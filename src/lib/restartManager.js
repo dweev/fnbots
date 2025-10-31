@@ -143,7 +143,7 @@ class RestartManager {
             RESTART_ATTEMPTS: this.currentAttempts.toString(),
             RESTARTED_BY_SELF: '1',
             LAST_RESTART_AT: this.lastRestartAt.toString()
-          },
+          }
         });
         child.on('error', (error) => {
           log(`Spawn error: ${error.message}`, true);
@@ -201,7 +201,7 @@ class RestartManager {
         log(`Cache sync failed in cleanup: ${error.message}`, true);
       }
     }
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    await new Promise((resolve) => setTimeout(resolve, 1500));
     log('Cleanup completed');
   }
 

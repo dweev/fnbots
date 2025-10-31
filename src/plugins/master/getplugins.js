@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import path from 'path';
@@ -23,14 +23,8 @@ export const command = {
       $or: [{ name: identifier }, { aliases: identifier }]
     }).lean();
     if (!commandDoc) return sReply(`Perintah atau alias '${identifier}' tidak ditemukan di database.`);
-    const filePath = path.join(
-      process.cwd(),
-      'src',
-      'plugins',
-      commandDoc.category,
-      `${commandDoc.name}.js`
-    );
-    if (!await fs.pathExists(filePath)) return sReply(`File tidak ditemukan di path yang diharapkan: \`${filePath.replace(process.cwd(), '')}\`. Mungkin ada inkonsistensi data.`);
+    const filePath = path.join(process.cwd(), 'src', 'plugins', commandDoc.category, `${commandDoc.name}.js`);
+    if (!(await fs.pathExists(filePath))) return sReply(`File tidak ditemukan di path yang diharapkan: \`${filePath.replace(process.cwd(), '')}\`. Mungkin ada inkonsistensi data.`);
     const caption = `File Plugin: *${commandDoc.name}.js*\n`;
     await fn.sendFilePath(toId, caption, filePath, { quoted: m });
   }

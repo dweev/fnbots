@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info src/lib/userMembership.js ──────────────
 
 import dayjs from '../utils/dayjs.js';
@@ -44,6 +44,7 @@ export function membershipUser(config) {
         if (msToAdd <= 0) return await sReply('Durasi harus lebih dari 0');
         await userModelMethods.add(userId, msToAdd);
         const durationMessage = formatDurationMessage(duration);
+        // prettier-ignore
         await sReply(
           `*「 PENAMBAHAN ${capitalizedType} 」*\n\n` +
           `*ID*: @${userId.split('@')[0]}\n` +
@@ -74,16 +75,19 @@ export function membershipUser(config) {
           jidsToDelete.add(quotedMsg.sender);
         }
         if (mentionedJidList.length > 0) {
-          mentionedJidList.forEach(jid => jidsToDelete.add(jid));
+          mentionedJidList.forEach((jid) => jidsToDelete.add(jid));
         }
         if (input) {
           const activeUsers = await userModelMethods.findActive();
           const selectedByArchimed = archimed(input, activeUsers);
           if (selectedByArchimed.length > 0) {
-            selectedByArchimed.forEach(user => jidsToDelete.add(user.userId));
+            selectedByArchimed.forEach((user) => jidsToDelete.add(user.userId));
           } else {
-            const targets = input.split(',').map(num => formatUserId(num.trim())).filter(Boolean);
-            targets.forEach(jid => jidsToDelete.add(jid));
+            const targets = input
+              .split(',')
+              .map((num) => formatUserId(num.trim()))
+              .filter(Boolean);
+            targets.forEach((jid) => jidsToDelete.add(jid));
           }
         }
         if (jidsToDelete.size === 0) {
@@ -109,6 +113,7 @@ export function membershipUser(config) {
       };
       const subCmd = args[0]?.toLowerCase();
       if (!subCmd) {
+        // prettier-ignore
         const guideMessage = `*❏ PANDUAN PERINTAH ${capitalizedType} ❏*\n\n` +
           `*1. Menambah:*\n\`\`\`${dbSettings.rname}${type.toLowerCase()} add <@user/nomor> <durasi>\`\`\`\n\n` +
           `*2. Menghapus:*\n\`\`\`${dbSettings.rname}${type.toLowerCase()} del <@user/nomor>\`\`\`\n\n` +

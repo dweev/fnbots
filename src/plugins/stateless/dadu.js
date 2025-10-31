@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import path from 'path';
@@ -21,7 +21,7 @@ export const command = {
     await gameStateManager.startGame(serial);
     try {
       const dirPath = config.paths.dice;
-      const allFiles = (await fs.readdir(dirPath)).filter(file => file.endsWith('.webp'));
+      const allFiles = (await fs.readdir(dirPath)).filter((file) => file.endsWith('.webp'));
       const randomFile = allFiles[Math.floor(Math.random() * allFiles.length)];
       const filePath = path.join(dirPath, randomFile);
       const match = randomFile.match(/roll-(\d)\.webp/);
@@ -31,10 +31,11 @@ export const command = {
       if (diceValue === 6) {
         const reward = 1500n;
         await sPesan(`🎉 Jackpot! Kamu mendapatkan ${formatNumber(reward)} dari hasil dadu angka 6!`);
-        await user.addXp(); 
+        await user.addXp();
         await user.addBalance(reward);
       } else {
-        await user.addXp(); await reactFail();
+        await user.addXp();
+        await reactFail();
       }
     } finally {
       gameStateManager.endGame(serial);

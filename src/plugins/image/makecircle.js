@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import { makeCircleSticker } from '../../function/index.js';
@@ -15,9 +15,9 @@ export const command = {
   isCommandWithoutPayment: true,
   execute: async ({ fn, m, toId, dbSettings, quotedMsg, sReply }) => {
     const targetMsg = quotedMsg ? m.quoted || m : m.message;
-    if (!targetMsg) return await sReply("Media tidak ditemukan.");
+    if (!targetMsg) return await sReply('Media tidak ditemukan.');
     const mime = targetMsg?.imageMessage?.mimetype;
-    if (!mime) return await sReply("Kirim atau balas gambar untuk dijadikan lingkaran.");
+    if (!mime) return await sReply('Kirim atau balas gambar untuk dijadikan lingkaran.');
     const resBuffer = await makeCircleSticker(await fn.getMediaBuffer(targetMsg));
     await fn.sendMediaFromBuffer(toId, 'image/jpeg', resBuffer, dbSettings.autocommand, m);
   }

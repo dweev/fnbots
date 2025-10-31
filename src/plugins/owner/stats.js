@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import os from 'os';
@@ -27,15 +27,7 @@ export const command = {
   execute: async ({ version, sReply }) => {
     const startTime = Date.now();
     const currentSettings = await Settings.getSettings();
-    const [
-      npmVersionData,
-      diskData,
-      virtData,
-      ipInfo,
-      packageJson,
-      topCommands,
-      userStats
-    ] = await Promise.all([
+    const [npmVersionData, diskData, virtData, ipInfo, packageJson, topCommands, userStats] = await Promise.all([
       exec('npm -v').catch(() => ({ stdout: 'N/A' })),
       exec('df -h / | grep -v loop').catch(() => ({ stdout: '' })),
       exec('systemd-detect-virt || echo "N/A"').catch(() => ({ stdout: 'N/A' })),
@@ -55,9 +47,10 @@ export const command = {
           return { data: {} };
         }
       })(),
+      // prettier-ignore
       fs.readFile('./package.json', 'utf8').then(JSON.parse).catch(() => ({})),
       Command.getTopCommands(5),
-      User.getUserStats().catch(() => ({ totalUsers: 0, activeUsers: 0 })),
+      User.getUserStats().catch(() => ({ totalUsers: 0, activeUsers: 0 }))
     ]);
     const responseTime = Date.now() - startTime;
     const used = process.memoryUsage();
@@ -72,10 +65,12 @@ export const command = {
     const platform = os.platform();
     const release = os.release();
     const arch = os.arch();
-    const load = os.loadavg().map(n => n.toFixed(2)).join(', ');
+    // prettier-ignore
+    const load = os.loadavg().map((n) => n.toFixed(2)).join(', ');
     const environment = process.env.NODE_ENV || 'development';
     const networkInterfaces = os.networkInterfaces();
-    let ipv4Active = 'No', ipv6Active = 'No';
+    let ipv4Active = 'No';
+    let ipv6Active = 'No';
     for (const iface in networkInterfaces) {
       for (const details of networkInterfaces[iface]) {
         if (!details.internal) {
@@ -85,7 +80,9 @@ export const command = {
       }
     }
     const npmVersion = npmVersionData.stdout?.toString()?.trim() || 'N/A';
-    let diskUsed = 'N/A', diskTotal = 'N/A', diskPercent = 'N/A';
+    let diskUsed = 'N/A';
+    let diskTotal = 'N/A';
+    let diskPercent = 'N/A';
     const dfOutput = diskData.stdout?.toString()?.split('\n')[1];
     if (dfOutput) {
       const df = dfOutput.trim().split(/\s+/);
@@ -119,7 +116,8 @@ export const command = {
     message += `> Load Average: ${load}\n\n`;
     message += `*❏ MEMORY USAGE*\n`;
     message += `> System RAM: ${bytesToSize(usedMem)}/${bytesToSize(totalMem)} (${((usedMem / totalMem) * 100).toFixed(2)}%)\n`;
-    message += Object.keys(used).map(key => `> ${key}: ${bytesToSize(used[key])}`).join('\n') + '\n\n';
+    // prettier-ignore
+    message += Object.keys(used).map((key) => `> ${key}: ${bytesToSize(used[key])}`).join('\n') + '\n\n';
     message += `*❏ USAGE STATISTICS*\n`;
     message += `> Total Users: ${userStats.totalUsers || 0}\n`;
     message += `> Active Users (7d): ${userStats.activeUsers || 0}\n`;

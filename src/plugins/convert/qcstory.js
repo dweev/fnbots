@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import sharp from 'sharp';
@@ -17,11 +17,11 @@ export const command = {
   isCommandWithoutPayment: true,
   execute: async ({ fn, m, quotedMsg, serial, arg, sReply, pushname, toId, dbSettings, store }) => {
     const targetMsg = quotedMsg ? m.quoted || m : m.message;
-    if (!targetMsg) return await sReply("Media tidak ditemukan.");
+    if (!targetMsg) return await sReply('Media tidak ditemukan.');
     const mime = targetMsg?.imageMessage?.mimetype;
-    if (!mime) return await sReply("Kirim atau balas gambar!");
+    if (!mime) return await sReply('Kirim atau balas gambar!');
     const buffer = await fn.getMediaBuffer(targetMsg);
-    if (!buffer) return await sReply("Gagal mengunduh media.");
+    if (!buffer) return await sReply('Gagal mengunduh media.');
     const bufferMedia = await sharp(buffer).png().toBuffer();
     let profilePicUrl = null;
     try {
@@ -35,17 +35,19 @@ export const command = {
       format: 'png',
       scale: 2,
       backgroundColor: '#1a1a1a',
-      messages: [{
-        avatar: true,
-        from: {
-          id: 1,
-          name: pushname,
-          photo: { buffer: profilePicUrl }
-        },
-        text: finalCleanText,
-        entities: allEntities,
-        media: { buffer: bufferMedia }
-      }]
+      messages: [
+        {
+          avatar: true,
+          from: {
+            id: 1,
+            name: pushname,
+            photo: { buffer: profilePicUrl }
+          },
+          text: finalCleanText,
+          entities: allEntities,
+          media: { buffer: bufferMedia }
+        }
+      ]
     };
     const result = await QuoteGenerator(params);
     const resultBuffer = Buffer.from(result.image, 'base64');

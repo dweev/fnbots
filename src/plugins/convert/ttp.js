@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import { generateTTP } from 'attp-generator';
@@ -18,18 +18,18 @@ export const command = {
   execute: async ({ quotedMsg, sendRawWebpAsSticker, arg, sReply, dbSettings }) => {
     const randomStyle = { color: randomChoice(warna) };
     let inputText;
-    if ((quotedMsg && quotedMsg?.type === "extendedTextMessage") || (quotedMsg && quotedMsg?.type === "conversation")) {
+    if ((quotedMsg && quotedMsg?.type === 'extendedTextMessage') || (quotedMsg && quotedMsg?.type === 'conversation')) {
       inputText = quotedMsg?.body;
     } else if (arg.length > 0) {
       inputText = arg;
     } else {
-      return await sReply("!Error");
+      return await sReply('!Error');
     }
-    if (inputText.length > 200) return await sReply("!Error");
-    const randomFonts = ["SpicyRice", "Bangers"];
+    if (inputText.length > 200) return await sReply('!Error');
+    const randomFonts = ['SpicyRice', 'Bangers'];
     const hasilRandomFonts = randomChoice(randomFonts);
     const result = await generateTTP(inputText, randomStyle, hasilRandomFonts);
-    const webpSticker = await webpFormatter(result, "contain");
+    const webpSticker = await webpFormatter(result, 'contain');
     await sendRawWebpAsSticker(webpSticker, { packName: dbSettings.packName, authorName: dbSettings.packAuthor });
   }
 };

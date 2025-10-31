@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ## [3.0.10] - 2025-10-30
 
 ### 🚀 What's Changed
+
 - chore: bump version to 3.0.10 ([364bd12](https://github.com/Terror-Machine/fnbots/commit/364bd12ee0454fef9cfa7dbe34783a76bddc0323))
 - refactor(connection): simplify error handling and use Boom for status codes ([538b1d1](https://github.com/Terror-Machine/fnbots/commit/538b1d1009db65385f429c50849861faf621b12b))
 - feat: implement fetch options parser and enhance media processing with improved error handling ([7639638](https://github.com/Terror-Machine/fnbots/commit/763963897f79acf950f80bb8faa06d1d9d54fb14))
@@ -28,6 +29,7 @@ All notable changes to this project will be documented in this file.
 ## [3.0.9] - 2025-10-24
 
 ### 🚀 What's Changed
+
 - chore(release): update CHANGELOG.md for v3.0.9 ([9da2025](https://github.com/Terror-Machine/fnbots/commit/9da20251452a34a85ec8bd47a57321ac93710a39))
 - chore: bump version to 3.0.9 in package.json ([b6316b3](https://github.com/Terror-Machine/fnbots/commit/b6316b33a6c760b56729e3fc3146a587554f05a1))
 - feat: implement active verification cache for group member verification commands ([fc22315](https://github.com/Terror-Machine/fnbots/commit/fc2231589840b92d195857666860dc488483cd6c))
@@ -54,6 +56,7 @@ All notable changes to this project will be documented in this file.
 ## [3.0.8] - 2025-10-22
 
 ### 🚀 What's Changed
+
 - chore(release): update CHANGELOG.md for v3.0.8 ([8a1026b](https://github.com/Terror-Machine/fnbots/commit/8a1026bd2fc2fe310f5fc357ab60872a18a37487))
 - refactor: replace StoreMessages with store in various functions for improved consistency and performance ([9eb9c48](https://github.com/Terror-Machine/fnbots/commit/9eb9c48c00aab7e47e9f3e4ef77bc9f653909652))
 - feat: add getAllContacts method to retrieve and cache WhatsApp contacts ([eefddcc](https://github.com/Terror-Machine/fnbots/commit/eefddcc5121f63aa05a1ff5fde536db938a38da3))
@@ -110,6 +113,7 @@ All notable changes to this project will be documented in this file.
 ## [3.0.7] - 2025-10-19
 
 ### 🚀 What's Changed
+
 - chore(release): update CHANGELOG.md for v3.0.7 ([70411ce](https://github.com/Terror-Machine/fnbots/commit/70411ce3e5d3ece6d1c36f44006ad12b4da4fac4))
 - chore: update version to 3.0.7 in package.json and package-lock.json ([e517a29](https://github.com/Terror-Machine/fnbots/commit/e517a29eb66c490291f1d293e6f908d56051dbac))
 - feat: enhance cachestats command with detailed cache and store statistics ([9b1bf77](https://github.com/Terror-Machine/fnbots/commit/9b1bf77594398b8d48d843562b194a86b1f67992))
@@ -140,6 +144,7 @@ All notable changes to this project will be documented in this file.
 ## [3.0.6] - 2025-10-17
 
 ### 🚀 What's Changed
+
 - chore(release): update CHANGELOG.md for v3.0.6 ([d1eff47](https://github.com/Terror-Machine/fnbots/commit/d1eff47abe0c194f748d4941b4a7a1796ea6ce4a))
 - refactor: integrate normalizeMentionsInBody function for improved message handling and update package version to 3.0.6 ([5db0825](https://github.com/Terror-Machine/fnbots/commit/5db0825ee9d140bc3ce2dc39c680a5c12bf3b8bd))
 - refactor: remove ttsId functionality and related audio processing code and remove unused forwardMessage functions ([a4da0ad](https://github.com/Terror-Machine/fnbots/commit/a4da0adca6467ccd93863e1db7f308f9f4d8e63e))
@@ -168,6 +173,7 @@ All notable changes to this project will be documented in this file.
 ## [3.0.5] - 2025-10-12
 
 ### 🚀 What's Changed
+
 - chore(release): update CHANGELOG.md for v3.0.5 ([fa88f4c](https://github.com/Terror-Machine/fnbots/commit/fa88f4c606cc4c4cd2fd4f34467384be2ae18a42))
 - feat: update version to 3.0.5 in package.json and package-lock.json ([f370d96](https://github.com/Terror-Machine/fnbots/commit/f370d96bd5b28cc65ff66ffdeb7a88cfbe330f20))
 - feat: enhance session management with retry logic and backup restoration ([f0e2b7b](https://github.com/Terror-Machine/fnbots/commit/f0e2b7baceb69b410097d574d84bc31f1728a554))
@@ -198,6 +204,7 @@ All notable changes to this project will be documented in this file.
 ## [3.0.4] - 2025-10-10
 
 ### 🚀 What's Changed
+
 - chore: update workflows for improved automation and dependency management ([0c3459d](https://github.com/Terror-Machine/fnbots/commit/0c3459d0de6d4b149b8e4dc1a5d1536a5f8f0859))
 - chore: update package version ([c59a4c5](https://github.com/Terror-Machine/fnbots/commit/c59a4c55696d36145a120e90561ec38a04bccfd7))
 - refactor: enhance command access checks and improve limit warning handling ([9e25f66](https://github.com/Terror-Machine/fnbots/commit/9e25f66853dbea2e84de8e78d2b900370125acac))
@@ -241,6 +248,7 @@ All notable changes to this project will be documented in this file.
 ## [3.0.3] - 2025-10-07
 
 ### 🚀 What's Changed
+
 - feat: enhance command execution flow and improve category display formatting ([709ff19](https://github.com/Terror-Machine/fnbots/commit/709ff19193f745270e5692acb696b196043dfbb3))
 - feat: refactor backupLIDMapping and AuthStore for improved readability and error handling ([71df620](https://github.com/Terror-Machine/fnbots/commit/71df6201e2d1adbacd7533349d6d78c696df31e5))
 - fnbots ([1bc3d66](https://github.com/Terror-Machine/fnbots/commit/1bc3d66c787155c2db118452d569566df5a59897))
@@ -267,6 +275,7 @@ All notable changes to this project will be documented in this file.
 ## [3.0.2] - 2025-10-05
 
 ### 🚀 What's Changed
+
 - refactor: restructure worker pool management and enhance job execution logic ([f0f6ff5](https://github.com/Terror-Machine/fnbots/commit/f0f6ff5d8e55cdb9f80ab21335ed4bdd6d89abb0))
 - fix: add Telegram token and user ID placeholders in .env.example ([0795844](https://github.com/Terror-Machine/fnbots/commit/0795844a7265bf6df9dc1d1cb9beebcd217908e6))
 - fix: simplify ptt property access in audio command handlers ([57dfca6](https://github.com/Terror-Machine/fnbots/commit/57dfca64571642237ec531a55d61b05be2e630bf))
@@ -274,7 +283,7 @@ All notable changes to this project will be documented in this file.
 - fix: update README and install script for MongoDB and Redis installation ([a83c3bb](https://github.com/Terror-Machine/fnbots/commit/a83c3bb04ef85707f8c43dab431d15e219f09d8d))
 - fix: update log messages ([5181758](https://github.com/Terror-Machine/fnbots/commit/51817587d9adb14490c10c0379a9482c2e221e86))
 - fix: improve response handling in banchat command for muted status ([61649dd](https://github.com/Terror-Machine/fnbots/commit/61649dd8aa453a4c0a6473845c9c51b96af7435a))
-- fix: error modify immutable field '_id' ([59b4d13](https://github.com/Terror-Machine/fnbots/commit/59b4d1318d2e852acd3c58d33cdebc15514aed16))
+- fix: error modify immutable field '\_id' ([59b4d13](https://github.com/Terror-Machine/fnbots/commit/59b4d1318d2e852acd3c58d33cdebc15514aed16))
 - fix: streamline error logging in handler and main modules ([b0e778e](https://github.com/Terror-Machine/fnbots/commit/b0e778ed4f674ddf1d0bfa5e8cd01457069164b1))
 - fix: update baileys dependency source and add 'Auto Respon' setting in bot configuration ([5c41f5b](https://github.com/Terror-Machine/fnbots/commit/5c41f5beb721009251df642372046b5b8d8aad73))
 - fix: remove redundant error logging in clientBot and improve audio conversion error handling ([5694ba4](https://github.com/Terror-Machine/fnbots/commit/5694ba4c1a5713092d62c5d6c821225cc0ab1e95))
@@ -291,6 +300,7 @@ All notable changes to this project will be documented in this file.
 ## [3.0.1] - 2025-10-04
 
 ### 🚀 What's Changed
+
 - feat(fix): add missing one ([694fba6](https://github.com/Terror-Machine/fnbots/commit/694fba66fd70a25142f38236ae0baec3abec2949))
 - Merge wabot code into main (full replace with preserved history) ([b496772](https://github.com/Terror-Machine/fnbots/commit/b49677216bbb76aa73d67d1a3634600fe082fb93))
 - Replace fnbots content with wabot code (preserve both histories) ([291330a](https://github.com/Terror-Machine/fnbots/commit/291330a717f8182c90c0321307e25d81d1430c89))
@@ -361,6 +371,7 @@ All notable changes to this project will be documented in this file.
 ## [3.0.0-base] - 2025-09-23
 
 ### 🚀 What's Changed
+
 - core: unify logging, improve error handling, enhance StoreMessages, and optimize plugin behavior ([23dec3f](https://github.com/Terror-Machine/fnbots/commit/23dec3f89600c319f738bb6f9df79f30f518f2f9))
 - refactor(core): major refactor of core logic, performance, and error handling ([2ebce95](https://github.com/Terror-Machine/fnbots/commit/2ebce958995c13e204ed7f17cf23b06865aa8a32))
 - fix(settings): change default self mode ([1bfc293](https://github.com/Terror-Machine/fnbots/commit/1bfc293945b07356ddd596720b70dba46ea5ab48))
@@ -390,6 +401,7 @@ All notable changes to this project will be documented in this file.
 ## [2.0.0] - 2025-10-04
 
 ### 🚀 What's Changed
+
 - fnbots ([836b22e](https://github.com/Terror-Machine/fnbots/commit/836b22ebffc1cec6ad598cd17fc9261dc4cb9e71))
 - fnbots ([b507e3b](https://github.com/Terror-Machine/fnbots/commit/b507e3bc5211c105509d26982f84521b5bde12ad))
 - fnbots ([1a36b9e](https://github.com/Terror-Machine/fnbots/commit/1a36b9e1f26e82eef4a982a90e9c3bc30aa80951))
@@ -415,6 +427,7 @@ All notable changes to this project will be documented in this file.
 ## [1.0.0] - 2023-12-29
 
 ### 🚀 What's Changed
+
 - Update fn.sh ([511e7ab](https://github.com/Terror-Machine/fnbots/commit/511e7abf11804bd51ec695c268da48050a3b9c19))
 - Update fn.sh ([e30b7e3](https://github.com/Terror-Machine/fnbots/commit/e30b7e3d65253907f31d31d43b203f5b570413d5))
 - Update fn.sh ([ecfa584](https://github.com/Terror-Machine/fnbots/commit/ecfa584c1b3b37afe479f2effd7820929becf311))
@@ -431,4 +444,3 @@ All notable changes to this project will be documented in this file.
 - Update main.js ([a14edc0](https://github.com/Terror-Machine/fnbots/commit/a14edc0ef51180e752f1ee29703da0289ba07e60))
 - Update fn.sh ([2add3cb](https://github.com/Terror-Machine/fnbots/commit/2add3cb73e0fa035a20d51ff0107c92eb8cc361d))
 - Nothing ([a9a33d2](https://github.com/Terror-Machine/fnbots/commit/a9a33d2944796c1c69cb633c158b90361b3a5a81))
-

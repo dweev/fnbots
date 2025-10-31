@@ -1,9 +1,9 @@
 // ─── Info ─────────────────────────────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info src/worker/workers/group_image_worker.js ────────────────
 
 import fs from 'fs-extra';
@@ -70,7 +70,7 @@ async function groupImage(username, groupname, welcometext, profileImagePath) {
   ctx.fillText(trimTextToWidth('#' + groupname, maxWidth), textX, darkAreasY[1] + 40);
   ctx.fillText(trimTextToWidth('@' + username, maxWidth), textX, darkAreasY[2] + 40);
   return canvas.toBuffer('image/png');
-};
+}
 
 export default async function createImage({ username, groupname, welcometext, profileImagePath }) {
   return await groupImage(username, groupname, welcometext, profileImagePath);

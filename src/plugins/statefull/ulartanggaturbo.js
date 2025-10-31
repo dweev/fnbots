@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import { turboBoard, startUlarTanggaTimeout } from '../../function/index.js';
@@ -16,13 +16,19 @@ export const command = {
   isLimitGameCommand: true,
   aliases: ['g-ulartangga-turbo'],
   execute: async ({ m, user, toId, sReply, serial, ularTanggaSessions, sPesan }) => {
-    if (!m.isGroup) return await sReply("Permainan ini hanya bisa dimainkan di grup.");
-    if (ularTanggaSessions[toId]) return await sReply("Sudah ada permainan yang sedang berjalan. Ketik `stop` untuk berhenti.");
+    if (!m.isGroup) return await sReply('Permainan ini hanya bisa dimainkan di grup.');
+    if (ularTanggaSessions[toId]) return await sReply('Sudah ada permainan yang sedang berjalan. Ketik `stop` untuk berhenti.');
     const playerId = serial;
     ularTanggaSessions[toId] = {
-      board: turboBoard, playerJid: playerId, playerPos: 0, botPos: 0, turn: 'player', timeoutId: null
+      board: turboBoard,
+      playerJid: playerId,
+      playerPos: 0,
+      botPos: 0,
+      turn: 'player',
+      timeoutId: null
     };
     startUlarTanggaTimeout(toId, ularTanggaSessions);
+    // prettier-ignore
     const welcomeMessage = `🐍 *Ular Tangga Turbo Dimulai!* 🪜\n\n` +
       `Pemain: @${playerId.split('@')[0]}\nLawan: Bot\n\n` +
       `*Aturan Turbo:*\n` +

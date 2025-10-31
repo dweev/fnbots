@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import { fetchTikTokData, buildBaseCaption, sendImages, normalizeResult } from '../../function/index.js';
@@ -16,7 +16,7 @@ export const command = {
   aliases: ['tt', 'tikdl'],
   execute: async ({ fn, m, toId, dbSettings, quotedMsg, args, sReply, reactDone }) => {
     let url;
-    if ((quotedMsg && quotedMsg?.type === "extendedTextMessage") || (quotedMsg && quotedMsg?.type === "conversation")) {
+    if ((quotedMsg && quotedMsg?.type === 'extendedTextMessage') || (quotedMsg && quotedMsg?.type === 'conversation')) {
       url = quotedMsg?.body.trim();
     } else if (args.length > 0) {
       url = args[0];
@@ -28,12 +28,7 @@ export const command = {
     let lastError = null;
     for (const version of versions) {
       try {
-        result = await Promise.race([
-          fetchTikTokData(url, version),
-          new Promise((_, reject) =>
-            setTimeout(() => reject(new Error(`Timeout (${version})`)), 15000)
-          )
-        ]);
+        result = await Promise.race([fetchTikTokData(url, version), new Promise((_, reject) => setTimeout(() => reject(new Error(`Timeout (${version})`)), 15000))]);
         if (result) break;
       } catch (error) {
         lastError = error;
@@ -41,6 +36,7 @@ export const command = {
       }
     }
     if (!result) {
+      // prettier-ignore
       return await sReply(
         `Gagal mengunduh TikTok.\n\n` +
         `Error terakhir: ${lastError?.message || 'Unknown error'}\n\n` +

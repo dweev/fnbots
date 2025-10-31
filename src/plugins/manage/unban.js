@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import { archimed } from '../../function/index.js';
@@ -24,7 +24,7 @@ export const command = {
         }
       }
       if (unbannedUsers.length > 0) {
-        await sReply(`Berhasil mengunban ${unbannedUsers.map(u => `@${u.split('@')[0]}`).join(', ')}`);
+        await sReply(`Berhasil mengunban ${unbannedUsers.map((u) => `@${u.split('@')[0]}`).join(', ')}`);
       } else {
         await sReply('Tidak ada pengguna yang di-unban');
       }
@@ -41,7 +41,7 @@ export const command = {
       return;
     }
     if (args[0]) {
-      const bannedMembers = groupData.bannedMembers.map(u => u.userId);
+      const bannedMembers = groupData.bannedMembers.map((u) => u.userId);
       if (bannedMembers.length === 0) {
         await sReply('Tidak ada pengguna yang di-ban.');
         return;

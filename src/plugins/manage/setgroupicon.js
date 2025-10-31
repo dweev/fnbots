@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import { generateProfilePicture } from 'baileys';
@@ -24,10 +24,11 @@ export const command = {
       if (!mimeType || !mimeType.startsWith('image/')) return await sReply(`Balas pesan gambar atau kirim gambar dengan perintah ini.`);
       const resBuffer = await fn.getMediaBuffer(targetMsg);
       if (!resBuffer) return await sReply(`Gagal mendapatkan gambar dari pesan yang dibalas.`);
-      const filename = await saveFile(resBuffer, "tmp_group_icon");
+      const filename = await saveFile(resBuffer, 'tmp_group_icon');
       await fn.updateProfilePicture(toId, { url: filename });
-      await tmpDir.deleteFile(filename); await reactDone();
-    } else if (args[0] === "full") {
+      await tmpDir.deleteFile(filename);
+      await reactDone();
+    } else if (args[0] === 'full') {
       const targetMsg = quotedMsg ? m.quoted || m : m.message;
       const mimeType = targetMsg?.imageMessage?.mimetype;
       if (!mimeType || !mimeType.startsWith('image/')) return await sReply(`Balas pesan gambar atau kirim gambar dengan perintah ini.`);

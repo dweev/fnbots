@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info src/lib/performanceManager.js ──────────
 
 import process from 'process';
@@ -21,6 +21,7 @@ import PQueue from 'p-queue';
 const PERFORMANCE_CONFIG = {
   CACHE_SYNC_INTERVAL: 5000,
   BATCH_SIZE: 100,
+  // prettier-ignore
   CACHE_SIZES: {
     whitelist       : { max: 1000, ttl: 86400000, updateAgeOnGet: false },
     groupData       : { max: 1000, ttl: 86400000, updateAgeOnGet: false },
@@ -221,7 +222,7 @@ class UnifiedCacheManager {
           metadataCachedCount++;
         }
       }
-      const groupIds = groupMetadatas.map(m => m.groupId || m.id).filter(Boolean);
+      const groupIds = groupMetadatas.map((m) => m.groupId || m.id).filter(Boolean);
       if (groupIds.length > 0) {
         log(`Loading group settings for ${groupIds.length} groups...`);
         const groupSettings = await Group.find({
@@ -237,7 +238,7 @@ class UnifiedCacheManager {
       const contacts = new Set();
       for (const metadata of groupMetadatas) {
         if (metadata?.participants) {
-          metadata.participants.forEach(p => {
+          metadata.participants.forEach((p) => {
             let jid;
             if (p.phoneNumber) {
               jid = p.phoneNumber;
@@ -281,12 +282,7 @@ class UnifiedCacheManager {
     return this.syncQueue.add(async () => {
       const release = await this.syncMutex.acquire();
       try {
-        await Promise.all([
-          this.syncUserStats(),
-          this.syncGroupStats(),
-          this.syncCommandStats(),
-          this.syncGlobalStats()
-        ]);
+        await Promise.all([this.syncUserStats(), this.syncGroupStats(), this.syncCommandStats(), this.syncGlobalStats()]);
         this.lastSyncTime = Date.now();
       } catch (error) {
         log(`Error during cache sync: ${error}`, true);
@@ -302,7 +298,7 @@ class UnifiedCacheManager {
     try {
       await new Promise((resolve, reject) => {
         const onData = (keys) => {
-          keys.forEach(k => keysToSync.push(k));
+          keys.forEach((k) => keysToSync.push(k));
         };
         const onEnd = async () => {
           cleanup();
@@ -369,7 +365,7 @@ class UnifiedCacheManager {
     try {
       await new Promise((resolve, reject) => {
         const onData = (keys) => {
-          keys.forEach(k => keysToSync.push(k));
+          keys.forEach((k) => keysToSync.push(k));
         };
         const onEnd = async () => {
           cleanup();
@@ -437,7 +433,7 @@ class UnifiedCacheManager {
     try {
       await new Promise((resolve, reject) => {
         const onData = (keys) => {
-          keys.forEach(k => keysToSync.push(k));
+          keys.forEach((k) => keysToSync.push(k));
         };
         const onEnd = async () => {
           cleanup();
@@ -496,11 +492,7 @@ class UnifiedCacheManager {
     try {
       if (this.globalStatsCache.totalHits > 0) {
         const { Settings } = await import('../../database/index.js');
-        await Settings.collection.updateOne(
-          {},
-          { $inc: { totalHitCount: this.globalStatsCache.totalHits } },
-          { upsert: true }
-        );
+        await Settings.collection.updateOne({}, { $inc: { totalHitCount: this.globalStatsCache.totalHits } }, { upsert: true });
         this.globalStatsCache.totalHits = 0;
       }
     } catch (error) {
@@ -512,12 +504,16 @@ class UnifiedCacheManager {
     if (this.syncJob) {
       this.syncJob.stop();
     }
-    this.syncJob = schedule('cache-sync', () => {
-      this.syncToDatabase().catch(console.error);
-    }, {
-      intervalSeconds: Math.floor(PERFORMANCE_CONFIG.CACHE_SYNC_INTERVAL / 1000),
-      concurrency: 'skip'
-    });
+    this.syncJob = schedule(
+      'cache-sync',
+      () => {
+        this.syncToDatabase().catch(console.error);
+      },
+      {
+        intervalSeconds: Math.floor(PERFORMANCE_CONFIG.CACHE_SYNC_INTERVAL / 1000),
+        concurrency: 'skip'
+      }
+    );
     log('Cache sync timer started (native cron, every 5s)');
   }
   stopSyncTimer() {
@@ -531,12 +527,16 @@ class UnifiedCacheManager {
     if (this.memoryMonitorJob) {
       this.memoryMonitorJob.stop();
     }
-    this.memoryMonitorJob = schedule('memory-monitor', () => {
-      this.checkMemoryUsage();
-    }, {
-      intervalSeconds: Math.floor(this.memorySettings.checkInterval / 1000),
-      concurrency: 'skip'
-    });
+    this.memoryMonitorJob = schedule(
+      'memory-monitor',
+      () => {
+        this.checkMemoryUsage();
+      },
+      {
+        intervalSeconds: Math.floor(this.memorySettings.checkInterval / 1000),
+        concurrency: 'skip'
+      }
+    );
     log(`Memory monitoring started: Check every ${this.memorySettings.checkInterval / 1000}s, RSS threshold: ${this.memorySettings.rssThreshold}MB`);
   }
   stopMemoryMonitoring() {
@@ -566,8 +566,7 @@ class UnifiedCacheManager {
         log('Forcing garbage collection');
         global.gc();
       }
-      if (this.memorySettings.enableAutoRestart &&
-        this.memoryStats.warnings >= this.memorySettings.consecutiveWarningsBeforeRestart) {
+      if (this.memorySettings.enableAutoRestart && this.memoryStats.warnings >= this.memorySettings.consecutiveWarningsBeforeRestart) {
         log(`${this.memoryStats.warnings} consecutive memory warnings, initiating restart`, true);
         this.restartDueToMemory('Consecutive memory warnings');
         return { rssMB: rssInMB, heapUsedMB: heapUsedInMB, heapTotalMB: heapTotalInMB };
@@ -599,10 +598,7 @@ class UnifiedCacheManager {
     if (newSettings.consecutiveWarningsBeforeRestart) this.memorySettings.consecutiveWarningsBeforeRestart = newSettings.consecutiveWarningsBeforeRestart;
     if (typeof newSettings.enableAutoRestart !== 'undefined') this.memorySettings.enableAutoRestart = newSettings.enableAutoRestart;
     try {
-      await redis.set(
-        REDIS_KEYS.MEMORY_SETTINGS,
-        JSON.stringify(this.memorySettings)
-      );
+      await redis.set(REDIS_KEYS.MEMORY_SETTINGS, JSON.stringify(this.memorySettings));
       log('Memory settings persisted to Redis');
     } catch {
       log('Failed to persist memory settings to Redis', true);
@@ -625,10 +621,7 @@ class UnifiedCacheManager {
         log('Memory settings loaded from Redis');
       } else {
         log('No saved settings found, initializing with defaults');
-        await redis.set(
-          REDIS_KEYS.MEMORY_SETTINGS,
-          JSON.stringify(this.memorySettings)
-        );
+        await redis.set(REDIS_KEYS.MEMORY_SETTINGS, JSON.stringify(this.memorySettings));
         log('Default memory settings saved to Redis');
       }
     } catch (error) {
@@ -656,7 +649,7 @@ class UnifiedCacheManager {
       const stream = redis.scanStream({ match: 'stats:*', count: 100 });
       await new Promise((resolve, reject) => {
         const onData = (keys) => {
-          keys.forEach(key => {
+          keys.forEach((key) => {
             if (key.startsWith('stats:user:')) counts.users++;
             else if (key.startsWith('stats:group:')) counts.groups++;
             else if (key.startsWith('stats:command:')) counts.commands++;
@@ -779,7 +772,7 @@ class UnifiedCacheManager {
     await this.syncQueue.onIdle();
     await this.syncToDatabase();
   }
-};
+}
 class UnifiedJobScheduler {
   constructor(cacheManager) {
     this.cacheManager = cacheManager;
@@ -906,7 +899,7 @@ class UnifiedJobScheduler {
       while (true) {
         const users = await User.find({}).skip(processed).limit(batchSize);
         if (users.length === 0) break;
-        const bulkOps = users.map(user => ({
+        const bulkOps = users.map((user) => ({
           updateOne: {
             filter: { _id: user._id },
             update: {
@@ -965,9 +958,11 @@ class UnifiedJobScheduler {
         log('No cached stories to sync');
         return;
       }
-      const dbUsers = await StoreStory.find({ 'statuses.0': { $exists: true } }).select('userId').lean();
-      const dbUserIds = new Set(dbUsers.map(u => u.userId));
-      const staleUserIds = cachedUserIds.filter(userId => !dbUserIds.has(userId));
+      const dbUsers = await StoreStory.find({ 'statuses.0': { $exists: true } })
+        .select('userId')
+        .lean();
+      const dbUserIds = new Set(dbUsers.map((u) => u.userId));
+      const staleUserIds = cachedUserIds.filter((userId) => !dbUserIds.has(userId));
       if (staleUserIds.length === 0) {
         log('Story cache is in sync with MongoDB');
         return;
@@ -1024,7 +1019,7 @@ class UnifiedJobScheduler {
       restarting: this.restarting
     };
   }
-};
+}
 class UnifiedPerformanceManager {
   constructor() {
     this.cacheManager = new UnifiedCacheManager();
@@ -1047,11 +1042,15 @@ class UnifiedPerformanceManager {
     log('Performance manager initialized successfully');
   }
   setupGracefulShutdown() {
-    signalHandler.register('performance-manager', async (signal) => {
-      log(`${signal}: Performance manager cleanup`);
-      await this.jobScheduler.shutdown();
-      await this.cacheManager.shutdown();
-    }, 60);
+    signalHandler.register(
+      'performance-manager',
+      async (signal) => {
+        log(`${signal}: Performance manager cleanup`);
+        await this.jobScheduler.shutdown();
+        await this.cacheManager.shutdown();
+      },
+      60
+    );
   }
   get cache() {
     return this.cacheManager;
@@ -1090,7 +1089,7 @@ class UnifiedPerformanceManager {
   async clearAllCaches() {
     return this.cacheManager.clearAllCaches();
   }
-};
+}
 
 export const performanceManager = new UnifiedPerformanceManager();
 export default performanceManager;

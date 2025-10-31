@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info src/lib/plugins.js ─────────────────────
 
 import fs from 'fs-extra';
@@ -16,7 +16,7 @@ import { Command } from '../../database/index.js';
 export const pluginCache = {
   commands: new Map(),
   helpMap: new Map(),
-  isLoading: false,
+  isLoading: false
 };
 
 const moduleUrlCache = new Set();
@@ -130,18 +130,11 @@ export const loadPlugins = async (pluginPath) => {
           const flags = {
             isLimitCommand: Boolean(cmd.isLimitCommand),
             isLimitGameCommand: Boolean(cmd.isLimitGameCommand),
-            isCommandWithoutPayment: Boolean(cmd.isCommandWithoutPayment),
+            isCommandWithoutPayment: Boolean(cmd.isCommandWithoutPayment)
           };
           let dbCommand;
           try {
-            dbCommand = await Command.findOrCreate(
-              cmdName,
-              cmd.displayName || cmdName,
-              categoryName,
-              cmd.description,
-              cmd.aliases || [],
-              flags
-            );
+            dbCommand = await Command.findOrCreate(cmdName, cmd.displayName || cmdName, categoryName, cmd.description, cmd.aliases || [], flags);
           } catch (dbError) {
             log(`Database error for command ${cmdName}: ${dbError.message}`, true);
             errorCount++;
@@ -196,9 +189,9 @@ export const hasCommand = (commandName) => {
 export const getCommandsByCategory = (category) => {
   const categoryCommands = pluginCache.helpMap.get(category);
   if (!categoryCommands) return [];
-  return Array.from(categoryCommands.keys()).map(cmdName =>
-    pluginCache.commands.get(cmdName)
-  ).filter(cmd => cmd !== undefined);
+  return Array.from(categoryCommands.keys())
+    .map((cmdName) => pluginCache.commands.get(cmdName))
+    .filter((cmd) => cmd !== undefined);
 };
 export const getPluginStats = () => {
   const stats = {

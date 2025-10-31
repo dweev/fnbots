@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import { Settings } from '../../../database/index.js';
@@ -22,10 +22,6 @@ export const command = {
     }
     dbSettings.pinoLogger = mode;
     updatePinoLoggerLevel(mode);
-    await Promise.all([
-      Settings.updateSettings(dbSettings),
-      sReply(`Console logger: ${mode}`),
-      reactDone()
-    ]);
+    await Promise.all([Settings.updateSettings(dbSettings), sReply(`Console logger: ${mode}`), reactDone()]);
   }
 };

@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import path from 'path';
@@ -21,7 +21,7 @@ export const command = {
     let tempFrameDir = '';
     let outputPath = '';
     try {
-      let bgColor = "#FFFFFF";
+      let bgColor = '#FFFFFF';
       let inputText = '';
       const hexColorRegex = /^#([0-9A-F]{3}|[0-9A-F]{4}|[0-9A-F]{6}|[0-9A-F]{8})$/i;
       if (arg.includes('|')) {
@@ -39,16 +39,16 @@ export const command = {
         inputText = arg;
       }
       if (!inputText && quotedMsg) {
-        if (quotedMsg?.type === "extendedTextMessage" || quotedMsg?.type === "conversation") {
+        if (quotedMsg?.type === 'extendedTextMessage' || quotedMsg?.type === 'conversation') {
           inputText = quotedMsg?.body;
         }
       }
       if (!inputText) return await sReply(`Format salah.\n\nContoh:\n1. ${dbSettings.rname}bratvid teks kamu\n2. ${dbSettings.rname}bratvid biru | teks kamu\n3. ${dbSettings.rname}bratvid #FF9800 | teks kamu`);
-      if (inputText.length > 200) return await sReply("Teks terlalu panjang! Maksimal 200 karakter.");
+      if (inputText.length > 200) return await sReply('Teks terlalu panjang! Maksimal 200 karakter.');
       const textColor = getContrastColor(bgColor);
       const highlightRegex = /(?:--|—)\S+/g;
       const matches = inputText.match(highlightRegex) || [];
-      const cleanedArray = matches.map(word => {
+      const cleanedArray = matches.map((word) => {
         return word.startsWith('--') ? word.slice(2) : word.slice(1);
       });
       const cleanedString = inputText.replace(highlightRegex, (match) => {

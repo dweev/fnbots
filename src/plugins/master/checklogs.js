@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import fs from 'fs-extra';
@@ -81,8 +81,8 @@ export const command = {
       return await sReply('Tidak ada log DEBUG/ERROR yang ditemukan.');
     }
     const lastLogs = logs.slice(-limit).reverse();
-    const debugLogs = lastLogs.filter(l => l.level === 'DEBUG');
-    const errorLogs = lastLogs.filter(l => l.level === 'ERROR');
+    const debugLogs = lastLogs.filter((l) => l.level === 'DEBUG');
+    const errorLogs = lastLogs.filter((l) => l.level === 'ERROR');
     let output = `*${lastLogs.length} Log Baileys Terakhir* (Mode: ${mode})\n\n`;
     if (errorLogs.length > 0) {
       output += `*ERROR (${errorLogs.length}):*\n\n`;

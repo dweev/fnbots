@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import sizeOf from 'image-size';
@@ -23,7 +23,7 @@ export const command = {
     const dimensions = sizeOf(media);
     const { width, height } = dimensions;
     const TARGET_RESOLUTION = 4096;
-    if (width >= TARGET_RESOLUTION || height >= TARGET_RESOLUTION) return await sReply("Gambar ini sudah memiliki resolusi tinggi, tidak perlu di-upscale.");
+    if (width >= TARGET_RESOLUTION || height >= TARGET_RESOLUTION) return await sReply('Gambar ini sudah memiliki resolusi tinggi, tidak perlu di-upscale.');
     const scaleX = TARGET_RESOLUTION / width;
     const scaleY = TARGET_RESOLUTION / height;
     const scaleFactor = Math.min(scaleX, scaleY, 9);
@@ -31,12 +31,16 @@ export const command = {
       scale: scaleFactor,
       quality: 1
     });
-    await fn.sendMessage(toId, {
-      image: outputBuffer,
-      caption: `Upscaled ${scaleFactor.toFixed(2)}x menggunakan Lanczos filter`
-    }, {
-      quoted: m,
-      ephemeralExpiration: m.expiration || 0
-    });
+    await fn.sendMessage(
+      toId,
+      {
+        image: outputBuffer,
+        caption: `Upscaled ${scaleFactor.toFixed(2)}x menggunakan Lanczos filter`
+      },
+      {
+        quoted: m,
+        ephemeralExpiration: m.expiration || 0
+      }
+    );
   }
 };

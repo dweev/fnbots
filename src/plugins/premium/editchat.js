@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import { DatabaseBot } from '../../../database/index.js';
@@ -29,9 +29,9 @@ export const command = {
       newReplyText = parts.join('|').trim();
     }
     if (!keyword || !newReplyText) return sReply('Gagal! Keyword dan balasan baru tidak boleh kosong.');
-    if (/chat\.whatsapp\.com|instagram\.com|youtube\.com|youtu\.be|tiktok\.com/i.test(keyword) || /chat\.whatsapp\.com|instagram\.com|youtube\.com|youtu\.be|tiktok\.com/i.test(newReplyText)) return sReply("Keyword atau Teks Balasan tidak boleh mengandung link.");
+    if (/chat\.whatsapp\.com|instagram\.com|youtube\.com|youtu\.be|tiktok\.com/i.test(keyword) || /chat\.whatsapp\.com|instagram\.com|youtube\.com|youtu\.be|tiktok\.com/i.test(newReplyText)) return sReply('Keyword atau Teks Balasan tidak boleh mengandung link.');
     const db = await DatabaseBot.getDatabase();
     await db.editChat(keyword, newReplyText);
     await sReply(`Auto-reply berhasil diubah!\n\n*Keyword:* ${keyword}\n*Balasan Baru:* ${newReplyText}`);
-  },
+  }
 };

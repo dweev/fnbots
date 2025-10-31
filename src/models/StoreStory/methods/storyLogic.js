@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import config from '../../../../config.js';
@@ -25,10 +25,7 @@ export const statics = {
     );
   },
   deleteStatus(userId, messageId) {
-    return this.updateOne(
-      { userId: userId },
-      { $pull: { statuses: { 'key.id': messageId } } }
-    );
+    return this.updateOne({ userId: userId }, { $pull: { statuses: { 'key.id': messageId } } });
   },
   bulkDeleteStatuses(userId, messageIds) {
     if (!messageIds || messageIds.length === 0) {

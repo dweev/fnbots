@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 export const command = {
@@ -25,9 +25,9 @@ export const command = {
     }
     const failedUsers = [];
     const metadata = await store.getGroupMetadata(toId);
-    const groupAdmins = metadata?.participants?.filter(p => p.admin) || [];
+    const groupAdmins = metadata?.participants?.filter((p) => p.admin) || [];
     for (const jid of targets) {
-      if (groupAdmins.some(admin => admin.id === jid) || ownerNumber.includes(jid)) {
+      if (groupAdmins.some((admin) => admin.id === jid) || ownerNumber.includes(jid)) {
         failedUsers.push(jid);
         continue;
       }
@@ -35,7 +35,7 @@ export const command = {
       await reactDone();
     }
     if (failedUsers.length > 0) {
-      await sReply(`Gagal kick beberapa user karena mereka memiliki privilege: ${failedUsers.map(jid => `@${jid.split('@')[0]}`).join(', ')}`);
+      await sReply(`Gagal kick beberapa user karena mereka memiliki privilege: ${failedUsers.map((jid) => `@${jid.split('@')[0]}`).join(', ')}`);
     }
   }
 };

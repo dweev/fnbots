@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import { DatabaseBot } from '../../../database/index.js';
@@ -23,5 +23,5 @@ export const command = {
       listText += `\n*${i++}. Keyword:* \`${keyword}\`\n`;
     }
     await sReply(listText.trim());
-  },
+  }
 };

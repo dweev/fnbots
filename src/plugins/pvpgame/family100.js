@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import { randomChoice } from '../../function/index.js';
@@ -31,7 +31,8 @@ export const command = {
       setTimeout(async () => {
         if (family100[toId]) {
           const [, jawaban, status] = family100[toId];
-          const belum = jawaban.map((j, i) => status[i] ? null : `❎ ${j}`).filter(Boolean).join('\n');
+          // prettier-ignore
+          const belum = jawaban.map((j, i) => (status[i] ? null : `❎ ${j}`)).filter(Boolean).join('\n');
           await sReply(`⏰ Waktu habis!\n\nJawaban:\n- ${jawaban.join('\n')}\n\nYang belum terjawab:\n${belum}`);
           delete family100[toId];
         }

@@ -1,9 +1,9 @@
 // ─── Info ─────────────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info src/handler/chatbot.js ──────────────────
 
 import { delay } from 'baileys';
@@ -16,8 +16,8 @@ export class ChatbotHandler {
     this.fn = fn;
     this.Media = Media;
     this.DatabaseBot = DatabaseBot;
-    this.bacotTriggers = ["bct", "bacot"];
-    this.greetingTriggers = ["bot", "hi"];
+    this.bacotTriggers = ['bct', 'bacot'];
+    this.greetingTriggers = ['bot', 'hi'];
     this.greetingMediaPath = config.paths.vanya;
   }
   async handle(params) {
@@ -27,10 +27,7 @@ export class ChatbotHandler {
       if (!trigger) {
         return;
       }
-      const [mediaResponses, dbBot] = await Promise.all([
-        Media.find({ name: trigger }).lean(),
-        DatabaseBot.getDatabase()
-      ]);
+      const [mediaResponses, dbBot] = await Promise.all([Media.find({ name: trigger }).lean(), DatabaseBot.getDatabase()]);
       await this.handleBacotResponse(body, dbSettings, dbBot, sReply);
       await this.handleGreetingResponse(body, dbSettings, fn, toId, m, sReply);
       await this.handleChatResponse(trigger, dbBot, sReply);
@@ -43,10 +40,7 @@ export class ChatbotHandler {
     try {
       if (!body) return;
       const normalizedBody = body.toLowerCase().trim();
-      const prefixedBacot = [
-        dbSettings.sname + "bacot",
-        dbSettings.rname + "bacot"
-      ];
+      const prefixedBacot = [dbSettings.sname + 'bacot', dbSettings.rname + 'bacot'];
       const isBacotTrigger = this.bacotTriggers.includes(normalizedBody) || prefixedBacot.includes(body);
       if (isBacotTrigger) {
         const randomText = dbBot.getRandomBacot();

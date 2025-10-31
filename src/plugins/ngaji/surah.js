@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import { fetchJson } from '../../function/index.js';
@@ -24,7 +24,7 @@ export const command = {
     const verses = quranData.verses;
     let replyText = `📖 *Surah ${surahName}*\n`;
     replyText += `Jumlah Ayat: ${numberOfAyah}\n\n`;
-    verses.forEach(verse => {
+    verses.forEach((verse) => {
       const verseNumber = verse.number;
       const verseText = verse.text;
       const verseTranslation = verse.translation_id;

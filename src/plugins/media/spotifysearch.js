@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import { SpotifyDownloader } from 'yt-spotify-dl';
@@ -28,6 +28,7 @@ export const command = {
       const minutes = Math.floor(totalSeconds / 60);
       const seconds = (totalSeconds % 60).toString().padStart(2, '0');
       const duration = `${minutes}:${seconds}`;
+      // prettier-ignore
       teks += `*${i + 1}.* 🎵 *${track.name}*\n` +
         `   👤 *Artis:* ${track.artists}\n` +
         `   ⏰ *Durasi:* ${duration}\n` +

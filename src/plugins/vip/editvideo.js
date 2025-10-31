@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import log from '../../lib/logger.js';
@@ -38,6 +38,7 @@ export const command = {
     try {
       await deleteMedia({ name, type: 'video' });
       const saved = await saveMediaStream(name, 'video', mime, tempPath);
+      // prettier-ignore
       await sReply(
         `Storage: ${saved.storageType.toUpperCase()}\n` +
         `Size: ${(saved.size / 1024 / 1024).toFixed(2)} MB\n` +
@@ -50,5 +51,5 @@ export const command = {
     } finally {
       await tmpDir.deleteFile(tempPath);
     }
-  },
+  }
 };

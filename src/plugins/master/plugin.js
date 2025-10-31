@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import log from '../../lib/logger.js';
@@ -40,10 +40,7 @@ export const command = {
     const commandDoc = await findCommandInDb(targetIdentifier);
     if (!commandDoc) return sReply(`Perintah atau alias '${targetIdentifier}' tidak ditemukan di database.`);
     try {
-      await Command.updateOne(
-        { _id: commandDoc._id },
-        { $set: { isEnabled: newState } }
-      );
+      await Command.updateOne({ _id: commandDoc._id }, { $set: { isEnabled: newState } });
       log(`Plugin ${commandDoc.name} set to isEnabled=${newState}`);
     } catch (error) {
       log(`Error updating command in database: ${error.message}`, true);
@@ -61,6 +58,7 @@ export const command = {
     }
     const statusText = newState ? 'diaktifkan' : 'dinonaktifkan';
     const aliasInfo = commandDoc.aliases?.length > 0 ? ` (termasuk ${commandDoc.aliases.length} alias)` : '';
+    // prettier-ignore
     await sReply(
       `Berhasil!\n\n` +
       `Perintah: *${commandDoc.name}*${aliasInfo}\n` +

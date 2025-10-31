@@ -1,9 +1,9 @@
 // ─── Info ──────────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── info src/function/rank.js ─────────────────
 
 import fs from 'fs-extra';
@@ -25,7 +25,7 @@ function truncateText(ctx, text, maxWidth) {
     truncated = truncated.slice(0, -3) + '...';
   }
   return truncated;
-};
+}
 function roundRect(ctx, x, y, width, height, radius) {
   ctx.beginPath();
   ctx.moveTo(x + radius, y);
@@ -38,7 +38,7 @@ function roundRect(ctx, x, y, width, height, radius) {
   ctx.lineTo(x, y + radius);
   ctx.quadraticCurveTo(x, y, x + radius, y);
   ctx.closePath();
-};
+}
 
 async function createBalanceCard({ username, discriminator, avatarUrl, balance }) {
   const width = 600;
@@ -99,7 +99,7 @@ async function createBalanceCard({ username, discriminator, avatarUrl, balance }
   ctx.lineTo(500, 115);
   ctx.stroke();
   return canvas.toBuffer('image/png');
-};
+}
 async function createRankCard({ username, discriminator, avatarUrl, level, currentXP, requiredXP, rank, pangkat }) {
   const width = 800;
   const height = 250;
@@ -171,7 +171,7 @@ async function createRankCard({ username, discriminator, avatarUrl, level, curre
   ctx.font = '20px Sans';
   ctx.fillText(`${formatter.format(currentXP)} / ${formatter.format(requiredXP)} XP`, 250, 210);
   return canvas.toBuffer('image/png');
-};
+}
 
 export async function getMyLevel(user, username, avatarUrl) {
   try {
@@ -191,24 +191,24 @@ export async function getMyLevel(user, username, avatarUrl) {
     await log(`Error getMyLevel:\n${error}`, true);
     throw new Error('Gagal membuat kartu rank.');
   }
-};
+}
 export async function getMyBalance(user, username, avatarUrl) {
   try {
     const balanceCardBuffer = await createBalanceCard({
       username: username,
       discriminator: user.levelName,
       avatarUrl: avatarUrl,
-      balance: formatNumber(user.balance),
+      balance: formatNumber(user.balance)
     });
     return balanceCardBuffer;
   } catch (error) {
     await log(`Error getMyBalance:\n${error}`, true);
     throw new Error('Gagal membuat kartu balance.');
   }
-};
+}
 export async function getLeaderboardText(dbSettings) {
   const topUsers = await User.getLeaderboard('xp', 20);
-  if (!topUsers || topUsers.length === 0) return "Belum ada seorang pun di leaderboard.";
+  if (!topUsers || topUsers.length === 0) return 'Belum ada seorang pun di leaderboard.';
   let ranks = `*✨ ${dbSettings.botname} LEADERBOARD ✨*\n\n`;
   ranks += `────────────────────────\n`;
   const mentions = [];
@@ -224,4 +224,4 @@ export async function getLeaderboardText(dbSettings) {
   const totalPlayers = await User.countDocuments();
   ranks += `*Total Pemain:* ${totalPlayers}`;
   return { text: ranks, mentions };
-};
+}

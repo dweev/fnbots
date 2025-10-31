@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import path from 'path';
@@ -28,6 +28,7 @@ export const command = {
     const telegramUrl = arg;
     await fs.ensureDir(inputDir);
     await fs.ensureDir(tmpDir);
+    // prettier-ignore
     await execFile(
       config.paths.stickerConvertPath,
       [
@@ -42,7 +43,7 @@ export const command = {
     );
     await delay(2000);
     const files = await fs.readdir(inputDir);
-    const webpFiles = files.filter(f => f.endsWith('.webp'));
+    const webpFiles = files.filter((f) => f.endsWith('.webp'));
     if (!webpFiles.length) return await sReply('Tidak ada file stiker ditemukan.');
     for (const file of webpFiles) {
       const inputPath = path.join(inputDir, file);

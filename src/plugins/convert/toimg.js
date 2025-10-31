@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import { bratGenerator } from 'qc-generator-whatsapp';
@@ -15,7 +15,7 @@ export const command = {
   description: 'Mengconvert text ke gambar',
   isCommandWithoutPayment: true,
   execute: async ({ fn, m, args, quotedMsg, toId, sReply, dbSettings }) => {
-    if (quotedMsg && quotedMsg?.type === "stickerMessage") {
+    if (quotedMsg && quotedMsg?.type === 'stickerMessage') {
       const mediaData = await fn.getMediaBuffer(quotedMsg);
       const isAnimate = isAnimated(mediaData);
       if (isAnimate) {
@@ -27,14 +27,14 @@ export const command = {
       }
     } else {
       let inputText;
-      if (quotedMsg && (quotedMsg?.type === "extendedTextMessage" || quotedMsg?.type === "conversation")) {
+      if (quotedMsg && (quotedMsg?.type === 'extendedTextMessage' || quotedMsg?.type === 'conversation')) {
         inputText = quotedMsg?.body;
       } else if (args.length > 0) {
         inputText = args.join(' ');
       } else {
-        return await sReply("Berikan teks atau balas stiker/teks yang ingin diubah menjadi gambar.");
+        return await sReply('Berikan teks atau balas stiker/teks yang ingin diubah menjadi gambar.');
       }
-      if (inputText.length > 200) return await sReply("Teks terlalu panjang! Maksimal 200 karakter.");
+      if (inputText.length > 200) return await sReply('Teks terlalu panjang! Maksimal 200 karakter.');
       const buffer = await bratGenerator(inputText);
       const resultBuffer = Buffer.from(buffer, 'base64');
       await fn.sendMediaFromBuffer(toId, 'image/jpeg', resultBuffer, dbSettings.autocommand, m);

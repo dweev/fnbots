@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 export const methods = {
@@ -38,7 +38,7 @@ export const statics = {
         aliases,
         isLimitCommand: flags.isLimitCommand,
         isLimitGameCommand: flags.isLimitGameCommand,
-        isCommandWithoutPayment: flags.isCommandWithoutPayment,
+        isCommandWithoutPayment: flags.isCommandWithoutPayment
       });
       await command.save();
     }

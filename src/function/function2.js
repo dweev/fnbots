@@ -1,9 +1,9 @@
 // ─── Info ───────────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── info src/function/function2.js ─────────────
 
 import sharp from 'sharp';
@@ -15,7 +15,10 @@ import { delay, extractMessageContent } from 'baileys';
 import { fetch as nativeFetch } from '../addon/bridge.js';
 
 export function cleanYoutubeUrl(url) {
-  return url.replace(/(&|\?)list=[^&]*/i, '$1').replace(/(&|\?)index=[^&]*/i, '$1').replace(/[&?]$/, '');
+  return url
+    .replace(/(&|\?)list=[^&]*/i, '$1')
+    .replace(/(&|\?)index=[^&]*/i, '$1')
+    .replace(/[&?]$/, '');
 }
 export function chunkArray(array, chunkSize) {
   const results = [];
@@ -23,7 +26,7 @@ export function chunkArray(array, chunkSize) {
     results.push(array.slice(i, i + chunkSize));
   }
   return results;
-};
+}
 export function parseImageSelection(selectionString, maxImages) {
   const indices = new Set();
   const parts = selectionString.split(',');
@@ -43,38 +46,40 @@ export function parseImageSelection(selectionString, maxImages) {
     }
   }
   return Array.from(indices).sort((a, b) => a - b);
-};
+}
 export function buildBaseCaption(result) {
+  // prettier-ignore
   return `🎬 *TikTok Downloader*\n\n` +
     `👤 *Author:* @${result.author?.username || 'N/A'}\n` +
     `❤️ *Likes:* ${result.statistics?.diggCount || 0}\n` +
     `💬 *Comments:* ${result.statistics?.commentCount || 0}\n` +
     `🔗 *Shares:* ${result.statistics?.shareCount || 0}\n\n` +
     `📝 *Deskripsi:* ${result.desc || '(Tidak ada deskripsi)'}`;
-};
+}
 export async function fetchTikTokData(url, version = 'v1') {
   if (!/^https?:\/\/(www\.|vt\.|vm\.|t\.)?tiktok\.com(\/|$)/.test(url)) {
-    throw new Error("URL yang Kamu berikan sepertinya bukan link TikTok yang valid.");
+    throw new Error('URL yang Kamu berikan sepertinya bukan link TikTok yang valid.');
   }
   const data = await Downloader(url, { version });
   if (data.status !== 'success' || !data.result) {
-    throw new Error("Gagal memproses permintaan tiktok. API downloader mungkin bermasalah, link tidak valid, atau video bersifat pribadi.");
+    throw new Error('Gagal memproses permintaan tiktok. API downloader mungkin bermasalah, link tidak valid, atau video bersifat pribadi.');
   }
   return data.result;
-};
+}
 export async function sendImages(fn, result, args, toId, m, baseCaption) {
   const imageSelection = args[1];
   let imagesToSend;
   if (imageSelection) {
     const indicesToDownload = parseImageSelection(imageSelection, result.images.length);
     if (indicesToDownload.length === 0) {
+      // prettier-ignore
       throw new Error(
         `Format pemilihan gambar salah!\n` +
         `Total: ${result.images.length}\n` +
         `Contoh: \`.tt [url] 1,3,5\` atau \`.tt [url] 2-5\``
       );
     }
-    imagesToSend = indicesToDownload.map(index => ({
+    imagesToSend = indicesToDownload.map((index) => ({
       url: result.images[index],
       index: index
     }));
@@ -112,6 +117,7 @@ export async function sendImages(fn, result, args, toId, m, baseCaption) {
       }
     }
     if (downloadedImages.length === 0) {
+      // prettier-ignore
       throw new Error(
         `Gagal mendownload semua gambar!\n\n` +
         `Errors:\n${errors.join('\n')}`
@@ -125,6 +131,7 @@ export async function sendImages(fn, result, args, toId, m, baseCaption) {
       }
     }
     if (errors.length > 0) {
+      // prettier-ignore
       await fn.sendReply(
         toId,
         `*Berhasil:* ${downloadedImages.length}/${totalImages} gambar\n\n` +
@@ -136,7 +143,7 @@ export async function sendImages(fn, result, args, toId, m, baseCaption) {
   } catch (error) {
     throw error;
   }
-};
+}
 export async function makeCircleSticker(buffer) {
   const img = await loadImage(buffer);
   const diameter = Math.min(img.width, img.height);
@@ -151,7 +158,7 @@ export async function makeCircleSticker(buffer) {
   ctx.clip();
   ctx.drawImage(img, sx, sy, diameter, diameter, 0, 0, diameter, diameter);
   return canvas.toBuffer('image/png');
-};
+}
 export async function webpFormatter(buffer, formatFit) {
   return await sharp(buffer)
     .resize(512, 512, {
@@ -159,9 +166,10 @@ export async function webpFormatter(buffer, formatFit) {
     })
     .webp()
     .toBuffer();
-};
+}
 export function cleanFormattingText(text) {
   if (!text || typeof text !== 'string') return text;
+  // prettier-ignore
   const patterns = [
     /\*~_([^~*_]+)_~*/g,
     /_\*~([^*~_]+)~\*_/g,
@@ -181,18 +189,18 @@ export function cleanFormattingText(text) {
     /```([^`]+)```/g
   ];
   let cleanedText = text;
-  patterns.forEach(pattern => {
+  patterns.forEach((pattern) => {
     cleanedText = cleanedText.replace(pattern, '$1');
   });
   return cleanedText.trim();
-};
+}
 export function formatTimestampToHourMinute(ts) {
   if (ts.toString().length === 13) ts = Math.floor(ts / 1000);
   const date = new Date(ts * 1000);
   const hours = date.getHours().toString().padStart(2, '0');
   const minutes = date.getMinutes().toString().padStart(2, '0');
   return `${hours}.${minutes}`;
-};
+}
 function redactUrlSecrets(urlString) {
   try {
     const urlObj = new URL(urlString);
@@ -203,7 +211,7 @@ function redactUrlSecrets(urlString) {
   } catch {
     return urlString;
   }
-};
+}
 export async function fetchJson(url, options = {}) {
   try {
     const { headers: optionHeaders, ...restOptions } = options;
@@ -223,7 +231,7 @@ export async function fetchJson(url, options = {}) {
     await log(`Error fetchJson: ${safeUrl}.\n${error}`, true);
     throw error;
   }
-};
+}
 export async function jadwalSholat(kode_daerah) {
   try {
     const response = await nativeFetch('https://jadwalsholat.org/jadwal-sholat/daily.php?id=' + kode_daerah);
@@ -244,7 +252,17 @@ export async function jadwalSholat(kode_daerah) {
     const maghrib = $(row[7]).text().trim();
     const isya = $(row[8]).text().trim();
     return {
-      daerah, bulan, tanggal, imsyak, shubuh, terbit, dhuha, dzuhur, ashr, maghrib, isya
+      daerah,
+      bulan,
+      tanggal,
+      imsyak,
+      shubuh,
+      terbit,
+      dhuha,
+      dzuhur,
+      ashr,
+      maghrib,
+      isya
     };
   } catch (error) {
     await log(`Error jadwalSholat:\n${error}`, true);
@@ -253,7 +271,7 @@ export async function jadwalSholat(kode_daerah) {
       message: error.message
     };
   }
-};
+}
 export async function getZodiak(nama, tgl) {
   try {
     const encodedNama = encodeURIComponent(nama);
@@ -274,7 +292,7 @@ export async function getZodiak(nama, tgl) {
     await log(`Error getZodiak:\n${error}`, true);
     throw error;
   }
-};
+}
 export function normalizeResult(result) {
   const normalized = {
     type: result.type,
@@ -298,7 +316,7 @@ export function normalizeResult(result) {
     }
   }
   return normalized;
-};
+}
 export function normalizeMentionsInBody(body, originalMentionedJids, resolvedMentionedJids) {
   if (!body || !Array.isArray(originalMentionedJids) || !Array.isArray(resolvedMentionedJids)) return body;
   let normalizedBody = body;
@@ -313,16 +331,13 @@ export function normalizeMentionsInBody(body, originalMentionedJids, resolvedMen
     }
   }
   for (const [lidNumber, jidNumber] of lidToJidMap.entries()) {
-    const patterns = [
-      new RegExp(`@\\+?\\s*${lidNumber.replace(/(\d)/g, '$1\\s*')}\\b`, 'g'),
-      new RegExp(`@${lidNumber}\\b`, 'g')
-    ];
+    const patterns = [new RegExp(`@\\+?\\s*${lidNumber.replace(/(\d)/g, '$1\\s*')}\\b`, 'g'), new RegExp(`@${lidNumber}\\b`, 'g')];
     for (const pattern of patterns) {
       normalizedBody = normalizedBody.replace(pattern, `@${jidNumber}`);
     }
   }
   return normalizedBody;
-};
+}
 export function unwrapMessage(msg) {
   if (!msg || typeof msg !== 'object') return null;
   if (msg.ephemeralMessage?.message) return unwrapMessage(msg.ephemeralMessage.message);
@@ -343,4 +358,4 @@ export function unwrapMessage(msg) {
     if (extracted) msg.message = extracted;
   }
   return msg;
-};
+}

@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import util from 'util';
@@ -27,6 +27,7 @@ export const command = {
     }
     const backupFilePath = tmpDir.createTempFile('zip', fileName);
     const sourceDir = '.';
+    // prettier-ignore
     const exclusions = [
       path.basename(backupFilePath),
       'logs/*',
@@ -35,7 +36,7 @@ export const command = {
       '.git/*',
       '.*'
     ];
-    const excludeArgs = exclusions.map(ex => ['-x', ex]).flat();
+    const excludeArgs = exclusions.map((ex) => ['-x', ex]).flat();
     const zipArgs = ['-r', backupFilePath, sourceDir, ...excludeArgs];
     await execFile('zip', zipArgs);
     await fn.sendFilePath(toId, dbSettings.autocommand, backupFilePath, { quoted: m });

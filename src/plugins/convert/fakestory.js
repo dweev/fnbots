@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import fs from 'fs-extra';
@@ -17,8 +17,8 @@ export const command = {
   isCommandWithoutPayment: true,
   execute: async ({ fn, toId, arg, sReply, pushname, serial, dbSettings, m }) => {
     const caption = arg;
-    if (!caption) return await sReply("Silakan berikan teks untuk story.");
-    if (caption.length > 2048) return await sReply("Teks terlalu panjang!");
+    if (!caption) return await sReply('Silakan berikan teks untuk story.');
+    if (caption.length > 2048) return await sReply('Teks terlalu panjang!');
     const username = pushname;
     let ppBuffer;
     try {

@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import { delay } from 'baileys';
@@ -19,21 +19,32 @@ export const command = {
     await gameStateManager.startGame(serial);
     try {
       let pricePerTicket = 500000n;
-      if (!args[0] || !args[0].toLowerCase().endsWith('x')) return await sReply("Format perintah salah.\nContoh: `.lotre 10x` atau `.lotre 5x 1m`");
+      if (!args[0] || !args[0].toLowerCase().endsWith('x')) return await sReply('Format perintah salah.\nContoh: `.lotre 10x` atau `.lotre 5x 1m`');
       const count = parseInt(args[0].toLowerCase().replace('x', ''));
-      if (isNaN(count) || count <= 0 || count > 10) return await sReply("Jumlah tiket tidak valid (1-10).");
+      if (isNaN(count) || count <= 0 || count > 10) return await sReply('Jumlah tiket tidak valid (1-10).');
       if (args[1]) {
         const bi0 = args[1].toLowerCase();
         let multiplier = 1n;
         let numPart = bi0;
-        if (bi0.endsWith('k')) { multiplier = 1000n; numPart = bi0.slice(0, -1); }
-        else if (bi0.endsWith('m')) { multiplier = 1000000n; numPart = bi0.slice(0, -1); }
-        else if (bi0.endsWith('b')) { multiplier = 1000000000n; numPart = bi0.slice(0, -1); }
-        else if (bi0.endsWith('t')) { multiplier = 1000000000000n; numPart = bi0.slice(0, -1); }
-        else if (bi0.endsWith('q')) { multiplier = 1000000000000000n; numPart = bi0.slice(0, -1); }
+        if (bi0.endsWith('k')) {
+          multiplier = 1000n;
+          numPart = bi0.slice(0, -1);
+        } else if (bi0.endsWith('m')) {
+          multiplier = 1000000n;
+          numPart = bi0.slice(0, -1);
+        } else if (bi0.endsWith('b')) {
+          multiplier = 1000000000n;
+          numPart = bi0.slice(0, -1);
+        } else if (bi0.endsWith('t')) {
+          multiplier = 1000000000000n;
+          numPart = bi0.slice(0, -1);
+        } else if (bi0.endsWith('q')) {
+          multiplier = 1000000000000000n;
+          numPart = bi0.slice(0, -1);
+        }
         const sanitized = numPart.replace(',', '.');
         const numVal = Number(sanitized);
-        if (isNaN(numVal) || !isFinite(numVal) || numVal <= 0) return await sReply("Format harga tiket tidak valid.");
+        if (isNaN(numVal) || !isFinite(numVal) || numVal <= 0) return await sReply('Format harga tiket tidak valid.');
         if (sanitized.includes('.')) {
           const parts = sanitized.split('.');
           const decimalPlaces = BigInt(parts[1].length);
@@ -44,7 +55,7 @@ export const command = {
           pricePerTicket = BigInt(sanitized) * multiplier;
         }
       }
-      if (!user || user.balance <= 0) return await sReply("User tidak ditemukan atau saldo 0.\nsilakan gunakan permainan mode grinding dulu seperti .chop, .mine, .fish, .hunt, .ngelonte, .work atau gunakan perintah .daily jika kamu belum daily claim hari ini.");
+      if (!user || user.balance <= 0) return await sReply('User tidak ditemukan atau saldo 0.\nsilakan gunakan permainan mode grinding dulu seperti .chop, .mine, .fish, .hunt, .ngelonte, .work atau gunakan perintah .daily jika kamu belum daily claim hari ini.');
       const saldoAwal = BigInt(user.balance);
       const totalCost = BigInt(count) * pricePerTicket;
       if (saldoAwal < totalCost) return await sReply(`Saldo tidak cukup. Total: ${formatNumber(totalCost)}`);
@@ -68,10 +79,11 @@ export const command = {
         await fn.sendReply(toId, hasilMsg, { edit: key });
         await delay(500);
       }
-      hasilMsg += '- PB: ' + powerballUndian; await fn.sendReply(toId, hasilMsg, { edit: key });
+      hasilMsg += '- PB: ' + powerballUndian;
+      await fn.sendReply(toId, hasilMsg, { edit: key });
       let totalMenang = 0n;
-      const finalTickets = tickets.map(t => {
-        const match = t.numbers.filter(n => hasilUndian.includes(n)).length;
+      const finalTickets = tickets.map((t) => {
+        const match = t.numbers.filter((n) => hasilUndian.includes(n)).length;
         const powerMatch = t.powerball === powerballUndian;
         let multiplier = 0n;
         if (match === 5 && powerMatch) multiplier = 100000n;

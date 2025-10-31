@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import fs from 'fs-extra';
@@ -18,16 +18,24 @@ export const command = {
   execute: async ({ fn, user, dbSettings, toId, m, pushname, serial }) => {
     let datax;
     try {
-      datax = await fn.profileImageBuffer(serial, "image");
+      datax = await fn.profileImageBuffer(serial, 'image');
     } catch {
       datax = await fs.readFile(config.paths.avatar);
     }
     const prefix = dbSettings.rname;
     const buylimitItems = [
-      { limit: 50, price: 1500 }, { limit: 100, price: 3000 }, { limit: 150, price: 4500 },
-      { limit: 200, price: 6000 }, { limit: 250, price: 7500 }, { limit: 300, price: 9000 },
-      { limit: 350, price: 10500 }, { limit: 400, price: 12000 }, { limit: 450, price: 13500 },
-      { limit: 500, price: 15000 }, { limit: 1500, price: 150000 }, { limit: 15000, price: 1500000 },
+      { limit: 50, price: 1500 },
+      { limit: 100, price: 3000 },
+      { limit: 150, price: 4500 },
+      { limit: 200, price: 6000 },
+      { limit: 250, price: 7500 },
+      { limit: 300, price: 9000 },
+      { limit: 350, price: 10500 },
+      { limit: 400, price: 12000 },
+      { limit: 450, price: 13500 },
+      { limit: 500, price: 15000 },
+      { limit: 1500, price: 150000 },
+      { limit: 15000, price: 1500000 }
     ];
     let text = `❏  \`\`\`G A M E S H O P\`\`\`\n`;
     for (const item of buylimitItems) {

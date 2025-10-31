@@ -1,9 +1,9 @@
 // ─── Info ─────────────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info src/lib/serializeMessage.js ─────────────
 
 import log from './logger.js';
@@ -26,7 +26,7 @@ export default async function serializeMessage(fn, msg) {
       if (m.isGroup) {
         delete key.remoteJidAlt;
       } else {
-        if (key.remoteJid !== "status@broadcast") {
+        if (key.remoteJid !== 'status@broadcast') {
           delete key.participant;
           delete key.participantAlt;
         }
@@ -157,8 +157,8 @@ export default async function serializeMessage(fn, msg) {
     } else {
       const remoteJid = jidNormalizedUser(msg.key.remoteJid);
       const remoteJidAlt = jidNormalizedUser(msg.key.remoteJidAlt);
-      senderJid = remoteJid?.endsWith('@s.whatsapp.net') ? remoteJid : (remoteJidAlt?.endsWith('@s.whatsapp.net') ? remoteJidAlt : null);
-      senderLid = remoteJid?.endsWith('@lid') ? remoteJid : (remoteJidAlt?.endsWith('@lid') ? remoteJidAlt : null);
+      senderJid = remoteJid?.endsWith('@s.whatsapp.net') ? remoteJid : remoteJidAlt?.endsWith('@s.whatsapp.net') ? remoteJidAlt : null;
+      senderLid = remoteJid?.endsWith('@lid') ? remoteJid : remoteJidAlt?.endsWith('@lid') ? remoteJidAlt : null;
       mfrom = senderJid || remoteJid;
       mchat = mfrom;
       m.participant = mfrom;
@@ -167,7 +167,7 @@ export default async function serializeMessage(fn, msg) {
     }
     if (senderJid && senderLid) {
       try {
-        const contactName = msg.pushName || (await performanceManager.cache.warmContactCache(senderJid))?.name || (await performanceManager.cache.warmContactCache(senderJid))?.notify || await fn.getName(senderJid);
+        const contactName = msg.pushName || (await performanceManager.cache.warmContactCache(senderJid))?.name || (await performanceManager.cache.warmContactCache(senderJid))?.notify || (await fn.getName(senderJid));
         await updateContact(senderJid, { lid: senderLid, name: contactName });
       } catch (error) {
         log(`Error updating contact: ${error}`, true);
@@ -178,15 +178,16 @@ export default async function serializeMessage(fn, msg) {
         const metadata = await store.getGroupMetadata(mchat);
         m.metadata = metadata?.toJSON ? metadata.toJSON() : metadata;
         if (m.metadata?.participants) {
-          m.metadata.participants = m.metadata.participants.map(p => ({
+          m.metadata.participants = m.metadata.participants.map((p) => ({
             id: p.id,
             admin: p.admin || null
           }));
         }
+        // prettier-ignore
         groupAdmins = m.metadata?.participants?.reduce((a, b) => {
-          if (b.admin) a.push({ id: b.id, admin: b.admin });
-          return a;
-        }, []) || [];
+            if (b.admin) a.push({ id: b.id, admin: b.admin });
+            return a;
+          }, []) || [];
       } catch (error) {
         log(`Error getting group metadata: ${error}`, true);
         m.metadata = null;
@@ -198,8 +199,8 @@ export default async function serializeMessage(fn, msg) {
     m.sender = m.participant;
     m.botnumber = botNumber;
     if (m.isGroup) {
-      m.isAdmin = groupAdmins.some(b => b.id === m.sender);
-      m.isBotAdmin = !!groupAdmins.find(member => member.id === botNumber);
+      m.isAdmin = groupAdmins.some((b) => b.id === m.sender);
+      m.isBotAdmin = !!groupAdmins.find((member) => member.id === botNumber);
     }
     m.pushName = msg.pushName;
     if (m.message) {
@@ -211,7 +212,7 @@ export default async function serializeMessage(fn, msg) {
       m.body = normalizeMentionsInBody(originalBody, rawMentionedJid, m.mentionedJid);
       m.device = getDevice(m.key.id);
       m.expiration = kamuCrot?.contextInfo?.expiration || 0;
-      const parseTimestamp = (t) => typeof t === 'number' ? t : t?.low || t?.high || 0;
+      const parseTimestamp = (t) => (typeof t === 'number' ? t : t?.low || t?.high || 0);
       m.timestamp = parseTimestamp(msg.messageTimestamp) || 0;
       m.isMedia = !!kamuCrot?.mimetype || !!kamuCrot?.thumbnailDirectPath;
       if (m.isMedia) {
@@ -221,14 +222,35 @@ export default async function serializeMessage(fn, msg) {
         m.width = kamuCrot?.width || '';
         if (/webp/i.test(m.mime)) m.isAnimated = kamuCrot?.isAnimated;
       }
-      if (m.type === 'reactionMessage') { m.reaction = kamuCrot; m.reaction.sender = m.sender; m.reaction.chat = m.chat; }
-      if (m.type === 'protocolMessage') { m.protocolMessage = kamuCrot; }
-      if (m.type === 'buttonsResponseMessage') { m.selectedButtonId = kamuCrot.selectedButtonId; m.selectedButtonText = kamuCrot.selectedDisplayText || ''; }
-      if (m.type === 'listResponseMessage') { m.selectedRowId = kamuCrot.singleSelectReply?.selectedRowId || ''; m.selectedRowTitle = kamuCrot.title || ''; m.selectedRowDescription = kamuCrot.description || ''; }
-      if (m.type === 'pollCreationMessage') { m.poll = kamuCrot; }
-      if (m.type === 'pollUpdateMessage') { m.pollUpdate = kamuCrot; }
-      if (m.type === 'pollResponseMessage') { m.pollResponse = kamuCrot; }
-      if (m.type === 'messageContextInfo' && kamuCrot?.edit) { m.editedMessage = kamuCrot.edit; }
+      if (m.type === 'reactionMessage') {
+        m.reaction = kamuCrot;
+        m.reaction.sender = m.sender;
+        m.reaction.chat = m.chat;
+      }
+      if (m.type === 'protocolMessage') {
+        m.protocolMessage = kamuCrot;
+      }
+      if (m.type === 'buttonsResponseMessage') {
+        m.selectedButtonId = kamuCrot.selectedButtonId;
+        m.selectedButtonText = kamuCrot.selectedDisplayText || '';
+      }
+      if (m.type === 'listResponseMessage') {
+        m.selectedRowId = kamuCrot.singleSelectReply?.selectedRowId || '';
+        m.selectedRowTitle = kamuCrot.title || '';
+        m.selectedRowDescription = kamuCrot.description || '';
+      }
+      if (m.type === 'pollCreationMessage') {
+        m.poll = kamuCrot;
+      }
+      if (m.type === 'pollUpdateMessage') {
+        m.pollUpdate = kamuCrot;
+      }
+      if (m.type === 'pollResponseMessage') {
+        m.pollResponse = kamuCrot;
+      }
+      if (m.type === 'messageContextInfo' && kamuCrot?.edit) {
+        m.editedMessage = kamuCrot.edit;
+      }
       if (kamuCrot?.contextInfo?.participant?.endsWith('@lid')) {
         const participantLid = kamuCrot.contextInfo.participant;
         const resolved = await store.resolveJid(participantLid);
@@ -249,7 +271,7 @@ export default async function serializeMessage(fn, msg) {
             remoteJid: m.chat,
             participant: jidNormalizedUser(quotedInfo.participant),
             fromMe: areJidsSameUser(jidNormalizedUser(quotedInfo.participant), jidNormalizedUser(fn?.user?.id)),
-            id: quotedInfo.stanzaId,
+            id: quotedInfo.stanzaId
           };
           m.quoted.sender = jidNormalizedUser(m.quoted.key.participant);
           if (m.quoted.sender?.endsWith('@lid')) {
@@ -273,7 +295,7 @@ export default async function serializeMessage(fn, msg) {
           }
           m.quoted.expiration = akuCrot?.contextInfo?.expiration || 0;
           const quotedContact = await performanceManager.cache.warmContactCache(m.quoted.sender);
-          m.quoted.pushName = quotedContact?.name || quotedContact?.notify || await fn.getName(m.quoted.sender);
+          m.quoted.pushName = quotedContact?.name || quotedContact?.notify || (await fn.getName(m.quoted.sender));
           if (m.quoted.isMedia) {
             m.quoted.mime = akuCrot?.mimetype;
             m.quoted.size = akuCrot?.fileLength;
@@ -289,4 +311,4 @@ export default async function serializeMessage(fn, msg) {
     log(`Error in serializeMessage: ${error}`, true);
     return null;
   }
-};
+}

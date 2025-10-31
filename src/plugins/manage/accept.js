@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import { parseSelector } from '../../function/index.js';
@@ -16,7 +16,7 @@ export const command = {
   execute: async ({ fn, m, sReply, isBotGroupAdmins, dbSettings, toId, args, store }) => {
     if (!m.isGroup) return await sReply(`Perintah ini hanya bisa digunakan didalam group.`);
     if (!isBotGroupAdmins) return await sReply(`Perintah ini hanya bisa digunakan jika bot menjadi admin grup.`);
-    const pendingList = await fn.groupRequestParticipantsList(toId).then(a => a.map(b => b.jid));
+    const pendingList = await fn.groupRequestParticipantsList(toId).then((a) => a.map((b) => b.jid));
     if (pendingList.length === 0) {
       return await sReply('Saat ini tidak ada permintaan bergabung yang tertunda.');
     }
@@ -29,9 +29,10 @@ export const command = {
         } else {
           jid = p;
         }
-        return `${index + 1}. @${(jid)?.split('@')[0]}`;
+        return `${index + 1}. @${jid?.split('@')[0]}`;
       });
       const listText = (await Promise.all(listPromises)).join('\n');
+      // prettier-ignore
       return await sReply(
         `*Daftar Permintaan Bergabung:*\n${listText}\n\n` +
         `*Cara penggunaan:*\n` +

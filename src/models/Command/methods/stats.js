@@ -1,18 +1,14 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 export const statics = {
   updateCount(commandName, amount = 1) {
-    return this.findOneAndUpdate(
-      { name: commandName.toLowerCase() },
-      { $inc: { count: amount } },
-      { upsert: true, new: true }
-    );
+    return this.findOneAndUpdate({ name: commandName.toLowerCase() }, { $inc: { count: amount } }, { upsert: true, new: true });
   },
   getTopCommands(limit = 10) {
     return this.find().sort({ count: -1 }).limit(limit);

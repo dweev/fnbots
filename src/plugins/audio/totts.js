@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import util from 'util';
@@ -22,12 +22,12 @@ export const command = {
   isCommandWithoutPayment: true,
   execute: async ({ fn, m, quotedMsg, toId, args, sReply }) => {
     let inputText;
-    if ((quotedMsg && quotedMsg?.type === "extendedTextMessage") || (quotedMsg && quotedMsg?.type === "conversation")) {
+    if ((quotedMsg && quotedMsg?.type === 'extendedTextMessage') || (quotedMsg && quotedMsg?.type === 'conversation')) {
       inputText = quotedMsg?.body;
     } else if (args.length > 0) {
       inputText = args.join(' ');
     } else {
-      return await sReply("Silakan berikan teks atau balas pesan yang ingin diubah menjadi suara.");
+      return await sReply('Silakan berikan teks atau balas pesan yang ingin diubah menjadi suara.');
     }
     if (inputText.length >= 500) return await sReply('Teks terlalu panjang! Maksimal 500 karakter untuk menghindari spam.');
     const tempFilePath = tmpDir.createTempFile('mp3');

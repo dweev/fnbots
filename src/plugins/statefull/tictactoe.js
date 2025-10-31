@@ -1,9 +1,9 @@
 // ─── Info ────────────────────────────────
 /*
-* Created with ❤️ and 💦 By FN
-* Follow https://github.com/Terror-Machine
-* Feel Free To Use
-*/
+ * Created with ❤️ and 💦 By FN
+ * Follow https://github.com/Terror-Machine
+ * Feel Free To Use
+ */
 // ─── Info ────────────────────────────────
 
 import { formatTicTacToeBoard } from '../../function/index.js';
@@ -16,8 +16,8 @@ export const command = {
   isLimitGameCommand: true,
   aliases: ['g-tictactoe'],
   execute: async ({ m, user, toId, sReply, serial, tictactoeSessions, sPesan }) => {
-    if (!m.isGroup) return await sReply("Permainan ini hanya bisa dimainkan di grup.");
-    if (tictactoeSessions[toId]) return await sReply("Sudah ada permainan yang sedang berjalan di grup ini.");
+    if (!m.isGroup) return await sReply('Permainan ini hanya bisa dimainkan di grup.');
+    if (tictactoeSessions[toId]) return await sReply('Sudah ada permainan yang sedang berjalan di grup ini.');
     const startTTTTimeout = (idGroup) => {
       const gameDuration = 3 * 60 * 1000;
       const timeoutCallback = () => {
@@ -27,7 +27,11 @@ export const command = {
       };
       tictactoeSessions[idGroup].timeoutId = setTimeout(timeoutCallback, gameDuration);
     };
-    const initialBoard = [['', '', ''], ['', '', ''], ['', '', '']];
+    const initialBoard = [
+      ['', '', ''],
+      ['', '', ''],
+      ['', '', '']
+    ];
     const playerJid = serial;
     tictactoeSessions[toId] = {
       board: initialBoard,
@@ -38,6 +42,7 @@ export const command = {
       timeoutId: null
     };
     startTTTTimeout(toId);
+    // prettier-ignore
     let introText = `Permainan Tic-Tac-Toe dimulai antara @${playerJid.split('@')[0]} (X) dan Bot (O)!\n\n` +
       `Kamu mendapat giliran pertama. Sesi akan berakhir dalam 3 menit jika tidak aktif.\n` +
       `Ketik angka (1-9) untuk menempatkan 'X' Kamu.\n`;

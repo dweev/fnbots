@@ -15,10 +15,8 @@ import { delay, extractMessageContent } from 'baileys';
 import { fetch as nativeFetch } from '../addon/bridge.js';
 
 export function cleanYoutubeUrl(url) {
-  return url
-    .replace(/(&|\?)list=[^&]*/i, '$1')
-    .replace(/(&|\?)index=[^&]*/i, '$1')
-    .replace(/[&?]$/, '');
+  // prettier-ignore
+  return url.replace(/(&|\?)list=[^&]*/i, '$1').replace(/(&|\?)index=[^&]*/i, '$1').replace(/[&?]$/, '');
 }
 export function chunkArray(array, chunkSize) {
   const results = [];

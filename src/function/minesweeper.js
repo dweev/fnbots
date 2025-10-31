@@ -7,9 +7,8 @@
 // ─── info src/function/minesweeper.js ────────────────
 
 export function generateMinesweeperBoard(width, height, numMines) {
-  const board = Array(height)
-    .fill(null)
-    .map(() => Array(width).fill('0'));
+  // prettier-ignore
+  const board = Array(height).fill(null).map(() => Array(width).fill('0'));
   let minesPlaced = 0;
   while (minesPlaced < numMines) {
     const row = Math.floor(Math.random() * height);

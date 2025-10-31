@@ -21,12 +21,11 @@ export const command = {
     const groupMetadata = await store.getGroupMetadata(toId);
     const allMemberIds = groupMetadata.participants.map((p) => p.id);
     const groupAdminIds = new Set(groupMetadata.participants.filter((p) => p.admin).map((p) => p.id));
+    // prettier-ignore
     const specialUsers = await User.find({
       userId: { $in: allMemberIds },
       $or: [{ isMaster: true }, { isVIP: true }, { isPremium: true }]
-    })
-      .select('userId')
-      .lean();
+    }).select('userId').lean();
     const specialUserIds = new Set(specialUsers.map((u) => u.userId));
     let removedCount = 0;
     let failedCount = 0;

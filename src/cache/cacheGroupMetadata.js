@@ -264,9 +264,8 @@ class GroupCache {
   static async getStats() {
     try {
       const groupIds = await this.getAllCachedGroupIds();
-      const hotGroups = Array.from(this.hotGroupStats.entries())
-        .filter(([_, count]) => count >= this.hotGroupThreshold)
-        .map(([groupId]) => groupId);
+      // prettier-ignore
+      const hotGroups = Array.from(this.hotGroupStats.entries()).filter(([_, count]) => count >= this.hotGroupThreshold).map(([groupId]) => groupId);
       const stats = {
         totalGroups: groupIds.length,
         hotGroups: hotGroups.length,
@@ -344,10 +343,8 @@ class GroupCache {
   static getHotGroupStats() {
     return {
       totalTracked: this.hotGroupStats.size,
-      hotGroups: Array.from(this.hotGroupStats.entries())
-        .filter(([_, count]) => count >= this.hotGroupThreshold)
-        .sort((a, b) => b[1] - a[1])
-        .map(([groupId, count]) => ({ groupId, accessCount: count }))
+      // prettier-ignore
+      hotGroups: Array.from(this.hotGroupStats.entries()).filter(([_, count]) => count >= this.hotGroupThreshold).sort((a, b) => b[1] - a[1]).map(([groupId, count]) => ({ groupId, accessCount: count }))
     };
   }
 }

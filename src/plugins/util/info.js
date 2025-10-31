@@ -58,11 +58,8 @@ export const command = {
           foundCommand = partialMatches[0].command;
           matchType = 'partial_single';
         } else {
-          const suggestions = partialMatches
-            .slice(0, 5)
-            .map((m) => `• ${m.command.displayName || m.command.name}`)
-            .join('\n');
-
+          // prettier-ignore
+          const suggestions = partialMatches.slice(0, 5).map((m) => `• ${m.command.displayName || m.command.name}`).join('\n');
           return await sReply(`Command "${args[0]}" tidak ditemukan.\n\nMungkin yang kamu maksud:\n${suggestions}\n\nGunakan nama yang lebih spesifik.`);
         }
       }

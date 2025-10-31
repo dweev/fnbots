@@ -20,10 +20,8 @@ export const command = {
     const hariIni = new Date();
     const daftarHari = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
     const namaHari = daftarHari[hariIni.getDay()];
-    const namaKotaKapital = kota
-      .split(' ')
-      .map((kata) => kata.charAt(0).toUpperCase() + kata.slice(1))
-      .join(' ');
+    // prettier-ignore
+    const namaKotaKapital = kota.split(' ').map((kata) => kata.charAt(0).toUpperCase() + kata.slice(1)).join(' ');
     let replyText = `🕌 *Jadwal Sholat untuk wilayah ${namaKotaKapital}*\n`;
     replyText += `*${namaHari}, ${hasil.tanggal} ${hasil.bulan}*\n`;
     replyText += '```\n';

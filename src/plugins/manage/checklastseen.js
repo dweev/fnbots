@@ -18,9 +18,8 @@ export const command = {
     if (!m.isGroup) return await sReply('Perintah ini hanya bisa digunakan di dalam grup.');
     const presences = await store.getPresences(toId);
     if (!presences || Object.keys(presences).length === 0) return await sReply('Tidak ada data kehadiran yang tercatat untuk grup ini.');
-    const seenList = Object.entries(presences)
-      .filter(([, data]) => data?.lastSeen)
-      .sort(([, a], [, b]) => b.lastSeen - a.lastSeen);
+    // prettier-ignore
+    const seenList = Object.entries(presences).filter(([, data]) => data?.lastSeen).sort(([, a], [, b]) => b.lastSeen - a.lastSeen);
     if (seenList.length === 0) return await sReply('Tidak ada data kehadiran yang valid yang bisa ditampilkan.');
     const resultText =
       `*Aktivitas Terakhir Anggota Grup:*\n\n` +

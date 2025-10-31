@@ -164,10 +164,8 @@ async function startNightPhase(toId, fn, m, werewolfSessions) {
   gameState.status = 'NIGHT';
   gameState.aksiMalam = {};
   await fn.sendPesan(toId, `🌙 Malam telah tiba. Semua warga tertidur. Para peran khusus, silakan cek pesan pribadi untuk beraksi. Waktu 90 detik.`, { ephemeralExpiration: m.expiration ?? 0 });
-  const livingPlayersForDm = Object.values(gameState.pemain)
-    .filter((p) => p.isAlive)
-    .map((p, i) => `${i + 1}. @${p.id.split('@')[0]}`)
-    .join('\n');
+  // prettier-ignore
+  const livingPlayersForDm = Object.values(gameState.pemain).filter((p) => p.isAlive).map((p, i) => `${i + 1}. @${p.id.split('@')[0]}`).join('\n');
   for (const playerJid in gameState.pemain) {
     const player = gameState.pemain[playerJid];
     if (player.isAlive) {

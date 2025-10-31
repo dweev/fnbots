@@ -71,10 +71,8 @@ export async function textMatch2(lt) {
   if (Array.isArray(lt)) {
     lt = lt.join(' ; ');
   }
-  const commands = lt
-    .split(';')
-    .map((cmd) => cmd.trim())
-    .filter((cmd) => cmd.length > 0);
+  // prettier-ignore
+  const commands = lt.split(';').map((cmd) => cmd.trim()).filter((cmd) => cmd.length > 0);
   const correctedCommands = [];
   let hasCorrections = false;
   for (const command of commands) {
@@ -435,10 +433,8 @@ export function formatTimeAgo(timestamp) {
   return Math.floor(seconds) + ' detik yang lalu';
 }
 export function firstUpperCase(text, split = ' ') {
-  return text
-    .split(split)
-    .map((word) => `${word.charAt(0).toUpperCase()}${word.slice(1)}`)
-    .join(' ');
+  // prettier-ignore
+  return text.split(split).map((word) => `${word.charAt(0).toUpperCase()}${word.slice(1)}`).join(' ');
 }
 export function list(arr, conj = 'and') {
   const len = arr.length;
@@ -489,10 +485,8 @@ export async function mycmd(input) {
   if (Array.isArray(input)) {
     return input;
   }
-  return input
-    .split(';')
-    .map((cmd) => cmd.trim())
-    .filter((cmd) => cmd.length > 0);
+  // prettier-ignore
+  return input.split(';').map((cmd) => cmd.trim()).filter((cmd) => cmd.length > 0);
 }
 export async function getBuffer(url, options = {}) {
   try {

@@ -29,11 +29,8 @@ export const command = {
       }
     };
     const totalCommands = Array.from(targetUser.commandStats.values()).reduce((a, b) => a + b, 0);
-    const topCommands = Array.from(targetUser.commandStats.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5)
-      .map(([cmd, count]) => `• ${cmd}: ${count}x`)
-      .join('\n');
+    // prettier-ignore
+    const topCommands = Array.from(targetUser.commandStats.entries()).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([cmd, count]) => `• ${cmd}: ${count}x`).join('\n');
     let message = '';
     message += `\`\`\`DATABASE USER INFO\n\n`;
     message += `IDENTITAS\n`;

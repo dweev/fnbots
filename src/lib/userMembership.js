@@ -83,10 +83,8 @@ export function membershipUser(config) {
           if (selectedByArchimed.length > 0) {
             selectedByArchimed.forEach((user) => jidsToDelete.add(user.userId));
           } else {
-            const targets = input
-              .split(',')
-              .map((num) => formatUserId(num.trim()))
-              .filter(Boolean);
+            // prettier-ignore
+            const targets = input.split(',').map((num) => formatUserId(num.trim())).filter(Boolean);
             targets.forEach((jid) => jidsToDelete.add(jid));
           }
         }

@@ -115,15 +115,9 @@ export const command = {
   isCommandWithoutPayment: true,
   execute: async ({ args, sReply }) => {
     if (args.length === 0) {
-      const availableCategories = Object.keys(categories)
-        .map((cat) => `› ${cat}`)
-        .join('\n');
       // prettier-ignore
-      return await sReply(
-        `Silakan pilih kadar yang ingin diukur!\n\n` +
-        `*Contoh Penggunaan:*\n.kadar kepintaran\n\n` +
-        `*Pilihan yang Tersedia:*\n${availableCategories}`
-      );
+      const availableCategories = Object.keys(categories).map((cat) => `› ${cat}`).join('\n');
+      return await sReply(`Silakan pilih kadar yang ingin diukur!\n\n*Contoh Penggunaan:*\n.kadar kepintaran\n\n*Pilihan yang Tersedia:*\n${availableCategories}`);
     }
     const requestedCategory = args[0].toLowerCase();
     if (categories[requestedCategory]) {
@@ -136,10 +130,9 @@ export const command = {
         return await sReply('Terjadi kesalahan internal pada data kategori.');
       }
     } else {
-      const availableCategories = Object.keys(categories)
-        .map((cat) => `› ${cat}`)
-        .join('\n');
-      return await sReply(`Kadar "${requestedCategory}" tidak ditemukan.\n\n` + `*Pilihan yang Tersedia:*\n${availableCategories}`);
+      // prettier-ignore
+      const availableCategories = Object.keys(categories).map((cat) => `› ${cat}`).join('\n');
+      return await sReply(`Kadar "${requestedCategory}" tidak ditemukan.\n\n*Pilihan yang Tersedia:*\n${availableCategories}`);
     }
   }
 };

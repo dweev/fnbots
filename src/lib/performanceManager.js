@@ -958,9 +958,8 @@ class UnifiedJobScheduler {
         log('No cached stories to sync');
         return;
       }
-      const dbUsers = await StoreStory.find({ 'statuses.0': { $exists: true } })
-        .select('userId')
-        .lean();
+      // prettier-ignore
+      const dbUsers = await StoreStory.find({ 'statuses.0': { $exists: true } }).select('userId').lean();
       const dbUserIds = new Set(dbUsers.map((u) => u.userId));
       const staleUserIds = cachedUserIds.filter((userId) => !dbUserIds.has(userId));
       if (staleUserIds.length === 0) {

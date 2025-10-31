@@ -189,9 +189,8 @@ export const hasCommand = (commandName) => {
 export const getCommandsByCategory = (category) => {
   const categoryCommands = pluginCache.helpMap.get(category);
   if (!categoryCommands) return [];
-  return Array.from(categoryCommands.keys())
-    .map((cmdName) => pluginCache.commands.get(cmdName))
-    .filter((cmd) => cmd !== undefined);
+  // prettier-ignore
+  return Array.from(categoryCommands.keys()).map((cmdName) => pluginCache.commands.get(cmdName)).filter((cmd) => cmd !== undefined);
 };
 export const getPluginStats = () => {
   const stats = {

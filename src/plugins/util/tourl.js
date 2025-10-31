@@ -23,9 +23,8 @@ export const command = {
   isLimitCommand: true,
   execute: async ({ fn, m, args, sReply, quotedMsg }) => {
     if (!args[0] || isNaN(args[0]) || !uploaders[args[0]]) {
-      const list = Object.entries(uploaders)
-        .map(([num, { name }]) => `${num}. ${name}`)
-        .join('\n');
+      // prettier-ignore
+      const list = Object.entries(uploaders).map(([num, { name }]) => `${num}. ${name}`).join('\n');
       return await sReply(`Select upload server by number.\n› Example: .${command.name} 1\n\nAvailable servers:\n${list}`);
     }
     const server = uploaders[args[0]];

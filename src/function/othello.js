@@ -14,9 +14,8 @@ export const fileLabels = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
 export const rankLabels = ['1', '2', '3', '4', '5', '6', '7', '8'];
 
 export function createOthelloBoard() {
-  const board = Array(8)
-    .fill(null)
-    .map(() => Array(8).fill(0));
+  // prettier-ignore
+  const board = Array(8).fill(null).map(() => Array(8).fill(0));
   board[3][4] = PLAYER_BLACK;
   board[4][3] = PLAYER_BLACK;
   board[3][3] = PLAYER_WHITE;

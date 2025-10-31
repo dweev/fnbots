@@ -51,7 +51,7 @@ export function buildBaseCaption(result) {
   // prettier-ignore
   return `🎬 *TikTok Downloader*\n\n` +
     `👤 *Author:* @${result.author?.username || 'N/A'}\n` +
-    `❤️ *Likes:* ${result.statistics?.diggCount || 0}\n` +
+    `❤️ *Likes:* ${result.statistics?.likeCount || 0}\n` +
     `💬 *Comments:* ${result.statistics?.commentCount || 0}\n` +
     `🔗 *Shares:* ${result.statistics?.shareCount || 0}\n\n` +
     `📝 *Deskripsi:* ${result.desc || '(Tidak ada deskripsi)'}`;

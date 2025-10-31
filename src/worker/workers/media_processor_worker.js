@@ -8,13 +8,9 @@
 
 import path from 'path';
 import fs from 'fs-extra';
-import { fileURLToPath } from 'url';
 import log from '../../lib/logger.js';
-import config from '../../../config.js';
+import { tmpDir } from '../../lib/tempManager.js';
 import { fetch, parseArgsToFetchOptions, getHeader } from '../../addon/bridge.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 export default async function ({ argsArray }) {
   const { url, options } = parseArgsToFetchOptions(argsArray);
@@ -37,10 +33,6 @@ export default async function ({ argsArray }) {
     }
     const isDirectDownload = contentType.startsWith('image/') || contentType.startsWith('audio/') || contentType.startsWith('video/') || contentType.startsWith('application/pdf') || contentType.startsWith('application/zip') || contentType.startsWith('application/octet-stream');
     if (isDirectDownload) {
-      const tempDir = config.paths.tempDir;
-      if (!fs.existsSync(tempDir)) {
-        fs.mkdirSync(tempDir, { recursive: true });
-      }
       let extension = '';
       try {
         const urlPath = new URL(url).pathname;
@@ -54,9 +46,8 @@ export default async function ({ argsArray }) {
           extension = ctParts[1].split(';')[0];
         }
       }
-      const tempFileName = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}.${extension || 'tmp'}`;
-      const tempFilePath = path.join(tempDir, tempFileName);
-      fs.writeFileSync(tempFilePath, bodyBuffer);
+      const tempFilePath = tmpDir.createTempFile(extension, 'fetch-');
+      await fs.writeFile(tempFilePath, bodyBuffer);
       return {
         type: 'local_file',
         path: tempFilePath

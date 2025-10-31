@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
-
-#==============================================================================
-# Python Package Update Script
-# Mengupdate pip dan semua package Python di virtual environment
-# Kompatibel dengan setup.sh
-#==============================================================================
+# ─── Info ───────────────────────────────────────
+# Created with ❤️ and 💦 By FN
+# Follow https://github.com/Terror-Machine
+# Feel Free To Use
+# ─── Info update.sh ─────────────────────────────
 
 set -e
 

@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
-
-#==============================================================================
-# Git Pull & Reset Script
-# Memperbarui repository dengan git fetch, reset, dan pull
-# Kompatibel dengan setup.sh dan update.sh
-#==============================================================================
+# ─── Info ───────────────────────────────────────
+# Created with ❤️ and 💦 By FN
+# Follow https://github.com/Terror-Machine
+# Feel Free To Use
+# ─── Info pull.sh ───────────────────────────────
 
 set -e
 

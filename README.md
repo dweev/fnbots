@@ -4,8 +4,6 @@
 
 ---
 
---
-
 ## About The Project
 
 - **This is an independent project and is NOT affiliated, endorsed, or supported by WhatsApp or Meta Platforms.** It is built using the [Baileys](https://www.npmjs.com/package/baileys) library from the [WhiskeySockets/Baileys](https://github.com/WhiskeySockets/Baileys) GitHub repository with 1 server for 1 bot only. Or you can multiple with different folder project but i dont recommend for small servers.
@@ -485,11 +483,15 @@ pm2 start ecosystem.config.cjs
 pm2 logs
 ```
 
+Note: pm2 only work for foreground process, so if you want to run with pairing code, use npm run pair or set usePairingCode to true in config.js and then use npm start
+
 For ROOT users (running at systemd level), use the `system.sh` script to set up the systemd service.
 
 ```bash
-sudo bash ./system.sh
+sudo ./system.sh
 bot start
+bot restart
+bot stop
 ```
 
 ---

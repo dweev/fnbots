@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-
 # ─── Info ───────────────────────────────────────
 # Created with ❤️ and 💦 By FN
 # Follow https://github.com/Terror-Machine
 # Feel Free To Use
-# ─── Info src/utils/chat_bot2.py ────────────────
+# ─── Info src/utils/chat_bot.py ─────────────────
 
 import os
 import sys

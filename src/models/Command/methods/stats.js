@@ -1,10 +1,8 @@
-// ─── Info ────────────────────────────────
-/*
+/**
+ * @file src/models/Command/methods/stats.js
+ * Metode statis untuk mendapatkan statistik penggunaan perintah.
  * Created with ❤️ and 💦 By FN
- * Follow https://github.com/Terror-Machine
- * Feel Free To Use
  */
-// ─── Info ────────────────────────────────
 
 export const statics = {
   updateCount(commandName, amount = 1) {

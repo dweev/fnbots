@@ -1,10 +1,8 @@
-// ─── Info ────────────────────────────────
-/*
+/**
+ * @file src/models/Settings/methods/stats.js
+ * Mengelola metode dan statis untuk statistik pada pengaturan.
  * Created with ❤️ and 💦 By FN
- * Follow https://github.com/Terror-Machine
- * Feel Free To Use
  */
-// ─── Info ────────────────────────────────
 
 export const statics = {
   async incrementTotalHitCount(amount = 1) {

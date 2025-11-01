@@ -1,3 +1,14 @@
+/**
+ * @file src/addon/media.cpp
+ * Media processing using FFmpeg libraries.
+ * Provides functions for merging video and audio streams,
+ * with support for presets and quality settings.
+ * Includes utilities for working with media metadata.
+ * Provides functions for video and audio encoding/decoding.
+ * Supports various container formats and codecs.
+ * Includes utilities for working with media streams.
+ */
+
 #include <napi.h>
 #include <string>
 #include <vector>

@@ -1,10 +1,8 @@
-// ─── Info ────────────────────────────────
-/*
+/**
+ * @file src/models/User/methods/stats.js
+ * Mengelola metode dan statis untuk logika statistik pengguna.
  * Created with ❤️ and 💦 By FN
- * Follow https://github.com/Terror-Machine
- * Feel Free To Use
  */
-// ─── Info ────────────────────────────────
 
 export const methods = {
   addCommandCount(commandName, count = 1) {

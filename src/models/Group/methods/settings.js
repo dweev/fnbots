@@ -1,10 +1,8 @@
-// ─── Info ────────────────────────────────
-/*
+/**
+ * @file src/models/Group/methods/settings.js
+ * Metode untuk mengelola pengaturan grup.
  * Created with ❤️ and 💦 By FN
- * Follow https://github.com/Terror-Machine
- * Feel Free To Use
  */
-// ─── Info ────────────────────────────────
 
 export const methods = {
   incrementMessageCount() {

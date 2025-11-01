@@ -1,10 +1,8 @@
-// ─── Info ────────────────────────────────
-/*
+/**
+ * @file src/models/Group/methods/queries.js
+ * Metode statis untuk kueri database terkait grup.
  * Created with ❤️ and 💦 By FN
- * Follow https://github.com/Terror-Machine
- * Feel Free To Use
  */
-// ─── Info ────────────────────────────────
 
 export const statics = {
   ensureGroup(groupId) {

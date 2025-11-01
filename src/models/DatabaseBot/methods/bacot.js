@@ -1,10 +1,8 @@
-// ─── Info ────────────────────────────────
-/*
+/**
+ * @file src/models/DatabaseBot/methods/bacot.js
+ * Metode untuk mengelola koleksi "bacot" (pesan acak).
  * Created with ❤️ and 💦 By FN
- * Follow https://github.com/Terror-Machine
- * Feel Free To Use
  */
-// ─── Info ────────────────────────────────
 
 export const methods = {
   addBacot(text) {

@@ -1,10 +1,8 @@
-// ─── Info ────────────────────────────────
-/*
+/**
+ * @file src/models/StoreGroupMetadata/methods/sync.js
+ * Mengelola metode dan statis untuk sinkronisasi metadata grup.
  * Created with ❤️ and 💦 By FN
- * Follow https://github.com/Terror-Machine
- * Feel Free To Use
  */
-// ─── Info ────────────────────────────────
 
 export const methods = {
   syncWithBaileys(baileysData) {

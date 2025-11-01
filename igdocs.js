@@ -1,5 +1,12 @@
 #!/usr/bin/env node
 
+/**
+ * @file igdocs.js
+ * Skrip CLI untuk mengambil doc_id, app_id, dan asbd_id dari URL Instagram.
+ * Menggunakan utilitas instagramGetIds dari src/utils/igdocs.js.
+ * Created with ❤️ and 💦 By FN
+ */
+
 import instagramGetIds from './src/utils/igdocs.js';
 
 async function main() {

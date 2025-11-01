@@ -1,10 +1,8 @@
-// ─── Info ────────────────────────────────
-/*
+/**
+ * @file src/models/Group/methods/warning.js
+ * Metode untuk mengelola sistem peringatan pengguna dalam grup.
  * Created with ❤️ and 💦 By FN
- * Follow https://github.com/Terror-Machine
- * Feel Free To Use
  */
-// ─── Info ────────────────────────────────
 
 function sanitizeKey(jid) {
   return jid.replace(/\./g, '_').replace(/@/g, '_');

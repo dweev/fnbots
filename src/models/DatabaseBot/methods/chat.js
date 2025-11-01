@@ -1,10 +1,8 @@
-// ─── Info ────────────────────────────────
-/*
+/**
+ * @file src/models/DatabaseBot/methods/chat.js
+ * Metode untuk mengelola koleksi "chat" (balasan otomatis berdasarkan kata kunci).
  * Created with ❤️ and 💦 By FN
- * Follow https://github.com/Terror-Machine
- * Feel Free To Use
  */
-// ─── Info ────────────────────────────────
 
 export const methods = {
   addChat(keyword, reply) {

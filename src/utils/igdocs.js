@@ -1,17 +1,11 @@
-// ─── Info ───────────────────────────────────────
-/*
- * Created with ❤️ and 💦 By FN
- * Follow https://github.com/Terror-Machine
- * Feel Free To Use
- */
-// ─── Info src/utils/igdocs.js ───────────────────
-
-/*
+/**
  *
+ * @file src/utils/igdocs.js
  * Menggunakan Playwright untuk membuka URL Instagram dan menyadap (intercept)
  * permintaan jaringan untuk menemukan doc_id, app_id, dan asbd_id.
  * @param {string} targetUrl - URL lengkap dari Post atau Reel Instagram.
  * @returns {Promise<object>} Sebuah objek berisi ID yang ditemukan.
+ * Created with ❤️ and 💦 By FN
  *
  */
 

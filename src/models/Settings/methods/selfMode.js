@@ -1,10 +1,8 @@
-// ─── Info ────────────────────────────────
-/*
+/**
+ * @file src/models/Settings/methods/selfMode.js
+ * Mengelola metode dan statis untuk mode self pada pengaturan.
  * Created with ❤️ and 💦 By FN
- * Follow https://github.com/Terror-Machine
- * Feel Free To Use
  */
-// ─── Info ────────────────────────────────
 
 const validModes = ['true', 'false', 'auto'];
 

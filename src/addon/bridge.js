@@ -1,3 +1,9 @@
+/** @file src/addon/bridge.js
+ * Bridge antara JavaScript dan native addon C++ untuk berbagai fungsi media.
+ * Menyediakan fungsi untuk pembuatan stiker, konversi media, pengambilan data via HTTP,
+ * dan penjadwalan tugas cron.
+ */
+
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';

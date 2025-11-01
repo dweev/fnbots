@@ -1,10 +1,8 @@
-// ─── Info ────────────────────────────────
-/*
+/**
+ * @file src/models/User/methods/limit.js
+ * Mengelola metode untuk logika batas pengguna.
  * Created with ❤️ and 💦 By FN
- * Follow https://github.com/Terror-Machine
- * Feel Free To Use
  */
-// ─── Info ────────────────────────────────
 
 import config from '../../../../config.js';
 import { Settings } from '../../../../database/index.js';

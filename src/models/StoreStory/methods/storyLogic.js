@@ -1,10 +1,8 @@
-// ─── Info ────────────────────────────────
-/*
+/**
+ * @file src/models/StoreStory/methods/storyLogic.js
+ * Mengelola metode dan statis untuk logika cerita.
  * Created with ❤️ and 💦 By FN
- * Follow https://github.com/Terror-Machine
- * Feel Free To Use
  */
-// ─── Info ────────────────────────────────
 
 import config from '../../../../config.js';
 

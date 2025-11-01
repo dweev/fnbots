@@ -1,10 +1,8 @@
-// ─── Info ────────────────────────────────
-/*
+/**
+ * @file src/models/User/methods/membership.js
+ * Mengelola metode dan statis untuk logika keanggotaan pengguna.
  * Created with ❤️ and 💦 By FN
- * Follow https://github.com/Terror-Machine
- * Feel Free To Use
  */
-// ─── Info ────────────────────────────────
 
 import { Settings } from '../../../../database/index.js';
 

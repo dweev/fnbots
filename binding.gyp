@@ -1,3 +1,10 @@
+# ─── Info ───────────────────────────────────────
+# @file binding.gyp
+# Konfigurasi build untuk addon Node.js menggunakan node-gyp.
+# Mendefinisikan target build untuk berbagai modul addon seperti cron, sticker, converter,
+# convertMedia, media, dan fetch dengan pengaturan compiler dan linker yang dioptimalkan.
+# ─── Info ───────────────────────────────────────
+
 {
   "targets": [
     {

@@ -1,10 +1,8 @@
-// ─── Info ────────────────────────────────
-/*
+/**
+ * @file src/models/Command/methods/alias.js
+ * Metode statis untuk menambah dan menghapus alias pada perintah.
  * Created with ❤️ and 💦 By FN
- * Follow https://github.com/Terror-Machine
- * Feel Free To Use
  */
-// ─── Info ────────────────────────────────
 
 export const statics = {
   async addAlias(commandName, alias) {

@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 # ─── Info ───────────────────────────────────────
 # Created with ❤️ and 💦 By FN
 # Follow https://github.com/Terror-Machine

@@ -1,10 +1,8 @@
-// ─── Info ────────────────────────────────
-/*
+/**
+ * @file src/models/Whitelist/methods/whitelistLogic.js
+ * Mengelola metode dan statis untuk logika daftar putih.
  * Created with ❤️ and 💦 By FN
- * Follow https://github.com/Terror-Machine
- * Feel Free To Use
  */
-// ─── Info ────────────────────────────────
 
 import log from '../../../lib/logger.js';
 

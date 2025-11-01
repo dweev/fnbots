@@ -1,10 +1,8 @@
-// ─── Info ────────────────────────────────
-/*
+/**
+ * @file src/models/Group/methods/afk.js
+ * Metode untuk mengelola status AFK (Away From Keyboard) pengguna.
  * Created with ❤️ and 💦 By FN
- * Follow https://github.com/Terror-Machine
- * Feel Free To Use
  */
-// ─── Info ────────────────────────────────
 
 export const methods = {
   addAfkUser(userId, reason = '') {

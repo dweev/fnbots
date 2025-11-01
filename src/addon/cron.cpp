@@ -1,3 +1,10 @@
+/**
+ * @file src/addon/cron.cpp
+ * Cron job scheduler addon for Node.js using N-API.
+ * Allows scheduling of tasks based on cron expressions or fixed intervals,
+ * with configurable concurrency modes and queue management.
+ */
+
 #include <napi.h>
 #include <thread>
 #include <atomic>

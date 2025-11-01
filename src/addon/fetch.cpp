@@ -1,3 +1,10 @@
+/**
+ * @file src/addon/fetch.cpp
+ * HTTP request handling using libcurl.
+ * Implements a fetch function with support for various HTTP methods,
+ * headers, body data, multipart form data, streaming, and progress callbacks.
+ */
+
 #include <napi.h>
 #include <curl/curl.h>
 #include <string>

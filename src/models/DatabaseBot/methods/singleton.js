@@ -1,10 +1,8 @@
-// ─── Info ────────────────────────────────
-/*
+/**
+ * @file src/models/DatabaseBot/methods/singleton.js
+ * Metode statis untuk mendapatkan instance singleton dari database bot.
  * Created with ❤️ and 💦 By FN
- * Follow https://github.com/Terror-Machine
- * Feel Free To Use
  */
-// ─── Info ────────────────────────────────
 
 import log from '../../../lib/logger.js';
 

@@ -1,3 +1,12 @@
+/**
+ * @file src/addon/sticker.cpp
+ * Sticker processing and WebP encoding.
+ * Provides functions for creating WhatsApp-compatible stickers
+ * with support for EXIF metadata, resizing, and rounded corners.
+ * Includes utilities for working with WebP images.
+ * Provides functions for encoding and decoding WebP images.
+ */
+
 #include <napi.h>
 #include <vector>
 #include <string>

@@ -1,3 +1,10 @@
+/**
+ * @file src/addon/converter.cpp
+ * Audio converter using FFmpeg libraries.
+ * Supports conversion between various audio formats with options for bitrate,
+ * sample rate, channels, push-to-talk mode, and variable bitrate.
+ */
+
 #include <napi.h>
 #include <string>
 #include <vector>

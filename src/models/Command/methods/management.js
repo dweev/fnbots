@@ -1,10 +1,8 @@
-// ─── Info ────────────────────────────────
-/*
+/**
+ * @file src/models/Command/methods/management.js
+ * Metode untuk manajemen perintah seperti mengubah deskripsi, kategori, dan menghitung penggunaan.
  * Created with ❤️ and 💦 By FN
- * Follow https://github.com/Terror-Machine
- * Feel Free To Use
  */
-// ─── Info ────────────────────────────────
 
 export const methods = {
   incrementCount(amount = 1) {

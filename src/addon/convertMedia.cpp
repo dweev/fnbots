@@ -1,3 +1,12 @@
+/**
+ * @file src/addon/convertMedia.cpp
+ * Media conversion and image upscaling using FFmpeg libraries.
+ * Supports image upscaling with configurable scale factor and quality settings.
+ * Provides functions for image format conversion and video frame extraction.
+ * Includes utilities for working with audio and video streams.
+ * Offers a high-level API for common media processing tasks.
+ */
+
 #include <napi.h>
 #include <string>
 #include <vector>

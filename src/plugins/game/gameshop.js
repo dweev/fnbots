@@ -48,8 +48,7 @@ export const command = {
     text += `> ${prefix}buyvip [harga: $ 100.000.000.000.000]\n\n`;
     text += `❏  \`\`\`N O T E\`\`\`\n`;
     text += `> premium dan vip berlaku 1bulan\n`;
-    text += `> limit hanya berlaku 1 hari sampai jam 21.00 serta tunduk kepada syarat dan ketentuan penggunaan bot!\n\n`;
-    text += `ketik ${prefix}rules untuk syarat dan ketentuan penggunaan bot`;
+    text += `> limit hanya berlaku 1 hari sampai jam 21.00 serta tunduk kepada syarat dan ketentuan penggunaan bot!`;
     const buffer = await getMyBalance(user, pushname, datax);
     await fn.sendMediaFromBuffer(toId, 'image/jpeg', buffer, text, m);
   }

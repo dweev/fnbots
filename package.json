@@ -1,6 +1,6 @@
 {
   "name": "fnbots",
-  "version": "3.0.10",
+  "version": "3.1.0",
   "description": "FNBOTS FN WHATSAPP BOT",
   "main": "core/main.js",
   "type": "module",
@@ -84,12 +84,12 @@
     "yt-spotify-dl": "^1.0.1"
   },
   "devDependencies": {
-    "@eslint/js": "^9.38.0",
+    "@eslint/js": "^9.39.0",
     "conventional-changelog-cli": "^5.0.0",
-    "eslint": "^9.38.0",
+    "eslint": "^9.39.0",
     "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-security": "^3.0.1",
-    "globals": "^16.4.0",
+    "globals": "^16.5.0",
     "jest": "^30.2.0",
     "node-addon-api": "^8.5.0",
     "nodemon": "^3.1.10",

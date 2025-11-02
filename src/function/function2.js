@@ -902,7 +902,7 @@ export function normalizeMentionsInBody(body, originalMentionedJids, resolvedMen
   for (const [lidNumber, jidNumber] of lidToJidMap.entries()) {
     const patterns = [new RegExp(`@\\+?\\s*${lidNumber.replace(/(\d)/g, '$1\\s*')}\\b`, 'g'), new RegExp(`@${lidNumber}\\b`, 'g')];
     for (const pattern of patterns) {
-      normalizedBody = normalizedBody.replace(pattern, `@${jidNumber}`);
+      normalizedBody = normalizedBody.replace(pattern, `@${jidNumber} `);
     }
   }
   return normalizedBody;

@@ -526,28 +526,68 @@ export async function sendAndCleanupFile(fn, toId, localPath, m, dbSettings) {
     await fn.sendReply(toId, `Gagal mengirim file: ${error.message}`, { quoted: m });
   }
 }
-export async function expiredCheck(fn, ownerNumber, store) {
+export async function expiredPremiumCheck(fn, ownerNumber, store) {
   if (_checkPremium) return;
   _checkPremium = true;
   setInterval(async () => {
-    const expiredUsers = await User.getExpiredPremiumUsers();
-    for (const user of expiredUsers) {
-      const messages = await store.getMessages(ownerNumber[0], 1);
-      const latestMessageFromOwner = messages && messages.length > 0 ? messages[0] : null;
-      const notificationText = `Premium expired: @${user.userId.split('@')[0]}`;
-      if (latestMessageFromOwner) {
-        const expiration = await fn.getEphemeralExpiration(ownerNumber[0]);
-        await fn.sendPesan(ownerNumber[0], notificationText, {
-          quoted: latestMessageFromOwner,
-          ephemeralExpiration: expiration
-        });
-      } else {
-        const expiration = await fn.getEphemeralExpiration(ownerNumber[0]);
-        await fn.sendPesan(ownerNumber[0], notificationText, {
-          ephemeralExpiration: expiration
-        });
+    try {
+      const usersNearExpiry = await User.getUsersNearPremiumExpiry();
+      for (const user of usersNearExpiry) {
+        try {
+          const warningSet = await User.setExpiredWarning(user.userId);
+          if (!warningSet) {
+            continue;
+          }
+          const now = dayjs();
+          const expiryDate = dayjs(user.premiumExpired);
+          const daysRemaining = Math.ceil(expiryDate.diff(now, 'day', true));
+          const formattedDate = expiryDate.format('DD MMMM YYYY');
+          const userNotification = `*Peringatan Premium*\n\nPremium Anda akan berakhir dalam *${daysRemaining} hari*.\nTanggal kedaluwarsa: ${formattedDate}`;
+          try {
+            const userExpiration = await fn.getEphemeralExpiration(user.userId);
+            await fn.sendPesan(user.userId, userNotification, {
+              ephemeralExpiration: userExpiration
+            });
+          } catch (err) {
+            log(`Failed to send expiry warning to user ${user.userId}: ${err.message}`, true);
+          }
+          const ownerNotification = `*Premium Expiry Warning*\n\nUser: @${user.userId.split('@')[0]}\nSisa waktu: ${daysRemaining} hari\nExpired: ${formattedDate}`;
+          try {
+            const ownerExpiration = await fn.getEphemeralExpiration(ownerNumber[0]);
+            await fn.sendPesan(ownerNumber[0], ownerNotification, {
+              mentions: [user.userId],
+              ephemeralExpiration: ownerExpiration
+            });
+          } catch (err) {
+            log(`Failed to send expiry warning to owner for user ${user.userId}: ${err.message}`, true);
+          }
+        } catch (error) {
+          log(`Error processing near expiry for user ${user.userId}: ${error.message}`, true);
+        }
       }
-      await User.removePremium(user.userId);
+      const expiredUsers = await User.getExpiredPremiumUsers();
+      for (const user of expiredUsers) {
+        try {
+          const notificationText = `*Premium Expired*\n\nUser: @${user.userId.split('@')[0]}\nPremium telah berakhir dan dihapus.`;
+          try {
+            const messages = await store.getMessages(ownerNumber[0], 1);
+            const latestMessageFromOwner = messages && messages.length > 0 ? messages[0] : null;
+            const expiration = await fn.getEphemeralExpiration(ownerNumber[0]);
+            await fn.sendPesan(ownerNumber[0], notificationText, {
+              mentions: [user.userId],
+              quoted: latestMessageFromOwner || undefined,
+              ephemeralExpiration: expiration
+            });
+          } catch (err) {
+            log(`Failed to send expired notification to owner for user ${user.userId}: ${err.message}`, true);
+          }
+          await User.removePremium(user.userId);
+        } catch (error) {
+          log(`Error processing expired premium for user ${user.userId}: ${error.message}`, true);
+        }
+      }
+    } catch (error) {
+      log(`Error in expiredPremiumCheck: ${error.message}`, true);
     }
   }, config.performance.defaultInterval);
 }
@@ -555,24 +595,64 @@ export async function expiredVIPcheck(fn, ownerNumber, store) {
   if (_checkVIP) return;
   _checkVIP = true;
   setInterval(async () => {
-    const expiredUsers = await User.getExpiredVIPUsers();
-    for (const user of expiredUsers) {
-      const messages = await store.getMessages(ownerNumber[0], 1);
-      const latestMessageFromOwner = messages && messages.length > 0 ? messages[0] : null;
-      const notificationText = `VIP expired: @${user.userId.split('@')[0]}`;
-      if (latestMessageFromOwner) {
-        const expiration = await fn.getEphemeralExpiration(ownerNumber[0]);
-        await fn.sendPesan(ownerNumber[0], notificationText, {
-          quoted: latestMessageFromOwner,
-          ephemeralExpiration: expiration
-        });
-      } else {
-        const expiration = await fn.getEphemeralExpiration(ownerNumber[0]);
-        await fn.sendPesan(ownerNumber[0], notificationText, {
-          ephemeralExpiration: expiration
-        });
+    try {
+      const usersNearExpiry = await User.getUsersNearVIPExpiry();
+      for (const user of usersNearExpiry) {
+        try {
+          const warningSet = await User.setExpiredWarning(user.userId);
+          if (!warningSet) {
+            continue;
+          }
+          const now = dayjs();
+          const expiryDate = dayjs(user.vipExpired);
+          const daysRemaining = Math.ceil(expiryDate.diff(now, 'day', true));
+          const formattedDate = expiryDate.format('DD MMMM YYYY');
+          const userNotification = `*Peringatan VIP*\n\nVIP Anda akan berakhir dalam *${daysRemaining} hari*.\nTanggal kedaluwarsa: ${formattedDate}`;
+          try {
+            const userExpiration = await fn.getEphemeralExpiration(user.userId);
+            await fn.sendPesan(user.userId, userNotification, {
+              ephemeralExpiration: userExpiration
+            });
+          } catch (err) {
+            log(`Failed to send expiry warning to user ${user.userId}: ${err.message}`, true);
+          }
+          const ownerNotification = `*VIP Expiry Warning*\n\nUser: @${user.userId.split('@')[0]}\nSisa waktu: ${daysRemaining} hari\nExpired: ${formattedDate}`;
+          try {
+            const ownerExpiration = await fn.getEphemeralExpiration(ownerNumber[0]);
+            await fn.sendPesan(ownerNumber[0], ownerNotification, {
+              mentions: [user.userId],
+              ephemeralExpiration: ownerExpiration
+            });
+          } catch (err) {
+            log(`Failed to send expiry warning to owner for user ${user.userId}: ${err.message}`, true);
+          }
+        } catch (error) {
+          log(`Error processing near expiry for user ${user.userId}: ${error.message}`, true);
+        }
       }
-      await User.removeVIP(user.userId);
+      const expiredUsers = await User.getExpiredVIPUsers();
+      for (const user of expiredUsers) {
+        try {
+          const notificationText = `*VIP Expired*\n\nUser: @${user.userId.split('@')[0]}\nVIP telah berakhir dan dihapus.`;
+          try {
+            const messages = await store.getMessages(ownerNumber[0], 1);
+            const latestMessageFromOwner = messages && messages.length > 0 ? messages[0] : null;
+            const expiration = await fn.getEphemeralExpiration(ownerNumber[0]);
+            await fn.sendPesan(ownerNumber[0], notificationText, {
+              mentions: [user.userId],
+              quoted: latestMessageFromOwner || undefined,
+              ephemeralExpiration: expiration
+            });
+          } catch (err) {
+            log(`Failed to send expired notification to owner for user ${user.userId}: ${err.message}`, true);
+          }
+          await User.removeVIP(user.userId);
+        } catch (error) {
+          log(`Error processing expired VIP for user ${user.userId}: ${error.message}`, true);
+        }
+      }
+    } catch (error) {
+      log(`Error in expiredVIPcheck: ${error.message}`, true);
     }
   }, config.performance.defaultInterval);
 }

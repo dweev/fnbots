@@ -33,6 +33,10 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: null
     },
+    warnedExpired: {
+      type: Boolean,
+      default: false
+    },
     premiumExpired: {
       type: Date,
       default: null

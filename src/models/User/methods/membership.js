@@ -14,6 +14,7 @@ async function addMembership(user, type, durationMs) {
   const fields = fieldMap[type];
   if (!fields) throw new Error('Invalid membership type');
   user[fields.is] = true;
+  user.warnedExpired = false;
   const currentExpiry = user[fields.expiry];
   const newExpiry = (currentExpiry && currentExpiry > new Date() ? currentExpiry.getTime() : Date.now()) + durationMs;
   user[fields.expiry] = new Date(newExpiry);
@@ -27,6 +28,32 @@ export const statics = {
   getExpiredVIPUsers() {
     return this.find({ isVIP: true, vipExpired: { $ne: null, $lte: new Date() } });
   },
+  getUsersNearPremiumExpiry() {
+    const now = new Date();
+    const sevenDaysLater = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    return this.find({
+      isPremium: true,
+      premiumExpired: {
+        $ne: null,
+        $gt: now,
+        $lte: sevenDaysLater
+      },
+      warnedExpired: false
+    });
+  },
+  getUsersNearVIPExpiry() {
+    const now = new Date();
+    const sevenDaysLater = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    return this.find({
+      isVIP: true,
+      vipExpired: {
+        $ne: null,
+        $gt: now,
+        $lte: sevenDaysLater
+      },
+      warnedExpired: false
+    });
+  },
   getMasters() {
     return this.find({ isMaster: true });
   },
@@ -34,11 +61,11 @@ export const statics = {
     return this.findOneAndUpdate({ userId }, { $set: { isMaster: true } }, { upsert: true, new: true });
   },
   async addPremium(userId, durationMs) {
-    const user = await this.findOneAndUpdate({ userId }, { $set: { isPremium: true } }, { new: true, upsert: true });
+    const user = await this.findOneAndUpdate({ userId }, { $set: { isPremium: true, warnedExpired: false } }, { new: true, upsert: true });
     return addMembership(user, 'premium', durationMs);
   },
   async addVIP(userId, durationMs) {
-    const user = await this.findOneAndUpdate({ userId }, { $set: { isVIP: true } }, { new: true, upsert: true });
+    const user = await this.findOneAndUpdate({ userId }, { $set: { isVIP: true, warnedExpired: false } }, { new: true, upsert: true });
     return addMembership(user, 'vip', durationMs);
   },
   removeMaster(userId) {
@@ -52,6 +79,7 @@ export const statics = {
         $set: {
           isPremium: false,
           premiumExpired: null,
+          warnedExpired: false,
           'limit.current': dbSettings.limitCount,
           'limitgame.current': dbSettings.limitGame
         }
@@ -59,6 +87,14 @@ export const statics = {
     );
   },
   removeVIP(userId) {
-    return this.updateOne({ userId }, { $set: { isVIP: false, vipExpired: null } });
+    return this.updateOne({ userId }, { $set: { isVIP: false, vipExpired: null, warnedExpired: false } });
+  },
+  async setExpiredWarning(userId) {
+    try {
+      const result = await this.findOneAndUpdate({ userId, warnedExpired: false }, { $set: { warnedExpired: true } }, { new: true });
+      return result !== null;
+    } catch (error) {
+      throw new Error(`Failed to set warning for ${userId}: ${error.message}`);
+    }
   }
 };

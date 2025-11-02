@@ -10,7 +10,7 @@
 
 ### Core Philosophies
 
-- **Performance**: Heavy, blocking tasks (media processing, image generation, web scraping) are offloaded to a separate pool of worker threads, ensuring the main application remains non-blocking and highly responsive. Caching is handled by an in-memory Redis database for maximum speed.
+- **Performance**: Heavy tasks (media processing, scraping) are offloaded from the JavaScript runtime by executing them directly at the native level via high-speed C++ addons (ffmpeg, libcurl). This strategy minimizes main thread blockage by leveraging compiled code instead of JS worker threads. Caching is handled by an in-memory Redis database for maximum speed.
 - **Stability**: The application is designed for high uptime with self-healing capabilities, including memory monitoring, connection health checks, and a graceful restart manager that prevents infinite crash loops.
 - **Modularity**: A file-based plugin system allows for easy addition and hot-reloading of commands without restarting the entire application, streamlining development and maintenance.
 
@@ -359,8 +359,7 @@ The directory structure is designed for a clear separation of concerns, making t
 │   ├── models/            # MongoDB (Mongoose) schemas & models
 │   ├── plugins/           # All bot commands (highly modular)
 │   ├── sampah/            # Managed temporary file storage
-│   ├── utils/             # General utilities (security, scrapers, external scripts)
-│   └── worker/            # Async worker system for heavy tasks (FFMPEG, Canvas)
+│   └── utils/             # General utilities (security, scrapers, external scripts)
 ├── .env.example           # Environment variable template
 ├── .gitignore             # Git ignore file
 ├── binding.gyp            # Build configuration for native addons
@@ -475,15 +474,25 @@ Scan the QR code that appears in your terminal.
 
 For production environments, using PM2 is highly recommended for process management and auto-restarts. The `install.sh` script already installs it globally.
 
-```bash
-# Start the application with PM2
-pm2 start ecosystem.config.cjs
+**Important:** PM2 runs the bot in the **background**, so it cannot ask for terminal input. You must log in *before* starting PM2.
 
-# Monitor logs
-pm2 logs
-```
+1.  **Log In First (One Time Only)**
+    Run the `pair` script in the foreground to log in and create your session files.
+    ```bash
+    npm run pair
+    ```
+    *(Enter your phone number and pairing code as prompted)*
 
-Note: pm2 only work for foreground process, so if you want to run with pairing code, use npm run pair or set usePairingCode to true in config.js and then use npm start
+2.  **Start Production Server**
+    Once you have successfully logged in, stop the `npm run pair` process (Ctrl+C) and start the bot with PM2:
+    ```bash
+    pm2 start ecosystem.config.cjs
+    ```
+
+3.  **Monitor**
+    ```bash
+    pm2 logs fnbots
+    ```
 
 For ROOT users (running at systemd level), use the `system.sh` script to set up the systemd service.
 

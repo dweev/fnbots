@@ -6,22 +6,22 @@
  */
 // ─── info src/function/index.js ─────────────────
 
-import { colorNameMap, getContrastColor, generateFakeChatWithQCGenerator, processAllTextFormatting } from './fakeFunction.js';
-import { SESSION_TIMEOUT, getSession, safetySettings } from './chatbot.js';
+import { modes, genMath } from './math.js';
 import { generateBoardImage } from './chess.js';
-import { makeCircleSticker, parseImageSelection, cleanYoutubeUrl, chunkArray, fetchTikTokData, buildBaseCaption, sendImages, webpFormatter, cleanFormattingText, formatTimestampToHourMinute, fetchJson, jadwalSholat, getZodiak, normalizeResult, normalizeMentionsInBody, unwrapMessage, handleBufferInput, ensureBuffer, isBufferEmpty, validateAndConvertBuffer, rehydrateBuffer, audioChanger, createNativeSticker, fetchMedia, imageGenerator, groupImage } from './function2.js';
-import { PLAYER_BLACK, PLAYER_WHITE, fileLabels, rankLabels, parseOthelloMove, makeOthelloMove, getValidOthelloMoves, calculateOthelloScore, generateOthelloBoardImage, createOthelloBoard } from './othello.js';
-import { runBotLudoTurns, calculateNewPosition, HOME_POSITIONS, checkForCapture, generateLudoBoard, startLudoTimeout, PLAYERS, BASE_POSITIONS } from './ludo.js';
-import { rollDice, generateUlarTanggaImage, runBotUlarTanggaTurnV2, runBotUlarTanggaTurn, turboBoard, createRandomMap, startUlarTanggaTimeout } from './ulartangga.js';
-import { emoji_role, endGame, initializeGameWW } from './werewolf.js';
-import { formatMinesweeperBoard, revealCell, checkWinCondition, generateMinesweeperBoard } from './minesweeper.js';
 import { checkWinner, formatTicTacToeBoard } from './tictactoe.js';
+import { emoji_role, endGame, initializeGameWW } from './werewolf.js';
 import { generateSudokuBoardImage, parseSudokuCoord } from './sudoku.js';
 import { getMyLevel, getMyBalance, getLeaderboardText } from './rank.js';
+import { SESSION_TIMEOUT, getSession, safetySettings } from './chatbot.js';
+import { formatMinesweeperBoard, revealCell, checkWinCondition, generateMinesweeperBoard } from './minesweeper.js';
+import { colorNameMap, getContrastColor, generateFakeChatWithQCGenerator, processAllTextFormatting } from './fakeFunction.js';
 import { deepfry, glitch, mataikan, mirror, approved, rejected, thuglife, tobecontinue, subtitle, burn, blur, ghost, wrapText } from './imageManipulation.js';
+import { runBotLudoTurns, calculateNewPosition, HOME_POSITIONS, checkForCapture, generateLudoBoard, startLudoTimeout, PLAYERS, BASE_POSITIONS } from './ludo.js';
+import { rollDice, generateUlarTanggaImage, runBotUlarTanggaTurnV2, runBotUlarTanggaTurn, turboBoard, createRandomMap, startUlarTanggaTimeout } from './ulartangga.js';
 import { formatHandSimple, getHandDetails, anteBonusMultipliers, createDeck, shuffleDeck, formatKartu, calculateScore, runBotTurn41, calculateSamgongValue, runBotSamgongTurn } from './casino.js';
+import { PLAYER_BLACK, PLAYER_WHITE, fileLabels, rankLabels, parseOthelloMove, makeOthelloMove, getValidOthelloMoves, calculateOthelloScore, generateOthelloBoardImage, createOthelloBoard } from './othello.js';
+import { makeCircleSticker, parseImageSelection, cleanYoutubeUrl, chunkArray, fetchTikTokData, buildBaseCaption, sendImages, webpFormatter, cleanFormattingText, formatTimestampToHourMinute, fetchJson, jadwalSholat, getZodiak, normalizeResult, normalizeMentionsInBody, unwrapMessage, handleBufferInput, ensureBuffer, isBufferEmpty, validateAndConvertBuffer, rehydrateBuffer, audioChanger, createNativeSticker, fetchMedia, imageGenerator, groupImage } from './function2.js';
 import { parseNIK, speedtest, getCommonGroups, getServerIp, formatNumber, saveFile, getTxt, getSerial, expiredVIPcheck, expiredCheck, sendAndCleanupFile, getBuffer, mycmd, reviver, replacer, msgs, randomByte, arrayRemove, ulang, list, firstUpperCase, formatTimeAgo, formatCommandList, formatDurationMessage, formatDuration, waktu, color, bytesToSize, parseSelector, archimed, randomChoice, getSizeMedia, safeStringify, checkDepth, isUserVerified, checkCommandAccess, textMatch2, textMatch1, initializeFuse, parseCheatAmount } from './function.js';
-import { modes, genMath } from './math.js';
 
 export {
   groupImage,

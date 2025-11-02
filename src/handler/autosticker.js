@@ -7,11 +7,11 @@
 // ─── Info src/handler/autosticker.js ──────────────
 
 import log from '../lib/logger.js';
+import { createNativeSticker } from '../function/index.js';
 
 export class AutoStickerHandler {
-  constructor(fn, runJob) {
+  constructor(fn) {
     this.fn = fn;
-    this.runJob = runJob;
     // prettier-ignore
     this.supportedMimeTypes = [
       "video/mp4",
@@ -24,7 +24,7 @@ export class AutoStickerHandler {
     this.maxVideoSeconds = 20;
   }
   async handle(params) {
-    const { m, toId, fn, runJob, reactDone } = params;
+    const { m, toId, fn, reactDone } = params;
     try {
       const mime = m.mime;
       if (!this.hasMediaContent(m)) {
@@ -36,7 +36,7 @@ export class AutoStickerHandler {
       if (!this.isSupportedMedia(mime, m.message)) {
         return;
       }
-      await this.convertToSticker(m, toId, fn, runJob, reactDone);
+      await this.convertToSticker(m, toId, fn, reactDone);
     } catch (error) {
       log(`Error in auto sticker handler: ${error}`, true);
     }
@@ -64,7 +64,7 @@ export class AutoStickerHandler {
     }
     return false;
   }
-  async convertToSticker(m, toId, fn, runJob, reactDone) {
+  async convertToSticker(m, toId, fn, reactDone) {
     try {
       await fn.sendMessage(toId, { react: { text: '⏳', key: m.key } });
       const buffer = await fn.getMediaBuffer(m.message);
@@ -72,7 +72,7 @@ export class AutoStickerHandler {
         log('Failed to get media buffer');
         return;
       }
-      const stickerBuffer = await runJob('stickerNative', {
+      const stickerBuffer = await createNativeSticker({
         mediaBuffer: buffer
       });
       if (!stickerBuffer) {
@@ -93,6 +93,6 @@ export class AutoStickerHandler {
 }
 
 export const handleAutoSticker = async (params) => {
-  const handler = new AutoStickerHandler(params.fn, params.runJob);
+  const handler = new AutoStickerHandler(params.fn);
   return await handler.handle(params);
 };

@@ -12,11 +12,10 @@ import config from '../config.js';
 import log from '../src/lib/logger.js';
 import { store } from '../database/index.js';
 import { tmpDir } from '../src/lib/tempManager.js';
-import { runJob } from '../src/worker/worker_manager.js';
 import { fileTypeFromBuffer, fileTypeFromFile } from 'file-type';
 import { convert as convertNative, fetch as nativeFetch } from '../src/addon/bridge.js';
 import { MediaValidationError, MediaProcessingError, MediaSizeError } from '../src/lib/errorManager.js';
-import { randomByte, getSizeMedia, handleBufferInput, validateAndConvertBuffer } from '../src/function/index.js';
+import { randomByte, getSizeMedia, handleBufferInput, validateAndConvertBuffer, createNativeSticker, groupImage } from '../src/function/index.js';
 import { jidNormalizedUser, generateWAMessage, generateWAMessageFromContent, downloadContentFromMessage, jidDecode, jidEncode, getBinaryNodeChildString, getBinaryNodeChildren, getBinaryNodeChild, proto, WAMessageAddressingMode, isLidUser, isPnUser } from 'baileys';
 
 const createQuotedOptions = (quoted, options = {}) => {
@@ -192,7 +191,7 @@ export async function clientBot(fn, dbSettings) {
           const finalCaption = opts.caption || '';
           const isWebpSticker = opts.asSticker || /webp/.test(mime);
           if (isWebpSticker) {
-            const stickerBuffer = await runJob('stickerNative', {
+            const stickerBuffer = await createNativeSticker({
               mediaBuffer: buffer,
               packname: opts.packname || dbSettings.packName,
               author: opts.author || dbSettings.packAuthor
@@ -293,7 +292,7 @@ export async function clientBot(fn, dbSettings) {
       if (!inputBuffer || inputBuffer.length === 0) {
         throw new Error('Gagal mendapatkan buffer dari input yang diberikan');
       }
-      const stickerBuffer = await runJob('stickerNative', {
+      const stickerBuffer = await createNativeSticker({
         mediaBuffer: inputBuffer,
         ...options
       });
@@ -586,7 +585,7 @@ export async function clientBot(fn, dbSettings) {
     } catch {
       profilePictureUrl = config.paths.avatar;
     }
-    const imageBuffer = await runJob('groupImage', {
+    const imageBuffer = await groupImage({
       username: memberNum,
       groupname: subject,
       welcometext: eventText,

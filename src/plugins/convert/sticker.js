@@ -7,8 +7,8 @@
 // ─── Info ────────────────────────────────────
 
 import config from '../../../config.js';
-import { runJob } from '../../worker/worker_manager.js';
 import { fetch as nativeFetch } from '../../addon/bridge.js';
+import { createNativeSticker } from '../../function/index.js';
 
 export const command = {
   name: 'sticker',
@@ -81,7 +81,7 @@ export const command = {
       }
     }
     if (!buffer || buffer.length < 100) return await sReply('Ukuran media tidak valid atau gagal diunduh.');
-    const stickerBuffer = await runJob('stickerNative', {
+    const stickerBuffer = await createNativeSticker({
       mediaBuffer: buffer,
       packName: pack.packName,
       authorName: pack.authorName,

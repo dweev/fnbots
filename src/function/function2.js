@@ -6,16 +6,427 @@
  */
 // ─── info src/function/function2.js ─────────────
 
+import path from 'path';
 import fs from 'fs-extra';
 import sharp from 'sharp';
 import log from '../lib/logger.js';
 import * as cheerio from 'cheerio';
+import config from '../../config.js';
+import { spawn } from 'child_process';
 import { getBuffer } from './index.js';
+import { tmpDir } from '../lib/tempManager.js';
 import { createCanvas, loadImage } from 'canvas';
 import { Downloader } from '@tobyg74/tiktok-api-dl';
 import { delay, extractMessageContent } from 'baileys';
-import { fetch as nativeFetch } from '../addon/bridge.js';
+import { fetch as nativeFetch, sticker as stickerNative, addExif as addExifNative, parseArgsToFetchOptions, getHeader } from '../addon/bridge.js';
 
+const ffmpegFilters = new Map([
+  ['8d',         { flag: '-af',             filter: 'apulsator=hz=0.3'                                                                          }],
+  ['alien',      { flag: '-af',             filter: 'asetrate=44100*0.5, atempo=2'                                                              }],
+  ['bass',       { flag: '-af',             filter: 'equalizer=f=54:width_type=o:width=2:g=20'                                                  }],
+  ['blown',      { flag: '-af',             filter: 'acrusher=.1:1:64:0:log'                                                                    }],
+  ['chipmunk',   { flag: '-af',             filter: 'atempo=0.5,asetrate=65100'                                                                 }],
+  ['deep',       { flag: '-af',             filter: 'atempo=4/4,asetrate=44500*2/3'                                                             }],
+  ['demonic',    { flag: '-af',             filter: 'asetrate=44100*0.7, atempo=1.2'                                                            }],
+  ['dizzy',      { flag: '-af',             filter: 'aphaser=in_gain=0.4'                                                                       }],
+  ['earrape',    { flag: '-af',             filter: 'volume=12'                                                                                 }],
+  ['echo',       { flag: '-af',             filter: 'aecho=0.8:0.9:1000:0.3'                                                                    }],
+  ['fast',       { flag: '-af',             filter: 'atempo=1.63,asetrate=44100'                                                                }],
+  ['fastreverse',{ flag: '-filter_complex', filter: 'areverse,atempo=1.63,asetrate=44100'                                                       }],
+  ['fat',        { flag: '-af',             filter: 'atempo=1.6,asetrate=22100'                                                                 }],
+  ['ghost',      { flag: '-af',             filter: 'aecho=0.8:0.88:60:0.4'                                                                     }],
+  ['haunted',    { flag: '-filter_complex', filter: "afftfilt=real='hypot(re,im)':imag='0'"                                                     }],
+  ['nightcore',  { flag: '-af',             filter: 'atempo=1.06,asetrate=44100*1.25'                                                           }],
+  ['nightmare',  { flag: '-af',             filter: "afftfilt=real='hypot(re,im)*cos(0.5)':imag='hypot(re,im)*sin(0.5)'"                        }],
+  ['radio',      { flag: '-af',             filter: 'highpass=f=200, lowpass=f=3000'                                                            }],
+  ['reverse',    { flag: '-filter_complex', filter: 'areverse'                                                                                  }],
+  ['robot',      { flag: '-filter_complex', filter: "afftfilt=real='hypot(re,im)*sin(0)':imag='hypot(re,im)*cos(0)':win_size=512:overlap=0.75"  }],
+  ['slow',       { flag: '-af',             filter: 'atempo=0.7,asetrate=44100'                                                                 }],
+  ['smooth',     { flag: '-filter:v',       filter: 'minterpolate=mi_mode=mci:mc_mode=aobmc:vsbmc=1:fps=120'                                    }],
+  ['spooky',     { flag: '-af',             filter: 'asetrate=44100*0.8, atempo=1.1'                                                            }],
+  ['telephone',  { flag: '-af',             filter: 'bandpass=f=1000:width_type=h:width=200'                                                    }],
+  ['tremolo',    { flag: '-af',             filter: 'tremolo=f=5.0:d=0.8'                                                                       }],
+  ['underwater', { flag: '-af',             filter: 'aecho=0.6:0.3:1000:0.5, lowpass=f=300'                                                     }],
+  ['vibrato',    { flag: '-af',             filter: 'vibrato=f=5'                                                                               }],
+]);
+
+function isWebP(buffer) {
+  return buffer.length >= 12 && buffer.slice(0, 4).toString() === 'RIFF' && buffer.slice(8, 12).toString() === 'WEBP';
+}
+function hasExifMetadata(buffer) {
+  if (!isWebP(buffer)) return false;
+  let offset = 12;
+  while (offset < buffer.length - 8) {
+    const chunkHeader = buffer.slice(offset, offset + 4).toString();
+    const chunkSize = buffer.readUInt32LE(offset + 4);
+    if (chunkHeader === 'EXIF') {
+      return true;
+    }
+    offset += 8 + chunkSize + (chunkSize % 2);
+  }
+  return false;
+}
+function runFFMPEGWithBuffer(inputBuffer, filter) {
+  return new Promise((resolve, reject) => {
+    // prettier-ignore
+    const args = [
+      '-i', 'pipe:0',
+      filter.flag, filter.filter,
+      '-f', 'mp3',
+      'pipe:1'
+    ];
+    const ffmpeg = spawn('ffmpeg', args, {
+      stdio: ['pipe', 'pipe', 'pipe']
+    });
+    const chunks = [];
+    let errorOutput = '';
+    ffmpeg.stdout.on('data', (chunk) => {
+      chunks.push(chunk);
+    });
+    ffmpeg.stderr.on('data', (data) => {
+      errorOutput += data.toString();
+    });
+    ffmpeg.on('close', (code) => {
+      if (code === 0) {
+        const outputBuffer = Buffer.concat(chunks);
+        if (outputBuffer.length === 0) {
+          reject(new Error('FFMPEG created empty output'));
+        } else {
+          resolve(outputBuffer);
+        }
+      } else {
+        console.error('FFmpeg Error Output:', errorOutput);
+        reject(new Error(`FFMPEG exited with code ${code}`));
+      }
+    });
+    ffmpeg.on('error', (err) => {
+      reject(new Error(`FFMPEG spawn error: ${err.message}`));
+    });
+    ffmpeg.stdin.write(inputBuffer);
+    ffmpeg.stdin.end();
+  });
+}
+function runImageMagick(args) {
+  return new Promise((resolve, reject) => {
+    const child = spawn('convert', args);
+    let stderr = '';
+    child.stderr.on('data', (chunk) => {
+      stderr += chunk.toString();
+    });
+    child.on('error', (error) => {
+      reject(new Error(`ImageMagick spawn error: ${error.message}`));
+    });
+    child.on('close', (code) => {
+      if (code !== 0) {
+        const errorMessage = stderr.trim() || `ImageMagick exited with code ${code}`;
+        reject(new Error(errorMessage));
+      } else {
+        resolve();
+      }
+    });
+  });
+}
+function validateText(text, maxLength = 8) {
+  if (!text || text.trim().length === 0) {
+    throw new Error('Teks tidak boleh kosong');
+  }
+  const upperText = text.toUpperCase();
+  if (upperText.length > maxLength) {
+    throw new Error(`Teks terlalu panjang! Maksimal ${maxLength} huruf`);
+  }
+  if (/[^A-Z]/.test(upperText)) {
+    throw new Error('Teks hanya boleh berisi huruf A-Z');
+  }
+  return upperText;
+}
+
+export async function groupImage(username, groupname, welcometext, profileImagePath) {
+  const width = 600;
+  const height = 300;
+  const canvas = createCanvas(width, height);
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#FF7F00';
+  ctx.fillRect(0, 0, width, height);
+  const darkAreaHeight = 60;
+  const darkAreasY = [30, 120, 210];
+  ctx.fillStyle = '#333333';
+  for (const y of darkAreasY) {
+    ctx.fillRect(0, y, width, darkAreaHeight);
+  }
+  let profileImage;
+  try {
+    profileImage = await loadImage(profileImagePath);
+  } catch {
+    await log(`Tidak bisa load gambar profil, fallback.`);
+    profileImage = await loadImage(await fs.readFile(config.paths.avatar));
+  }
+  const profileSize = 160;
+  const profileX = 30;
+  const profileY = (height - profileSize) / 2;
+  ctx.drawImage(profileImage, profileX, profileY, profileSize, profileSize);
+  ctx.strokeStyle = '#333333';
+  ctx.lineWidth = 60;
+  const gap = 30;
+  const firstLineX = profileX + profileSize;
+  const spacing = 90;
+  for (let i = 0; i < 3; i++) {
+    const offsetX = firstLineX + i * spacing;
+    const startX = offsetX;
+    const startY = height;
+    const endX = offsetX + height;
+    const endY = 0;
+    ctx.beginPath();
+    ctx.moveTo(startX + gap, startY + gap);
+    ctx.lineTo(endX - gap, endY - gap);
+    ctx.stroke();
+  }
+  function trimTextToWidth(text, maxWidth) {
+    let trimmedText = text;
+    while (ctx.measureText(trimmedText).width > maxWidth && trimmedText.length > 0) {
+      trimmedText = trimmedText.slice(0, -1);
+    }
+    if (trimmedText.length < text.length) {
+      trimmedText = trimmedText.slice(0, -3) + '...';
+    }
+    return trimmedText;
+  }
+  ctx.fillStyle = '#FF7F00';
+  ctx.font = '30px sans-serif';
+  ctx.textAlign = 'left';
+  const textX = profileX + profileSize + 30;
+  const maxWidth = width - textX - 20;
+  ctx.fillText(trimTextToWidth(welcometext, maxWidth), textX, darkAreasY[0] + 40);
+  ctx.fillText(trimTextToWidth('#' + groupname, maxWidth), textX, darkAreasY[1] + 40);
+  ctx.fillText(trimTextToWidth('@' + username, maxWidth), textX, darkAreasY[2] + 40);
+  return canvas.toBuffer('image/png');
+}
+export async function imageGenerator({ type, text1, text2, text3, outputFormat = 'jpg' }) {
+  if (!type) {
+    throw new Error('Type is required (tahta, harta, or create)');
+  }
+  let annotationText;
+  let validatedTexts = [];
+  try {
+    if (type === 'tahta' || type === 'harta') {
+      if (!text1) {
+        throw new Error('Text is required');
+      }
+      const validated = validateText(text1);
+      validatedTexts.push(validated);
+      annotationText = `HARTA\nTAHTA\n${validated}`;
+    } else if (type === 'create') {
+      if (!text1 || !text2 || !text3) {
+        throw new Error('Three texts are required for create mode');
+      }
+      validatedTexts = [validateText(text1), validateText(text2), validateText(text3)];
+      annotationText = validatedTexts.join('\n');
+    } else {
+      throw new Error(`Unknown type: ${type}. Use tahta, harta, or create`);
+    }
+  } catch (error) {
+    log(`[ImageGenerator] Validation failed: ${error.message}`, true);
+    throw error;
+  }
+  const outputFile = tmpDir.createTempFile(`output-${type}.jpg`);
+  try {
+    // prettier-ignore
+    const convertArgs = [
+      '-size', '512x512',
+      '-background', 'black',
+      'xc:black',
+      '-pointsize', '90',
+      '-font', './src/fonts/harta.ttf',
+      '-gravity', 'center',
+      '-tile', './src/image/rainbow.jpg',
+      '-annotate', '+0+0', annotationText,
+      '-wave', '4.5x64',
+      outputFile
+    ];
+    await runImageMagick(convertArgs);
+    if (!(await fs.pathExists(outputFile))) {
+      throw new Error('ImageMagick did not create output file');
+    }
+    const outputStats = await fs.stat(outputFile);
+    if (outputStats.size === 0) {
+      throw new Error('ImageMagick created empty output file');
+    }
+    let outputBuffer;
+    if (outputFormat === 'webp' || type === 'harta' || type === 'create') {
+      outputBuffer = await sharp(outputFile).webp().toBuffer();
+    } else {
+      outputBuffer = await fs.readFile(outputFile);
+    }
+    if (!Buffer.isBuffer(outputBuffer)) {
+      throw new Error('Output is not a Buffer');
+    }
+    if (outputBuffer.length === 0) {
+      throw new Error('Output buffer is empty');
+    }
+    return outputBuffer;
+  } catch (error) {
+    log(`[ImageGenerator] Processing failed: ${error.message}`, true);
+    throw error;
+  } finally {
+    await tmpDir.deleteFile(outputFile);
+  }
+}
+export async function fetchMedia({ argsArray }) {
+  const { url, options } = parseArgsToFetchOptions(argsArray);
+  try {
+    const response = await nativeFetch(url, options);
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => '');
+      throw new Error(`Gagal dengan status: ${response.status}\n${errorText}`);
+    }
+    const bodyBuffer = await response.arrayBuffer();
+    const contentType = getHeader(response.headers, 'content-type') || '';
+    if (contentType.includes('application/json')) {
+      try {
+        const text = bodyBuffer.toString('utf-8');
+        const parsedJson = JSON.parse(text);
+        return { type: 'text', content: JSON.stringify(parsedJson, null, 2) };
+      } catch {
+        return { type: 'text', content: bodyBuffer.toString('utf-8') };
+      }
+    }
+    const isDirectDownload = contentType.startsWith('image/') || contentType.startsWith('audio/') || contentType.startsWith('video/') || contentType.startsWith('application/pdf') || contentType.startsWith('application/zip') || contentType.startsWith('application/octet-stream');
+    if (isDirectDownload) {
+      let extension = '';
+      try {
+        const urlPath = new URL(url).pathname;
+        extension = path.extname(urlPath).substring(1);
+      } catch {
+        // Ignore URL parsing errors
+      }
+      if (!extension) {
+        const ctParts = contentType.split('/');
+        if (ctParts.length > 1) {
+          extension = ctParts[1].split(';')[0];
+        }
+      }
+      const tempFilePath = tmpDir.createTempFile(extension, 'fetch-');
+      await fs.writeFile(tempFilePath, bodyBuffer);
+      return {
+        type: 'local_file',
+        path: tempFilePath
+      };
+    }
+    if (contentType.includes('text/html')) {
+      const pageContentString = bodyBuffer.toString('utf-8');
+      const preMatch = pageContentString.match(/<pre[^>]*>([\s\S]*?)<\/pre>/i);
+      if (preMatch && preMatch[1]) {
+        try {
+          const jsonData = JSON.parse(preMatch[1]);
+          return { type: 'text', content: JSON.stringify(jsonData, null, 2) };
+        } catch {
+          // If parsing fails, fall through to return raw text
+        }
+      }
+      const videoMatch = pageContentString.match(/<video[^>]*>[\s\S]*?<source[^>]+src=["']([^"']+)["']/i);
+      if (videoMatch && videoMatch[1]) {
+        let src = videoMatch[1];
+        try {
+          src = new URL(src, url).href;
+        } catch {
+          // Ignore URL parsing errors
+        }
+        return { type: 'url', content: src };
+      }
+      const audioMatch = pageContentString.match(/<audio[^>]*>[\s\S]*?<source[^>]+src=["']([^"']+)["']/i);
+      if (audioMatch && audioMatch[1]) {
+        let src = audioMatch[1];
+        try {
+          src = new URL(src, url).href;
+        } catch {
+          // Ignore URL parsing errors
+        }
+        return { type: 'url', content: src };
+      }
+      const imageMatch = pageContentString.match(/<image[^>]*>[\s\S]*?<source[^>]+src=["']([^"']+)["']/i);
+      if (imageMatch && imageMatch[1]) {
+        let src = imageMatch[1];
+        try {
+          src = new URL(src, url).href;
+        } catch {
+          // Ignore URL parsing errors
+        }
+        return { type: 'url', content: src };
+      }
+      return { type: 'text', content: pageContentString };
+    }
+    const plainText = bodyBuffer.toString('utf-8');
+    return { type: 'text', content: plainText };
+  } catch (error) {
+    if (error.message && error.message.includes('Gagal dengan status:')) {
+      log(error.message, true);
+      throw error;
+    }
+    const errorMessage = error.message || String(error);
+    if (errorMessage.includes('curl perform error:')) {
+      log(`Tidak ada respons dari server: ${errorMessage}`, true);
+      throw new Error(`Tidak ada respons dari server: ${errorMessage}`);
+    }
+    log(`Terjadi error: ${errorMessage}`, true);
+    throw new Error(`Terjadi error: ${errorMessage}`);
+  }
+}
+export async function createNativeSticker({ mediaBuffer, packName, authorName, crop, forceUpdateExif = false, ...otherOptions }) {
+  if (!mediaBuffer) throw new Error('mediaBuffer is required in worker');
+  const finalBuffer = ensureBuffer(mediaBuffer);
+  const stickerOptions = {
+    packName: packName || 'Sticker Pack',
+    authorName: authorName || 'Author',
+    crop: crop ?? false,
+    ...otherOptions
+  };
+  const isAlreadyWebP = isWebP(finalBuffer);
+  const hasExif = hasExifMetadata(finalBuffer);
+  let result;
+  if (isAlreadyWebP) {
+    if (hasExif && !forceUpdateExif) {
+      result = finalBuffer;
+    } else {
+      result = await addExifNative(finalBuffer, stickerOptions);
+    }
+  } else {
+    result = await stickerNative(finalBuffer, stickerOptions);
+  }
+  if (!result || !Buffer.isBuffer(result)) throw new Error(`Native function returned invalid data: ${typeof result}`);
+  if (result.length === 0) throw new Error('Native function returned empty buffer');
+  return result;
+}
+export async function audioChanger({ mediaBuffer, filterName }) {
+  if (!mediaBuffer) throw new Error('mediaBuffer is required but received undefined');
+  let finalBuffer;
+  try {
+    finalBuffer = ensureBuffer(mediaBuffer);
+  } catch (error) {
+    log(`[AudioChanger] Buffer conversion failed: ${error.message}`, true);
+    throw error;
+  }
+  if (finalBuffer.length === 0) throw new Error('Audio buffer is empty');
+  let selectedFilter;
+  if (filterName) {
+    selectedFilter = ffmpegFilters.get(filterName);
+    if (!selectedFilter) {
+      const availableFilters = Array.from(ffmpegFilters.keys()).join(', ');
+      throw new Error(`Filter "${filterName}" not found. Available: ${availableFilters}`);
+    }
+  } else {
+    const filterKeys = Array.from(ffmpegFilters.keys());
+    const randomKey = filterKeys[Math.floor(Math.random() * filterKeys.length)];
+    selectedFilter = ffmpegFilters.get(randomKey);
+  }
+  try {
+    const outputBuffer = await runFFMPEGWithBuffer(finalBuffer, selectedFilter);
+    if (!Buffer.isBuffer(outputBuffer)) throw new Error('Output is not a Buffer');
+    if (outputBuffer.length === 0) throw new Error('Output buffer is empty');
+    return outputBuffer;
+  } catch (error) {
+    log(`Processing failed: ${error.message}`, true);
+    throw error;
+  }
+}
 export async function handleBufferInput(input) {
   try {
     return ensureBuffer(input);

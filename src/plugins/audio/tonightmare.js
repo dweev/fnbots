@@ -6,7 +6,7 @@
  */
 // ─── Info ────────────────────────────────
 
-import { runJob } from '../../worker/worker_manager.js';
+import { audioChanger } from '../../function/index.js';
 
 export const command = {
   name: 'tonightmare',
@@ -21,7 +21,7 @@ export const command = {
     if (!mimeType || !mimeType.startsWith('audio/')) return await sReply(`Kirim atau balas pesan audio untuk diubah.`);
     const mediaBuffer = await fn.getMediaBuffer(quotedMsg);
     if (!mediaBuffer) return await sReply(`Gagal mengunduh media.`);
-    const resultBuffer = await runJob('audioChanger', {
+    const resultBuffer = await audioChanger({
       mediaBuffer: mediaBuffer,
       filterName: 'nightmare'
     });

@@ -6,7 +6,7 @@
  */
 // ─── Info ────────────────────────────────
 
-import { runJob } from '../../worker/worker_manager.js';
+import { imageGenerator } from '../../function/index.js';
 
 export const command = {
   name: 'harta',
@@ -18,7 +18,7 @@ export const command = {
     const text = args[0].toUpperCase();
     if (text.length > 8) return await sReply(`Teks terlalu panjang! Maksimal 8 huruf.`);
     if (/[^A-Z]/.test(text)) return await sReply(`Teks hanya boleh berisi huruf A-Z.`);
-    const resultBuffer = await runJob('imageGenerator', {
+    const resultBuffer = await imageGenerator({
       type: 'harta',
       text1: text,
       outputFormat: 'webp'

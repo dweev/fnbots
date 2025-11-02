@@ -9,7 +9,7 @@
 import { colorNameMap, getContrastColor, generateFakeChatWithQCGenerator, processAllTextFormatting } from './fakeFunction.js';
 import { SESSION_TIMEOUT, getSession, safetySettings } from './chatbot.js';
 import { generateBoardImage } from './chess.js';
-import { makeCircleSticker, parseImageSelection, cleanYoutubeUrl, chunkArray, fetchTikTokData, buildBaseCaption, sendImages, webpFormatter, cleanFormattingText, formatTimestampToHourMinute, fetchJson, jadwalSholat, getZodiak, normalizeResult, normalizeMentionsInBody, unwrapMessage, handleBufferInput, ensureBuffer, isBufferEmpty, validateAndConvertBuffer, rehydrateBuffer } from './function2.js';
+import { makeCircleSticker, parseImageSelection, cleanYoutubeUrl, chunkArray, fetchTikTokData, buildBaseCaption, sendImages, webpFormatter, cleanFormattingText, formatTimestampToHourMinute, fetchJson, jadwalSholat, getZodiak, normalizeResult, normalizeMentionsInBody, unwrapMessage, handleBufferInput, ensureBuffer, isBufferEmpty, validateAndConvertBuffer, rehydrateBuffer, audioChanger, createNativeSticker, fetchMedia, imageGenerator, groupImage } from './function2.js';
 import { PLAYER_BLACK, PLAYER_WHITE, fileLabels, rankLabels, parseOthelloMove, makeOthelloMove, getValidOthelloMoves, calculateOthelloScore, generateOthelloBoardImage, createOthelloBoard } from './othello.js';
 import { runBotLudoTurns, calculateNewPosition, HOME_POSITIONS, checkForCapture, generateLudoBoard, startLudoTimeout, PLAYERS, BASE_POSITIONS } from './ludo.js';
 import { rollDice, generateUlarTanggaImage, runBotUlarTanggaTurnV2, runBotUlarTanggaTurn, turboBoard, createRandomMap, startUlarTanggaTimeout } from './ulartangga.js';
@@ -24,6 +24,11 @@ import { parseNIK, speedtest, getCommonGroups, getServerIp, formatNumber, saveFi
 import { modes, genMath } from './math.js';
 
 export {
+  groupImage,
+  imageGenerator,
+  fetchMedia,
+  createNativeSticker,
+  audioChanger,
   rehydrateBuffer,
   handleBufferInput,
   ensureBuffer,

@@ -7,11 +7,11 @@
 // ─── Info src/handler/autochanger.js ──────────────
 
 import log from '../lib/logger.js';
+import { audioChanger } from '../function/index.js';
 
 export class AudioChangerHandler {
-  constructor(fn, runJob) {
+  constructor(fn) {
     this.fn = fn;
-    this.runJob = runJob;
     // prettier-ignore
     this.supportedMediaTypes = new Set([
       'audio/ogg; codecs=opus',
@@ -24,7 +24,7 @@ export class AudioChangerHandler {
     ]);
   }
   async handle(params) {
-    const { m, toId, fn, selfMode, fromBot, runJob, sReply } = params;
+    const { m, toId, fn, selfMode, fromBot, sReply } = params;
     try {
       if (selfMode === 'auto' && fromBot) {
         return;
@@ -32,7 +32,7 @@ export class AudioChangerHandler {
       if (!this.isSupportedAudioType(m.mime)) {
         return;
       }
-      await this.processAudioMessage(m, toId, fn, runJob, sReply);
+      await this.processAudioMessage(m, toId, fn, sReply);
     } catch (error) {
       log(`Error in audio changer handler: ${error}`, true);
       await sReply('Terjadi kesalahan saat memproses audio.');
@@ -41,14 +41,14 @@ export class AudioChangerHandler {
   isSupportedAudioType(mimeType) {
     return this.supportedMediaTypes.has(mimeType);
   }
-  async processAudioMessage(m, toId, fn, runJob, sReply) {
+  async processAudioMessage(m, toId, fn, sReply) {
     try {
       const mediaData = await fn.getMediaBuffer(m.message);
       if (!mediaData) {
         await sReply('Gagal mengambil data audio.');
         return;
       }
-      const resultBuffer = await runJob('audioChanger', { mediaBuffer: mediaData, filterName: null });
+      const resultBuffer = await audioChanger({ mediaBuffer: mediaData, filterName: null });
       if (!resultBuffer) {
         await sReply('Gagal memproses audio melalui voice changer.');
         return;
@@ -103,6 +103,6 @@ export class AudioChangerHandler {
 }
 
 export const handleAudioChanger = async (params) => {
-  const handler = new AudioChangerHandler(params.fn, params.runJob);
+  const handler = new AudioChangerHandler(params.fn);
   return await handler.handle(params);
 };

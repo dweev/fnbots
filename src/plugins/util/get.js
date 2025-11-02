@@ -10,7 +10,7 @@ import path from 'path';
 import fs from 'fs-extra';
 import { fileTypeFromBuffer } from 'file-type';
 import { tmpDir } from '../../lib/tempManager.js';
-import { runJob } from '../../worker/worker_manager.js';
+import { fetchMedia } from '../../function/index.js';
 import { convert as convertNative } from '../../addon/bridge.js';
 
 export const command = {
@@ -21,7 +21,7 @@ export const command = {
   execute: async ({ fn, m, sReply, toId, dbSettings, arg, sendRawWebpAsSticker }) => {
     const argsArray = arg.match(/(?:[^\s"']+|"[^"]*"|'[^']*')+/g) || [];
     if (argsArray.length === 0) return await sReply('Argumen tidak boleh kosong.');
-    const result = await runJob('mediaProcessor', { argsArray });
+    const result = await fetchMedia({ argsArray });
     switch (result.type) {
       case 'text':
         await sReply(result.content);

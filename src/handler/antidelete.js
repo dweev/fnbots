@@ -7,50 +7,7 @@
 // ─── Info src/handler/antidelete.js ────────────────
 
 import log from '../lib/logger.js';
-import { normalizeMentionsInBody } from '../function/index.js';
-
-function rehydrateBuffer(obj) {
-  if (!obj || typeof obj !== 'object') return obj;
-  if (obj.type === 'Buffer' && Array.isArray(obj.data)) {
-    return Buffer.from(obj.data);
-  }
-  if (obj instanceof Uint8Array || obj instanceof ArrayBuffer || ArrayBuffer.isView(obj)) {
-    return Buffer.from(obj);
-  }
-  if (Array.isArray(obj)) {
-    if (obj.length > 0 && typeof obj[0] === 'number') {
-      return Buffer.from(obj);
-    }
-    return obj.map((item) => rehydrateBuffer(item));
-  }
-  const keys = Object.keys(obj);
-  const hasNumericKeys = keys.length > 0 && keys.every((key) => !isNaN(parseInt(key)));
-  if (hasNumericKeys && !obj.type && !Array.isArray(obj)) {
-    const maxIndex = Math.max(...keys.map((k) => parseInt(k)));
-    const arr = new Array(maxIndex + 1);
-    for (const key in obj) {
-      arr[parseInt(key)] = obj[key];
-    }
-    return Buffer.from(arr);
-  }
-  if (obj.data && !obj.type) {
-    if (Array.isArray(obj.data) || Buffer.isBuffer(obj.data) || obj.data instanceof Uint8Array || obj.data instanceof ArrayBuffer) {
-      return Buffer.from(obj.data);
-    }
-  }
-  if (obj.buffer && !obj.type) {
-    if (Array.isArray(obj.buffer) || Buffer.isBuffer(obj.buffer) || obj.buffer instanceof Uint8Array || obj.buffer instanceof ArrayBuffer) {
-      return Buffer.from(obj.buffer);
-    }
-  }
-  const cloned = {};
-  for (const key in obj) {
-    if (Object.prototype.hasOwnProperty.call(obj, key)) {
-      cloned[key] = rehydrateBuffer(obj[key]);
-    }
-  }
-  return cloned;
-}
+import { normalizeMentionsInBody, rehydrateBuffer } from '../function/index.js';
 
 class AntiDeletedHandler {
   constructor(store, fn) {

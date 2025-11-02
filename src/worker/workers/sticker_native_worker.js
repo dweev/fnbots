@@ -6,18 +6,8 @@
  */
 // ─── Info src/worker/workers/sticker_native_worker.js ────────────────
 
+import { ensureBuffer } from '../../function/index.js';
 import { sticker as stickerNative, addExif as addExifNative } from '../../addon/bridge.js';
-
-function ensureBuffer(data) {
-  if (Buffer.isBuffer(data)) return data;
-  if (data && data.type === 'Buffer' && Array.isArray(data.data)) {
-    return Buffer.from(data.data);
-  }
-  if (data instanceof Uint8Array || data instanceof ArrayBuffer) {
-    return Buffer.from(data);
-  }
-  throw new Error(`Invalid data type in worker. Expected Buffer, got ${typeof data}`);
-}
 
 function isWebP(buffer) {
   return buffer.length >= 12 && buffer.slice(0, 4).toString() === 'RIFF' && buffer.slice(8, 12).toString() === 'WEBP';

@@ -596,7 +596,7 @@ export async function getTxt(txt, dbSettings) {
   txt = txt.trim();
   return txt;
 }
-export async function saveFile(imageInput, prefix, toFile = 'png') {
+export async function saveFile(imageInput, toFile = 'png') {
   let imageBuffer;
   if (typeof imageInput === 'string' && imageInput.startsWith('data:image')) {
     const base64Data = imageInput.split(';base64,').pop();

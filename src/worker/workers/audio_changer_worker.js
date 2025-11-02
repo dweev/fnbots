@@ -8,6 +8,7 @@
 
 import { spawn } from 'child_process';
 import log from '../../lib/logger.js';
+import { ensureBuffer } from '../../function/index.js';
 
 // prettier-ignore
 const ffmpegFilters = new Map([
@@ -40,29 +41,6 @@ const ffmpegFilters = new Map([
   ['vibrato',    { flag: '-af',             filter: 'vibrato=f=5'                                                                               }],
 ]);
 
-function ensureBuffer(input) {
-  if (Buffer.isBuffer(input)) {
-    return input;
-  }
-  if (input && input.type === 'Buffer' && input.data) {
-    if (Array.isArray(input.data)) {
-      return Buffer.from(input.data);
-    }
-  }
-  if (typeof input.length === 'number' && typeof input[0] === 'number') {
-    return Buffer.from(input);
-  }
-  if (input.buffer instanceof ArrayBuffer) {
-    return Buffer.from(input);
-  }
-  // prettier-ignore
-  throw new Error(
-    `Cannot convert to Buffer: type=${typeof input}, ` +
-    `constructor=${input?.constructor?.name}, ` +
-    `isArray=${Array.isArray(input)}, ` +
-    `hasData=${input?.data !== undefined}`
-  );
-}
 function runFFMPEGWithBuffer(inputBuffer, filter) {
   return new Promise((resolve, reject) => {
     // prettier-ignore

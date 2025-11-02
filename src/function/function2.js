@@ -6,14 +6,173 @@
  */
 // ─── info src/function/function2.js ─────────────
 
+import fs from 'fs-extra';
 import sharp from 'sharp';
 import log from '../lib/logger.js';
 import * as cheerio from 'cheerio';
+import { getBuffer } from './index.js';
 import { createCanvas, loadImage } from 'canvas';
 import { Downloader } from '@tobyg74/tiktok-api-dl';
 import { delay, extractMessageContent } from 'baileys';
 import { fetch as nativeFetch } from '../addon/bridge.js';
 
+export async function handleBufferInput(input) {
+  try {
+    return ensureBuffer(input);
+  } catch {
+    // If fails, try async methods
+  }
+  if (typeof input === 'string') {
+    if (/^https?:\/\//.test(input)) {
+      return await getBuffer(input);
+    }
+    try {
+      const stats = await fs.stat(input);
+      if (stats.isFile()) {
+        return await fs.readFile(input);
+      }
+    } catch {
+      // Not a valid file path
+    }
+  }
+  // prettier-ignore
+  throw new Error(
+    `Cannot convert to Buffer (async): type=${typeof input}, ` +
+    `constructor=${input?.constructor?.name}`
+  );
+}
+export function ensureBuffer(input) {
+  if (Buffer.isBuffer(input)) {
+    return input;
+  }
+  if (input && input.type === 'Buffer' && input.data) {
+    if (Array.isArray(input.data)) {
+      return Buffer.from(input.data);
+    }
+  }
+  if (typeof input === 'string') {
+    if (/^data:.*?\/.*?;base64,/i.test(input)) {
+      return Buffer.from(input.split(',')[1], 'base64');
+    }
+    try {
+      const buffer = Buffer.from(input, 'base64');
+      if (buffer.toString('base64') === input) {
+        return buffer;
+      }
+    } catch {
+      // Not valid base64, continue
+    }
+  }
+  if (input instanceof ArrayBuffer) {
+    return Buffer.from(input);
+  }
+  if (ArrayBuffer.isView(input)) {
+    return Buffer.from(input);
+  }
+  if (typeof input.length === 'number' && typeof input[0] === 'number') {
+    return Buffer.from(input);
+  }
+  if (typeof input === 'object' && input !== null) {
+    if (input.data) {
+      return Buffer.from(input.data);
+    }
+    if (input.buffer) {
+      return Buffer.from(input.buffer);
+    }
+  }
+  // prettier-ignore
+  throw new Error(
+    `Cannot convert to Buffer: type=${typeof input}, ` +
+    `constructor=${input?.constructor?.name}, ` +
+    `isArray=${Array.isArray(input)}, ` +
+    `hasData=${input?.data !== undefined}`
+  );
+}
+export function isBufferEmpty(buffer) {
+  return !buffer || !Buffer.isBuffer(buffer) || buffer.length === 0;
+}
+export function validateAndConvertBuffer(input, context = 'unknown') {
+  try {
+    const buffer = ensureBuffer(input);
+    if (isBufferEmpty(buffer)) {
+      throw new Error('Buffer is empty');
+    }
+    return buffer;
+  } catch (error) {
+    const errorDetails = {
+      context,
+      error: error.message,
+      inputAnalysis: {
+        type: typeof input,
+        isArray: Array.isArray(input),
+        isBuffer: Buffer.isBuffer(input),
+        isArrayBuffer: input instanceof ArrayBuffer,
+        isArrayBufferView: ArrayBuffer.isView(input),
+        hasLength: input?.length !== undefined,
+        length: input?.length,
+        constructorName: input?.constructor?.name
+      }
+    };
+    // prettier-ignore
+    throw new Error(
+      `Buffer conversion failed in ${context}: ${error.message}\n` +
+      `Input analysis: ${JSON.stringify(errorDetails.inputAnalysis, null, 2)}`
+    );
+  }
+}
+export function rehydrateBuffer(obj) {
+  if (!obj || typeof obj !== 'object') {
+    return obj;
+  }
+  try {
+    const isBufferLike = (obj.type === 'Buffer' && obj.data) || obj instanceof Uint8Array || obj instanceof ArrayBuffer || ArrayBuffer.isView(obj) || (Array.isArray(obj) && obj.length > 0 && typeof obj[0] === 'number');
+    if (isBufferLike) {
+      return ensureBuffer(obj);
+    }
+  } catch {
+    // Not a buffer-like object, continue processing
+  }
+  if (!Array.isArray(obj)) {
+    const keys = Object.keys(obj);
+    const hasNumericKeys = keys.length > 0 && keys.every((key) => !isNaN(parseInt(key)));
+    if (hasNumericKeys && !obj.type) {
+      try {
+        const maxIndex = Math.max(...keys.map((k) => parseInt(k)));
+        const arr = new Array(maxIndex + 1);
+        for (const key in obj) {
+          arr[parseInt(key)] = obj[key];
+        }
+        return ensureBuffer(arr);
+      } catch {
+        // Failed to convert, continue as object
+      }
+    }
+  }
+  if (Array.isArray(obj)) {
+    return obj.map((item) => rehydrateBuffer(item));
+  }
+  if (obj.data && !obj.type) {
+    try {
+      return ensureBuffer(obj.data);
+    } catch {
+      // Not a valid buffer, continue
+    }
+  }
+  if (obj.buffer && !obj.type) {
+    try {
+      return ensureBuffer(obj.buffer);
+    } catch {
+      // Not a valid buffer, continue
+    }
+  }
+  const cloned = {};
+  for (const key in obj) {
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
+      cloned[key] = rehydrateBuffer(obj[key]);
+    }
+  }
+  return cloned;
+}
 export function cleanYoutubeUrl(url) {
   // prettier-ignore
   return url.replace(/(&|\?)list=[^&]*/i, '$1').replace(/(&|\?)index=[^&]*/i, '$1').replace(/[&?]$/, '');

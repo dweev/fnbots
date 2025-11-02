@@ -14,9 +14,9 @@ import { store } from '../database/index.js';
 import { tmpDir } from '../src/lib/tempManager.js';
 import { runJob } from '../src/worker/worker_manager.js';
 import { fileTypeFromBuffer, fileTypeFromFile } from 'file-type';
-import { randomByte, getBuffer, getSizeMedia } from '../src/function/index.js';
 import { convert as convertNative, fetch as nativeFetch } from '../src/addon/bridge.js';
 import { MediaValidationError, MediaProcessingError, MediaSizeError } from '../src/lib/errorManager.js';
+import { randomByte, getSizeMedia, handleBufferInput, validateAndConvertBuffer } from '../src/function/index.js';
 import { jidNormalizedUser, generateWAMessage, generateWAMessageFromContent, downloadContentFromMessage, jidDecode, jidEncode, getBinaryNodeChildString, getBinaryNodeChildren, getBinaryNodeChild, proto, WAMessageAddressingMode, isLidUser, isPnUser } from 'baileys';
 
 const createQuotedOptions = (quoted, options = {}) => {
@@ -40,50 +40,6 @@ const detectMimeType = async (data, headers = {}) => {
     mime = fileType?.mime || 'application/octet-stream';
   }
   return mime;
-};
-const handleBufferInput = async (input) => {
-  if (Buffer.isBuffer(input)) {
-    return input;
-  }
-  if (typeof input === 'string') {
-    if (/^data:.*?\/.*?;base64,/i.test(input)) {
-      return Buffer.from(input.split(',')[1], 'base64');
-    }
-    if (/^https?:\/\//.test(input)) {
-      return await getBuffer(input);
-    }
-    try {
-      const stats = await fs.stat(input);
-      if (stats.isFile()) {
-        return await fs.readFile(input);
-      }
-    } catch {
-      // dont do anything if it fails
-    }
-    try {
-      const buffer = Buffer.from(input, 'base64');
-      if (buffer.toString('base64') === input) {
-        return buffer;
-      }
-    } catch {
-      // dont do anything if it fails
-    }
-  }
-  if (input instanceof Uint8Array || input instanceof ArrayBuffer || ArrayBuffer.isView(input)) {
-    return Buffer.from(input);
-  }
-  if (Array.isArray(input) && typeof input[0] === 'number') {
-    return Buffer.from(input);
-  }
-  if (typeof input === 'object' && input !== null) {
-    if (input.data) {
-      return Buffer.from(input.data);
-    }
-    if (input.buffer) {
-      return Buffer.from(input.buffer);
-    }
-  }
-  throw new Error(`Tipe input tidak didukung untuk diubah menjadi Buffer: ${typeof input}`);
 };
 const createMediaMessage = (mime, data, caption, options = {}) => {
   if (mime.includes('gif')) {
@@ -265,35 +221,8 @@ export async function clientBot(fn, dbSettings) {
     await fn.sendMessage(jid, { contacts: { displayName: displayName, contacts: [{ vcard }] } }, createQuotedOptions(quoted));
   };
   fn.sendMediaFromBuffer = async (jid, mime, dataBuffer, caption, quoted, options = {}) => {
-    let imageBuffer;
     try {
-      if (typeof dataBuffer === 'string') {
-        if (dataBuffer.startsWith('data:')) {
-          const base64Data = dataBuffer.split(';base64,').pop();
-          imageBuffer = Buffer.from(base64Data, 'base64');
-        } else {
-          imageBuffer = Buffer.from(dataBuffer, 'base64');
-        }
-      } else if (Buffer.isBuffer(dataBuffer)) {
-        imageBuffer = dataBuffer;
-      } else if (dataBuffer instanceof Uint8Array || dataBuffer instanceof ArrayBuffer || ArrayBuffer.isView(dataBuffer)) {
-        imageBuffer = Buffer.from(dataBuffer);
-      } else if (Array.isArray(dataBuffer)) {
-        imageBuffer = Buffer.from(dataBuffer);
-      } else if (typeof dataBuffer === 'object' && dataBuffer !== null) {
-        if (dataBuffer.data) {
-          imageBuffer = Buffer.from(dataBuffer.data);
-        } else if (dataBuffer.buffer) {
-          imageBuffer = Buffer.from(dataBuffer.buffer);
-        } else {
-          throw new Error('Object tidak memiliki property data atau buffer yang valid');
-        }
-      } else {
-        throw new Error(`Tipe input tidak didukung: ${typeof dataBuffer}`);
-      }
-      if (!imageBuffer || imageBuffer.length === 0) {
-        throw new Error('Buffer kosong atau tidak valid');
-      }
+      const imageBuffer = validateAndConvertBuffer(dataBuffer, 'sendMediaFromBuffer');
       if (!mime) {
         return await fn.sendMessage(
           jid,
@@ -310,27 +239,6 @@ export async function clientBot(fn, dbSettings) {
       const messageContent = createMediaMessage(mime, imageBuffer, caption, options);
       return await fn.sendMessage(jid, messageContent, createQuotedOptions(quoted, options));
     } catch (error) {
-      const errorContext = {
-        function: 'sendMediaFromBuffer',
-        jid,
-        mime,
-        error: {
-          message: error.message,
-          stack: error.stack
-        },
-        inputAnalysis: {
-          type: typeof dataBuffer,
-          isArray: Array.isArray(dataBuffer),
-          isBuffer: Buffer.isBuffer(dataBuffer),
-          isUint8Array: dataBuffer instanceof Uint8Array,
-          isArrayBuffer: dataBuffer instanceof ArrayBuffer,
-          isArrayBufferView: ArrayBuffer.isView(dataBuffer),
-          hasLength: dataBuffer?.length,
-          length: dataBuffer?.length,
-          constructorName: dataBuffer?.constructor?.name
-        }
-      };
-      log(errorContext, true);
       throw new Error(`Gagal memproses media: ${error.message}`);
     }
   };

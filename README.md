@@ -474,17 +474,20 @@ Scan the QR code that appears in your terminal.
 
 For production environments, using PM2 is highly recommended for process management and auto-restarts. The `install.sh` script already installs it globally.
 
-**Important:** PM2 runs the bot in the **background**, so it cannot ask for terminal input. You must log in *before* starting PM2.
+**Important:** PM2 runs the bot in the **background**, so it cannot ask for terminal input. You must log in _before_ starting PM2.
 
 1.  **Log In First (One Time Only)**
     Run the `pair` script in the foreground to log in and create your session files.
+
     ```bash
     npm run pair
     ```
-    *(Enter your phone number and pairing code as prompted)*
+
+    _(Enter your phone number and pairing code as prompted)_
 
 2.  **Start Production Server**
     Once you have successfully logged in, stop the `npm run pair` process (Ctrl+C) and start the bot with PM2:
+
     ```bash
     pm2 start ecosystem.config.cjs
     ```

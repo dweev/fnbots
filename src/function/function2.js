@@ -20,6 +20,7 @@ import { Downloader } from '@tobyg74/tiktok-api-dl';
 import { delay, extractMessageContent } from 'baileys';
 import { fetch as nativeFetch, sticker as stickerNative, addExif as addExifNative, parseArgsToFetchOptions, getHeader } from '../addon/bridge.js';
 
+//prettier-ignore
 const ffmpegFilters = new Map([
   ['8d',         { flag: '-af',             filter: 'apulsator=hz=0.3'                                                                          }],
   ['alien',      { flag: '-af',             filter: 'asetrate=44100*0.5, atempo=2'                                                              }],

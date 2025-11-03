@@ -141,7 +141,7 @@ function validateText(text, maxLength = 8) {
   return upperText;
 }
 
-export async function groupImage(username, groupname, welcometext, profileImagePath) {
+export async function groupImage({ username, groupname, welcometext, profileImagePath }) {
   const width = 600;
   const height = 300;
   const canvas = createCanvas(width, height);

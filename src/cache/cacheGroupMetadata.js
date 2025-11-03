@@ -47,7 +47,7 @@ class GroupCache {
         pipeline.set(`${REDIS_PREFIX.HOT_GROUP}${groupId}`, '1', 'EX', ttl);
       }
       await pipeline.exec();
-      log(`Group cached: ${groupId}${this.isHotGroup(groupId) ? ' (hot)' : ''}`);
+      log(`Group cached: ${groupId} ${this.isHotGroup(groupId) ? ' (hot)' : ''}`);
       return true;
     } catch (error) {
       log(`Add group to cache error: ${error.message}`, true);

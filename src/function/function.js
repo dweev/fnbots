@@ -26,6 +26,7 @@ let _checkVIP = false;
 let _checkPremium = false;
 let _checkWhitelist = false;
 
+const recentJoiners = new Map();
 const wil_cache = {
   provinces: null,
   regencies: null,
@@ -43,7 +44,29 @@ const fuseOptions = {
 function isJID(str) {
   return str.includes('@') && (str.endsWith('@s.whatsapp.net') || str.endsWith('@lid'));
 }
+function isRecentJoiner(groupId, userId) {
+  return recentJoiners.get(groupId)?.has(userId) || false;
+}
 
+export function trackRecentJoin(groupId, userId) {
+  if (!recentJoiners.has(groupId)) {
+    recentJoiners.set(groupId, new Set());
+  }
+  recentJoiners.get(groupId).add(userId);
+  setTimeout(
+    () => {
+      const groupSet = recentJoiners.get(groupId);
+      if (groupSet) {
+        groupSet.delete(userId);
+        if (groupSet.size === 0) {
+          recentJoiners.delete(groupId);
+        }
+      }
+    },
+    2 * 60 * 1000
+  );
+  log(`Tracked recent join: ${userId} in ${groupId}`);
+}
 export async function initializeFuse() {
   allCmds = Array.from(pluginCache.commands.keys());
   fuse = new Fuse(allCmds, fuseOptions);
@@ -154,16 +177,56 @@ export async function isUserVerified(m, dbSettings, store, fn, sReply, hakIstime
       log('Verification skipped: groupIdentity not set in dbSettings.');
       return true;
     }
-    const metadata = await store.getGroupMetadata(verificationGroupId);
+    if (isRecentJoiner(verificationGroupId, m.sender)) {
+      log(`${m.sender} is recent joiner, bypassing cache for verification...`);
+      try {
+        const freshMetadata = await fn.groupMetadata(verificationGroupId);
+        if (freshMetadata) {
+          store.updateGroupMetadata(verificationGroupId, freshMetadata).catch((err) => {
+            log(`Background cache update failed: ${err.message}`, true);
+          });
+          const isParticipant = freshMetadata.participants.some((p) => {
+            const participantId = p.phoneNumber || p.id;
+            return participantId === m.sender || participantId.split('@')[0] === m.sender.split('@')[0];
+          });
+          if (isParticipant) {
+            log(`Recent joiner ${m.sender} verified successfully!`);
+            const groupSet = recentJoiners.get(verificationGroupId);
+            if (groupSet) groupSet.delete(m.sender);
+            return true;
+          }
+        }
+      } catch (error) {
+        log(`Force refresh failed for recent joiner: ${error.message}`, true);
+      }
+    }
+    let metadata = await store.getGroupMetadata(verificationGroupId);
     if (!metadata) {
-      log(`Verification skipped: Verification group ${verificationGroupId} not found in store.`);
+      log(`Cache miss for verification group, attempting direct fetch...`);
+      try {
+        metadata = await fn.groupMetadata(verificationGroupId);
+        if (metadata) {
+          await store.updateGroupMetadata(verificationGroupId, metadata);
+        }
+      } catch (error) {
+        log(`Direct fetch failed: ${error.message}`, true);
+      }
+    }
+    if (!metadata) {
+      log(`Verification skipped: Verification group ${verificationGroupId} not found.`);
       return true;
     }
-    const isParticipant = metadata.participants.some((p) => p.id === m.sender);
+    const isParticipant = metadata.participants.some((p) => {
+      const participantId = p.phoneNumber || p.id;
+      return participantId === m.sender || participantId.split('@')[0] === m.sender.split('@')[0];
+    });
     if (isParticipant) {
       return true;
     }
-    const botParticipant = metadata.participants.find((p) => p.id === m.botnumber);
+    const botParticipant = metadata.participants.find((p) => {
+      const participantId = p.phoneNumber || p.id;
+      return participantId === m.botnumber;
+    });
     if (botParticipant && botParticipant.admin) {
       const inviteCode = await fn.groupInviteCode(verificationGroupId);
       await sReply(`Untuk menggunakan bot, Anda harus bergabung ke grup kami:\n\nhttps://chat.whatsapp.com/${inviteCode}`);

@@ -21,9 +21,10 @@ import { rollDice, generateUlarTanggaImage, runBotUlarTanggaTurnV2, runBotUlarTa
 import { formatHandSimple, getHandDetails, anteBonusMultipliers, createDeck, shuffleDeck, formatKartu, calculateScore, runBotTurn41, calculateSamgongValue, runBotSamgongTurn } from './casino.js';
 import { PLAYER_BLACK, PLAYER_WHITE, fileLabels, rankLabels, parseOthelloMove, makeOthelloMove, getValidOthelloMoves, calculateOthelloScore, generateOthelloBoardImage, createOthelloBoard } from './othello.js';
 import { makeCircleSticker, parseImageSelection, cleanYoutubeUrl, chunkArray, fetchTikTokData, buildBaseCaption, sendImages, webpFormatter, cleanFormattingText, formatTimestampToHourMinute, fetchJson, jadwalSholat, getZodiak, normalizeResult, normalizeMentionsInBody, unwrapMessage, handleBufferInput, ensureBuffer, isBufferEmpty, validateAndConvertBuffer, rehydrateBuffer, audioChanger, createNativeSticker, fetchMedia, imageGenerator, groupImage } from './function2.js';
-import { parseNIK, speedtest, getCommonGroups, getServerIp, formatNumber, saveFile, getTxt, getSerial, expiredVIPcheck, expiredPremiumCheck, sendAndCleanupFile, getBuffer, mycmd, reviver, replacer, msgs, randomByte, arrayRemove, ulang, list, firstUpperCase, formatTimeAgo, formatCommandList, formatDurationMessage, formatDuration, waktu, color, bytesToSize, parseSelector, archimed, randomChoice, getSizeMedia, safeStringify, checkDepth, isUserVerified, checkCommandAccess, textMatch2, textMatch1, initializeFuse, parseCheatAmount, expiredWhitelistCheck } from './function.js';
+import { parseNIK, speedtest, getCommonGroups, getServerIp, formatNumber, saveFile, getTxt, getSerial, expiredVIPcheck, expiredPremiumCheck, sendAndCleanupFile, getBuffer, mycmd, reviver, replacer, msgs, randomByte, arrayRemove, ulang, list, firstUpperCase, formatTimeAgo, formatCommandList, formatDurationMessage, formatDuration, waktu, color, bytesToSize, parseSelector, archimed, randomChoice, getSizeMedia, safeStringify, checkDepth, isUserVerified, checkCommandAccess, textMatch2, textMatch1, initializeFuse, parseCheatAmount, expiredWhitelistCheck, trackRecentJoin } from './function.js';
 
 export {
+  trackRecentJoin,
   expiredWhitelistCheck,
   groupImage,
   imageGenerator,

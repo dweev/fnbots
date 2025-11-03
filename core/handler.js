@@ -19,7 +19,7 @@ import { restartManager } from '../src/lib/restartManager.js';
 import { performanceManager } from '../src/lib/performanceManager.js';
 import { User, Group, Settings, OTPSession, Media, DatabaseBot } from '../database/index.js';
 import { handleAntiDeleted, handleAutoJoin, handleAudioChanger, handleAutoSticker, handleChatbot, handleAutoDownload, handleGameBotResponse } from '../src/handler/index.js';
-import { color, msgs, mycmd, safeStringify, sendAndCleanupFile, waktu, checkCommandAccess, isUserVerified, textMatch1, textMatch2, expiredVIPcheck, expiredPremiumCheck, getSerial, getTxt } from '../src/function/index.js';
+import { color, msgs, mycmd, safeStringify, sendAndCleanupFile, waktu, checkCommandAccess, isUserVerified, textMatch1, textMatch2, expiredVIPcheck, expiredPremiumCheck, getSerial, getTxt, expiredWhitelistCheck  } from '../src/function/index.js';
 
 const exec = util.promisify(cp_exec);
 const localFilePrefix = config.localPrefix;
@@ -65,8 +65,9 @@ export const updateMyGroup = (newGroupList, newMemberlist) => {
 };
 export async function arfine(fn, m, { store, dbSettings, ownerNumber, version, isSuggestion = false }) {
   suggested = isSuggestion;
-  await expiredPremiumCheck(fn, ownerNumber, store);
   await expiredVIPcheck(fn, ownerNumber, store);
+  await expiredPremiumCheck(fn, ownerNumber, store);
+  await expiredWhitelistCheck(fn, ownerNumber, store);
 
   const serial = await getSerial(m, dbSettings);
   const botNumber = m.botnumber;

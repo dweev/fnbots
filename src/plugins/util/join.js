@@ -6,8 +6,6 @@
  */
 // ─── Info ────────────────────────────────
 
-import { Whitelist } from '../../../database/index.js';
-
 export const command = {
   name: 'join',
   category: 'util',
@@ -27,9 +25,6 @@ export const command = {
         if (!restrict) {
           const res = await store.getGroupMetadata(id);
           await fn.sendPesan(id, `Halo warga grup *${subject}*!\nTerima kasih sudah mengundang ${dbSettings.botname}.`, { ephemeralExpiration: res.ephemeralDuration ?? 0 });
-        }
-        if (isSadmin || isMaster) {
-          await Whitelist.addToWhitelist(id, 'group');
         }
         await sReply(`*BERHASIL BERGABUNG!*\n\nNama Grup: ${subject}\nMember: ${participants.length}\nID: ${id}`);
       }

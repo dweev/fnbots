@@ -16,14 +16,15 @@ import config from '../../config.js';
 import speedTest from 'speedtest-net';
 import dayjs from '../utils/dayjs.js';
 import { tmpDir } from '../lib/tempManager.js';
-import { User } from '../../database/index.js';
 import { pluginCache } from '../lib/plugins.js';
+import { User, Whitelist } from '../../database/index.js';
 import { fetch as nativeFetch } from '../addon/bridge.js';
 
 let fuse;
 let allCmds = [];
 let _checkVIP = false;
 let _checkPremium = false;
+let _checkWhitelist = false;
 
 const wil_cache = {
   provinces: null,
@@ -653,6 +654,74 @@ export async function expiredVIPcheck(fn, ownerNumber, store) {
       }
     } catch (error) {
       log(`Error in expiredVIPcheck: ${error.message}`, true);
+    }
+  }, config.performance.defaultInterval);
+}
+export async function expiredWhitelistCheck(fn, ownerNumber, store) {
+  if (_checkWhitelist) return;
+  _checkWhitelist = true;
+  setInterval(async () => {
+    try {
+      const groupsNearExpiry = await Whitelist.getGroupsNearExpiry();
+      for (const group of groupsNearExpiry) {
+        try {
+          const warningSet = await Whitelist.setExpiredWarning(group.groupId);
+          if (!warningSet) {
+            continue;
+          }
+          const now = dayjs();
+          const expiryDate = dayjs(group.expiredAt);
+          const daysRemaining = Math.ceil(expiryDate.diff(now, 'day', true));
+          const formattedDate = expiryDate.format('DD MMMM YYYY');
+          let groupName = 'Unknown Group';
+          try {
+            const metadata = await store.getGroupMetadata(group.groupId);
+            groupName = metadata?.subject || groupName;
+          } catch (err) {
+            log(`Failed to get group metadata for ${group.groupId}: ${err.message}`, true);
+          }
+          const ownerNotification = `*Whitelist Expiry Warning*\n\nGroup: ${groupName}\nID: ${group.groupId}\nSisa waktu: ${daysRemaining} hari\nExpired: ${formattedDate}`;
+          try {
+            const ownerExpiration = await fn.getEphemeralExpiration(ownerNumber[0]);
+            await fn.sendPesan(ownerNumber[0], ownerNotification, {
+              ephemeralExpiration: ownerExpiration
+            });
+          } catch (err) {
+            log(`Failed to send expiry warning to owner for group ${group.groupId}: ${err.message}`, true);
+          }
+        } catch (error) {
+          log(`Error processing near expiry for group ${group.groupId}: ${error.message}`, true);
+        }
+      }
+      const expiredGroups = await Whitelist.getExpiredGroups();
+      for (const group of expiredGroups) {
+        try {
+          let groupName = 'Unknown Group';
+          try {
+            const metadata = await store.getGroupMetadata(group.groupId);
+            groupName = metadata?.subject || groupName;
+          } catch (err) {
+            log(`Failed to get group metadata for ${group.groupId}: ${err.message}`, true);
+          }
+          const notificationText = `*Whitelist Expired*\n\nGroup: ${groupName}\nID: ${group.groupId}\nWhitelist telah berakhir dan dihapus.`;
+          try {
+            const messages = await store.getMessages(ownerNumber[0], 1);
+            const latestMessageFromOwner = messages && messages.length > 0 ? messages[0] : null;
+            const expiration = await fn.getEphemeralExpiration(ownerNumber[0]);
+            await fn.sendPesan(ownerNumber[0], notificationText, {
+              quoted: latestMessageFromOwner || undefined,
+              ephemeralExpiration: expiration
+            });
+          } catch (err) {
+            log(`Failed to send expired notification to owner for group ${group.groupId}: ${err.message}`, true);
+          }
+          await Whitelist.removeFromWhitelist(group.groupId);
+        } catch (error) {
+          log(`Error processing expired whitelist for group ${group.groupId}: ${error.message}`, true);
+        }
+      }
+    } catch (error) {
+      log(`Error in expiredWhitelistCheck: ${error.message}`, true);
     }
   }, config.performance.defaultInterval);
 }

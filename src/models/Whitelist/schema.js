@@ -10,35 +10,50 @@ import mongoose from 'mongoose';
 
 const whitelistSchema = new mongoose.Schema(
   {
-    type: {
-      type: String,
-      enum: ['group', 'user'],
-      required: true,
-      index: true
-    },
-    targetId: {
+    groupId: {
       type: String,
       required: true,
+      unique: true,
+      index: true,
       validate: {
         validator: function (v) {
-          if (this.type === 'group') return v.endsWith('@g.us');
-          if (this.type === 'user') return v.endsWith('@s.whatsapp.net');
-          return false;
+          return v.endsWith('@g.us');
         },
-        message: 'Target ID must match type (group: @g.us, user: @s.whatsapp.net)'
+        message: 'Group ID must end with @g.us'
       }
+    },
+    expiredAt: {
+      type: Date,
+      default: null
+    },
+    warnedExpired: {
+      type: Boolean,
+      default: false
     }
   },
   {
-    timestamps: true
+    timestamps: true,
+    toJSON: {
+      virtuals: true
+    },
+    toObject: {
+      virtuals: true
+    }
   }
 );
 
-whitelistSchema.index({ type: 1, targetId: 1 }, { unique: true });
-
 whitelistSchema.pre('save', function (next) {
-  this.targetId = this.targetId.toLowerCase();
+  this.groupId = this.groupId.toLowerCase();
   next();
+});
+
+whitelistSchema.virtual('isActive').get(function () {
+  if (!this.expiredAt) return true;
+  return this.expiredAt > new Date();
+});
+
+whitelistSchema.virtual('isPermanent').get(function () {
+  return this.expiredAt === null;
 });
 
 export default whitelistSchema;

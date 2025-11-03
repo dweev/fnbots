@@ -7,49 +7,82 @@
 import log from '../../../lib/logger.js';
 
 export const statics = {
-  async isWhitelisted(targetId, type = null) {
-    if (!targetId) return false;
-    if (!type) {
-      type = targetId.endsWith('@g.us') ? 'group' : 'user';
-    }
+  async isWhitelisted(groupId) {
+    if (!groupId || !groupId.endsWith('@g.us')) return false;
     try {
-      const result = await this.exists({ type, targetId: targetId.toLowerCase() });
-      return !!result;
+      const whitelist = await this.findOne({ groupId: groupId.toLowerCase() });
+      if (!whitelist) return false;
+      if (!whitelist.expiredAt) return true;
+      return whitelist.expiredAt > new Date();
     } catch (error) {
       log(`Error in isWhitelisted: ${error}`, true);
       return false;
     }
   },
-  async addToWhitelist(targetId, type = null) {
-    if (!targetId) return null;
-    if (!type) {
-      type = targetId.endsWith('@g.us') ? 'group' : 'user';
-    }
-    const filter = { type, targetId: targetId.toLowerCase() };
-    const update = { $setOnInsert: { type, targetId: targetId.toLowerCase() } };
-    const options = { upsert: true, new: true };
+  async addToWhitelist(groupId, durationMs = null) {
+    if (!groupId || !groupId.endsWith('@g.us')) return null;
     try {
-      return await this.findOneAndUpdate(filter, update, options);
+      const existing = await this.findOne({ groupId: groupId.toLowerCase() });
+      if (existing) {
+        existing.warnedExpired = false;
+        if (durationMs) {
+          const currentExpiry = existing.expiredAt;
+          const newExpiry = (currentExpiry && currentExpiry > new Date() ? currentExpiry.getTime() : Date.now()) + durationMs;
+          existing.expiredAt = new Date(newExpiry);
+        } else {
+          existing.expiredAt = null;
+        }
+        return await existing.save();
+      }
+      const expiredAt = durationMs ? new Date(Date.now() + durationMs) : null;
+      return await this.create({
+        groupId: groupId.toLowerCase(),
+        expiredAt,
+        warnedExpired: false
+      });
     } catch (error) {
       log(`Error in addToWhitelist: ${error}`, true);
       return null;
     }
   },
-  removeFromWhitelist(targetId, type = null) {
-    if (!targetId) return null;
-    if (!type) {
-      type = targetId.endsWith('@g.us') ? 'group' : 'user';
-    }
-    return this.deleteOne({ type, targetId: targetId.toLowerCase() });
+  removeFromWhitelist(groupId) {
+    if (!groupId || !groupId.endsWith('@g.us')) return null;
+    return this.deleteOne({ groupId: groupId.toLowerCase() });
   },
   getWhitelistedGroups() {
-    return this.find({ type: 'group' });
+    return this.find({});
   },
-  getWhitelistedUsers() {
-    return this.find({ type: 'user' });
+  getActiveWhitelistedGroups() {
+    return this.find({
+      $or: [{ expiredAt: null }, { expiredAt: { $gt: new Date() } }]
+    });
   },
-  clearAll(type = null) {
-    const filter = type ? { type } : {};
-    return this.deleteMany(filter);
+  getExpiredGroups() {
+    return this.find({
+      expiredAt: { $ne: null, $lte: new Date() }
+    });
+  },
+  getGroupsNearExpiry() {
+    const now = new Date();
+    const sevenDaysLater = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    return this.find({
+      expiredAt: {
+        $ne: null,
+        $gt: now,
+        $lte: sevenDaysLater
+      },
+      warnedExpired: false
+    });
+  },
+  async setExpiredWarning(groupId) {
+    try {
+      const result = await this.findOneAndUpdate({ groupId: groupId.toLowerCase(), warnedExpired: false }, { $set: { warnedExpired: true } }, { new: true });
+      return result !== null;
+    } catch (error) {
+      throw new Error(`Failed to set warning for ${groupId}: ${error.message}`);
+    }
+  },
+  clearAll() {
+    return this.deleteMany({});
   }
 };

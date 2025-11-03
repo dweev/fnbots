@@ -141,7 +141,7 @@ class UnifiedCacheManager {
     if (!this.whitelistCache.has(groupId)) {
       try {
         const { Whitelist } = await import('../../database/index.js');
-        const isWhitelisted = await Whitelist.isWhitelisted(groupId, 'group');
+        const isWhitelisted = await Whitelist.isWhitelisted(groupId);
         this.whitelistCache.set(groupId, isWhitelisted);
         return isWhitelisted;
       } catch (error) {

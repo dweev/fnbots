@@ -105,9 +105,9 @@ export default async function groupParticipantsUpdate({ id, participants, action
           log(`Bot dikeluarkan dari grup ${id}. Membersihkan metadata...`);
           await invalidateMetadataCache(id);
           await store.deleteGroup(id);
-          const isWhitelisted = await Whitelist.isWhitelisted(id, 'group');
+          const isWhitelisted = await Whitelist.isWhitelisted(id);
           if (isWhitelisted) {
-            await Whitelist.removeFromWhitelist(id, 'group');
+            await Whitelist.removeFromWhitelist(id);
             log(`Grup ${id} dihapus dari whitelist karena bot dikeluarkan.`);
           }
           return;

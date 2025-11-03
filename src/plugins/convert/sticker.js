@@ -13,7 +13,7 @@ import { createNativeSticker } from '../../function/index.js';
 export const command = {
   name: 'sticker',
   category: 'convert',
-  description: 'Membuat stiker dari gambar atau video (maks 10 detik). Bisa juga dari URL.\nPenggunaan:\n- .s (reply media)\n- .s --crop (dengan crop)\n- .s nama|author\n- .s url --crop\n- .s nama|author --crop',
+  description: 'Membuat stiker dari gambar atau video (maks 10 detik). Bisa juga dari URL.\nPenggunaan:\n- .s (reply media)\n- .s --crop (dengan crop)\n- .s --rounded 60 (custom rounded corner)\n- .s nama|author\n- .s url --crop\n- .s nama|author --crop --rounded 80',
   aliases: ['s', 'stiker', 'wm'],
   isCommandWithoutPayment: true,
   execute: async ({ fn, m, toId, dbSettings, arg, args, quotedMsg, sReply }) => {
@@ -24,12 +24,21 @@ export const command = {
     };
     let buffer;
     let hasCustomWatermark = false;
+    let cornerRadius = 0;
     const hasCropFlag = args.some((a) => a === '--crop');
     if (hasCropFlag) {
       pack.crop = true;
       args = args.filter((a) => a !== '--crop');
-      arg = args.join(' ').trim();
     }
+    const radiusIndex = args.findIndex((a) => a === '--rounded');
+    if (radiusIndex !== -1 && args[radiusIndex + 1]) {
+      const radiusValue = parseInt(args[radiusIndex + 1]);
+      if (!isNaN(radiusValue) && radiusValue >= 0 && radiusValue <= 256) {
+        cornerRadius = radiusValue;
+      }
+      args.splice(radiusIndex, 2);
+    }
+    arg = args.join(' ').trim();
     const isURL = args.length > 0 && /^https?:\/\/.+/i.test(args[0]);
     if (isURL) {
       try {
@@ -67,9 +76,10 @@ export const command = {
           "Contoh penggunaan:\n" +
           "- .s (reply media)\n" +
           "- .s --crop\n" +
+          "- .s --rounded 60\n" +
           "- .s nama|author\n" +
           "- .s https://url.com/image.jpg\n" +
-          "- .s nama|author --crop"
+          "- .s nama|author --crop --rounded 80"
         );
       }
       const isMedia = !!(targetMsg.imageMessage || targetMsg.videoMessage || targetMsg.stickerMessage);
@@ -86,6 +96,7 @@ export const command = {
       packName: pack.packName,
       authorName: pack.authorName,
       crop: pack.crop,
+      cornerRadius: cornerRadius,
       forceUpdateExif: hasCustomWatermark
     });
     if (!Buffer.isBuffer(stickerBuffer) || stickerBuffer.length === 0) return await sReply('Worker gagal menghasilkan buffer stiker yang valid.');

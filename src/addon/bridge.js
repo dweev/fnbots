@@ -57,6 +57,7 @@ export function sticker(buffer, options = {}) {
     throw new Error('sticker() input harus Buffer');
   }
   const opts = {
+    cornerRadius: options.cornerRadius ?? 40,
     crop: options.crop ?? false,
     quality: options.quality ?? 80,
     fps: options.fps ?? 15,

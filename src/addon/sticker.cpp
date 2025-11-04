@@ -182,6 +182,16 @@ static void FreeBufferCtx(OpenResult& R){
   } 
 }
 
+static bool IsValidMediaBuffer(const uint8_t* data, size_t len) {
+  if (!data || len < 12) return false;
+  bool isJPEG = (len >= 2 && data[0] == 0xFF && data[1] == 0xD8);
+  bool isPNG = (len >= 8 && memcmp(data, "\x89PNG\r\n\x1a\n", 8) == 0);
+  bool isMP4 = (len >= 12 && memcmp(data + 4, "ftyp", 4) == 0);
+  bool isWebP = IsWebP(data, len);
+  bool isGIF = (len >= 6 && memcmp(data, "GIF", 3) == 0);
+  return isJPEG || isPNG || isMP4 || isWebP || isGIF;
+}
+
 static OpenResult OpenFromBuffer(const uint8_t* buf, size_t len){
   OpenResult R;
   
@@ -920,6 +930,13 @@ Napi::Value MakeSticker(const Napi::CallbackInfo& info){
     av_log_set_level(AV_LOG_QUIET);
     
     auto input = info[0].As<Napi::Buffer<uint8_t>>();
+    const uint8_t* data = input.Data();
+    size_t len = input.Length();
+
+    if (!IsValidMediaBuffer(data, len)) {
+      Napi::Error::New(env, "Invalid or corrupted media buffer").ThrowAsJavaScriptException();
+      return env.Null();
+    }
     
     Napi::Object opt = (info.Length() >= 2 && info[1].IsObject()) ? 
                         info[1].As<Napi::Object>() : Napi::Object::New(env);
@@ -959,9 +976,6 @@ Napi::Value MakeSticker(const Napi::CallbackInfo& info){
         }
       }
     }
-
-    const uint8_t* data = input.Data();
-    size_t len = input.Length();
 
     if (IsWebP(data, len)) {
       std::vector<uint8_t> in(data, data + len);

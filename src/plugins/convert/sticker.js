@@ -6,6 +6,7 @@
  */
 // ─── Info ────────────────────────────────────
 
+import sharp from 'sharp';
 import config from '../../../config.js';
 import { fetch as nativeFetch } from '../../addon/bridge.js';
 import { createNativeSticker } from '../../function/index.js';
@@ -91,15 +92,34 @@ export const command = {
       }
     }
     if (!buffer || buffer.length < 100) return await sReply('Ukuran media tidak valid atau gagal diunduh.');
-    const stickerBuffer = await createNativeSticker({
-      mediaBuffer: buffer,
-      packName: pack.packName,
-      authorName: pack.authorName,
-      crop: pack.crop,
-      cornerRadius: cornerRadius,
-      forceUpdateExif: hasCustomWatermark
-    });
-    if (!Buffer.isBuffer(stickerBuffer) || stickerBuffer.length === 0) return await sReply('Worker gagal menghasilkan buffer stiker yang valid.');
+    const isFromAndroid = m.key?.id?.startsWith('3EB') || false;
+    let stickerBuffer;
+    try {
+      stickerBuffer = await createNativeSticker({
+        mediaBuffer: buffer,
+        packName: pack.packName,
+        authorName: pack.authorName,
+        crop: pack.crop,
+        cornerRadius: cornerRadius,
+        forceUpdateExif: hasCustomWatermark
+      });
+    } catch {
+      if (isFromAndroid) {
+        // prettier-ignore
+        const pngBuffer = await sharp(buffer).png().toBuffer();
+        stickerBuffer = await createNativeSticker({
+          mediaBuffer: pngBuffer,
+          packName: pack.packName,
+          authorName: pack.authorName,
+          crop: pack.crop,
+          cornerRadius: cornerRadius,
+          forceUpdateExif: hasCustomWatermark
+        });
+      } else {
+        return await sReply('Gagal membuat stiker. Coba dengan media yang lebih kecil.');
+      }
+    }
+    if (!Buffer.isBuffer(stickerBuffer) || stickerBuffer.length === 0) return await sReply('Gagal menghasilkan stiker yang valid.');
     await fn.sendMessage(toId, { sticker: stickerBuffer }, { quoted: m, ephemeralExpiration: m.expiration ?? 0 });
   }
 };

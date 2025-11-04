@@ -66,10 +66,43 @@ export function sticker(buffer, options = {}) {
     authorName: options.authorName || dbSettings.packAuthor,
     emojis: options.emojis || []
   };
-  if (isWebP(buffer)) {
-    return stickerNative.addExif(buffer, opts);
+  try {
+    const { execSync } = require('child_process');
+    execSync('find /tmp -name "sticker*-enc" -mmin +5 -delete 2>/dev/null || true', { timeout: 2000 });
+  } catch {
+    // Ignore cleanup errors
   }
-  return stickerNative.sticker(buffer, opts);
+  try {
+    let result;
+    if (isWebP(buffer)) {
+      result = stickerNative.addExif(buffer, opts);
+    } else {
+      const startTime = Date.now();
+      result = stickerNative.sticker(buffer, opts);
+      const duration = Date.now() - startTime;
+      if (duration > 10000) {
+        console.warn(`[Sticker] Slow processing: ${duration}ms`);
+      }
+    }
+    if (!Buffer.isBuffer(result) || result.length === 0) {
+      throw new Error('Native sticker returned invalid result');
+    }
+    return result;
+  } catch (error) {
+    try {
+      const { execSync } = require('child_process');
+      execSync('rm -f /tmp/sticker*-enc 2>/dev/null || true', { timeout: 1000 });
+    } catch {
+      // Ignore cleanup errors
+    }
+    const errorMsg = error.message || String(error);
+    console.error('[Sticker Native Error]', {
+      message: errorMsg,
+      bufferSize: buffer.length,
+      options: opts
+    });
+    throw new Error(`Sticker processing failed: ${errorMsg}`);
+  }
 }
 
 export function isAnimated(buffer) {

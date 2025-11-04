@@ -140,6 +140,25 @@ function validateText(text, maxLength = 8) {
   }
   return upperText;
 }
+async function sanitizeMediaBuffer(buffer) {
+  const isImage = buffer[0] === 0xff && buffer[1] === 0xd8;
+  const isVideo = buffer.slice(4, 8).toString() === 'ftyp';
+  const isPNG = buffer.slice(0, 8).toString('hex') === '89504e470d0a1a0a';
+  if (!isImage && !isVideo && !isPNG && !isWebP(buffer)) {
+    throw new Error('Unsupported media format');
+  }
+  if (isImage || isPNG) {
+    try {
+      // prettier-ignore
+      const processed = await sharp(buffer).rotate().removeAlpha().toFormat('jpeg', { quality: 90 }).toBuffer();
+      return processed;
+    } catch (sharpErr) {
+      log(`[Sanitize] Sharp processing failed: ${sharpErr.message}`);
+      return buffer;
+    }
+  }
+  return buffer;
+}
 
 export async function groupImage({ username, groupname, welcometext, profileImagePath }) {
   const width = 600;
@@ -373,28 +392,51 @@ export async function fetchMedia({ argsArray }) {
 }
 export async function createNativeSticker({ mediaBuffer, packName, authorName, crop, forceUpdateExif = false, ...otherOptions }) {
   if (!mediaBuffer) throw new Error('mediaBuffer is required in worker');
-  const finalBuffer = ensureBuffer(mediaBuffer);
-  const stickerOptions = {
-    packName: packName || 'Sticker Pack',
-    authorName: authorName || 'Author',
-    crop: crop ?? false,
-    ...otherOptions
-  };
-  const isAlreadyWebP = isWebP(finalBuffer);
-  const hasExif = hasExifMetadata(finalBuffer);
-  let result;
-  if (isAlreadyWebP) {
-    if (hasExif && !forceUpdateExif) {
-      result = finalBuffer;
-    } else {
-      result = await addExifNative(finalBuffer, stickerOptions);
+  try {
+    let finalBuffer = ensureBuffer(mediaBuffer);
+    if (finalBuffer.length === 0 || finalBuffer.length < 100) {
+      throw new Error('Invalid media buffer size');
     }
-  } else {
-    result = await stickerNative(finalBuffer, stickerOptions);
+    try {
+      finalBuffer = await sanitizeMediaBuffer(finalBuffer);
+    } catch (sanitizeErr) {
+      log(`[Sticker] Buffer sanitization failed: ${sanitizeErr.message}`);
+    }
+    const stickerOptions = {
+      packName: packName || 'Sticker Pack',
+      authorName: authorName || 'Author',
+      crop: crop ?? false,
+      ...otherOptions
+    };
+    const isAlreadyWebP = isWebP(finalBuffer);
+    const hasExif = hasExifMetadata(finalBuffer);
+    let result;
+    if (isAlreadyWebP) {
+      if (hasExif && !forceUpdateExif) {
+        result = finalBuffer;
+      } else {
+        result = await addExifNative(finalBuffer, stickerOptions);
+      }
+    } else {
+      result = await Promise.race([stickerNative(finalBuffer, stickerOptions), new Promise((_, reject) => setTimeout(() => reject(new Error('Sticker processing timeout')), 30000))]);
+    }
+    if (!result || !Buffer.isBuffer(result)) {
+      throw new Error(`Invalid result from native: ${typeof result}`);
+    }
+    if (result.length === 0) {
+      throw new Error('Empty result from native');
+    }
+    return result;
+  } catch (error) {
+    log(`[createNativeSticker] Error: ${error.message}`, true);
+    try {
+      const { execSync } = require('child_process');
+      execSync('rm -f /tmp/sticker*-enc 2>/dev/null || true', { timeout: 1000 });
+    } catch {
+      // Ignore cleanup errors
+    }
+    throw new Error(`Failed to create sticker: ${error.message}`);
   }
-  if (!result || !Buffer.isBuffer(result)) throw new Error(`Native function returned invalid data: ${typeof result}`);
-  if (result.length === 0) throw new Error('Native function returned empty buffer');
-  return result;
 }
 export async function audioChanger({ mediaBuffer, filterName }) {
   if (!mediaBuffer) throw new Error('mediaBuffer is required but received undefined');

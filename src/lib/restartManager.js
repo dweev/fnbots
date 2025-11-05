@@ -242,6 +242,33 @@ class RestartManager {
     process.exit(code);
   }
 
+  async permanentStop(reason = 'Manual stop') {
+    await log(`Permanent stop requested: ${reason}`, true);
+    if (this.restartTimer) {
+      clearTimeout(this.restartTimer);
+      this.restartTimer = null;
+    }
+    this.isRestarting = false;
+    if (isPm2) {
+      const { exec } = await import('child_process');
+      const util = await import('util');
+      const execAsync = util.promisify(exec);
+      try {
+        const processId = process.env.pm_id || process.env.name || 'fnbots';
+        await log(`Stopping PM2 process: ${processId}`);
+        await execAsync(`pm2 stop ${processId}`);
+        setTimeout(() => process.exit(0), 2000);
+      } catch (error) {
+        await log(`PM2 stop command failed: ${error.message}`, true);
+        await log('Forcing process exit...');
+        process.exit(0);
+      }
+    } else {
+      await log('Stopping Node process...');
+      process.exit(0);
+    }
+  }
+
   getStatus() {
     return {
       attempts: this.currentAttempts,

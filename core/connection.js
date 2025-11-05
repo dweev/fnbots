@@ -6,7 +6,9 @@
  */
 // ─── Info core/connection.js ──────────────────
 
+import path from 'path';
 import 'dotenv/config.js';
+import fs from 'fs-extra';
 import readline from 'readline';
 import config from '../config.js';
 import { Boom } from '@hapi/boom';
@@ -25,12 +27,91 @@ const baileysPackage = require('baileys/package.json');
 
 let phoneNumber;
 let pairingStarted = false;
+let connectionAttempts = 0;
+let lastQRorPairingCode = null;
+let attemptTimer = null;
+
+const MAX_CONNECTION_ATTEMPTS = 3;
+const ATTEMPT_RESET_TIME = 5 * 60 * 1000;
+const COUNTER_FILE = path.join(process.cwd(), '.connection_attempts');
 
 const pairingCode = process.argv.includes('--qr') ? false : process.argv.includes('--pairing-code') || config.usePairingCode;
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 const question = (text) => new Promise((resolve) => rl.question(text, resolve));
 
+function loadAttemptCounter() {
+  try {
+    if (fs.existsSync(COUNTER_FILE)) {
+      const data = JSON.parse(fs.readFileSync(COUNTER_FILE, 'utf8'));
+      const now = Date.now();
+      if (now - data.timestamp > ATTEMPT_RESET_TIME) {
+        log('Counter file expired, resetting...');
+        fs.unlinkSync(COUNTER_FILE);
+        return 0;
+      }
+      log(`Loaded attempt counter: ${data.attempts}/${MAX_CONNECTION_ATTEMPTS}`);
+      return data.attempts;
+    }
+  } catch (error) {
+    log(`Failed to load counter file: ${error.message}`, true);
+  }
+  return 0;
+}
+
+function saveAttemptCounter(attempts) {
+  try {
+    const data = {
+      attempts: attempts,
+      timestamp: Date.now()
+    };
+    fs.writeFileSync(COUNTER_FILE, JSON.stringify(data), 'utf8');
+  } catch (error) {
+    log(`Failed to save counter file: ${error.message}`, true);
+  }
+}
+
+function clearAttemptCounter() {
+  try {
+    if (fs.existsSync(COUNTER_FILE)) {
+      fs.unlinkSync(COUNTER_FILE);
+      log('Counter file cleared');
+    }
+  } catch (error) {
+    log(`Failed to clear counter file: ${error.message}`, true);
+  }
+}
+
+function resetAttemptCounter() {
+  connectionAttempts = 0;
+  lastQRorPairingCode = null;
+  clearAttemptCounter();
+  if (attemptTimer) {
+    clearTimeout(attemptTimer);
+    attemptTimer = null;
+  }
+}
+
+function startAttemptTimer() {
+  if (attemptTimer) clearTimeout(attemptTimer);
+  attemptTimer = setTimeout(() => {
+    log('Connection attempt timeout reached, resetting counter...');
+    resetAttemptCounter();
+  }, ATTEMPT_RESET_TIME);
+}
+
 export async function createWASocket(dbSettings) {
+  connectionAttempts = loadAttemptCounter();
+  if (connectionAttempts >= MAX_CONNECTION_ATTEMPTS) {
+    await log(`Connection attempts already exceeded (${connectionAttempts}/${MAX_CONNECTION_ATTEMPTS})`, true);
+    await log('Waiting for counter to reset or manual intervention...', true);
+    await log(`Counter will reset in ${Math.ceil(ATTEMPT_RESET_TIME / 60000)} minutes from last attempt`, true);
+    await log('To reset manually, delete file: .connection_attempts', true);
+    clearAttemptCounter();
+    rl.close();
+    await restartManager.permanentStop('Max connection attempts exceeded');
+    return;
+  }
+
   const { version } = await fetchLatestBaileysVersion();
   const authStore = await AuthStore();
   const { state, saveCreds } = authStore;
@@ -100,15 +181,60 @@ export async function createWASocket(dbSettings) {
   fn.ev.on('connection.update', async ({ connection, lastDisconnect, qr, isNewLogin }) => {
     const statusCode = lastDisconnect?.error ? new Boom(lastDisconnect.error).output.statusCode : 0;
     if ((connection === 'connecting' || !!qr) && pairingCode && phoneNumber && !fn.authState.creds.registered && !pairingStarted) {
+      pairingStarted = true;
       setTimeout(async () => {
-        pairingStarted = true;
         await log('Requesting Pairing Code...');
-        let code = await fn.requestPairingCode(phoneNumber);
-        code = code?.match(/.{1,4}/g)?.join('-') || code;
-        await log(`Your Pairing Code : ${code}`);
+        try {
+          let code = await fn.requestPairingCode(phoneNumber);
+          code = code?.match(/.{1,4}/g)?.join('-') || code;
+          if (code && code !== lastQRorPairingCode) {
+            lastQRorPairingCode = code;
+            connectionAttempts++;
+            saveAttemptCounter(connectionAttempts);
+            startAttemptTimer();
+            await log(`Your Pairing Code [${connectionAttempts}/${MAX_CONNECTION_ATTEMPTS}]: ${code}`);
+            if (connectionAttempts >= MAX_CONNECTION_ATTEMPTS) {
+              await log(`Maximum pairing attempts (${MAX_CONNECTION_ATTEMPTS}) reached.`, true);
+              await log('Bot will stop. Counter will reset in 5 minutes.', true);
+              await log('To reset manually, delete file: .connection_attempts', true);
+              clearAttemptCounter();
+              rl.close();
+              await restartManager.permanentStop('Max pairing code attempts');
+            }
+          }
+        } catch (error) {
+          await log(`Failed to request pairing code: ${error.message}`, true);
+        }
       }, 3000);
     }
+    if (qr && !pairingCode) {
+      if (qr !== lastQRorPairingCode && !fn.authState.creds.registered) {
+        lastQRorPairingCode = qr;
+        connectionAttempts++;
+        saveAttemptCounter(connectionAttempts);
+        startAttemptTimer();
+        log(`QR Code Generated [${connectionAttempts}/${MAX_CONNECTION_ATTEMPTS}]:`);
+        qrcode.generate(qr, { small: true }, (qrcodeString) => {
+          log(`\n${String(qrcodeString)}`);
+        });
+        if (connectionAttempts >= MAX_CONNECTION_ATTEMPTS) {
+          await log(`Maximum QR generation attempts (${MAX_CONNECTION_ATTEMPTS}) reached.`, true);
+          await log('Bot will stop. Counter will reset in 5 minutes.', true);
+          await log('To reset manually, delete file: .connection_attempts', true);
+          clearAttemptCounter();
+          rl.close();
+          await restartManager.permanentStop('Max QR generation attempts');
+        }
+      } else if (fn.authState.creds.registered) {
+        log('Scan QR berikut:');
+        qrcode.generate(qr, { small: true }, (qrcodeString) => {
+          log(`\n${String(qrcodeString)}`);
+        });
+      }
+    }
     if (connection === 'open') {
+      resetAttemptCounter();
+      pairingStarted = false;
       restartManager.reset();
       if (dbSettings.restartState) {
         dbSettings.restartState = false;
@@ -153,6 +279,8 @@ export async function createWASocket(dbSettings) {
       await log(`Error ${lastDisconnect.error?.message || lastDisconnect.error}`);
       const fatalCodes = [401, 402, 403, 411];
       const transientCodes = [408, 429, 440, 500, 503];
+      const errorMsg = lastDisconnect.error?.message || '';
+      const isConflictError = errorMsg.includes('conflict') || errorMsg.includes('Stream Errored');
       if (fatalCodes.includes(statusCode)) {
         if (statusCode === 401 && isConflictError) {
           await log(`[BAILEYS BUG] Conflict error (duplicate device:0), reconnecting without clearing session...`);
@@ -164,6 +292,7 @@ export async function createWASocket(dbSettings) {
         dbSettings.botNumber = null;
         await authStore.clearSession();
         await Settings.updateSettings(dbSettings);
+        resetAttemptCounter();
         restartManager.forceExit(1);
       } else if (transientCodes.includes(statusCode)) {
         await log(`Temporary disconnect (${statusCode}). Reconnecting in 15s...`);
@@ -177,12 +306,8 @@ export async function createWASocket(dbSettings) {
     if (isNewLogin) {
       await log(`New device detected, session restarted!`);
       restartManager.reset();
-    }
-    if (qr && !pairingCode) {
-      log('Scan QR berikut:');
-      qrcode.generate(qr, { small: true }, (qrcodeString) => {
-        log(`\n${String(qrcodeString)}`);
-      });
+      resetAttemptCounter();
+      pairingStarted = false;
     }
   });
   return { fn, authStore };

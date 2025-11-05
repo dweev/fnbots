@@ -8,5 +8,6 @@ venv/
 # files
 .env
 .vscode/settings.json
+.connection_attempts
 bench.sh
 log.sh

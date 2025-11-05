@@ -24,6 +24,7 @@ class DBStore {
     };
     this.pendingFetches = new Map();
     this.lidMappingLocks = new Map();
+    this.lidMappingPromises = new Map();
     this.jidResolutionCache = new Map();
     this.circuitBreaker = {
       failures: 0,
@@ -148,7 +149,8 @@ class DBStore {
 
   sanitizeParticipants(participants) {
     if (!Array.isArray(participants)) return [];
-    return participants.map((p) => {
+    const participantsMap = new Map();
+    for (const p of participants) {
       let jid;
       if (p.phoneNumber) {
         jid = p.phoneNumber;
@@ -163,13 +165,24 @@ class DBStore {
       } else if (p.id && p.id.includes('@lid')) {
         lid = p.id;
       }
-      return {
-        id: jid,
-        phoneNumber: jid,
-        lid: lid,
-        admin: p.admin || null
-      };
-    });
+      const normalizedKey = jid.replace(/@.*$/, '');
+      if (participantsMap.has(normalizedKey)) {
+        const existing = participantsMap.get(normalizedKey);
+        participantsMap.set(normalizedKey, {
+          ...existing,
+          lid: lid || existing.lid,
+          admin: p.admin || existing.admin
+        });
+      } else {
+        participantsMap.set(normalizedKey, {
+          id: jid,
+          phoneNumber: jid,
+          lid: lid,
+          admin: p.admin || null
+        });
+      }
+    }
+    return Array.from(participantsMap.values());
   }
 
   sanitizeGroupData(rawData, existing = null) {
@@ -901,10 +914,20 @@ class DBStore {
     const normalizedJid = jid?.includes('@') ? jid : jid ? `${jid}@s.whatsapp.net` : null;
     if (!normalizedLid && !normalizedJid) return;
     const lockKey = normalizedJid || normalizedLid;
-    while (this.lidMappingLocks.has(lockKey)) {
-      await new Promise((resolve) => setTimeout(resolve, 50));
+    if (this.lidMappingPromises.has(lockKey)) {
+      await log(`[LID] Coalescing mapping request for ${lockKey}`);
+      return this.lidMappingPromises.get(lockKey);
     }
-    this.lidMappingLocks.set(lockKey, true);
+    const promise = this._doLIDMapping(normalizedLid, normalizedJid);
+    this.lidMappingPromises.set(lockKey, promise);
+    try {
+      return await promise;
+    } finally {
+      this.lidMappingPromises.delete(lockKey);
+    }
+  }
+
+  async _doLIDMapping(normalizedLid, normalizedJid) {
     try {
       if (normalizedLid && normalizedJid) {
         await ContactCache.cacheLidMapping(normalizedLid, normalizedJid);
@@ -915,10 +938,10 @@ class DBStore {
         existing = await ContactCache.getContact(normalizedJid);
       }
       if (!existing && (normalizedJid || normalizedLid)) {
+        const query = {};
+        if (normalizedJid) query.jid = normalizedJid;
+        else if (normalizedLid) query.lid = normalizedLid;
         try {
-          const query = {};
-          if (normalizedJid) query.jid = normalizedJid;
-          else if (normalizedLid) query.lid = normalizedLid;
           existing = await StoreContact.findOne(query).lean();
         } catch (error) {
           log(`Error fetching contact for LID mapping: ${error.message}`, true);
@@ -933,13 +956,12 @@ class DBStore {
         const sanitized = this.sanitizeContactData(merged, existing);
         await ContactCache.addContact(merged.jid, sanitized);
         this.updateQueues.contacts.set(merged.jid, sanitized);
-        log(`LID mapping queued: ${normalizedLid || 'null'} ↔ ${normalizedJid || 'null'}`);
+        await log(`LID mapping completed: ${normalizedLid || 'null'} ↔ ${normalizedJid || 'null'}`);
       }
     } catch (error) {
       this.stats.errors++;
-      log(`handleLIDMapping error: ${error.message}`, true);
-    } finally {
-      this.lidMappingLocks.delete(lockKey);
+      await log(`_doLIDMapping error: ${error.message}`, true);
+      throw error;
     }
   }
 

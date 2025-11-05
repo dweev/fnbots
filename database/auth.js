@@ -42,9 +42,10 @@ export default async function AuthStore() {
       keys: {
         get: async (type, ids) => {
           try {
+            const uniqueIds = [...new Set(ids)];
             const data = {};
             await Promise.all(
-              ids.map(async (id) => {
+              uniqueIds.map(async (id) => {
                 let value = await readData(`${type}-${id}`);
                 if (type === 'app-state-sync-key' && value) {
                   value = proto.Message.AppStateSyncKeyData.create(value);

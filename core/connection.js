@@ -51,7 +51,6 @@ export async function createWASocket(dbSettings) {
     defaultQueryTimeoutMs: undefined,
     markOnlineOnConnect: false,
     retryRequestDelayMs: 500,
-    shouldSyncHistoryMessage: () => true,
     maxMsgRetryCount: 5,
     emitOwnEvents: true,
     fireInitQueries: true,
@@ -155,6 +154,12 @@ export async function createWASocket(dbSettings) {
       const fatalCodes = [401, 402, 403, 411];
       const transientCodes = [408, 429, 440, 500, 503];
       if (fatalCodes.includes(statusCode)) {
+        if (statusCode === 401 && isConflictError) {
+          await log(`[BAILEYS BUG] Conflict error (duplicate device:0), reconnecting without clearing session...`);
+          await new Promise((res) => setTimeout(res, 5000));
+          await restartManager.restart(`Reconnecting after Baileys device duplication bug`, (await import('../src/lib/performanceManager.js')).performanceManager);
+          return;
+        }
         await log(`Fatal auth error (${statusCode}). Clearing session...`, true);
         dbSettings.botNumber = null;
         await authStore.clearSession();

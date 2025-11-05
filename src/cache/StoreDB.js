@@ -226,21 +226,22 @@ class DBStore {
     return sanitized;
   }
 
-  sanitizeContactData(rawData, existing = null) {
+  sanitizeContactData(rawData, existing = null, source = 'unknown') {
     const sanitized = {
       jid: rawData.jid,
       name: rawData.name || '',
       notify: rawData.notify || '',
       verifiedName: rawData.verifiedName || '',
-      lid: rawData.lid || ''
+      lid: rawData.lid || '',
+      lastUpdateSource: source,
+      lastUpdateTime: new Date()
     };
     if (existing) {
       sanitized.updateCount = (existing.updateCount || 0) + 1;
-      sanitized.lastUpdated = new Date();
+      sanitized.createdAt = existing.createdAt || new Date();
     } else {
       sanitized.updateCount = 0;
       sanitized.createdAt = new Date();
-      sanitized.lastUpdated = new Date();
     }
     return sanitized;
   }
@@ -351,7 +352,7 @@ class DBStore {
 
   async flushAllBatches() {
     if (!this.isConnected) return;
-    await Promise.all([this.flushBatch('contacts'), this.flushBatch('groups')]);
+    await Promise.allSettled([this.flushBatch('contacts'), this.flushBatch('groups')]);
   }
 
   async flushBatch(type) {
@@ -800,8 +801,13 @@ class DBStore {
     }
   }
 
-  async updateContact(jid, data) {
+  async updateContact(jid, data, source = 'unknown') {
     if (!this.isConnected) return;
+    const botJid = this.authStore?.creds?.me?.id;
+    if (botJid && jid === jidNormalizedUser(botJid)) {
+      log(`[updateContact] Skipping bot self-contact: ${jid}`);
+      return;
+    }
     let existing = await ContactCache.getContact(jid);
     if (!existing) {
       try {
@@ -810,11 +816,20 @@ class DBStore {
         log(`Error fetching existing contact: ${error.message}`, true);
       }
     }
-    const merged = { ...(existing || {}), ...data, jid };
-    const updated = this.sanitizeContactData(merged, existing);
+    const merged = {
+      jid,
+      name: data.name !== undefined ? data.name : existing?.name || '',
+      notify: data.notify !== undefined ? data.notify : existing?.notify || '',
+      verifiedName: data.verifiedName !== undefined ? data.verifiedName : existing?.verifiedName || '',
+      lid: data.lid !== undefined ? data.lid : existing?.lid || ''
+    };
+    const updated = this.sanitizeContactData(merged, existing, source);
     if (existing && !this.hasChanges(existing, updated, 'contacts')) {
       this.stats.skippedWrites++;
       return;
+    }
+    if (existing && existing.name !== updated.name) {
+      log(`[updateContact] Name change: "${existing.name}" → "${updated.name}" (source: ${source})`);
     }
     await ContactCache.addContact(jid, updated);
     this.updateQueues.contacts.set(jid, updated);
@@ -1480,7 +1495,6 @@ class DBStore {
 
   async forceCleanup() {
     log('Manual cleanup initiated');
-    await this.flushAllBatches();
     await this.performMaintenance();
   }
 

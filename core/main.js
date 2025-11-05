@@ -239,8 +239,8 @@ function setupWhatsAppEventHandlers(fn) {
         }
       }
       if (jid && lid) {
-        const eName = messageData.pushName || (await fn.getName(jid));
-        await updateContact(jid, { lid: lid, name: eName });
+        const eName = await fn.getName(jid);
+        await updateContact(jid, { lid: lid, name: eName }, 'chats.update');
       }
     }
   });

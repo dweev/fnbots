@@ -27,7 +27,7 @@ function releaseLock(jid) {
   updateLocks.delete(jid);
 }
 
-export async function updateContact(jid, data = {}) {
+export async function updateContact(jid, data = {}, source = 'unknown') {
   if (!jid || typeof jid !== 'string' || !jid.endsWith('@s.whatsapp.net')) {
     return;
   }
@@ -41,7 +41,7 @@ export async function updateContact(jid, data = {}) {
     }
     const mergedData = pendingUpdates.get(jid);
     pendingUpdates.delete(jid);
-    await store.updateContact(jid, mergedData);
+    await store.updateContact(jid, mergedData, source);
   } catch (error) {
     await log(error, true);
   } finally {

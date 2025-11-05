@@ -167,8 +167,8 @@ export default async function serializeMessage(fn, msg) {
     }
     if (senderJid && senderLid) {
       try {
-        const contactName = msg.pushName || (await performanceManager.cache.warmContactCache(senderJid))?.name || (await performanceManager.cache.warmContactCache(senderJid))?.notify || (await fn.getName(senderJid));
-        await updateContact(senderJid, { lid: senderLid, name: contactName });
+        const contactName = (await performanceManager.cache.warmContactCache(senderJid))?.name || (await performanceManager.cache.warmContactCache(senderJid))?.notify || (await fn.getName(senderJid));
+        await updateContact(senderJid, { lid: senderLid, name: contactName }, 'serializeMessage');
       } catch (error) {
         log(`Error updating contact: ${error}`, true);
       }

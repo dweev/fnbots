@@ -114,6 +114,7 @@ async function updateContactsFromMetadata(metadata) {
 async function handleAddParticipants(groupId, resolvedParticipants, fn) {
   const groupData = await Group.findOne({ groupId }).lean();
   const metadata = await refreshMetadata(fn, groupId);
+  await updateContactsFromMetadata(metadata);
   if (groupData?.welcome?.state && metadata) {
     for (const { jid, lid } of resolvedParticipants) {
       const newMemberJid = jid || (lid ? await store.findJidByLid(lid) : null);
@@ -135,13 +136,13 @@ async function handleRemoveParticipants(groupId, resolvedParticipants, botJid, f
   const isBotRemoved = resolvedParticipants.some(({ jid }) => jid === botJid);
   if (isBotRemoved) {
     log(`Bot dikeluarkan dari grup ${groupId}. Membersihkan metadata...`);
-    await invalidateCache(groupId);
     await store.deleteGroup(groupId);
     const isWhitelisted = await Whitelist.isWhitelisted(groupId);
     if (isWhitelisted) {
       await Whitelist.removeFromWhitelist(groupId);
       log(`Grup ${groupId} dihapus dari whitelist karena bot dikeluarkan.`);
     }
+    log(`Cleanup completed for group ${groupId}. Bot successfully removed.`);
     return;
   }
   const groupData = await Group.findOne({ groupId }).lean();
@@ -222,8 +223,6 @@ export default async function groupParticipantsUpdate({ id, participants, action
         break;
       }
     }
-    const finalMetadata = await getCachedMetadata(id);
-    await updateContactsFromMetadata(finalMetadata);
   } catch (error) {
     log(error, true);
   }

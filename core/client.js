@@ -610,8 +610,9 @@ export async function clientBot(fn, dbSettings) {
       throw error;
     }
   };
-  fn.sendFromTiktok = async (jid, url, caption, quoted, options = {}) => {
+  fn.sendFromTiktok = async (jid, url, caption, quoted, source = 'video', options = {}) => {
     try {
+      let mime = null
       const response = await nativeFetch(url, {
         method: 'GET',
         headers: {
@@ -623,7 +624,11 @@ export async function clientBot(fn, dbSettings) {
       const buffer = await response.arrayBuffer();
       const headers = {};
       response.headers.forEach((value, key) => (headers[key] = value));
-      const mime = await detectMimeType(buffer, headers);
+      if (source === 'audio') {
+        mime = 'audio/mpeg';
+      } else {
+        mime = await detectMimeType(buffer, headers);
+      }
       return await fn.sendMediaFromBuffer(jid, mime, buffer, caption, quoted, options);
     } catch (error) {
       if (error.message.includes('ECONNRESET') || error.message.includes('Connection reset')) {

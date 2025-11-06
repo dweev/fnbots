@@ -612,7 +612,7 @@ export async function clientBot(fn, dbSettings) {
   };
   fn.sendFromTiktok = async (jid, url, caption, quoted, source = 'video', options = {}) => {
     try {
-      let mime = null
+      let mime = null;
       const response = await nativeFetch(url, {
         method: 'GET',
         headers: {

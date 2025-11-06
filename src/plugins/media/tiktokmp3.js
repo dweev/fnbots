@@ -6,7 +6,7 @@
  */
 // ─── Info ────────────────────────────────
 
-import { fetchTikTokData, buildBaseCaption, normalizeResult } from '../../function/index.js';
+import { fetchTikTokData, normalizeResult } from '../../function/index.js';
 
 export const command = {
   name: 'tiktokmp3',

@@ -108,7 +108,7 @@ async function updateContactsFromMetadata(metadata) {
     });
 
   if (contactUpdates.length > 0) {
-    await batchUpdateContacts(contactUpdates);
+    await batchUpdateContacts(contactUpdates, 'updateContactsFromMetadata');
   }
 }
 async function handleAddParticipants(groupId, resolvedParticipants, fn) {

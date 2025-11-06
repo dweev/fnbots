@@ -49,19 +49,19 @@ export async function updateContact(jid, data = {}, source = 'unknown') {
   }
 }
 
-export async function batchUpdateContacts(contacts) {
+export async function batchUpdateContacts(contacts, source = 'unknown') {
   if (!contacts || contacts.length === 0) return;
   const validContacts = contacts.filter(({ jid }) => jid && typeof jid === 'string' && jid.endsWith('@s.whatsapp.net'));
   if (validContacts.length === 0) return;
   const updatePromises = validContacts.map(({ jid, data }) =>
-    updateContact(jid, data).catch((err) => {
+    updateContact(jid, data, source).catch((err) => {
       log(`Batch update failed for ${jid}: ${err.message}`, true);
     })
   );
   await Promise.allSettled(updatePromises);
 }
 
-export async function batchProcessContactUpdates(contacts) {
+export async function batchProcessContactUpdates(contacts, source = 'unknown') {
   if (!contacts || contacts.length === 0) return;
   const personalContacts = contacts.filter((contact) => contact && contact.id && contact.id.endsWith('@s.whatsapp.net'));
   if (personalContacts.length === 0) return;
@@ -93,7 +93,7 @@ export async function batchProcessContactUpdates(contacts) {
   const resolved = await Promise.all(resolvePromises);
   const validContacts = resolved.filter((c) => c !== null);
   if (validContacts.length > 0) {
-    await batchUpdateContacts(validContacts);
+    await batchUpdateContacts(validContacts, source);
   }
 }
 

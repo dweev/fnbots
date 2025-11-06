@@ -81,17 +81,17 @@ function setupWhatsAppEventHandlers(fn) {
     console.log(`recv ${contacts.length} contacts, ${messages.length} msgs`);
     try {
       if (contacts.length > 0) {
-        await batchProcessContactUpdates(contacts);
+        await batchProcessContactUpdates(contacts, 'messaging-history.set');
       }
     } catch (error) {
       console.error('Error batch processing contacts:', error);
     }
   });
   fn.ev.on('contacts.upsert', async (contacts) => {
-    await batchProcessContactUpdates(contacts);
+    await batchProcessContactUpdates(contacts, 'contacts.upsert');
   });
   fn.ev.on('contacts.update', async (updates) => {
-    await batchProcessContactUpdates(updates);
+    await batchProcessContactUpdates(updates, 'contacts.update');
   });
   fn.ev.on('messages.upsert', async (message) => {
     if (message.type !== 'notify') return;
@@ -143,7 +143,7 @@ function setupWhatsAppEventHandlers(fn) {
             });
           }
           const { batchUpdateContacts } = await import('../src/lib/contactManager.js');
-          await batchUpdateContacts(contactUpdates);
+          await batchUpdateContacts(contactUpdates, 'groups.upsert');
         }
       }
     }
@@ -188,7 +188,7 @@ function setupWhatsAppEventHandlers(fn) {
             });
           }
           const { batchUpdateContacts } = await import('../src/lib/contactManager.js');
-          await batchUpdateContacts(contactUpdates);
+          await batchUpdateContacts(contactUpdates, 'groups.update');
         }
       }
     }

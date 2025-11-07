@@ -38,6 +38,35 @@ function isWebP(buf) {
   return Buffer.isBuffer(buf) && buf.length >= 12 && buf.slice(0, 4).toString() === 'RIFF' && buf.slice(8, 12).toString() === 'WEBP';
 }
 
+class CronJob {
+  constructor(name, handle) {
+    this._name = name;
+    this._handle = handle;
+    if (this._handle?.start) this._handle.start();
+  }
+  stop() {
+    if (this._handle?.stop) {
+      this._handle.stop();
+      this._handle = null;
+      jobs.delete(this._name);
+    }
+  }
+  isRunning() {
+    return this._handle?.isRunning?.() ?? false;
+  }
+  secondsToNext() {
+    return this._handle?.secondsToNext?.() ?? -1;
+  }
+}
+
+export function schedule(exprOrName, callback, options = {}) {
+  if (typeof callback !== 'function') throw new Error('schedule() requires a callback function');
+  const handle = cronNative.schedule(exprOrName, callback, options);
+  const job = new CronJob(exprOrName, handle);
+  jobs.set(exprOrName, job);
+  return job;
+}
+
 export function addExif(buffer, meta = {}) {
   const dbSettings = Settings.getSettings();
   if (!Buffer.isBuffer(buffer)) {
@@ -127,13 +156,6 @@ export function stickerToVideo(buffer, options = {}) {
     fps: options.fps ?? 15
   };
   return stickerNative.toVideo(buffer, opts);
-}
-
-export function encodeRGBA(buf, w, h, opt = {}) {
-  if (!Buffer.isBuffer(buf)) {
-    throw new Error('encodeRGBA() input harus Buffer');
-  }
-  return stickerNative.encodeRGBA(buf, w, h, opt);
 }
 
 export function convert(input, options = {}) {
@@ -312,33 +334,4 @@ export function getHeader(headers, key) {
     }
   }
   return null;
-}
-
-class CronJob {
-  constructor(name, handle) {
-    this._name = name;
-    this._handle = handle;
-    if (this._handle?.start) this._handle.start();
-  }
-  stop() {
-    if (this._handle?.stop) {
-      this._handle.stop();
-      this._handle = null;
-      jobs.delete(this._name);
-    }
-  }
-  isRunning() {
-    return this._handle?.isRunning?.() ?? false;
-  }
-  secondsToNext() {
-    return this._handle?.secondsToNext?.() ?? -1;
-  }
-}
-
-export function schedule(exprOrName, callback, options = {}) {
-  if (typeof callback !== 'function') throw new Error('schedule() requires a callback function');
-  const handle = cronNative.schedule(exprOrName, callback, options);
-  const job = new CronJob(exprOrName, handle);
-  jobs.set(exprOrName, job);
-  return job;
 }

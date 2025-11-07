@@ -150,7 +150,7 @@ async function sanitizeMediaBuffer(buffer) {
   if (isImage || isPNG) {
     try {
       // prettier-ignore
-      const processed = await sharp(buffer).rotate().removeAlpha().toFormat('jpeg', { quality: 90 }).toBuffer();
+      const processed = await sharp(buffer).rotate().png({ compressionLevel: 9, quality: 90 }).toBuffer();
       return processed;
     } catch (sharpErr) {
       log(`[Sanitize] Sharp processing failed: ${sharpErr.message}`);

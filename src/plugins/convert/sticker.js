@@ -106,7 +106,7 @@ export const command = {
     } catch {
       if (isFromAndroid) {
         // prettier-ignore
-        const pngBuffer = await sharp(buffer).png().toBuffer();
+        const pngBuffer = await sharp(buffer).rotate().png({ compressionLevel: 9, quality: 90 }).toBuffer();
         stickerBuffer = await createNativeSticker({
           mediaBuffer: pngBuffer,
           packName: pack.packName,

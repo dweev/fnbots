@@ -22,7 +22,8 @@ export const command = {
     if (!mime) return await sReply('Kirim atau balas gambar!');
     const buffer = await fn.getMediaBuffer(targetMsg);
     if (!buffer) return await sReply('Gagal mengunduh media.');
-    const bufferMedia = await sharp(buffer).png().toBuffer();
+    // prettier-ignore
+    const bufferMedia = await sharp(buffer).rotate().png({ compressionLevel: 9, quality: 90 }).toBuffer();
     let profilePicUrl = null;
     try {
       profilePicUrl = await fn.profileImageBuffer(serial, 'image');

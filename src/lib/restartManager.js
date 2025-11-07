@@ -7,8 +7,8 @@
 // ─── Info src/lib/restartManager.js ────────────────────
 
 import log from './logger.js';
-import { delay } from 'baileys';
 import { spawn } from 'child_process';
+import { delay } from '../function/index.js';
 
 const MAX_RESTART_ATTEMPTS = 5;
 const BASE_DELAY_MS = 5000;

@@ -6,7 +6,7 @@
  */
 // ─── Info ────────────────────────────────
 
-import { delay } from 'baileys';
+import { delay } from '../../function/index.js';
 
 export const command = {
   name: 'spam',

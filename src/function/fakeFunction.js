@@ -6,11 +6,10 @@
  */
 // ─── info src/function/fakeFunction.js ───────────────
 
-import { delay } from 'baileys';
 import log from '../lib/logger.js';
 import { tmpDir } from '../lib/tempManager.js';
 import { QuoteGenerator } from 'qc-generator-whatsapp';
-import { formatTimestampToHourMinute } from './index.js';
+import { formatTimestampToHourMinute, delay } from './index.js';
 
 export async function processAllTextFormatting(rawText, store, fn) {
   const combinedRegex = /@(\d{5,})|\*([^*]+)\*|_([^_]+)_|`([^`]+)`|\b((https?:\/\/|www\.)[^\s]+\/[^\s]*)/g;

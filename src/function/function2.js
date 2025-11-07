@@ -15,9 +15,9 @@ import config from '../../config.js';
 import { spawn } from 'child_process';
 import { getBuffer } from './index.js';
 import { tmpDir } from '../lib/tempManager.js';
+import { extractMessageContent } from 'baileys';
 import { createCanvas, loadImage } from 'canvas';
 import { Downloader } from '@tobyg74/tiktok-api-dl';
-import { delay, extractMessageContent } from 'baileys';
 import { fetch as nativeFetch, sticker as stickerNative, addExif as addExifNative, parseArgsToFetchOptions, getHeader } from '../addon/bridge.js';
 
 //prettier-ignore
@@ -971,4 +971,7 @@ export function unwrapMessage(msg) {
     if (extracted) msg.message = extracted;
   }
   return msg;
+}
+export async function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }

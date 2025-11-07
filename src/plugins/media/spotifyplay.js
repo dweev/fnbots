@@ -6,8 +6,8 @@
  */
 // ─── Info ────────────────────────────────
 
-import { delay } from 'baileys';
 import config from '../../../config.js';
+import { delay } from '../../function/index.js';
 import { SpotifyDownloader } from 'yt-spotify-dl';
 
 const spotify = new SpotifyDownloader();

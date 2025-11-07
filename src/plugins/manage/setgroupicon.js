@@ -8,7 +8,6 @@
 
 import { generateProfilePicture } from 'baileys';
 import { tmpDir } from '../../lib/tempManager.js';
-import { saveFile } from '../../function/index.js';
 
 export const command = {
   name: 'setgroupicon',
@@ -24,9 +23,8 @@ export const command = {
       if (!mimeType || !mimeType.startsWith('image/')) return await sReply(`Balas pesan gambar atau kirim gambar dengan perintah ini.`);
       const resBuffer = await fn.getMediaBuffer(targetMsg);
       if (!resBuffer) return await sReply(`Gagal mendapatkan gambar dari pesan yang dibalas.`);
-      const filename = await saveFile(resBuffer, 'tmp_group_icon');
+      const filename = await tmpDir.createTempFileWithContent(resBuffer, 'png');
       await fn.updateProfilePicture(toId, { url: filename });
-      await tmpDir.deleteFile(filename);
       await reactDone();
     } else if (args[0] === 'full') {
       const targetMsg = quotedMsg ? m.quoted || m : m.message;

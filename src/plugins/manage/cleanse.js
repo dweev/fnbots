@@ -6,8 +6,8 @@
  */
 // ─── Info ────────────────────────────────
 
-import { delay } from 'baileys';
 import log from '../../lib/logger.js';
+import { delay } from '../../function/index.js';
 import { User } from '../../../database/index.js';
 
 export const command = {

@@ -9,8 +9,8 @@
 import path from 'path';
 import util from 'util';
 import fs from 'fs-extra';
-import { delay } from 'baileys';
 import config from '../../../config.js';
+import { delay } from '../../function/index.js';
 import { execFile as cp_execFile } from 'child_process';
 
 const execFile = util.promisify(cp_execFile);

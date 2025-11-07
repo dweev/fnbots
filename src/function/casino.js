@@ -6,7 +6,7 @@
  */
 // ─── info src/function/casino.js ─────────────
 
-import { delay } from 'baileys';
+import { delay } from '../function/index.js';
 
 export const formatHandSimple = (hand) => hand.map((c) => `[${c.rank}${c.suit}]`).join(' ');
 export const getHandDetails = (hand) => {

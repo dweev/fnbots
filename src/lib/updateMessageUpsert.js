@@ -9,10 +9,11 @@
 import util from 'util';
 import log from './logger.js';
 import config from '../../config.js';
+import { jidNormalizedUser } from 'baileys';
+import { delay } from '../function/index.js';
 import { analyzeMessage } from 'safety-safe';
 import { arfine } from '../../core/handler.js';
 import { store } from '../../database/index.js';
-import { jidNormalizedUser, delay } from 'baileys';
 import serializeMessage from './serializeMessage.js';
 import { handleAntiEdit } from '../handler/index.js';
 import handleGroupStubMessages from './handleGroupStubMessages.js';

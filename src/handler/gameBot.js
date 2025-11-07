@@ -6,11 +6,10 @@
  */
 // ─── Info src/handler/gameBot.js ─────────────────────
 
-import { delay } from 'baileys';
 import { User } from '../../database/index.js';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { performanceManager } from '../lib/performanceManager.js';
-import { rollDice, generateUlarTanggaImage, runBotUlarTanggaTurnV2, runBotUlarTanggaTurn, generateBoardImage, PLAYER_BLACK, PLAYER_WHITE, fileLabels, rankLabels, parseOthelloMove, makeOthelloMove, getValidOthelloMoves, calculateOthelloScore, generateOthelloBoardImage, runBotLudoTurns, calculateNewPosition, HOME_POSITIONS, checkForCapture, generateLudoBoard, startLudoTimeout, formatKartu, runBotTurn41, calculateScore, calculateSamgongValue, runBotSamgongTurn, emoji_role, checkWinner, formatTicTacToeBoard, formatMinesweeperBoard, revealCell, checkWinCondition, generateSudokuBoardImage, parseSudokuCoord, SESSION_TIMEOUT, getSession, safetySettings } from '../function/index.js';
+import { rollDice, generateUlarTanggaImage, runBotUlarTanggaTurnV2, runBotUlarTanggaTurn, generateBoardImage, PLAYER_BLACK, PLAYER_WHITE, fileLabels, rankLabels, parseOthelloMove, makeOthelloMove, getValidOthelloMoves, calculateOthelloScore, generateOthelloBoardImage, runBotLudoTurns, calculateNewPosition, HOME_POSITIONS, checkForCapture, generateLudoBoard, startLudoTimeout, formatKartu, runBotTurn41, calculateScore, calculateSamgongValue, runBotSamgongTurn, emoji_role, checkWinner, formatTicTacToeBoard, formatMinesweeperBoard, revealCell, checkWinCondition, generateSudokuBoardImage, parseSudokuCoord, SESSION_TIMEOUT, getSession, safetySettings, delay } from '../function/index.js';
 
 export async function handleGameBotResponse(params) {
   const { m, toId, body, user, sReply, sPesan, fn, serial, isCmd, reactFail, dbSettings, config, gameStates } = params;

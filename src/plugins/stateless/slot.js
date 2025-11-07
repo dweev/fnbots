@@ -6,9 +6,8 @@
  */
 // ─── Info ────────────────────────────────
 
-import { delay } from 'baileys';
-import { formatNumber } from '../../function/index.js';
 import { gameStateManager } from '../../lib/gameManager.js';
+import { formatNumber, delay } from '../../function/index.js';
 
 export const command = {
   name: 'slot',

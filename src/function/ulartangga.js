@@ -7,9 +7,9 @@
 // ─── info src/function/ulartangga.js ─────────────────
 
 import sharp from 'sharp';
-import { delay } from 'baileys';
 import log from '../lib/logger.js';
 import config from '../../config.js';
+import { delay } from '../function/index.js';
 
 export const turboBoard = {
   size: 50,

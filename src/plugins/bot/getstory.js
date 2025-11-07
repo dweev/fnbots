@@ -7,11 +7,10 @@
 // ─── Info ────────────────────────────────
 
 import fs from 'fs-extra';
-import { delay } from 'baileys';
 import log from '../../lib/logger.js';
 import config from '../../../config.js';
 import { generateFakeStory } from 'generator-fake';
-import { archimed } from '../../function/index.js';
+import { archimed, delay } from '../../function/index.js';
 
 export const command = {
   name: 'getstory',

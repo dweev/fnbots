@@ -8,14 +8,12 @@
 
 import os from 'os';
 import path from 'path';
-import sharp from 'sharp';
 import Fuse from 'fuse.js';
 import crypto from 'crypto';
 import log from '../lib/logger.js';
 import config from '../../config.js';
 import speedTest from 'speedtest-net';
 import dayjs from '../utils/dayjs.js';
-import { tmpDir } from '../lib/tempManager.js';
 import { pluginCache } from '../lib/plugins.js';
 import { User, Whitelist } from '../../database/index.js';
 import { fetch as nativeFetch } from '../addon/bridge.js';
@@ -522,29 +520,6 @@ export function msgs(a) {
   if (!a) return;
   return a.length >= 10 ? a.slice(0, 40) : a;
 }
-export function replacer(key, value) {
-  if (typeof value === 'bigint') {
-    return value.toString() + 'n';
-  }
-  if (typeof value === 'object' && value !== null) {
-    try {
-      JSON.stringify(value);
-      return value;
-    } catch (e) {
-      if (e.message.includes('circular')) {
-        return '[Circular]';
-      }
-      throw e;
-    }
-  }
-  return value;
-}
-export function reviver(key, value) {
-  if (typeof value === 'string' && /^-?\d+n$/.test(value)) {
-    return BigInt(value.slice(0, -1));
-  }
-  return value;
-}
 export async function mycmd(input) {
   if (Array.isArray(input)) {
     return input;
@@ -807,25 +782,6 @@ export async function getTxt(txt, dbSettings) {
   }
   txt = txt.trim();
   return txt;
-}
-export async function saveFile(imageInput, toFile = 'png') {
-  let imageBuffer;
-  if (typeof imageInput === 'string' && imageInput.startsWith('data:image')) {
-    const base64Data = imageInput.split(';base64,').pop();
-    imageBuffer = Buffer.from(base64Data, 'base64');
-  } else if (Buffer.isBuffer(imageInput)) {
-    imageBuffer = imageInput;
-  } else {
-    throw new Error('Input tidak valid. Harap berikan Buffer atau string Base64.');
-  }
-  const ext = toFile.toLowerCase() === 'jpg' ? 'jpg' : 'png';
-  const tmpPath = tmpDir.createTempFile(ext);
-  if (ext === 'jpg') {
-    await sharp(imageBuffer).jpeg({ quality: 90, progressive: true, mozjpeg: true }).toFile(tmpPath);
-  } else {
-    await sharp(imageBuffer).png().toFile(tmpPath);
-  }
-  return tmpPath;
 }
 export function parseCheatAmount(inputStr) {
   if (!inputStr) return null;

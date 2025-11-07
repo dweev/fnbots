@@ -6,9 +6,9 @@
  */
 // ─── Info src/handler/chatbot.js ──────────────────
 
-import { delay } from 'baileys';
 import log from '../lib/logger.js';
 import config from '../../config.js';
+import { delay } from '../function/index.js';
 import { getMediaStream } from '../../database/index.js';
 
 export class ChatbotHandler {

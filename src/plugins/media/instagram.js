@@ -7,8 +7,7 @@
 // ─── Info ────────────────────────────────
 
 import instagram from '../../utils/igdl.js';
-import { delay } from 'baileys';
-import { parseImageSelection, chunkArray } from '../../function/index.js';
+import { parseImageSelection, chunkArray, delay } from '../../function/index.js';
 
 export const command = {
   name: 'instagram',

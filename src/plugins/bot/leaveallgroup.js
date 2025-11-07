@@ -6,8 +6,8 @@
  */
 // ─── Info ────────────────────────────────
 
-import { delay } from 'baileys';
 import log from '../../lib/logger.js';
+import { delay } from '../../function/index.js';
 import { performanceManager } from '../../lib/performanceManager.js';
 
 export const command = {

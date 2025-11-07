@@ -7,10 +7,10 @@
 // ─── info src/function/ludo.js ──────────────────────
 
 import sharp from 'sharp';
-import { delay } from 'baileys';
 import log from '../lib/logger.js';
 import config from '../../config.js';
 import { rollDice } from './index.js';
+import { delay } from '../function/index.js';
 
 export const PLAYERS = ['BLUE', 'YELLOW', 'GREEN', 'RED'];
 export const BASE_POSITIONS = { BLUE: 500, YELLOW: 600, GREEN: 700, RED: 800 };

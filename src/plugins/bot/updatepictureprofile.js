@@ -7,7 +7,6 @@
 // ─── Info ────────────────────────────────
 
 import { tmpDir } from '../../lib/tempManager.js';
-import { saveFile } from '../../function/index.js';
 
 export const command = {
   name: 'updatepictureprofile',
@@ -22,9 +21,8 @@ export const command = {
     if (!mimeType || !mimeType.startsWith('image/')) return await sReply(`Silakan balas pesan gambar atau kirim gambar untuk mengubah foto profil bot.`);
     const resBuffer = await fn.getMediaBuffer(targetMsg);
     if (!resBuffer) return await sReply(`Gagal mendapatkan gambar dari pesan yang dibalas.`);
-    const filename = await saveFile(resBuffer, 'tmp_group_icon');
+    const filename = await tmpDir.createTempFileWithContent(resBuffer, 'png');
     await fn.updateProfilePicture(botNumber, { url: filename });
-    await tmpDir.deleteFile(filename);
     await reactDone();
   }
 };

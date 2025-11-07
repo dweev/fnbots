@@ -7,14 +7,13 @@
 // ─── Info src/handler/autodownload.js ─────────────────
 
 import util from 'util';
-import { delay } from 'baileys';
 import log from '../lib/logger.js';
 import config from '../../config.js';
 import instagram from '../utils/igdl.js';
 import { exec as cp_exec } from 'child_process';
 import { mergeVideoAudio } from '../addon/bridge.js';
 import { performanceManager } from '../lib/performanceManager.js';
-import { fetchTikTokData, buildBaseCaption, chunkArray, sendImages, normalizeResult } from '../function/index.js';
+import { fetchTikTokData, buildBaseCaption, chunkArray, sendImages, normalizeResult, delay } from '../function/index.js';
 
 const exec = util.promisify(cp_exec);
 

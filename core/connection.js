@@ -180,6 +180,7 @@ export async function createWASocket(dbSettings) {
   fn.ev.on('creds.update', saveCreds);
   fn.ev.on('connection.update', async ({ connection, lastDisconnect, qr, isNewLogin }) => {
     const statusCode = lastDisconnect?.error ? new Boom(lastDisconnect.error).output.statusCode : 0;
+    const errorMsg = lastDisconnect?.error?.message || '';
     if ((connection === 'connecting' || !!qr) && pairingCode && phoneNumber && !fn.authState.creds.registered && !pairingStarted) {
       pairingStarted = true;
       setTimeout(async () => {
@@ -276,10 +277,9 @@ export async function createWASocket(dbSettings) {
       await log(`${dbSettings.botName} Success Connected to WhatsApp`);
     }
     if (connection === 'close') {
-      await log(`Error ${lastDisconnect.error?.message || lastDisconnect.error}`);
+      await log(`Error ${errorMsg}`);
       const fatalCodes = [401, 402, 403, 411];
       const transientCodes = [408, 429, 440, 500, 503];
-      const errorMsg = lastDisconnect.error?.message || '';
       const isConflictError = errorMsg.includes('conflict') || errorMsg.includes('Stream Errored');
       if (fatalCodes.includes(statusCode)) {
         if (statusCode === 401 && isConflictError) {

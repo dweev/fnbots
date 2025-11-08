@@ -10,7 +10,6 @@ import util from 'util';
 import log from './logger.js';
 import config from '../../config.js';
 import { jidNormalizedUser } from 'baileys';
-import { delay } from '../function/index.js';
 import { analyzeMessage } from 'safety-safe';
 import { arfine } from '../../core/handler.js';
 import { store } from '../../database/index.js';
@@ -125,17 +124,5 @@ export default async function updateMessageUpsert(fn, message, dbSettings) {
     }
   } catch (globalError) {
     await log(globalError, true);
-    if (globalError.message?.includes('rate-overlimit')) {
-      await log(`Terkena rate limit, menunggu 5 detik...`);
-      await delay(5000);
-    }
-    if (globalError.message?.includes('No matching sessions') || globalError.message?.includes('Bad MAC')) {
-      await log(`Error session, mencoba refresh...`);
-      try {
-        await fn.ev.emit('creds.update', { deleteSessions: [message.messages?.[0]?.key?.remoteJid] });
-      } catch (error) {
-        await log(error, true);
-      }
-    }
   }
 }

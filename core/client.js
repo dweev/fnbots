@@ -18,6 +18,54 @@ import { MediaValidationError, MediaProcessingError, MediaSizeError } from '../s
 import { randomByte, getSizeMedia, handleBufferInput, validateAndConvertBuffer, createNativeSticker, groupImage } from '../src/function/index.js';
 import { jidNormalizedUser, generateWAMessage, generateWAMessageFromContent, downloadContentFromMessage, jidDecode, jidEncode, getBinaryNodeChildString, getBinaryNodeChildren, getBinaryNodeChild, proto, WAMessageAddressingMode, isLidUser, isPnUser } from 'baileys';
 
+class QueryHandler {
+  constructor() {
+    this.retryMap = new Map();
+    this.maxRetries = 3;
+    this.baseDelay = 10000;
+    this.sessionSyncDelay = 2000;
+  }
+  getOperationKey(node) {
+    return `${node?.tag || 'unknown'}-${node?.attrs?.to || 'unknown'}`;
+  }
+  async handleError(error, operation = 'operation', node = null) {
+    const opKey = node ? this.getOperationKey(node) : operation;
+    const currentRetries = this.retryMap.get(opKey) || 0;
+    if (error?.message?.includes('rate-overlimit') || error?.data === 429) {
+      if (currentRetries >= this.maxRetries) {
+        this.retryMap.delete(opKey);
+        throw new Error(`Rate limit exceeded after ${this.maxRetries} attempts for ${opKey}`);
+      }
+      const delay = this.baseDelay * (currentRetries + 1);
+      await log(`Rate limit pada ${opKey} [${currentRetries + 1}/${this.maxRetries}]`, true);
+      await log(`Menunggu ${delay / 1000} detik...`);
+      this.retryMap.set(opKey, currentRetries + 1);
+      await new Promise((resolve) => setTimeout(resolve, delay));
+      return true;
+    }
+    if (error?.message?.includes('Bad MAC') || error?.message?.includes('No matching sessions')) {
+      if (currentRetries >= this.maxRetries) {
+        this.retryMap.delete(opKey);
+        throw new Error(`Session sync failed after ${this.maxRetries} attempts for ${opKey}`);
+      }
+      await log(`Session sync error pada ${opKey} [${currentRetries + 1}/${this.maxRetries}]`);
+      this.retryMap.set(opKey, currentRetries + 1);
+      await new Promise((resolve) => setTimeout(resolve, this.sessionSyncDelay));
+      return true;
+    }
+    this.retryMap.delete(opKey);
+    return false;
+  }
+  reset(node) {
+    if (node) {
+      const opKey = this.getOperationKey(node);
+      this.retryMap.delete(opKey);
+    }
+  }
+}
+
+const queryHandler = new QueryHandler();
+
 const createQuotedOptions = (quoted, options = {}) => {
   const ephemeralExpiration = options?.ephemeralExpiration ?? options?.expiration ?? quoted?.expiration ?? 0;
 
@@ -107,16 +155,21 @@ const createMediaMessage = (mime, data, caption, options = {}) => {
   }
 };
 export async function clientBot(fn, dbSettings) {
-  fn.groupQuery = async (jid, type, content) =>
-    fn.query({
-      tag: 'iq',
-      attrs: {
-        type,
-        xmlns: 'w:g2',
-        to: jid
-      },
-      content
-    });
+  const originalQuery = fn.query.bind(fn);
+  fn.query = async (node) => {
+    while (true) {
+      try {
+        const result = await originalQuery(node);
+        queryHandler.reset(node);
+        return result;
+      } catch (error) {
+        const shouldRetry = await queryHandler.handleError(error, 'query', node);
+        if (!shouldRetry) {
+          throw error;
+        }
+      }
+    }
+  };
   fn.decodeJid = (jid = '') => {
     try {
       if (typeof jid !== 'string' || jid.length === 0) return jid;

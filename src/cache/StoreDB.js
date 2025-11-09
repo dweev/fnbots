@@ -229,10 +229,10 @@ class DBStore {
   sanitizeContactData(rawData, existing = null, source = 'unknown') {
     const sanitized = {
       jid: rawData.jid,
-      name: rawData.name || '',
-      notify: rawData.notify || '',
-      verifiedName: rawData.verifiedName || '',
-      lid: rawData.lid || '',
+      name: rawData.name !== undefined ? rawData.name : existing?.name || '',
+      notify: rawData.notify !== undefined ? rawData.notify : existing?.notify || '',
+      verifiedName: rawData.verifiedName !== undefined ? rawData.verifiedName : existing?.verifiedName || '',
+      lid: rawData.lid !== undefined ? rawData.lid : existing?.lid || '',
       lastUpdateSource: source,
       lastUpdateTime: new Date()
     };
@@ -805,7 +805,7 @@ class DBStore {
     if (!this.isConnected) return;
     const botJid = this.authStore?.creds?.me?.id;
     if (botJid && jid === jidNormalizedUser(botJid)) {
-      log(`[updateContact] Skipping bot self-contact: ${jid}`);
+      log(`Skipping bot self-contact: ${jid}`);
       return;
     }
     let existing = await ContactCache.getContact(jid);
@@ -827,9 +827,6 @@ class DBStore {
     if (existing && !this.hasChanges(existing, updated, 'contacts')) {
       this.stats.skippedWrites++;
       return;
-    }
-    if (existing && existing.name !== updated.name) {
-      log(`[updateContact] Name change: "${existing.name}" → "${updated.name}" (source: ${source})`);
     }
     await ContactCache.addContact(jid, updated);
     this.updateQueues.contacts.set(jid, updated);
@@ -930,7 +927,7 @@ class DBStore {
     if (!normalizedLid && !normalizedJid) return;
     const lockKey = normalizedJid || normalizedLid;
     if (this.lidMappingPromises.has(lockKey)) {
-      await log(`[LID] Coalescing mapping request for ${lockKey}`);
+      await log(`Coalescing mapping request for ${lockKey}`);
       return this.lidMappingPromises.get(lockKey);
     }
     const promise = this._doLIDMapping(normalizedLid, normalizedJid);

@@ -87,8 +87,7 @@ export default async function handleGroupStubMessages(fn, m) {
       if (freshMetadata && freshMetadata.participants) {
         for (const participant of freshMetadata.participants) {
           const contactJid = jidNormalizedUser(participant.id);
-          const contactName = await fn.getName(contactJid);
-          await updateContact(contactJid, { lid: participant.lid, name: contactName }, 'handleGroupStubMessages');
+          await updateContact(contactJid, { lid: participant.lid }, 'handleGroupStubMessages');
         }
       }
     } catch (error) {

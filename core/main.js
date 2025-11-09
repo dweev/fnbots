@@ -115,7 +115,6 @@ function setupWhatsAppEventHandlers(fn) {
         });
         const contacts = await store.getArrayContacts(participantJids);
         if (contacts) {
-          const contactMap = new Map(contacts.map((c) => [c.jid, c]));
           const contactUpdates = [];
           for (const participant of daget.participants) {
             let contactJid;
@@ -132,13 +131,10 @@ function setupWhatsAppEventHandlers(fn) {
             } else if (participant.id && participant.id.includes('@lid')) {
               contactLid = participant.id;
             }
-            const contact = contactMap.get(contactJid);
-            const contactName = contact?.name || contact?.notify || 'Unknown';
             contactUpdates.push({
               jid: contactJid,
               data: {
-                lid: contactLid,
-                name: contactName
+                lid: contactLid
               }
             });
           }
@@ -160,7 +156,6 @@ function setupWhatsAppEventHandlers(fn) {
         });
         const contacts = await store.getArrayContacts(participantJids);
         if (contacts) {
-          const contactMap = new Map(contacts.map((c) => [c.jid, c]));
           const contactUpdates = [];
           for (const participant of newMeta.participants) {
             let contactJid;
@@ -177,13 +172,10 @@ function setupWhatsAppEventHandlers(fn) {
             } else if (participant.id && participant.id.includes('@lid')) {
               contactLid = participant.id;
             }
-            const contact = contactMap.get(contactJid);
-            const contactName = contact?.name || contact?.notify || 'Unknown';
             contactUpdates.push({
               jid: contactJid,
               data: {
-                lid: contactLid,
-                name: contactName
+                lid: contactLid
               }
             });
           }
@@ -239,8 +231,7 @@ function setupWhatsAppEventHandlers(fn) {
         }
       }
       if (jid && lid) {
-        const eName = await fn.getName(jid);
-        await updateContact(jid, { lid: lid, name: eName }, 'chats.update');
+        await updateContact(jid, { lid: lid }, 'chats.update');
       }
     }
   });

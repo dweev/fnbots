@@ -106,9 +106,8 @@ async function updateContactsFromMetadata(metadata) {
       const lid = p.lid || (p.id?.includes('@lid') ? p.id : null);
       return { jid, data: { lid } };
     });
-
   if (contactUpdates.length > 0) {
-    await batchUpdateContacts(contactUpdates, 'updateContactsFromMetadata');
+    await batchUpdateContacts(contactUpdates, 'group-participants.update');
   }
 }
 async function handleAddParticipants(groupId, resolvedParticipants, fn) {

@@ -193,10 +193,21 @@ export async function clientBot(fn, dbSettings) {
     }
     if (id.endsWith('g.us')) {
       const metadata = await store.getGroupMetadata(id);
-      return metadata ? metadata.subject : 'none';
+      return metadata?.subject || 'Unknown Group';
     } else {
       const contact = await store.getContact(id);
-      return contact?.name || contact?.verifiedName || contact?.notify || 'Unknown?';
+      if (contact) {
+        if (contact.verifiedName && contact.verifiedName.trim() !== '' && contact.verifiedName !== 'Unknown' && contact.verifiedName !== 'Unknown?') {
+          return contact.verifiedName;
+        }
+        if (contact.name && contact.name.trim() !== '' && contact.name !== 'Unknown' && contact.name !== 'Unknown?') {
+          return contact.name;
+        }
+        if (contact.notify && contact.notify.trim() !== '' && contact.notify !== 'Unknown' && contact.notify !== 'Unknown?') {
+          return contact.notify;
+        }
+      }
+      return id.split('@')[0];
     }
   };
   fn.getFile = async (inputPath, save) => {

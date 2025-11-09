@@ -33,6 +33,14 @@ const contactSchema = new mongoose.Schema(
       default: '',
       index: true
     },
+    lastUpdateSource: {
+      type: String,
+      default: 'unknown'
+    },
+    lastUpdateTime: {
+      type: Date,
+      default: Date.now
+    },
     lastUpdated: {
       type: Date,
       default: Date.now
@@ -48,5 +56,7 @@ contactSchema.index({ name: 1 });
 contactSchema.index({ verifiedName: 1 });
 contactSchema.index({ notify: 1 });
 contactSchema.index({ lastUpdated: -1 });
+contactSchema.index({ lastUpdateSource: 1 });
+contactSchema.index({ lastUpdateTime: -1 });
 
 export default contactSchema;

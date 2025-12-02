@@ -67,8 +67,12 @@ export function initializeGameWW(toId, fn, m, werewolfSessions) {
 }
 export async function endGame(toId, reason, fn, m, werewolfSessions) {
   const gameState = werewolfSessions[toId];
-  if (!gameState) return;
-  clearTimeout(gameState.timeoutId);
+  if (!gameState || !gameState.pemain) {
+    console.log(`[endGame] gameState tidak ditemukan untuk ${toId}`);
+    return;
+  }
+  if (gameState.timeoutId) clearTimeout(gameState.timeoutId);
+  if (gameState.phaseTimeout) clearTimeout(gameState.phaseTimeout);
   let endMessage = `GAME SELESAI!\nAlasan: ${reason}\n\n`;
   const allPlayers = Object.values(gameState.pemain);
   const teamWarga = allPlayers.filter((p) => ['warga', 'seer', 'guardian'].includes(p.role));
@@ -86,11 +90,13 @@ export async function endGame(toId, reason, fn, m, werewolfSessions) {
 }
 async function processVotingResult(toId, fn, m, werewolfSessions) {
   const gameState = werewolfSessions[toId];
-  if (!gameState || gameState.status !== 'VOTING') return;
+  if (!gameState || !gameState.pemain || gameState.status !== 'VOTING') return;
   const voteCounts = {};
-  Object.values(gameState.votes).forEach((votedJid) => {
-    voteCounts[votedJid] = (voteCounts[votedJid] || 0) + 1;
-  });
+  if (gameState.votes) {
+    Object.values(gameState.votes).forEach((votedJid) => {
+      voteCounts[votedJid] = (voteCounts[votedJid] || 0) + 1;
+    });
+  }
   let maxVotes = 0;
   let lynchedJid = null;
   let isTie = false;
@@ -119,21 +125,20 @@ async function processVotingResult(toId, fn, m, werewolfSessions) {
 }
 async function startVotingPhase(toId, fn, m, werewolfSessions) {
   const gameState = werewolfSessions[toId];
-  if (!gameState) return;
+  if (!gameState || !gameState.pemain) return;
   gameState.status = 'VOTING';
   gameState.votes = {};
   let votingMessage = `Waktu voting telah tiba! Silakan pilih siapa yang akan dieksekusi.\nWaktu 90 detik.\n\nKetik .vote <nomor>\n\nPemain Hidup:\n`;
-  Object.values(gameState.pemain).forEach((p, index) => {
-    if (p.isAlive) {
-      votingMessage += `${index + 1}. @${p.id.split('@')[0]}\n`;
-    }
+  const livingPlayers = Object.values(gameState.pemain).filter((p) => p.isAlive);
+  livingPlayers.forEach((p, index) => {
+    votingMessage += `${index + 1}. @${p.id.split('@')[0]}\n`;
   });
   await fn.sendPesan(toId, votingMessage, { ephemeralExpiration: m.expiration ?? 0 });
   gameState.phaseTimeout = setTimeout(() => processVotingResult(toId, fn, m, werewolfSessions), 90 * 1000);
 }
 async function startDayDiscussionPhase(toId, nightEvents, fn, m, werewolfSessions) {
   const gameState = werewolfSessions[toId];
-  if (!gameState) return;
+  if (!gameState || !gameState.pemain) return;
   gameState.status = 'DISCUSSION';
   gameState.day++;
   const dayMessage = `☀️ Hari ke-${gameState.day} telah tiba.\n\n${nightEvents}\n\nWarga desa punya waktu 90 detik untuk berdiskusi sebelum voting dimulai.`;
@@ -142,8 +147,9 @@ async function startDayDiscussionPhase(toId, nightEvents, fn, m, werewolfSession
 }
 async function processNightActions(toId, fn, m, werewolfSessions) {
   const gameState = werewolfSessions[toId];
-  if (!gameState || gameState.status !== 'NIGHT') return;
-  const { pilihanWerewolf, pilihanGuardian } = gameState.aksiMalam;
+  if (!gameState || !gameState.pemain || gameState.status !== 'NIGHT') return;
+  const pilihanWerewolf = gameState.aksiMalam?.pilihanWerewolf || null;
+  const pilihanGuardian = gameState.aksiMalam?.pilihanGuardian || null;
   let nightEvents = 'Suasana pagi ini tenang, tidak ada yang terbunuh.';
   if (pilihanWerewolf && pilihanWerewolf !== pilihanGuardian) {
     gameState.pemain[pilihanWerewolf].isAlive = false;
@@ -160,16 +166,19 @@ async function processNightActions(toId, fn, m, werewolfSessions) {
 }
 async function startNightPhase(toId, fn, m, werewolfSessions) {
   const gameState = werewolfSessions[toId];
-  if (!gameState) return;
+  if (!gameState || !gameState.pemain) return;
   gameState.status = 'NIGHT';
-  gameState.aksiMalam = {};
+  gameState.aksiMalam = {
+    pilihanWerewolf: null,
+    pilihanGuardian: null
+  };
   await fn.sendPesan(toId, `🌙 Malam telah tiba. Semua warga tertidur. Para peran khusus, silakan cek pesan pribadi untuk beraksi. Waktu 90 detik.`, { ephemeralExpiration: m.expiration ?? 0 });
   // prettier-ignore
   const livingPlayersForDm = Object.values(gameState.pemain).filter((p) => p.isAlive).map((p, i) => `${i + 1}. @${p.id.split('@')[0]}`).join('\n');
   for (const playerJid in gameState.pemain) {
     const player = gameState.pemain[playerJid];
     if (player.isAlive) {
-      let dmMessage = `Malam ke-${gameState.day}. Peranmu: *${player.role}* ${emoji_role(player.role)}.\n\n`;
+      let dmMessage = `Malam ke-${gameState.day + 1}. Peranmu: *${player.role}* ${emoji_role(player.role)}.\n\n`;
       let commandInstruction = '';
       switch (player.role) {
         case 'werewolf':

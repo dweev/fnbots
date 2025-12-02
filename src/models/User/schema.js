@@ -101,14 +101,10 @@ const userSchema = new mongoose.Schema(
       type: Number,
       default: 0
     },
-    mutedUsers: [
-      {
-        userId: {
-          type: String,
-          required: true
-        }
-      }
-    ]
+    isMuted: {
+      type: Boolean,
+      default: false
+    }
   },
   {
     timestamps: true,
@@ -131,9 +127,6 @@ userSchema.pre('save', function () {
   }
 });
 
-userSchema.virtual('mutedUsersCount').get(function () {
-  return this.mutedUsers.length;
-});
 userSchema.virtual('isVIPActive').get(function () {
   return !!(this.isVIP && this.vipExpired && this.vipExpired > new Date());
 });
@@ -150,7 +143,5 @@ const levelNames = [null, 'Beginner', 'Intermediate', 'Public', 'Pro', 'Expert',
 userSchema.virtual('levelName').get(function () {
   return levelNames[this.level] || 'Mythic';
 });
-
-userSchema.index({ 'mutedUsers.userId': 1 });
 
 export default userSchema;

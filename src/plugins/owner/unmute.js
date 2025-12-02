@@ -6,6 +6,7 @@
  */
 // ─── Info ────────────────────────────────
 
+import { User } from '../../../database/index.js';
 import { archimed } from '../../function/index.js';
 
 export const command = {
@@ -13,13 +14,13 @@ export const command = {
   category: 'owner',
   description: 'Unban pengguna secara global',
   isCommandWithoutPayment: true,
-  execute: async ({ args, sReply, user, mentionedJidList, quotedParticipant }) => {
+  execute: async ({ args, sReply, mentionedJidList, quotedParticipant }) => {
     if (mentionedJidList && mentionedJidList.length > 0) {
-      const usersToUnban = mentionedJidList;
       const unbannedUsers = [];
-      for (const userId of usersToUnban) {
-        if (user.isUserMuted(userId)) {
-          await user.unmuteUser(userId);
+      for (const userId of mentionedJidList) {
+        const targetUser = await User.ensureUser(userId);
+        if (targetUser.isMuted) {
+          await targetUser.unmute();
           unbannedUsers.push(userId);
         }
       }
@@ -31,28 +32,34 @@ export const command = {
       return;
     }
     if (quotedParticipant) {
-      const userId = quotedParticipant;
-      if (user.isUserMuted(userId)) {
-        await user.unmuteUser(userId);
-        await sReply(`Berhasil mengunban @${userId.split('@')[0]}`);
+      const targetUser = await User.ensureUser(quotedParticipant);
+      if (targetUser.isMuted) {
+        await targetUser.unmute();
+        await sReply(`Berhasil mengunban @${quotedParticipant.split('@')[0]}`);
       } else {
-        await sReply(`Pengguna @${userId.split('@')[0]} tidak dalam daftar banned`);
+        await sReply(`Pengguna @${quotedParticipant.split('@')[0]} tidak dalam daftar banned`);
       }
       return;
     }
     if (args[0]) {
-      const mutedUsers = user.mutedUsers.map((u) => u.userId);
+      const mutedUsers = await User.find({ isMuted: true }).select('userId');
       if (mutedUsers.length === 0) {
         await sReply('Tidak ada pengguna yang di-ban.');
         return;
       }
-      const usersToUnban = archimed(args[0], mutedUsers);
+      const mutedUserIds = mutedUsers.map((u) => u.userId);
+      const usersToUnban = archimed(args[0], mutedUserIds);
+      let unbannedCount = 0;
       for (const userId of usersToUnban) {
-        await user.unmuteUser(userId);
+        const targetUser = await User.findOne({ userId });
+        if (targetUser && targetUser.isMuted) {
+          await targetUser.unmute();
+          unbannedCount++;
+        }
       }
-      await sReply(`Berhasil mengunban ${usersToUnban.length} pengguna.`);
+      await sReply(`Berhasil mengunban ${unbannedCount} pengguna.`);
       return;
     }
-    await sReply('Mohon mention pengguna, reply pesan, atau gunakan archimed.');
+    await sReply('Mohon mention pengguna, reply pesan, atau gunakan archimed (contoh: 1-5, 1,3,5).');
   }
 };

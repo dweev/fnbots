@@ -101,7 +101,7 @@ export async function arfine(fn, m, { store, dbSettings, ownerNumber, version, i
   const sPesan = (content, options = {}) => fn.sendPesan(toId, content, { ephemeralExpiration: m.expiration ?? 0, ...options });
   const sendRawWebpAsSticker = async (_data, options = {}) => await fn.sendRawWebpAsSticker(toId, _data, m, { ...options });
 
-  if (user.isUserMuted(serial)) return;
+  if (user.isMuted === true) return;
   if (body?.startsWith('>')) {
     if (!isSadmin && !isMaster) return;
     try {

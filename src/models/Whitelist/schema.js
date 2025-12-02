@@ -42,9 +42,8 @@ const whitelistSchema = new mongoose.Schema(
   }
 );
 
-whitelistSchema.pre('save', function (next) {
+whitelistSchema.pre('save', function () {
   this.groupId = this.groupId.toLowerCase();
-  next();
 });
 
 whitelistSchema.virtual('isActive').get(function () {

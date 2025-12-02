@@ -160,7 +160,7 @@ const groupMetadataSchema = new mongoose.Schema(
   }
 );
 
-groupMetadataSchema.pre('save', function (next) {
+groupMetadataSchema.pre('save', function () {
   if (!this.groupId && this.id) this.groupId = this.id;
   if (!this.id && this.groupId) this.id = this.groupId;
   this.size = this.participants.length;
@@ -171,7 +171,6 @@ groupMetadataSchema.pre('save', function (next) {
       this.updateCount += 1;
     }
   }
-  next();
 });
 
 groupMetadataSchema.index({ subject: 1 });

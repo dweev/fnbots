@@ -123,13 +123,12 @@ const userSchema = new mongoose.Schema(
   }
 );
 
-userSchema.pre('save', function (next) {
+userSchema.pre('save', function () {
   if (this.isNew || this.isModified('isPremium')) {
     const dbSettings = Settings.getSettings();
     this.limit.current = this.isPremium ? dbSettings.limitCountPrem : dbSettings.limitCount;
     this.limitgame.current = this.isPremium ? dbSettings.limitCountPrem : dbSettings.limitGame;
   }
-  next();
 });
 
 userSchema.virtual('mutedUsersCount').get(function () {

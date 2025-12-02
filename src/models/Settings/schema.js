@@ -187,11 +187,10 @@ settingsSchema
     this.totalHitCount = v;
   });
 
-settingsSchema.pre('save', function (next) {
+settingsSchema.pre('save', function () {
   if (this.rname === this.sname) {
     this.sname = this.rname === '.' ? '/' : '.';
   }
-  next();
 });
 
 settingsSchema.set('toJSON', { virtuals: true });

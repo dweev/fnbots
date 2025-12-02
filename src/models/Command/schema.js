@@ -59,12 +59,11 @@ const commandSchema = new mongoose.Schema(
   }
 );
 
-commandSchema.pre('save', function (next) {
+commandSchema.pre('save', function () {
   this.name = this.name.toLowerCase();
   if (!this.displayName) {
     this.displayName = this.name;
   }
-  next();
 });
 
 export default commandSchema;

@@ -150,14 +150,13 @@ groupSchema.index({ memberCount: -1 });
 groupSchema.index({ 'afkUsers.userId': 1 });
 groupSchema.index({ 'warnings.state': 1 });
 
-groupSchema.pre('save', function (next) {
+groupSchema.pre('save', function () {
   if (this.isModified()) {
     this.lastActivity = new Date();
   }
   if (!this.warnings) {
     this.warnings = { users: new Map(), state: true, count: 5 };
   }
-  next();
 });
 
 groupSchema.set('toJSON', { virtuals: true });

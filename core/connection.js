@@ -128,7 +128,7 @@ export async function createWASocket(dbSettings) {
     shouldIgnoreJid: (jid) => {
       return isJidBroadcast(jid) && jid !== 'status@broadcast';
     },
-    browser: Browsers.macOS('Safari'),
+    browser: Browsers.ubuntu('Chrome'),
     defaultQueryTimeoutMs: undefined,
     markOnlineOnConnect: false,
     retryRequestDelayMs: 500,

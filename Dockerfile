@@ -1,12 +1,16 @@
 FROM node:latest
 
-# Install FFmpeg, the ENTIRE suite of developer blueprints, and the C++ Graphics Tools
+# The Nuclear Option: Install every possible C++, Media, Graphics, and Network blueprint
 RUN apt-get update && \
-    apt-get install -y ffmpeg libavformat-dev libavcodec-dev libswscale-dev libavutil-dev libavfilter-dev libavdevice-dev build-essential libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev
+    apt-get install -y \
+    ffmpeg \
+    libavformat-dev libavcodec-dev libswscale-dev libavutil-dev libavfilter-dev libavdevice-dev \
+    build-essential libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev \
+    libnghttp2-dev libssl-dev pkg-config python3
 
 WORKDIR /app
 
-# Copy ALL the code first so the sticker blueprints are present
+# Copy ALL the code first so the blueprints are present
 COPY . .
 
 # NOW install packages and automatically build the C++ engines

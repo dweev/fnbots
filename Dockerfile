@@ -8,5 +8,6 @@ WORKDIR /app
 COPY package.json ./
 RUN yarn install
 COPY . .
+RUN npm run build
 
 CMD ["node", "core/main.js"]

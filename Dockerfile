@@ -9,4 +9,4 @@ COPY package.json ./
 RUN yarn install
 COPY . .
 
-CMD ["node", "index.js"]
+CMD ["node", "core/main.js"]
